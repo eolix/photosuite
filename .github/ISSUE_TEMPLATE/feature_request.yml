@@ -1,0 +1,40 @@
+name: Feature request
+description: A capability the editor is missing.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PhotoSuite is aiming at what Photoshop does, so the most useful requests
+        are ones that name the Photoshop feature and where it lives in the menus.
+
+  - type: textarea
+    id: capability
+    attributes:
+      label: What is missing
+      description: What you are trying to do, and what stops you today.
+    validations:
+      required: true
+
+  - type: input
+    id: photoshop-equivalent
+    attributes:
+      label: Where this lives in Photoshop
+      description: The menu path or panel, if it has one.
+      placeholder: "Filter → Noise → Dust & Scratches"
+
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: How it should behave
+      description: |
+        Options, defaults, keyboard shortcuts, how it interacts with selections
+        or layer masks — whatever you know about how it works.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Does this affect files?
+      options:
+        - label: It reads or writes something in a PSD, so files should round-trip with Photoshop
+        - label: It only affects the editor, not saved files

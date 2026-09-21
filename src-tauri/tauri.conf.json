@@ -1,0 +1,174 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PhotoSuite",
+  "version": "0.9.6",
+  "identifier": "app.photosuite",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "PhotoSuite",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "devtools": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "entitlements": null,
+      "exceptionDomain": null,
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": "Developer ID Application: Patrik Ohlson (W3H3H7D9ST)",
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "windowPosition": {
+          "x": 200,
+          "y": 120
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "psd",
+          "psb"
+        ],
+        "name": "Photoshop Document",
+        "description": "Layered image document",
+        "role": "Editor",
+        "mimeType": "image/vnd.adobe.photoshop"
+      },
+      {
+        "ext": [
+          "png",
+          "jpg",
+          "jpeg",
+          "gif",
+          "webp",
+          "avif",
+          "heic",
+          "heif",
+          "bmp",
+          "tif",
+          "tiff",
+          "ico"
+        ],
+        "name": "Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/png,image/jpeg,image/gif,image/webp,image/avif,image/heic,image/heif,image/bmp,image/tiff,image/vnd.microsoft.icon"
+      },
+      {
+        "ext": [
+          "svg",
+          "ai",
+          "eps",
+          "ps",
+          "pdf",
+          "dxf",
+          "emf",
+          "wmf",
+          "cdr"
+        ],
+        "name": "Vector Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "image/svg+xml,application/pdf,application/postscript,image/x-emf,image/wmf"
+      },
+      {
+        "ext": [
+          "sketch",
+          "xd",
+          "fig",
+          "af",
+          "afdesign",
+          "afphoto",
+          "afpub",
+          "aftemplate",
+          "xcf",
+          "ora",
+          "clip"
+        ],
+        "name": "Design Document",
+        "description": "Layered design document",
+        "role": "Editor",
+        "mimeType": "application/octet-stream"
+      },
+      {
+        "ext": [
+          "exr",
+          "hdr",
+          "dds",
+          "tga",
+          "ppm",
+          "pgm",
+          "pbm",
+          "pnm",
+          "lif",
+          "fits",
+          "fit",
+          "fts",
+          "raf",
+          "cr2",
+          "cr3",
+          "crw",
+          "nef",
+          "nrw",
+          "arw",
+          "dng",
+          "orf",
+          "rw2",
+          "pef",
+          "srw",
+          "raw",
+          "iff",
+          "lbm"
+        ],
+        "name": "Image Data",
+        "description": "High dynamic range or raw image data",
+        "role": "Editor",
+        "mimeType": "application/octet-stream"
+      }
+    ]
+  }
+}

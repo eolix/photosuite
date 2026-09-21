@@ -1,0 +1,20 @@
+# Rust / Tauri build artifacts
+src-tauri/target/
+src/wasm/webp-encode/target/
+
+# Node
+node_modules/
+
+# IDE   
+.claude/**/*
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Misc
+.env
+src-tauri/gen/
+
+# pdf.js source cloned on demand by vendor/js/pdfjs-codecs/build.sh
+src/vendor/pdfjs/
