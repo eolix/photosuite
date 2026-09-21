@@ -1,0 +1,48 @@
+[submodule "src/vendor/upng"]
+	path = src/vendor/upng
+	url = https://github.com/photopea/UPNG.js
+[submodule "src/vendor/utif"]
+	path = src/vendor/utif
+	url = https://github.com/photopea/UTIF.js
+[submodule "src/vendor/uzip"]
+	path = src/vendor/uzip
+	url = https://github.com/photopea/UZIP.js
+[submodule "src/vendor/typr"]
+	path = src/vendor/typr
+	url = https://github.com/photopea/Typr.js
+[submodule "src/vendor/pako"]
+	path = src/vendor/pako
+	url = https://github.com/nodeca/pako.git
+[submodule "src/vendor/paper"]
+	path = src/vendor/paper
+	url = https://github.com/paperjs/paper.js.git
+[submodule "src/vendor/omggif"]
+	path = src/vendor/omggif
+	url = https://github.com/deanm/omggif.git
+[submodule "src/vendor/js-sha1"]
+	path = src/vendor/js-sha1
+	url = https://github.com/emn178/js-sha1.git
+[submodule "src/vendor/utex"]
+	path = src/vendor/utex
+	url = https://github.com/photopea/UTEX.js.git
+[submodule "src/vendor/linear-solve"]
+	path = src/vendor/linear-solve
+	url = https://github.com/lovasoa/linear-solve
+[submodule "src/vendor/pdfi"]
+	path = src/vendor/pdfi
+	url = https://github.com/eolix/PDFI.js
+[submodule "src/vendor/acorn"]
+	path = src/vendor/acorn
+	url = https://github.com/acornjs/acorn.git
+[submodule "src/vendor/parse-exr"]
+	path = src/vendor/parse-exr
+	url = https://github.com/dmnsgn/parse-exr
+[submodule "src/vendor/fribidi"]
+	path = src/vendor/fribidi
+	url = https://github.com/fribidi/fribidi.git
+[submodule "src/vendor/lensfun"]
+	path = src/vendor/lensfun
+	url = https://github.com/lensfun/lensfun
+[submodule "src/vendor/libheif"]
+	path = src/vendor/libheif
+	url = https://github.com/strukturag/libheif.git

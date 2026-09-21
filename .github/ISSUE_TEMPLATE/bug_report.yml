@@ -1,0 +1,92 @@
+name: Bug report
+description: Something in the editor behaves differently from what you expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PhotoSuite aims to match Photoshop's behaviour. If you know what
+        Photoshop does in the same situation, saying so turns a report into a
+        specification.
+
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: What you did, and what the editor did in response.
+      placeholder: |
+        1. Open a PSD with a clipping mask
+        2. Toggle the base layer's visibility
+        3. The clipped layer disappears as well
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: If Photoshop does something different here, describe that.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: PhotoSuite version
+      description: Shown under the application's About entry.
+      placeholder: "0.9.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: "macOS 15.2 / Windows 11 24H2 / Ubuntu 24.04"
+
+  - type: dropdown
+    id: file-format
+    attributes:
+      label: Which file format is involved
+      description: Formats carry their own quirks, and this narrows it down fast.
+      options:
+        - "Not about a particular file"
+        - PSD / PSB
+        - PNG / JPEG / WebP / AVIF
+        - TIFF / GIF / BMP / TGA
+        - PDF / SVG / AI / EPS
+        - Sketch / XD / Figma / Affinity
+        - Camera raw
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: file
+    attributes:
+      label: A file that shows it
+      description: |
+        Attach one if you can share it — drag it onto this box. A file that
+        reproduces the problem is worth more than any description. Please do
+        not attach anything confidential.
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: |
+        Open the developer tools and copy anything in red. This is rendered as
+        code, so no backticks are needed.
+      render: text

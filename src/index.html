@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, initial-scale=1.0" />
+    <meta name="theme-color" content="#474747">
+
+    <title>PhotoSuite</title>
+
+    <link rel="apple-touch-icon" href="img/icon512.png">
+    <link rel="icon" sizes="256x256" href="img/icon256.png">
+
+    <link rel="stylesheet" href="style/all.css" />
+  </head>
+
+  <body class="theme0">
+    <script>
+      window.jsLoadedOK = true;
+      // Surface uncaught errors without tearing down the running UI: a stray
+      // exception in one widget must not blank the whole app. Logs to the
+      // console and shows a dismissible bar pinned over the UI.
+      window.onerror = function(msg, src, line, col, err) {
+        console.error("[PS] uncaught error:", msg, "@", src + ":" + line + ":" + col, err);
+        var bar = document.getElementById("ps-error-bar");
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.id = "ps-error-bar";
+          bar.setAttribute("style",
+            "position:fixed; left:0; right:0; bottom:0; z-index:2147483647; "
+            + "background:#3a1a1a; color:#ff8a8a; font:12px/1.5 monospace; "
+            + "padding:8px 32px 8px 12px; white-space:pre-wrap; max-height:30vh; overflow:auto;");
+          var close = document.createElement("button");
+          close.textContent = "×";
+          close.setAttribute("style",
+            "position:absolute; top:4px; right:8px; background:none; border:none; "
+            + "color:#ff8a8a; font-size:16px; cursor:pointer;");
+          close.onclick = function() { bar.remove(); };
+          bar.appendChild(close);
+          document.body.appendChild(bar);
+        }
+        bar.insertBefore(
+          document.createTextNode("JS Error: " + msg + "  (" + src + ":" + line + ":" + col + ")\n"),
+          bar.firstChild);
+      };
+    </script>
+    <!-- Third-party vendor scripts. Load order matters: pako first, because
+         other libraries expect it. Provenance, pins and licences for every one
+         of these are in vendor/README.md. -->
+
+    <!-- Compression (pako 1.0.5) — nodeca/pako -->
+    <script src="vendor/pako/dist/pako.min.js"></script>
+
+    <!-- PostScript / PDF / WMF / EMF parsers + writers — eolix/PDFI.js (submodule,
+         MIT; fork of NineBitsLLC/UDOC.js with the base-14 font-name fix for ToPDF).
+         Loaded verbatim; needs pako (above). Order: core first, then FromPS
+         (FromPDF depends on it), the other parsers, then the writers. -->
+    <!-- (file names keep the UDOC.js / From*/To* upstream layout) -->
+    <script src="vendor/pdfi/UDOC.js"></script>
+    <script src="vendor/pdfi/FromPS.js"></script>
+    <script src="vendor/pdfi/FromPDF.js"></script>
+    <script src="vendor/pdfi/FromWMF.js"></script>
+    <script src="vendor/pdfi/FromEMF.js"></script>
+    <script src="vendor/pdfi/ToContext2D.js"></script>
+    <script src="vendor/pdfi/ToEMF.js"></script>
+    <script src="vendor/pdfi/ToPDF.js"></script>
+
+    <!-- Mozilla pdf.js image codecs (global PDFJS): JPEG, JPEG2000 (JpxImage),
+         JBIG2 (Apache-2.0). Self-contained pre-WASM slice; see vendor/js/pdfjs-codecs/. -->
+    <script src="vendor/js/pdfjs-codecs/pdfjs-codecs.js"></script>
+
+    <!-- Acorn 3.1.0 JS parser (global `acorn`) — acornjs/acorn (submodule).
+         Generated from src/ by vendor/js/acorn/build.sh (esbuild bundle). -->
+    <script src="vendor/js/acorn/acorn.js"></script>
+
+    <!-- PNG decode/encode/quantize — photopea/UPNG.js (submodule) -->
+    <script src="vendor/upng/UPNG.js"></script>
+
+    <!-- DDS texture codec — photopea/UTEX.js -->
+    <script src="vendor/utex/UTEX.js"></script>
+    <script src="vendor/utex/UTEX.DDS.js"></script>
+
+    <!-- TIFF / DNG / etc. decoder — photopea/UTIF.js (submodule) -->
+    <script src="vendor/utif/UTIF.js"></script>
+
+    <!-- GIF encode (GifWriter) + decode (GifReader) — deanm/omggif (MIT) -->
+    <script src="vendor/omggif/omggif.js"></script>
+
+    <!-- Gauss-Jordan linear solver (global `linear`) — lovasoa/linear-solve (MIT).
+         Generated from the submodule by vendor/js/linear-solve/build.sh. -->
+    <script src="vendor/js/linear-solve/linear-solve.js"></script>
+
+    <!-- Font parser + shaping/SVG utilities (incl. HarfBuzz glue) — photopea/Typr.js.
+         Generated from the submodule by vendor/js/typr/build.sh (re-enables WASM
+         memory growth in shapeHB, which upstream gh-pages ships disabled). -->
+    <script src="vendor/js/typr/Typr.js"></script>
+    <script src="vendor/js/typr/Typr.U.js"></script>
+    <script src="vendor/js/typr/Typr.U.SVG.js"></script>
+
+    <!-- ZIP / deflate — photopea/UZIP.js (submodule) -->
+    <script src="vendor/uzip/UZIP.js"></script>
+
+    <!-- Paper.js 0.11.5 vector graphics — paperjs/paper.js -->
+    <script src="vendor/paper/dist/paper-full.js"></script>
+
+    <!-- js-sha1 0.6.0 — emn178/js-sha1 -->
+    <script src="vendor/js-sha1/src/sha1.js"></script>
+
+    <!-- EXR loader (global `EXRLoader.parse`) — dmnsgn/parse-exr (submodule, three.js
+         port). Generated by vendor/js/exr/build.sh; self-contained (bundles fflate). -->
+    <script src="vendor/js/exr/exr.js"></script>
+
+    <!-- libheif 1.23.2 (global `libheif`) — emscripten loader for HEIC/HEIF.
+         Defines the module factory only; heic.js fetches and compiles the
+         1.4 MB vendor/wasm/libheif/libheif.wasm on the first HEIC open. -->
+    <script src="vendor/wasm/libheif/libheif.js"></script>
+
+    <!-- Load translation data synchronously from per-language JSON files.
+         To add a language: drop a <code>.json table in core/i18n/locales/
+         and add an entry to core/i18n/locales/languages.json. -->
+    <script>
+      (function () {
+        function xhrJSON(url) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", url, false);
+          xhr.send();
+          if (xhr.status !== 200 && xhr.status !== 0) return null;
+          return JSON.parse(xhr.responseText);
+        }
+        var langs = xhrJSON("/core/i18n/locales/languages.json");
+        if (!langs) return;
+        var tables = [];
+        for (var i = 0; i < langs.length; i++) {
+          tables.push(xhrJSON("/core/i18n/locales/" + langs[i].code + ".json"));
+        }
+        window.I18N_DATA = {
+          langs: langs.map(function (l, i) { return { name: l.name, code: l.code, table: i }; }),
+          tables: tables
+        };
+      })();
+    </script>
+
+    <script>
+      window.BINDB = {
+        "tex/burlap":   "/assets/textures/burlap.png",
+        "tex/brick":    "/assets/textures/brick.png",
+        "tex/blocks":   "/assets/textures/blocks.png",
+        "tex/canvas":   "/assets/textures/canvas.png",
+        "tex/tinylens": "/assets/textures/tinylens.png",
+        "tex/sandstone": "/assets/textures/sandstone.png",
+        "img/beach":    "/assets/img/beach.jpg",
+        "wasm/zstd":    "/vendor/wasm/zstd/zstd.wasm",
+        "wasm/webp":    "/vendor/wasm/libwebp/webp.wasm",
+        "wasm/webp-enc": "/wasm/webp-encode.wasm",
+        "wasm/jpg":     "/vendor/wasm/stb-image/jpg.wasm",
+        "wasm/libheif": "/vendor/wasm/libheif/libheif.wasm",
+        "data/lens-profiles": "/vendor/js/lensfun/lens-database.json",
+      };
+    </script>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,102 @@
+{
+  "adjustments": {
+    "colourBalance": "Color Balance",
+    "colourLookup": "Color Lookup",
+    "posterise": "Posterize",
+    "selectiveColour": "Selective Color",
+    "autoColour": "Auto Color",
+    "replaceColour": "Replace Color"
+  },
+  "layer": {
+    "rasterise": "Rasterize",
+    "rasteriseLayerStyle": "Rasterize Layer Style",
+    "colourChange": "Color Change",
+    "newFillLayer": {
+      "colourFill": "Color Fill"
+    }
+  },
+  "select": {
+    "colourRange": "Color Range"
+  },
+  "tools": {
+    "colourReplacement": "Color Replacement"
+  },
+  "dialogs": {
+    "colourPicker": "Color Picker",
+    "exportColourLookupTables": "Export Color Lookup Tables",
+    "exportOptions": {
+      "rasteriseAll": "Rasterize All",
+      "rasteriseText": "Rasterize Text",
+      "vectoriseText": "Vectorize Text"
+    }
+  },
+  "properties": {
+    "colourise": "Colorize",
+    "size": {
+      "nearestNeighbour": "Nearest Neighbor"
+    },
+    "colours": "Colors"
+  },
+  "filters": {
+    "gallery": {
+      "groups": {
+        "stylise": "Stylize"
+      },
+      "colourPencil": "Color Pencil"
+    },
+    "menu": {
+      "pixelate": {
+        "colourHalftone": "Color Halftone",
+        "crystallise": "Crystallize",
+        "pointillise": "Pointillize"
+      },
+      "stylise": {
+        "title": "Stylize"
+      }
+    },
+    "options": {
+      "cloudsHelp": "Renders soft clouds using the current foreground and background colors.",
+      "differenceCloudsHelp": "Combines clouds with the layer using the difference blend mode. Uses foreground and background colors.",
+      "colourAmount": "Color Amount"
+    }
+  },
+  "colour": {
+    "labels": {
+      "grey": "Gray"
+    },
+    "title": "Color"
+  },
+  "layerEffects": {
+    "colourOverlay": "Color Overlay"
+  },
+  "brushAndMessages": {
+    "colourDynamics": {
+      "title": "Color Dynamics"
+    },
+    "toolHints": {
+      "triMapGuide": "Mark Foreground with White, Background with Black, and the unknown area with Gray."
+    },
+    "blendModes": {
+      "colourBurn": "Color Burn",
+      "darkerColour": "Darker Color",
+      "colourDodge": "Color Dodge",
+      "lighterColour": "Lighter Color",
+      "colour": "Color"
+    }
+  },
+  "styleOptions": {
+    "strokePosition": {
+      "centre": "Center",
+      "fromCentre": "From Center"
+    }
+  },
+  "align": {
+    "options": {
+      "centreHorizontally": "Center Horizontally",
+      "centreVertically": "Center Vertically"
+    }
+  },
+  "warp": {
+    "swapColours": "Swap Colors"
+  }
+}

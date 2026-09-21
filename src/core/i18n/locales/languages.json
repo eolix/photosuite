@@ -1,0 +1,162 @@
+[
+  {
+    "name": "English",
+    "code": "en"
+  },
+  {
+    "name": "English (US)",
+    "code": "en-US"
+  },
+  {
+    "name": "Česky",
+    "code": "cs"
+  },
+  {
+    "name": "Español",
+    "code": "es"
+  },
+  {
+    "name": "Deutsch",
+    "code": "de"
+  },
+  {
+    "name": "Français",
+    "code": "fr"
+  },
+  {
+    "name": "Ελληνικά",
+    "code": "el"
+  },
+  {
+    "name": "العربية",
+    "code": "ar"
+  },
+  {
+    "name": "Português",
+    "code": "pt"
+  },
+  {
+    "name": "Українська",
+    "code": "uk"
+  },
+  {
+    "name": "עברית",
+    "code": "he"
+  },
+  {
+    "name": "Hrvatski",
+    "code": "hr"
+  },
+  {
+    "name": "Italiano",
+    "code": "it"
+  },
+  {
+    "name": "Română",
+    "code": "ro"
+  },
+  {
+    "name": "Nederlands",
+    "code": "nl"
+  },
+  {
+    "name": "Svenska",
+    "code": "sv"
+  },
+  {
+    "name": "Dansk",
+    "code": "da"
+  },
+  {
+    "name": "Suomi",
+    "code": "fi"
+  },
+  {
+    "name": "Slovenščina",
+    "code": "sl"
+  },
+  {
+    "name": "Türkçe",
+    "code": "tr"
+  },
+  {
+    "name": "Polski",
+    "code": "pl"
+  },
+  {
+    "name": "Bahasa Indonesia",
+    "code": "id"
+  },
+  {
+    "name": "简化字 中文",
+    "code": "zh-CN"
+  },
+  {
+    "name": "正體字 中文",
+    "code": "zh-HK"
+  },
+  {
+    "name": "ภาษาไทย",
+    "code": "th"
+  },
+  {
+    "name": "日本語",
+    "code": "ja"
+  },
+  {
+    "name": "한국어",
+    "code": "ko"
+  },
+  {
+    "name": "Português do Brasil",
+    "code": "pt-BR"
+  },
+  {
+    "name": "Magyar",
+    "code": "hu"
+  },
+  {
+    "name": "Slovenčina",
+    "code": "sk"
+  },
+  {
+    "name": "Tiếng Việt",
+    "code": "vi"
+  },
+  {
+    "name": "Български език",
+    "code": "bg"
+  },
+  {
+    "name": "Српски језик",
+    "code": "sr"
+  },
+  {
+    "name": "Shqip",
+    "code": "sq"
+  },
+  {
+    "name": "தமிழ்",
+    "code": "ta"
+  },
+  {
+    "name": "བོད་ཡིག",
+    "code": "bo"
+  },
+  {
+    "name": "Català",
+    "code": "ca"
+  },
+  {
+    "name": "Norsk",
+    "code": "no"
+  },
+  {
+    "name": "Eesti",
+    "code": "et"
+  },
+  {
+    "name": "Lietuvių",
+    "code": "lt"
+  }
+]

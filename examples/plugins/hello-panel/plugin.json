@@ -1,0 +1,11 @@
+{
+  "id": "hello-panel",
+  "name": "Hello World",
+  "version": "1.1.0",
+  "entry": "index.html",
+  "icon": "icon.svg",
+  "width": 320,
+  "height": 460,
+  "themed": true,
+  "minAppVersion": "0.9.1"
+}

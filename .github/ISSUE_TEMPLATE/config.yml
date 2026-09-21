@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Plugin development
+    url: https://github.com/eolix/photosuite/blob/main/docs/PLUGINS.md
+    about: Writing a sidebar plugin — manifest, messaging, and the request API.
+  - name: How the source is organised
+    url: https://github.com/eolix/photosuite/blob/main/docs/ARCHITECTURE.md
+    about: Where code lives, and the rules that keep it navigable.

@@ -1,0 +1,39 @@
+[package]
+name = "photosuite"
+version = "0.9.6"
+description = "PhotoSuite - Advanced Image Editor"
+authors = ["eolix"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "photosuite_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "image-png"] }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+fontdb = "0.16"
+tauri-plugin-store = "2"
+
+[profile.release]
+panic = "abort"
+codegen-units = 4
+lto = false
+opt-level = 1
+strip = false
+
+[target."cfg(unix)".dependencies]
+cups_rs = "0.3.0"
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.62", features = ["Win32_Graphics_Printing", "Win32_Foundation"] }
+winprint = "0.2.1"

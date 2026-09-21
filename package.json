@@ -1,0 +1,32 @@
+{
+  "name": "photosuite",
+  "private": true,
+  "scripts": {
+    "install:git-hooks": "sh scripts/install-git-hooks.sh",
+    "vendor:fixlinks": "node scripts/repair-vendor-symlinks.mjs",
+    "icons": "sh scripts/generate-desktop-icons.sh",
+    "lint": "eslint src",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "verify": "npm run verify:imports && npm run verify:bindings && npm run verify:cycles && npm run verify:statics && npm run verify:shadows && npm run verify:prototypes && npm run verify:bootstrap",
+    "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
+    "verify:bindings": "node scripts/check-import-bindings.mjs",
+    "verify:statics": "node scripts/verify-static-members.mjs",
+    "verify:shadows": "node scripts/verify-shadowed-bindings.mjs",
+    "verify:prototypes": "node scripts/verify-prototype-chains.mjs",
+    "verify:imports": "node scripts/check-imports-resolve.mjs",
+    "verify:cycles": "node scripts/find-import-cycles.mjs --check",
+    "tauri": "tauri",
+    "dev": "npm run vendor:fixlinks && tauri dev --no-dev-server",
+    "build": "npm run vendor:fixlinks && tauri build",
+    "build:signed": "sh -c 'npm run vendor:fixlinks; set -a; [ -f .env ] && . ./.env; set +a; exec tauri build'"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tauri-apps/cli": "^2.11.4",
+    "eslint": "^10.11.0",
+    "globals": "^17.5.0"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-store": "^2.4.3"
+  }
+}

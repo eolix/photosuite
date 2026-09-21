@@ -1,0 +1,13 @@
+{
+  "bundle": {
+    "targets": ["deb", "rpm"],
+    "linux": {
+      "deb": {
+        "depends": ["libcups2"]
+      },
+      "rpm": {
+        "depends": ["cups-libs"]
+      }
+    }
+  }
+}
