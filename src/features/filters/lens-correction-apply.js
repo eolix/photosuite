@@ -190,7 +190,8 @@ function fillWarpMapAtScale(warpMap, descriptor, lensSize, profileDistortion, pr
 
   const invLensSize = 1 / (lensSize || 1e-6);
   const distortAmount = readNumber(descriptor, "LnIa", 0) / 100;
-  const distortScale = distortAmount == 0 ? 1e-6 : distortAmount * 4.6;
+  const absDistort = Math.abs(distortAmount);
+  const distortScale = absDistort * 4.6;
   const gridScale = invLensSize / maxRadius;
 
   const angleRad = readNumber(descriptor, "LnRa", 0) * Math.PI / 180;
@@ -228,13 +229,16 @@ function fillWarpMapAtScale(warpMap, descriptor, lensSize, profileDistortion, pr
 
       const normX = sampleX * gridScale;
       const normY = sampleY * gridScale;
-      const scaledRadius = Math.sqrt(normX * normX + normY * normY) * distortScale;
-      const atanRadius = Math.atan(scaledRadius);
-      // Both ratios tend to 1 at the centre, where they are otherwise 0/0. A
-      // grid with an odd cell count on both axes puts a cell exactly there.
-      const lensFactor = scaledRadius < 1e-12
-        ? 1
-        : distortAmount > 0 ? atanRadius / scaledRadius : scaledRadius / atanRadius;
+      let lensFactor = 1;
+      if (absDistort > 0) {
+        const scaledRadius = Math.sqrt(normX * normX + normY * normY) * distortScale;
+        // Both ratios tend to 1 at the centre, where they are otherwise 0/0. A
+        // grid with an odd cell count on both axes puts a cell exactly there.
+        if (scaledRadius >= 1e-12) {
+          const atanRadius = Math.atan(scaledRadius);
+          lensFactor = distortAmount > 0 ? atanRadius / scaledRadius : scaledRadius / atanRadius;
+        }
+      }
       const mappedX = gridCenterX + maxRadius * lensFactor * normX;
       const mappedY = gridCenterY + maxRadius * lensFactor * normY;
       const mapOffset = (mapRow * gridWidth + mapCol) << 1;

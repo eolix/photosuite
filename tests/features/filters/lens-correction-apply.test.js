@@ -102,6 +102,24 @@ describe("features/filters/lens-correction-apply.js", () => {
     assert.ok(sum > 1, "non-default geometry should displace samples");
   });
 
+  it("fillLensCorrectionWarpMap produces displacement for both positive and negative distortion", () => {
+    const calcSum = (distortVal) => {
+      const warpMap = {
+        gridWidth: 16,
+        gridHeight: 16,
+        map: new Float32Array(16 * 16 * 2),
+      };
+      fillLensCorrectionWarpMap(warpMap, makeLnCrDescriptor({ LnIa: distortVal }));
+      let sum = 0;
+      for (let i = 0; i < warpMap.map.length; i++) sum += Math.abs(warpMap.map[i]);
+      return sum;
+    };
+    const positiveDisp = calcSum(40);
+    const negativeDisp = calcSum(-40);
+    assert.ok(positiveDisp > 10, `positive distortion should displace: got ${positiveDisp}`);
+    assert.ok(negativeDisp > 10, `negative distortion should displace: got ${negativeDisp}`);
+  });
+
   it("applyChromaticAberration shifts channels for non-zero fringe", () => {
     const width = 32;
     const height = 32;
