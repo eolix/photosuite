@@ -657,7 +657,7 @@ function appendCubicSegmentRecords(
       if (endsAtStart) {
         anchorOut = new Point(coords[coordEnd - 4], coords[coordEnd - 3]);
       } else {
-        anchorOut = anchor.clonePath();
+        anchorOut = anchor.clone();
       }
     } else {
       anchorOut = new Point(coords[cubicCoordIdx - 2], coords[cubicCoordIdx - 1]);
@@ -676,7 +676,7 @@ function appendCubicSegmentRecords(
       type: recordTypeBase + 2,
       cp1: new Point(coords[coordEnd - 4], coords[coordEnd - 3]),
       anchor: closingAnchor,
-      anchorOut: closingAnchor.clonePath(),
+      anchorOut: closingAnchor.clone(),
     });
   }
 }
