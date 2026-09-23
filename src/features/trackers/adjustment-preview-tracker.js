@@ -348,6 +348,7 @@ AdjustmentPreviewTracker.applyFilterPreviewToSnapshots = function (layerState, s
  * @param {object[]} snapshots
  */
 AdjustmentPreviewTracker.restoreSnapshotsOnUndoRedo = function (layerState, snapshots) {
+  if (!snapshots) return;
   for (let snapshotIdx = 0; snapshotIdx < snapshots.length; snapshotIdx++) {
     const snapshot = snapshots[snapshotIdx];
     const targetLayer = layerState.layers[snapshot.layerIndex];

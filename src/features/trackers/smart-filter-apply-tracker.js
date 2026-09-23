@@ -195,14 +195,14 @@ function installSmartFilterApplyTrackerPrototype(Tracker) {
   };
 
   Tracker.prototype.handleRasterFilterPreview = function (filterEvent, docModel, layerState, colorEnv) {
-    if (this.previewSnapshots == null) {
-      const padding = FilterDefs.filterPaddingForClassId(filterEvent.operationId, filterEvent.operationData);
-      this.previewSnapshots = TrackerRegistry.AdjustmentPreviewTracker.captureLayerPixelSnapshots(
-        layerState,
-        padding.x != 0 || padding.y != 0,
-      );
-    }
     if (filterEvent.actionKind == "edit") {
+      if (this.previewSnapshots == null) {
+        const padding = FilterDefs.filterPaddingForClassId(filterEvent.operationId, filterEvent.operationData);
+        this.previewSnapshots = TrackerRegistry.AdjustmentPreviewTracker.captureLayerPixelSnapshots(
+          layerState,
+          padding.x != 0 || padding.y != 0,
+        );
+      }
       const optionsJson = JSON.stringify(filterEvent.operationData);
       if ((filterEvent.operationData == null || optionsJson != this.lastAppliedOptionsJson) && filterEvent.skipCanvasPreview != true) {
         for (let snapshotIdx = 0; snapshotIdx < this.previewSnapshots.length; snapshotIdx++) {
@@ -238,9 +238,11 @@ function installSmartFilterApplyTrackerPrototype(Tracker) {
       );
     }
     if (filterEvent.actionKind == "cancel") {
-      TrackerRegistry.AdjustmentPreviewTracker.cancelPreviewSnapshots(layerState, this.previewSnapshots);
-      this.previewSnapshots = null;
-      this.lastAppliedOptionsJson = null;
+      if (this.previewSnapshots) {
+        TrackerRegistry.AdjustmentPreviewTracker.cancelPreviewSnapshots(layerState, this.previewSnapshots);
+        this.previewSnapshots = null;
+        this.lastAppliedOptionsJson = null;
+      }
     }
     if (filterEvent.actionKind == "confirm") {
       TrackerRegistry.AdjustmentPreviewTracker.commitPreviewToHistory(

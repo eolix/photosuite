@@ -890,7 +890,6 @@ FilterParameterPanel.LnCr.prototype.getValue = function() {
 
 FilterParameterPanel.LnCr.prototype.refresh = function(widgetEvent) {
   this._previewQuality = "full";
-  FilterParameterPanel.prototype.refresh.call(this, widgetEvent);
   this.redraw();
 };
 
