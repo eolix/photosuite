@@ -1,6 +1,6 @@
 [package]
 name = "photosuite"
-version = "0.9.6"
+version = "0.9.7"
 description = "PhotoSuite - Advanced Image Editor"
 authors = ["eolix"]
 edition = "2021"
