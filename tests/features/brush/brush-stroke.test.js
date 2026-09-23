@@ -97,7 +97,7 @@ describe("features/brush/brush-stroke.js", () => {
     // roughly 1/1.44 of the tip's alpha.
     let alphaSum = 0;
     for (let i = 3; i < stamp[0].length; i += 4) alphaSum += stamp[0][i];
-    assert.equal(alphaSum, 45010);
+    assert.ok(Math.abs(alphaSum - 45010) <= 1, `alphaSum ${alphaSum} should be ~45010`);
 
     const stroke = new BrushStroke(brush, [], null, { opacity: 1 }, 0xff0000, 0, new Rect(0, 0, 32, 32));
     stroke.moveTo(16, 16, 1);

@@ -47,6 +47,7 @@ let FilterParameterPanel;
 let FilterDefs;
 let computePreferredLensCorrectionDialogSize;
 let setLensProfileDatabase;
+let EventType;
 
 before(async () => {
   installCanvasContext();
@@ -57,6 +58,7 @@ before(async () => {
   ({ FilterParameterPanel } = await import("../../../src/ui/filter-panels/filter-parameter-panel.js"));
   ({ FilterDefs } = await import("../../../src/features/filters/filter-apply.js"));
   ({ setLensProfileDatabase } = await import("../../../src/features/filters/lens-profile.js"));
+  ({ EventType } = await import("../../../src/core/event-bus.js"));
 });
 
 /** One camera and one lens, enough to drive the Search Criteria lists. */
@@ -183,5 +185,17 @@ describe("ui/filter-panels/lens-correction-panel.js", () => {
     assert.equal(panel.geometricAutoCheckbox.inputEl.disabled, false);
     assert.equal(panel.vignetteAutoCheckbox.inputEl.disabled, false);
     assert.equal(panel.chromaticAutoCheckbox.inputEl.disabled, true);
+  });
+
+  it("refresh updates preview quality and redraws without dispatching widgetSelect", () => {
+    const panel = new FilterParameterPanel.LnCr();
+    let widgetSelectCount = 0;
+    panel.on(EventType.widgetSelect, () => {
+      widgetSelectCount++;
+    });
+    panel._previewQuality = "draft";
+    panel.refresh();
+    assert.equal(panel._previewQuality, "full");
+    assert.equal(widgetSelectCount, 0, "LnCr panel refresh must not dispatch widgetSelect to the dialog");
   });
 });
