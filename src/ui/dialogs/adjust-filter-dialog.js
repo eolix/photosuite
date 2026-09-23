@@ -52,7 +52,9 @@ function AdjustFilterDialog(filterId) {
   if (this.filterPanelWidget.dialogClassName) {
     addClass(this.el, this.filterPanelWidget.dialogClassName);
   }
-  this.filterPanelWidget.on(EventType.widgetSelect, this.refresh, this);
+  if (!this.usesFullscreenFilterPanel()) {
+    this.filterPanelWidget.on(EventType.widgetSelect, this.refresh, this);
+  }
   this.filterPanelWidget.parent = this;
   this.body.appendChild(this.filterPanelWidget.el);
   this.previewOnCanvasCheckbox = new Checkbox("filters.menu.preview");

@@ -140,4 +140,13 @@ describe("features/trackers/smart-filter-apply-tracker.js", () => {
     tracker.undo(doc.history[0].data, doc);
     assert.deepEqual(layer.add.placedData, before);
   });
+
+  it("handles cancel action safely when no preview snapshots exist", () => {
+    const tracker = new TrackerRegistry.SmartFilterApplyTracker();
+    const doc = makeDoc([{ pixelContent: 0 }]);
+    assert.doesNotThrow(() => {
+      tracker.handleInput({ actionKind: "cancel", operationId: "LnCr" }, {}, doc, {}, {});
+    });
+    assert.equal(tracker.previewSnapshots, null);
+  });
 });
