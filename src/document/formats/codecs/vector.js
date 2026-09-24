@@ -111,7 +111,7 @@ function decodeCdrDocument(buffer, doc) {
 }
 
 function decodeAfDocument(buffer, doc) {
-  if (!codecLoaders.AffinityLoader.zstdWasm) {
+  if (codecLoaders.AffinityLoader && !codecLoaders.AffinityLoader.zstdWasm && aiCodec.zstdWasmExports) {
     codecLoaders.AffinityLoader.zstdWasm = aiCodec.zstdWasmExports;
   }
   return codecLoaders.AffinityLoader.parse(buffer, doc, codecLoaders);
