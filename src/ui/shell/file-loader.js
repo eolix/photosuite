@@ -22,6 +22,7 @@ import {
   ensureFormatLoaders,
   hasFormatLoaders,
 } from "../../document/formats/registry/format-loader-imports.js";
+import { DETECT_ONLY_FORMAT_NAMES } from "../../document/formats/registry/registry-helpers.js";
 import {
   readSystemClipboardForPaste,
   writeClipboardBlob
@@ -659,6 +660,10 @@ function openZipOrPresetResource(loadSpec, bytes, fileLoader, channelRasterCallb
     uiEvent.data.presetPayload = PopupTypes.getPresetResource(presetKind).parser.parse(bytes, displayName);
     uiEvent.data.popupType = presetKind;
     fileLoader.dispatch(uiEvent)
+  } else if (DETECT_ONLY_FORMAT_NAMES[formatId]) {
+    // Detected, but nothing decodes it. Say which format it is: "unknown" is
+    // wrong here, and leaves the user guessing whether the file is corrupt.
+    showToast("PhotoSuite cannot open " + DETECT_ONLY_FORMAT_NAMES[formatId] + " files.", 1e4)
   } else {
     showToast("Unknown file format: " + JSON.stringify(formatId))
   }
