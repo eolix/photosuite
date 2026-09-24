@@ -137,7 +137,7 @@ export function detectFormat(buffer) {
   if ([0, 1].indexOf(bytes[1]) != -1 && [1, 2, 3, 9, 10, 11].indexOf(bytes[2]) != -1 && [0, 16, 24, 32].indexOf(bytes[7]) != -1) {
     formatId = "tga";
   }
-  if (matchAt(bytes, [0, 2, 56, 66, 83, 76])) formatId = "asl";
+  if (matchAt(bytes, [56, 66, 83, 76], 2)) formatId = "asl";
   if (matchAt(bytes, [0, 1, 0, -1, 0, 2, 0])) formatId = "abr";
   if (matchAt(bytes, [0, 2, 0, -1, 0, 2, 0])) formatId = "abr";
   if (matchAt(bytes, [0, 6, 0, 1])) formatId = "abr";
