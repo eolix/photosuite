@@ -759,8 +759,6 @@ function createInitialAppData() {
     compact: false,
     intro: true,
     startupResourceStore: {
-      hasPromptedPersist: false,
-      persistConfirmed: false,
       storedFiles: {}
     },
     lastClipboardImageFileSize: 0,
