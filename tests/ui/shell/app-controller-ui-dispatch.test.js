@@ -13,6 +13,7 @@ import { describe, it, before } from "node:test";
 import { installBrowserGlobals } from "../../helpers/stub-browser-globals.js";
 import { promptConfirmUser } from "../../../src/core/user-prompts.js";
 import { installWebviewConfirm } from "../../../src/core/user-prompts.js";
+import { ensureFormatLoaders } from "../../../src/document/formats/registry/format-loader-imports.js";
 
 installBrowserGlobals();
 
@@ -117,6 +118,74 @@ describe("ui/shell/app-controller-ui-dispatch.js", () => {
     assert.equal(typeof FakeController.prototype.saveDocumentToOrigin, "function");
     assert.equal(typeof FakeController.prototype.saveDocumentToNewFile, "function");
     assert.equal(typeof FakeController.prototype.markDocumentSaved, "function");
+    assert.equal(typeof FakeController.prototype.deferSaveUntilFormatLoaders, "function");
+  });
+
+  // A writer ships in the same on-demand module as its parser. Export As waits
+  // for that import; Save has to as well, or a save in a format the session has
+  // never opened encodes with an undefined loader and reports only "could not
+  // prepare this document". PSD is bundled, so it never waits.
+  describe("deferSaveUntilFormatLoaders", () => {
+    function saveController() {
+      function FakeController() {}
+      applyUiDispatchHandlers(FakeController);
+      return new FakeController();
+    }
+
+    it("saves straight through for a format whose writer is in the bundle", () => {
+      let retried = 0;
+      const deferred = saveController().deferSaveUntilFormatLoaders("png", () => { retried++; });
+      assert.equal(deferred, false, "PNG encodes with a codec that is always present");
+      assert.equal(retried, 0);
+    });
+
+    // The first save of a new document defaults to PSD, and smart objects
+    // encode through the same writer whatever the document was opened from, so
+    // a PSD save must never be the thing that waits on an import.
+    it("saves straight through for PSD, which ships in the bundle", () => {
+      let retried = 0;
+      const deferred = saveController().deferSaveUntilFormatLoaders("psd", () => { retried++; });
+      assert.equal(deferred, false, "the PSD writer is installed at startup");
+      assert.equal(retried, 0);
+      assert.equal(saveController().deferSaveUntilFormatLoaders("psb", () => {}), false);
+    });
+
+    it("defers a save in an on-demand format until the writer lands, then retries it", async () => {
+      const controller = saveController();
+      let retried = 0;
+      const deferred = controller.deferSaveUntilFormatLoaders("xcf", () => { retried++; });
+      assert.equal(deferred, true, "nothing in this process has imported the XCF parser yet");
+      assert.equal(retried, 0, "the retry must not run before the import resolves");
+      await ensureFormatLoaders("xcf");
+      await Promise.resolve();
+      assert.equal(retried, 1);
+      assert.equal(
+        controller.deferSaveUntilFormatLoaders("xcf", () => {}),
+        false,
+        "the parser is installed now, so the retry saves without deferring again",
+      );
+    });
+
+    // `writeDocumentToPath` catches whatever the encode throws and toasts, so a
+    // missing writer looks like a save failure rather than an error. Count the
+    // encode instead: it must not happen at all until the writer is here.
+    it("writeDocumentToPath encodes nothing while the writer is still missing", async () => {
+      const controller = saveController();
+      let encodes = 0;
+      let retries = 0;
+      controller.encodeDocumentBytes = () => { encodes++; return new Uint8Array(0); };
+      const writeDocumentToPath = controller.writeDocumentToPath;
+      // The retry goes through `self.writeDocumentToPath`, so an own property
+      // catches it before it reaches the real write — this has no Tauri host.
+      controller.writeDocumentToPath = () => { retries++; };
+
+      writeDocumentToPath.call(controller, { layers: [] }, "/tmp/out.cdr", "cdr");
+      assert.equal(encodes, 0, "encoded with a writer this session never imported");
+
+      await ensureFormatLoaders("cdr");
+      await Promise.resolve();
+      assert.equal(retries, 1, "the save never resumed once the writer landed");
+    });
   });
 
   // Quitting asks about each document that still holds unsaved work. Declining

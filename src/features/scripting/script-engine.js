@@ -8,6 +8,11 @@
 import { Point } from "../../core/math/point.js";
 import { BlendModes } from "../../document/model/blend-modes.js";
 import { FileFormatRegistry } from "../../document/formats/registry/file-format-registry.js";
+import {
+  ensureFormatLoaders,
+  hasFormatLoaders,
+  lazyFormatIds,
+} from "../../document/formats/registry/format-loader-imports.js";
 import { ToolId, EventChannel } from "../../document/model/tool-base.js";
 import { ActionDescUtil } from "./action-desc.js";
 import { Document } from "../../document/model/document.js";
@@ -92,6 +97,33 @@ function evalProgramOrBlock(astNode, doc, env) {
 }
 
 function ScriptEngine() {}
+
+/**
+ * Deferred writers a script might reach for, by the format ids its source
+ * mentions. `saveAs("out.cdr")` and `{ fileFormatExtension: "cdr" }` both name
+ * the format in the text, so a word-boundary scan finds it without evaluating
+ * anything. It over-approximates on purpose: a stray mention costs one import,
+ * while a miss costs the script a writer that is not there when it writes.
+ */
+function deferredWritersNamedBy(scriptSource) {
+  const lowerSource = scriptSource.toLowerCase();
+  return lazyFormatIds().filter(
+    (formatId) =>
+      !hasFormatLoaders(formatId) && new RegExp("\\b" + formatId + "\\b").test(lowerSource),
+  );
+}
+
+function runParsedScript(astRoot, doc) {
+  reportedUnavailableFunctions.clear();
+  const scriptEnv = createScriptEnvironment();
+  ScriptEngine.eval(astRoot, doc, scriptEnv);
+  const virtualFs = scriptEnv.__fs;
+  if (Object.keys(virtualFs).length != 0) {
+    const zipBytes = globalThis.UZIP.encode(virtualFs);
+    FileLoader.save(zipBytes, "output.zip")
+  }
+}
+
 ScriptEngine.execute = function(scriptSource, doc) {
   const parseStartMs = Date.now();
   let astRoot;
@@ -101,14 +133,19 @@ ScriptEngine.execute = function(scriptSource, doc) {
     console.log(parseError);
     return
   }
-  reportedUnavailableFunctions.clear();
-  const scriptEnv = createScriptEnvironment();
-  ScriptEngine.eval(astRoot, doc, scriptEnv);
-  const virtualFs = scriptEnv.__fs;
-  if (Object.keys(virtualFs).length != 0) {
-    const zipBytes = globalThis.UZIP.encode(virtualFs);
-    FileLoader.save(zipBytes, "output.zip")
+  // `eval` below is synchronous, so there is nowhere inside a script to wait
+  // for a writer that arrives on demand. Fetch them first, then run once.
+  const deferredWriters = deferredWritersNamedBy(scriptSource);
+  if (deferredWriters.length != 0) {
+    Promise.all(deferredWriters.map(ensureFormatLoaders)).then(function() {
+      runParsedScript(astRoot, doc)
+    }, function(err) {
+      console.error("[script] could not load a file writer the script needs:", err);
+      showToast("Could not run this script: a file format it writes failed to load.", 1e4)
+    });
+    return
   }
+  runParsedScript(astRoot, doc)
 };
 ScriptEngine.eval = function(astNode, doc, env) {
   const nodeType = astNode.type;
@@ -1434,4 +1471,4 @@ ScriptEngine.ScriptEval.scriptBuiltinEnums = {
 ScriptEngine.ScriptEval.scriptBuiltinEnums.ColorBlendMode = ScriptEngine.ScriptEval.scriptBuiltinEnums.BlendMode;
 ScriptEngine.ScriptEval.layerFillResourceKeys = "---- SoLd TySh SoCo GdFl PtFl".split(" ");
 
-export { ScriptEngine };
+export { ScriptEngine, deferredWritersNamedBy };

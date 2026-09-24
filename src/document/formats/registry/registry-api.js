@@ -4,7 +4,7 @@
 import { Matrix2D } from "../../../core/math/matrix2d.js";
 import { Rect } from "../../../core/math/rect.js";
 import { stripFileExtension } from "../../../core/file-names.js";
-import { codecLoaders, getFormat, bytesToBase64, detectFormat } from "./registry-helpers.js";
+import { getFormat, bytesToBase64, detectFormat } from "./registry-helpers.js";
 import { Document } from "../../model/document.js";
 import { Layer, LayerSectionType } from "../../model/layer.js";
 import { Mask } from "../../model/layer-masks.js";
@@ -122,7 +122,7 @@ function rasterizeDocumentAtSize(doc, width, height, sourceRect, scaleMatrix, co
     const buffer = doc.getRasterData().buffer;
     return copyBuffer ? buffer.slice(0) : buffer;
   }
-  const scaledRaster = codecLoaders.transformPixels(
+  const scaledRaster = transformPixels(
     [doc.getRasterData(), sourceRect],
     scaleMatrix,
   );

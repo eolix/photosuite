@@ -12,6 +12,19 @@ import { lookupCameraBySize } from "../../../engine/compositing/raw-functions.js
 
 /* global pako, UZIP, BINDB, fetch, btoa */
 
+/**
+ * Formats the detector recognises but nothing decodes. Naming them is the whole
+ * point: without this, `detectFormat` returns an id, no codec claims it, and
+ * the open path calls a recognised file "unknown". The message says what the
+ * file is and that PhotoSuite cannot read it, which is the truth.
+ */
+export const DETECT_ONLY_FORMAT_NAMES = {
+  acv: "Photoshop curves preset (.acv)",
+  ciff: "Canon CIFF raw (.crw)",
+  msh: "Photoshop mesh (.msh)",
+  pvr: "PowerVR texture (.pvr)",
+};
+
 /** @type {Record<string, { encode?, decode?, isLayered? }> | null} */
 let formatCodecMap = null;
 

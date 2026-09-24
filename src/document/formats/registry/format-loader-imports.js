@@ -6,6 +6,11 @@
  * touches PSDs should never pay for the CorelDRAW reader. Each entry names the
  * loaders its module installs and imports it on demand.
  *
+ * PSD is deliberately not among them. It is not only an import format: smart
+ * objects, layer extraction and embedded AI patterns all round-trip through
+ * `PSDParser` from synchronous, format-agnostic code, so `main.js` installs it
+ * up front and `.psd`/`.psb` count as ready from the first frame.
+ *
  * `ensureFormatLoaders` reports whether the parser was already there, so the
  * open path can tell "ready to decode now" from "come back when this lands".
  */
@@ -17,8 +22,6 @@ import { codecLoaders, installCodecLoaders } from "./registry-helpers.js";
  * A format whose parser ships in the initial bundle is absent from this map.
  */
 const LOADER_IMPORTS = {
-  psd: { loaders: ["PSDParser"], load: () => import("../psd/psd-parser.js") },
-  psb: { loaders: ["PSDParser"], load: () => import("../psd/psd-parser.js") },
   sketch: { loaders: ["SketchLoader"], load: () => import("../sketch-format.js") },
   xd: { loaders: ["XDLoader"], load: () => import("../xd-format.js") },
   fig: { loaders: ["FigmaLoader"], load: () => import("../fig-format.js") },
@@ -26,8 +29,8 @@ const LOADER_IMPORTS = {
   fpng: { loaders: ["FpngLoader"], load: () => import("../fpng-format.js") },
   ai: { loaders: ["AiFormatLoader"], load: () => import("../ai-format.js") },
   cdr: { loaders: ["CdrLoader"], load: () => import("../cdr-format.js") },
-  afphoto: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
-  afdesign: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
+  // `.afphoto`, `.afdesign` and `.afpub` all detect as `af` — one entry covers them.
+  af: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
   svg: { loaders: ["SVGLoader"], load: () => import("../svg-format.js") },
 };
 
