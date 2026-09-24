@@ -34,6 +34,7 @@
     "targets": [
       "app"
     ],
+    "category": "Photography",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -79,41 +80,123 @@
         "mimeType": "image/vnd.adobe.photoshop"
       },
       {
-        "ext": [
-          "png",
-          "jpg",
-          "jpeg",
-          "gif",
-          "webp",
-          "avif",
-          "heic",
-          "heif",
-          "bmp",
-          "tif",
-          "tiff",
-          "ico"
-        ],
-        "name": "Image",
+        "ext": ["png"],
+        "name": "PNG Image",
         "description": "Bitmap image",
         "role": "Editor",
-        "mimeType": "image/png,image/jpeg,image/gif,image/webp,image/avif,image/heic,image/heif,image/bmp,image/tiff,image/vnd.microsoft.icon"
+        "mimeType": "image/png"
       },
       {
-        "ext": [
-          "svg",
-          "ai",
-          "eps",
-          "ps",
-          "pdf",
-          "dxf",
-          "emf",
-          "wmf",
-          "cdr"
-        ],
-        "name": "Vector Document",
+        "ext": ["jpg", "jpeg"],
+        "name": "JPEG Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/jpeg"
+      },
+      {
+        "ext": ["gif"],
+        "name": "GIF Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/gif"
+      },
+      {
+        "ext": ["webp"],
+        "name": "WebP Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/webp"
+      },
+      {
+        "ext": ["avif"],
+        "name": "AVIF Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/avif"
+      },
+      {
+        "ext": ["heic"],
+        "name": "HEIC Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/heic"
+      },
+      {
+        "ext": ["heif"],
+        "name": "HEIF Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/heif"
+      },
+      {
+        "ext": ["bmp"],
+        "name": "Bitmap Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/bmp"
+      },
+      {
+        "ext": ["tif", "tiff"],
+        "name": "TIFF Image",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/tiff"
+      },
+      {
+        "ext": ["ico"],
+        "name": "Icon",
+        "description": "Bitmap image",
+        "role": "Editor",
+        "mimeType": "image/vnd.microsoft.icon"
+      },
+      {
+        "ext": ["svg"],
+        "name": "SVG Document",
         "description": "Vector or page document",
         "role": "Editor",
-        "mimeType": "image/svg+xml,application/pdf,application/postscript,image/x-emf,image/wmf"
+        "mimeType": "image/svg+xml"
+      },
+      {
+        "ext": ["ai", "eps", "ps"],
+        "name": "PostScript Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "application/postscript"
+      },
+      {
+        "ext": ["pdf"],
+        "name": "PDF Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "application/pdf"
+      },
+      {
+        "ext": ["dxf"],
+        "name": "DXF Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "image/vnd.dxf"
+      },
+      {
+        "ext": ["emf"],
+        "name": "EMF Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "image/x-emf"
+      },
+      {
+        "ext": ["wmf"],
+        "name": "WMF Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "image/wmf"
+      },
+      {
+        "ext": ["cdr"],
+        "name": "CorelDRAW Document",
+        "description": "Vector or page document",
+        "role": "Editor",
+        "mimeType": "application/octet-stream"
       },
       {
         "ext": [
