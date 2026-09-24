@@ -384,7 +384,7 @@ function normalizeAuxiliaryLayerSizes(layerFrames) {
         scaleY = mainLayerRect.height / layerRect.height,
         scaleMatrix = new Matrix2D;
       scaleMatrix.scale(scaleX, scaleY);
-      var rasterizedLayer = codecLoaders.rasterizeWithMatrix([new Uint8Array(layerFrames[idx].data), layerRect], 1, matrix2DToHomography(scaleMatrix));
+      var rasterizedLayer = rasterizeWithMatrix([new Uint8Array(layerFrames[idx].data), layerRect], 1, matrix2DToHomography(scaleMatrix));
       layerFrames[idx].rect = rasterizedLayer.rect;
       layerFrames[idx].data = rasterizedLayer.buffer;
     }

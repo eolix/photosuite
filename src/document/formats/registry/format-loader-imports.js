@@ -26,9 +26,8 @@ const LOADER_IMPORTS = {
   fpng: { loaders: ["FpngLoader"], load: () => import("../fpng-format.js") },
   ai: { loaders: ["AiFormatLoader"], load: () => import("../ai-format.js") },
   cdr: { loaders: ["CdrLoader"], load: () => import("../cdr-format.js") },
+  // `.afphoto`, `.afdesign` and `.afpub` all detect as `af` — one entry covers them.
   af: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
-  afphoto: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
-  afdesign: { loaders: ["AffinityLoader"], load: () => import("../af-format.js") },
   svg: { loaders: ["SVGLoader"], load: () => import("../svg-format.js") },
 };
 
