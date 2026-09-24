@@ -1,38 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhotoSuite - Open Source PS alternative</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhotoSuite - Open source photo editor with native PSD support</title>
+<meta name="description" content="A desktop image editor that faithfully replicates classic Photoshop, with 1:1 native PSD/PSB compatibility. Free, open source, offline-first. macOS, Windows and Linux.">
+<meta name="theme-color" content="#070b16">
+<link rel="icon" href="images/logo.png" type="image/png">
+<link rel="apple-touch-icon" href="images/logo.png">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="PhotoSuite - Open source photo editor with native PSD support">
+<meta property="og:description" content="Classic Photoshop, faithfully replicated. 1:1 native PSD/PSB round-trip, offline-first, zero telemetry. macOS, Windows and Linux.">
+<meta property="og:image" content="images/logo.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://api.github.com" crossorigin>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <img src="images/logo.png" alt="PhotoSuite logo" width="200" height="200">
+
+<div class="backdrop" aria-hidden="true">
+    <div class="orb orb--blue"></div>
+    <div class="orb orb--pink"></div>
+    <div class="grid"></div>
+</div>
+
+<a class="skip-link" href="#downloads">Skip to downloads</a>
+
+<header class="nav">
+    <div class="nav__inner">
+        <a class="brand" href="#top">
+            <img src="images/logo.png" alt="" width="32" height="32">
+            <span>PhotoSuite</span>
+        </a>
+        <nav class="nav__links" aria-label="Sections">
+            <a href="#downloads">Download</a>
+            <a href="#screenshots">Screenshots</a>
+            <a href="#features">Features</a>
+            <a href="#formats">Formats</a>
+            <a href="https://github.com/eolix/photosuite#documentation" target="_blank" rel="noopener">Docs</a>
+        </nav>
+        <a class="nav__github" href="https://github.com/eolix/photosuite" target="_blank" rel="noopener" aria-label="View PhotoSuite on GitHub">
+            <img src="images/github.png" alt="" width="18" height="18">
+            <span class="nav__version" data-version-badge>GitHub</span>
+        </a>
+    </div>
+</header>
+
+<main id="top">
+
+    <section class="hero">
+        <div class="hero__logo">
+            <img src="images/logo.png" alt="PhotoSuite" width="132" height="132">
+        </div>
+
+        <p class="eyebrow">
+            <span class="dot"></span>
+            Free &amp; open source · No account, no cloud, no telemetry
+        </p>
+
+        <h1>
+            Photoshop muscle memory,<br>
+            <span class="grad">without the subscription.</span>
+        </h1>
+
+        <p class="lede">
+            PhotoSuite is a desktop raster &amp; vector editor that faithfully replicates classic
+            Photoshop: panels where you expect them, shortcuts you already know, and
+            <strong>PSD as the native format</strong>, not a lossy import.
+        </p>
+
+        <div class="hero__cta">
+            <a class="btn btn--primary" href="https://github.com/eolix/photosuite/releases/latest" data-primary-download>
+                <span class="btn__label" data-primary-label>Download PhotoSuite</span>
+                <span class="btn__meta" data-primary-meta>Latest release</span>
+            </a>
+            <a class="btn btn--ghost" href="#downloads">All platforms</a>
+        </div>
+
+        <ul class="hero__stats">
+            <li><strong>PSD / PSB</strong><span>Native round-trip</span></li>
+            <li><strong>30+</strong><span>Formats supported</span></li>
+            <li><strong>100%</strong><span>Offline &amp; local</span></li>
+        </ul>
+    </section>
+
+    <section class="section" id="downloads">
+        <div class="section__head">
+            <h2>Download</h2>
+            <p>Signed builds for every desktop platform, straight from GitHub Releases.</p>
+        </div>
+
+        <div class="cards" data-downloads>
+            <article class="card" data-platform="macos">
+                <img class="card__icon" src="images/macos.png" alt="" width="40" height="40">
+                <h3>macOS</h3>
+                <p class="card__note">Universal · Apple Silicon &amp; Intel</p>
+                <a class="card__btn" href="https://github.com/eolix/photosuite/releases/latest">
+                    Download <span class="card__ext">.dmg</span>
+                </a>
+                <p class="card__meta" data-meta><span class="skeleton"></span></p>
+            </article>
+
+            <article class="card" data-platform="windows">
+                <img class="card__icon" src="images/windows.png" alt="" width="40" height="40">
+                <h3>Windows</h3>
+                <p class="card__note">x64 · NSIS installer</p>
+                <a class="card__btn" href="https://github.com/eolix/photosuite/releases/latest">
+                    Download <span class="card__ext">.exe</span>
+                </a>
+                <p class="card__meta" data-meta><span class="skeleton"></span></p>
+            </article>
+
+            <article class="card" data-platform="debian">
+                <img class="card__icon" src="images/debian.png" alt="" width="40" height="40">
+                <h3>Debian / Ubuntu</h3>
+                <p class="card__note">x86_64 · APT package</p>
+                <a class="card__btn" href="https://github.com/eolix/photosuite/releases/latest">
+                    Download <span class="card__ext">.deb</span>
+                </a>
+                <p class="card__meta" data-meta><span class="skeleton"></span></p>
+            </article>
+
+            <article class="card" data-platform="fedora">
+                <img class="card__icon" src="images/fedora.png" alt="" width="40" height="40">
+                <h3>Fedora / RHEL</h3>
+                <p class="card__note">x86_64 · RPM package</p>
+                <a class="card__btn" href="https://github.com/eolix/photosuite/releases/latest">
+                    Download <span class="card__ext">.rpm</span>
+                </a>
+                <p class="card__meta" data-meta><span class="skeleton"></span></p>
+            </article>
+        </div>
+
+        <p class="downloads__foot" data-release-foot>
+            Fetching the latest release…
+        </p>
+    </section>
+
+
+    <section class="section" id="screenshots">
+        <div class="section__head">
+            <h2>A familiar room</h2>
+            <p>Same panels, same dialogs, same modifier keys. All running natively on your desktop.</p>
+        </div>
+
+        <div class="shots">
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/001.png" data-caption="Start screen &amp; New Project">
+                    <img src="screenshots/thumbs/001.jpg" alt="Start screen &amp; New Project — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>Start screen &amp; New Project</strong>
+                    <span>Recent documents alongside the full preset browser: Photo, Print, Screen, Mobile, Social — with the familiar preset details panel.</span>
+                </figcaption>
+            </figure>
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/002.png" data-caption="Layer Style, effect for effect">
+                    <img src="screenshots/thumbs/002.jpg" alt="Layer Style, effect for effect — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>Layer Style, effect for effect</strong>
+                    <span>Blending Options, Blend If sliders and all ten layer effects, applied non-destructively to a layered PSD.</span>
+                </figcaption>
+            </figure>
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/003.png" data-caption="Camera RAW develop">
+                    <img src="screenshots/thumbs/003.jpg" alt="Camera RAW develop — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>Camera RAW develop</strong>
+                    <span>Open RAW files straight from the camera: live histogram, clarity, dehaze, curves, colour mixer, split toning and optics.</span>
+                </figcaption>
+            </figure>
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/004.png" data-caption="Lens correction, from the database">
+                    <img src="screenshots/thumbs/004.jpg" alt="Lens correction, from the database — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>Lens correction, from the database</strong>
+                    <span>Geometric distortion, chromatic aberration and vignette corrections driven by Lensfun's camera and lens profiles.</span>
+                </figcaption>
+            </figure>
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/005.png" data-caption="The classic Filter Gallery">
+                    <img src="screenshots/thumbs/005.jpg" alt="The classic Filter Gallery — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>The classic Filter Gallery</strong>
+                    <span>Stack Artistic, Brush Stroke and Distort filters with live thumbnails and per-filter parameters.</span>
+                </figcaption>
+            </figure>
+            <figure class="shot">
+                <button class="shot__btn" type="button" data-lightbox="screenshots/006.png" data-caption="Native menus, complete adjustments">
+                    <img src="screenshots/thumbs/006.jpg" alt="Native menus, complete adjustments — PhotoSuite screenshot"
+                         width="1100" height="659" loading="lazy" decoding="async">
+                    <span class="shot__zoom" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M10.5 8v5M8 10.5h5M15.5 15.5 20 20"/></svg>
+                    </span>
+                    <span class="visually-hidden">View full size</span>
+                </button>
+                <figcaption>
+                    <strong>Native menus, complete adjustments</strong>
+                    <span>Real OS menus with the adjustment stack you know: Levels, Curves, Selective Colour, Shadows/Highlights and the rest.</span>
+                </figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section class="section" id="features">
+        <div class="section__head">
+            <h2>Everything you reach for, where you left it</h2>
+            <p>Fidelity over reinterpretation: tools behave like the originals, right down to modifier keys.</p>
+        </div>
+
+        <div class="features">
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="M3 12.5 12 17l9-4.5"/><path d="M3 17 12 21.5 21 17"/></svg>
+                </span>
+                <h3>Layer engine &amp; styles</h3>
+                <p>Raster and vector layers, groups, clipping and layer masks, Smart Objects with non-destructive smart-filter stacks, plus all ten Photoshop layer styles rendered 1:1.</p>
+            </article>
+
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 9.5 9 21H3v-6L14.5 3.5Z"/><path d="m12.5 5.5 6 6"/></svg>
+                </span>
+                <h3>The complete toolset</h3>
+                <p>Marquee, Lasso, Magic Wand, Brush, Clone Stamp, Healing, Gradient, Dodge &amp; Burn, Pen, Type and Shapes: with rulers, guides, pixel grid and a deep History palette with snapshots.</p>
+            </article>
+
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c4.5 5 4.5 12 0 17-4.5-5-4.5-12 0-17Z"/></svg>
+                </span>
+                <h3>Filters, accelerated</h3>
+                <p>The classic Filter Gallery with live thumbnails, Liquify mesh warping and Lensfun-backed lens correction: image processing compiled to WebAssembly and rendered on WebGL.</p>
+            </article>
+
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7V5h14v2"/><path d="M12 5v14"/><path d="M9.5 19h5"/></svg>
+                </span>
+                <h3>Real typography</h3>
+                <p>OpenType ligatures and kerning, HarfBuzz shaping, FriBidi bidirectional layout, type along path and text warp: with full character and paragraph palettes.</p>
+            </article>
+
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-5 4 5 4"/><path d="m15 8 5 4-5 4"/></svg>
+                </span>
+                <h3>Automation &amp; plugins</h3>
+                <p>Play back Photoshop Actions (<code>.atn</code>), script the editor in JavaScript/JSX, and extend it with sandboxed sidebar plugins written in plain HTML, CSS and JS.</p>
+            </article>
+
+            <article class="feature">
+                <span class="feature__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 4.4 3.1 7.8 7.5 9 4.4-1.2 7.5-4.6 7.5-9V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                </span>
+                <h3>Yours, offline</h3>
+                <p>A Tauri v2 desktop app with a Rust host for files, native menus and printing. No account, no cloud, no telemetry: your images never leave your machine.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="section" id="formats">
+        <div class="section__head">
+            <h2>Opens what you already have</h2>
+            <p>PSD is the native format. Everything else is one <kbd>⌘O</kbd> away.</p>
+        </div>
+
+        <div class="formats">
+            <div class="formats__group">
+                <h3>Native &amp; Adobe</h3>
+                <ul><li class="is-key">PSD</li><li class="is-key">PSB</li><li>AI</li><li>XD</li></ul>
             </div>
-            <h1>PhotoSuite</h1>       
-        </header>
-        
-        <main>
-            <p class="description">
-                A powerful, open-source photo editing application with native PSD compatibility and features for photographers and designers with déjà vu.
-            </p>
-            
-            <div class="downloads" id="downloads">
-                <p class="loading">Loading latest version...</p>
+            <div class="formats__group">
+                <h3>Raster</h3>
+                <ul><li>PNG</li><li>APNG</li><li>JPEG</li><li>WebP</li><li>AVIF</li><li>TIFF</li><li>GIF</li><li>BMP</li><li>TGA</li><li>EXR</li></ul>
             </div>
-            
-            <div class="github-link">
-                <a href="https://github.com/eolix/photosuite" target="_blank" rel="noopener noreferrer">
-                    <img src="images/github.png" alt="GitHub">
-                    <span>View on GitHub</span>
+            <div class="formats__group">
+                <h3>Vector &amp; document</h3>
+                <ul><li>SVG</li><li>PDF</li><li>PS</li><li>EPS</li><li>EMF</li><li>WMF</li><li>DXF</li></ul>
+            </div>
+            <div class="formats__group">
+                <h3>Design &amp; RAW</h3>
+                <ul><li>Sketch</li><li>Figma</li><li>XCF</li><li>Affinity</li><li>DNG</li><li>CR2</li><li>NEF</li><li>ARW</li></ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="section cta">
+        <div class="cta__box">
+            <h2>Start where you left off.</h2>
+            <p>Install it, open a PSD, and keep working. Free forever, source on GitHub.</p>
+            <div class="hero__cta">
+                <a class="btn btn--primary" href="https://github.com/eolix/photosuite/releases/latest" data-primary-download>
+                    <span class="btn__label" data-primary-label>Download PhotoSuite</span>
+                    <span class="btn__meta" data-primary-meta>Latest release</span>
+                </a>
+                <a class="btn btn--ghost" href="https://github.com/eolix/photosuite" target="_blank" rel="noopener">
+                    <img src="images/github.png" alt="" width="18" height="18" class="btn__gh">
+                    View source
                 </a>
             </div>
-        </main>
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <div class="footer__inner">
+        <div class="footer__brand">
+            <img src="images/logo.png" alt="" width="28" height="28">
+            <span>PhotoSuite</span>
+        </div>
+        <nav class="footer__links" aria-label="Footer">
+            <a href="https://github.com/eolix/photosuite" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/eolix/photosuite/releases" target="_blank" rel="noopener">Releases</a>
+            <a href="https://github.com/eolix/photosuite/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a>
+            <a href="https://github.com/eolix/photosuite/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener">Plugins</a>
+            <a href="https://github.com/eolix/photosuite/issues" target="_blank" rel="noopener">Issues</a>
+        </nav>
+        <p class="footer__legal">
+            Not affiliated with or endorsed by Adobe. Photoshop is a registered trademark of Adobe Inc.,
+            referenced solely to describe the interface this project replicates.
+        </p>
     </div>
-    
-    <script src="script.js"></script>
+</footer>
+
+<div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox__backdrop" data-lightbox-close></div>
+    <figure class="lightbox__figure" role="dialog" aria-modal="true" aria-label="Screenshot viewer">
+        <img class="lightbox__img" alt="">
+        <figcaption class="lightbox__caption"></figcaption>
+    </figure>
+    <button class="lightbox__nav lightbox__nav--prev" type="button" data-lightbox-prev aria-label="Previous screenshot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+    </button>
+    <button class="lightbox__nav lightbox__nav--next" type="button" data-lightbox-next aria-label="Next screenshot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+    </button>
+    <button class="lightbox__close" type="button" data-lightbox-close aria-label="Close viewer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+</div>
+
+<script src="script.js" defer></script>
 </body>
 </html>
