@@ -18,6 +18,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#downloads">Downloads</a> •
+  <a href="#screenshots">Screenshots</a> •
   <a href="#what-this-is">What This Is</a> •
   <a href="#key-features">Features</a> •
   <a href="#supported-formats">Supported Formats</a> •
@@ -55,6 +56,25 @@ Pre-built binary packages are available on the **[Releases](https://github.com/e
 | **macOS** | Universal `.dmg` | Apple Silicon (arm64) & Intel (x86_64) |
 | **Linux** | `.deb`, `.rpm` | x86_64 |
 | **Windows** | NSIS installer (`.exe`) | x64 |
+
+---
+
+## Screenshots
+
+Click any image for the full-resolution version.
+
+<table>
+  <tr>
+    <td align="center"><a href="website/screenshots/001.png"><img src="website/screenshots/thumbs/001.jpg" alt="Start screen and New Project" width="280"></a><br><sub><b>Start screen & New Project</b></sub></td>
+    <td align="center"><a href="website/screenshots/002.png"><img src="website/screenshots/thumbs/002.jpg" alt="Layer Style" width="280"></a><br><sub><b>Layer Style</b></sub></td>
+    <td align="center"><a href="website/screenshots/003.png"><img src="website/screenshots/thumbs/003.jpg" alt="Camera RAW develop" width="280"></a><br><sub><b>Camera RAW develop</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="website/screenshots/004.png"><img src="website/screenshots/thumbs/004.jpg" alt="Lens Correction" width="280"></a><br><sub><b>Lens Correction</b></sub></td>
+    <td align="center"><a href="website/screenshots/005.png"><img src="website/screenshots/thumbs/005.jpg" alt="Filter Gallery" width="280"></a><br><sub><b>Filter Gallery</b></sub></td>
+    <td align="center"><a href="website/screenshots/006.png"><img src="website/screenshots/thumbs/006.jpg" alt="Adjustments menu" width="280"></a><br><sub><b>Adjustments menu</b></sub></td>
+  </tr>
+</table>
 
 ---
 
