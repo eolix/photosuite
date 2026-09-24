@@ -68,6 +68,10 @@ function buildImportExtensionFilter(presetExtension) {
   return presetExtension == "ICC" ? "icc .cube .look .3dl" : presetExtension;
 }
 
+/**
+ * Count a clicked row as though "Define New" were always the first one, so the
+ * row→action map has a single numbering to work from.
+ */
 function adjustPresetActionIndex(actionIndex, hasDefineNew) {
   if (!hasDefineNew) actionIndex++;
   return actionIndex;
@@ -346,11 +350,15 @@ function buildPresetActionMenuItems(bundledPresetUrls, defineNewKind, presetExte
 const PRESET_ACTION_ROWS_AFTER_DEFINE_NEW = 3;
 
 /**
- * Map a menu row to its action. Pickers that cannot define a preset from the
- * current state — shapes and layer styles — omit the leading "Define New" row, so
- * every later row sits one place earlier for them.
+ * Map a menu row to its action.
+ *
+ * `actionIndex` is always counted as though "Define New" were there: pickers
+ * that cannot define a preset from the current state — shapes and layer styles
+ * — omit that row, and {@link adjustPresetActionIndex} has already added the
+ * one place back. So the fixed rows below sit at 1, 2 and 3 for every picker.
+ *
  * @param {*} popupButton
- * @param {number} actionIndex
+ * @param {number} actionIndex row index, counted with "Define New" at 0
  * @returns {AppEvent|null}
  */
 function buildPresetActionUiDispatch(popupButton, actionIndex) {
@@ -369,7 +377,7 @@ function buildPresetActionUiDispatch(popupButton, actionIndex) {
     };
     return uiEvent;
   }
-  const rowIndex = offersDefineNew ? actionIndex - 1 : actionIndex;
+  const rowIndex = actionIndex - 1;
   if (rowIndex == 0) {
     popupButton.menuList.setViewMode(1 - popupButton.menuList.getViewMode());
     return null;

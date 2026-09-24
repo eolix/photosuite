@@ -669,24 +669,18 @@ function handleExportPopupResourceBundle(controller, data) {
   FileLoader.save(encodedBundle, resource.bundleName + "." + resource.extension);
 }
 
-function handleConfirmPersistResource(controller, data) {
+/**
+ * Keep an imported library for next startup and show it in the Resource Manager.
+ */
+export function handleConfirmPersistResource(controller, data) {
   const startupResourceStore = controller.appData.startupResourceStore;
-  const forceSave = data.forcePersistWithoutPrompt;
-  if (!startupResourceStore.hasPromptedPersist && !forceSave) {
-    startupResourceStore.persistConfirmed = confirmUser(
-      Locale.get("dialogs.resourceManager.keepOnStartup").replace("VAR0", data.storageEntryName)
-    );
-    startupResourceStore.hasPromptedPersist = true;
-  }
-  if (startupResourceStore.persistConfirmed || forceSave) {
-    startupResourceStore.storedFiles[data.storageEntryName] = data.fileByteBuffer;
-    const outboundEvent = new AppEvent(EventType.uiDispatch);
-    outboundEvent.data = {
-      dispatchKind: UiCommand.openResourcePresetPopup,
-      popupType: PopupTypes.STARTUP_RESOURCES
-    };
-    controller.dispatch(outboundEvent);
-  }
+  startupResourceStore.storedFiles[data.storageEntryName] = data.fileByteBuffer;
+  const outboundEvent = new AppEvent(EventType.uiDispatch);
+  outboundEvent.data = {
+    dispatchKind: UiCommand.openResourcePresetPopup,
+    popupType: PopupTypes.STARTUP_RESOURCES
+  };
+  controller.dispatch(outboundEvent);
 }
 
 function handleSaveOrCommit(controller, data) {

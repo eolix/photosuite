@@ -26,6 +26,7 @@ let buildPatternPresetRecord;
 let resolvePlaceIntoActiveDocIndex;
 let lookupDialogScriptMethod;
 let confirmDiscardUnsavedDocuments;
+let handleConfirmPersistResource;
 
 before(async () => {
   ({
@@ -37,7 +38,8 @@ before(async () => {
     buildPatternPresetRecord,
     resolvePlaceIntoActiveDocIndex,
     lookupDialogScriptMethod,
-    confirmDiscardUnsavedDocuments
+    confirmDiscardUnsavedDocuments,
+    handleConfirmPersistResource
   } = await import("../../../src/ui/shell/app-controller-ui-dispatch.js"));
 });
 
@@ -185,6 +187,50 @@ describe("ui/shell/app-controller-ui-dispatch.js", () => {
       await ensureFormatLoaders("cdr");
       await Promise.resolve();
       assert.equal(retries, 1, "the save never resumed once the writer landed");
+    });
+  });
+
+  // The webview answers `confirm()` with a promise, so the synchronous prompt
+  // that used to guard this fell through to "no" every time: nothing was ever
+  // kept and the Resource Manager stayed empty however much the user loaded.
+  describe("handleConfirmPersistResource", () => {
+    function persistController() {
+      const dispatched = [];
+      return {
+        dispatched,
+        appData: { startupResourceStore: { storedFiles: {} } },
+        dispatch(event) { dispatched.push(event); }
+      };
+    }
+
+    it("keeps an imported library and refreshes the Resource Manager", () => {
+      const controller = persistController();
+      const bytes = new ArrayBuffer(4);
+      handleConfirmPersistResource(controller, {
+        storageEntryName: "styles.asl",
+        fileByteBuffer: bytes
+      });
+      assert.equal(controller.appData.startupResourceStore.storedFiles["styles.asl"], bytes);
+      assert.equal(controller.dispatched.length, 1, "the Resource Manager was not refreshed");
+      assert.equal(controller.dispatched[0].data.popupType, "STARTUP_RESOURCES");
+    });
+
+    // A .asl carries patterns and styles, and a multi-file import brings more
+    // still: every one of them is kept, without asking once per file.
+    it("keeps every library of a multi-file import", () => {
+      const controller = persistController();
+      handleConfirmPersistResource(controller, {
+        storageEntryName: "styles.asl",
+        fileByteBuffer: new ArrayBuffer(4)
+      });
+      handleConfirmPersistResource(controller, {
+        storageEntryName: "brushes.abr",
+        fileByteBuffer: new ArrayBuffer(4)
+      });
+      assert.deepEqual(
+        Object.keys(controller.appData.startupResourceStore.storedFiles),
+        ["styles.asl", "brushes.abr"],
+      );
     });
   });
 
