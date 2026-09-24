@@ -100,7 +100,7 @@ function ScriptEngine() {}
 
 /**
  * Deferred writers a script might reach for, by the format ids its source
- * mentions. `saveAs("out.psd")` and `{ fileFormatExtension: "psd" }` both name
+ * mentions. `saveAs("out.cdr")` and `{ fileFormatExtension: "cdr" }` both name
  * the format in the text, so a word-boundary scan finds it without evaluating
  * anything. It over-approximates on purpose: a stray mention costs one import,
  * while a miss costs the script a writer that is not there when it writes.

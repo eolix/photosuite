@@ -122,9 +122,9 @@ describe("ui/shell/app-controller-ui-dispatch.js", () => {
   });
 
   // A writer ships in the same on-demand module as its parser. Export As waits
-  // for that import; Save has to as well, or the first save of a new document —
-  // which defaults to PSD, a format the session has never opened — encodes with
-  // an undefined PSDParser and reports only "could not prepare this document".
+  // for that import; Save has to as well, or a save in a format the session has
+  // never opened encodes with an undefined loader and reports only "could not
+  // prepare this document". PSD is bundled, so it never waits.
   describe("deferSaveUntilFormatLoaders", () => {
     function saveController() {
       function FakeController() {}
@@ -139,17 +139,28 @@ describe("ui/shell/app-controller-ui-dispatch.js", () => {
       assert.equal(retried, 0);
     });
 
-    it("defers a PSD save until the parser lands, then retries it", async () => {
+    // The first save of a new document defaults to PSD, and smart objects
+    // encode through the same writer whatever the document was opened from, so
+    // a PSD save must never be the thing that waits on an import.
+    it("saves straight through for PSD, which ships in the bundle", () => {
+      let retried = 0;
+      const deferred = saveController().deferSaveUntilFormatLoaders("psd", () => { retried++; });
+      assert.equal(deferred, false, "the PSD writer is installed at startup");
+      assert.equal(retried, 0);
+      assert.equal(saveController().deferSaveUntilFormatLoaders("psb", () => {}), false);
+    });
+
+    it("defers a save in an on-demand format until the writer lands, then retries it", async () => {
       const controller = saveController();
       let retried = 0;
-      const deferred = controller.deferSaveUntilFormatLoaders("psd", () => { retried++; });
-      assert.equal(deferred, true, "nothing in this process has imported the PSD parser yet");
+      const deferred = controller.deferSaveUntilFormatLoaders("xcf", () => { retried++; });
+      assert.equal(deferred, true, "nothing in this process has imported the XCF parser yet");
       assert.equal(retried, 0, "the retry must not run before the import resolves");
-      await ensureFormatLoaders("psd");
+      await ensureFormatLoaders("xcf");
       await Promise.resolve();
       assert.equal(retried, 1);
       assert.equal(
-        controller.deferSaveUntilFormatLoaders("psd", () => {}),
+        controller.deferSaveUntilFormatLoaders("xcf", () => {}),
         false,
         "the parser is installed now, so the retry saves without deferring again",
       );

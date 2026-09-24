@@ -16,13 +16,16 @@ const mainJsPath = path.join(repoRoot, "src/main.js");
 /**
  * What the bag holds at boot: the pieces every open needs, whatever the format.
  * A format's own parser is absent — `format-loader-imports.js` fetches it the
- * first time someone opens that kind of file.
+ * first time someone opens that kind of file. PSDParser is the exception: smart
+ * objects and layer extraction encode through it from synchronous code, in
+ * documents that were never opened from a .psd.
  */
 const EXPECTED_LOADER_KEYS = [
   "VectorPageExporter",
   "VectorPageBuilder",
   "PathRecordCodec",
   "ChannelImageCodec",
+  "PSDParser",
 ];
 
 /** Parsers that must NOT be in the startup bundle. */
@@ -36,7 +39,6 @@ const LAZY_PARSER_MODULES = [
   "xd-format.js",
   "svg-format.js",
   "xcf-format.js",
-  "psd-parser.js",
 ];
 
 describe("src/main.js (bootstrap entry)", () => {

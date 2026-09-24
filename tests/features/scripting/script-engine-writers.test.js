@@ -25,11 +25,13 @@ describe("features/scripting/script-engine.js deferred writers", () => {
   it("asks for nothing when the script names no deferred format", () => {
     assert.deepEqual(deferredWritersNamedBy('app.activeDocument.saveAs("out.png")'), []);
     assert.deepEqual(deferredWritersNamedBy(""), []);
+    // PSD ships in the startup bundle, so a script that writes one waits on nothing.
+    assert.deepEqual(deferredWritersNamedBy('doc.saveAs("out.psd")'), []);
   });
 
   it("finds the format a saveAs path names, whatever the case", () => {
-    assert.deepEqual(deferredWritersNamedBy('doc.saveAs("~/Desktop/art.psd")'), ["psd"]);
-    assert.deepEqual(deferredWritersNamedBy('doc.saveAs("~/Desktop/ART.PSD")'), ["psd"]);
+    assert.deepEqual(deferredWritersNamedBy('doc.saveAs("~/Desktop/art.cdr")'), ["cdr"]);
+    assert.deepEqual(deferredWritersNamedBy('doc.saveAs("~/Desktop/ART.CDR")'), ["cdr"]);
   });
 
   it("finds a format named only in the export options", () => {
@@ -38,13 +40,13 @@ describe("features/scripting/script-engine.js deferred writers", () => {
   });
 
   it("collects every deferred format one script mentions", () => {
-    const source = 'doc.saveAs("a.psd"); doc.saveAs("b.svg"); doc.saveAs("c.png");';
-    assert.deepEqual(deferredWritersNamedBy(source).sort(), ["psd", "svg"]);
+    const source = 'doc.saveAs("a.cdr"); doc.saveAs("b.svg"); doc.saveAs("c.png");';
+    assert.deepEqual(deferredWritersNamedBy(source).sort(), ["cdr", "svg"]);
   });
 
   it("matches whole words only, so a longer name is not a false hit", () => {
-    // "psdish" is not the PSD writer, and fetching it would be wasted work.
-    assert.deepEqual(deferredWritersNamedBy('var psdish = 1; doc.saveAs("out.png")'), []);
+    // "cdrish" is not the CorelDRAW writer, and fetching it would be wasted work.
+    assert.deepEqual(deferredWritersNamedBy('var cdrish = 1; doc.saveAs("out.png")'), []);
   });
 
   it("stops asking for a writer that is already installed", async () => {
