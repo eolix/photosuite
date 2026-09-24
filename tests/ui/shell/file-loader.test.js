@@ -16,6 +16,8 @@ let resolveLoadDisplayNames;
 let shouldSkipZipEntry;
 let bindFormatCodecMap;
 let hasFormatLoaders;
+let installToastPainter;
+let DETECT_ONLY_FORMAT_NAMES;
 
 before(async () => {
   ({
@@ -25,9 +27,10 @@ before(async () => {
     resolveLoadDisplayNames,
     shouldSkipZipEntry
   } = await import("../../../src/ui/shell/file-loader.js"));
-  ({ bindFormatCodecMap } = await import(
+  ({ bindFormatCodecMap, DETECT_ONLY_FORMAT_NAMES } = await import(
     "../../../src/document/formats/registry/registry-helpers.js"
   ));
+  ({ installToastPainter } = await import("../../../src/core/user-prompts.js"));
   ({ hasFormatLoaders } = await import(
     "../../../src/document/formats/registry/format-loader-imports.js"
   ));
@@ -142,5 +145,58 @@ describe("ui/shell/file-loader.js deferred parser open", () => {
 
     assert.deepEqual(decoded, ["poster.fig"], "retry should decode the document");
     assert.equal(veilHidden, 1, "veil must come down exactly once, after the retry");
+  });
+
+  // The detector knows more formats than the codecs decode. Calling one of
+  // those "unknown" is wrong twice over: the file was recognised, and the user
+  // is left wondering whether it is corrupt. Name it and say we cannot read it.
+  describe("a format the detector knows but nothing decodes", () => {
+    function openBytesCapturingToast(header) {
+      const toasts = [];
+      installToastPainter((message) => toasts.push(message));
+      bindFormatCodecMap({});
+      const bytes = new Uint8Array(64);
+      bytes.set(header, 0);
+      try {
+        FileProcessor.dispatchOpenBytes(
+          { name: "sample.bin" },
+          bytes.buffer,
+          { hideOpenVeil() {}, dispatch() {} },
+          null,
+        );
+      } finally {
+        installToastPainter(null);
+      }
+      return toasts;
+    }
+
+    it("names the format instead of reporting an unknown file", () => {
+      const toasts = openBytesCapturingToast([80, 86, 82, 3]);
+      assert.equal(toasts.length, 1);
+      assert.match(toasts[0], /PowerVR texture \(\.pvr\)/);
+      assert.doesNotMatch(toasts[0], /Unknown file format/);
+    });
+
+    it("covers every id in the detect-only table", () => {
+      for (const [formatId, header] of [
+        ["acv", [0, 4, 0, 5]],
+        ["ciff", [73, 73, 26, 0]],
+        ["msh", [0, 0, 0, 2, 121, 102, 113, 76]],
+      ]) {
+        const toasts = openBytesCapturingToast(header);
+        assert.equal(toasts.length, 1, formatId);
+        assert.equal(
+          toasts[0],
+          "PhotoSuite cannot open " + DETECT_ONLY_FORMAT_NAMES[formatId] + " files.",
+          formatId,
+        );
+      }
+    });
+
+    it("still reports a genuinely unrecognised file as unknown", () => {
+      const toasts = openBytesCapturingToast([170, 187, 204, 221]);
+      assert.equal(toasts.length, 1);
+      assert.match(toasts[0], /Unknown file format/);
+    });
   });
 });

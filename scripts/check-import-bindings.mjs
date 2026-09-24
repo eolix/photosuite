@@ -31,6 +31,7 @@ const FREE_FUNCTION_MODULES=[
   "document/tools/flood-select.js",
   "document/tools/selection-actions.js",
   "document/tools/shape-actions.js",
+  "engine/compositing/anti-alias.js",
 ];
 function walk(d,o=[]){for(const n of fs.readdirSync(d)){if(["vendor","wasm"].includes(n))continue;const p=path.join(d,n);fs.statSync(p).isDirectory()?walk(p,o):n.endsWith(".js")&&o.push(p);}return o;}
 const files=walk(SRC);
