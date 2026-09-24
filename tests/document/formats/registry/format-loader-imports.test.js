@@ -61,10 +61,14 @@ describe("document/formats/registry/format-loader-imports.js", () => {
     assert.equal(codecLoaders.XCFParser, before, "re-imported an installed parser");
   });
 
-  it("both PSD and PSB resolve to the same parser", async () => {
-    await ensureFormatLoaders("psb");
+  // Smart objects, layer extraction and embedded AI patterns all round-trip
+  // through the PSD writer from synchronous code that cannot await an import,
+  // so PSD is installed at startup rather than on first open of a .psd.
+  it("treats PSD and PSB as ready without fetching anything", async () => {
     assert.equal(hasFormatLoaders("psd"), true);
-    assert.ok(lazyFormatIds().includes("psd"));
-    assert.ok(lazyFormatIds().includes("psb"));
+    assert.equal(hasFormatLoaders("psb"), true);
+    assert.ok(!lazyFormatIds().includes("psd"));
+    assert.ok(!lazyFormatIds().includes("psb"));
+    assert.equal(await ensureFormatLoaders("psd"), undefined);
   });
 });

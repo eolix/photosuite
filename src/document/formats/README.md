@@ -36,6 +36,8 @@ cached frames for a second open of the same bytes.
 
 `main.js` calls `FileFormatRegistry.installLoaders({…})` once at startup so codecs can resolve `PSDParser`, `SVGLoader`, etc. through `codecLoaders` without `file-format-registry.js` importing those loaders (import-cycle break).
 
+Most parsers are not in that startup bag: `registry/format-loader-imports.js` imports a format's module the first time someone opens that kind of file. `PSDParser` is, because PSD is also the internal container — smart objects, `Document.extractLayersAsPSD` and embedded AI patterns encode through it from synchronous code, in documents that were never opened from a `.psd`.
+
 There is no barrel module under `codecs/`; the codec map is bound explicitly in
 `registry/file-format-registry.js`.
 

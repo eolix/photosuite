@@ -12,6 +12,7 @@ import { VectorPageExporter } from "./document/formats/vector-page-exporter.js";
 import { VectorPageBuilder } from "./document/formats/vector-page-builder.js";
 import { PathRecordCodec } from "./document/formats/psd/path-record-codec.js";
 import { ChannelImageCodec } from "./document/formats/psd/channel-image-codec.js";
+import { PSDParser } from "./document/formats/psd/psd-parser.js";
 
 import "./ui/config/popup-type-parsers.js";
 import "./ui/ui.js";
@@ -25,12 +26,17 @@ import { precomputeFilterGalleryThumbnails } from "./ui/filter-panels/filter-gal
 // Only what every open needs. A format's own parser is fetched the first time
 // someone opens that kind of file — see
 // `document/formats/registry/format-loader-imports.js`.
+//
+// PSDParser is the exception: smart objects, layer extraction and embedded AI
+// patterns encode through it from synchronous code that has no chance to await
+// an import, whatever format the open document is, so it ships here.
 function buildFileFormatLoaderBag() {
   return {
     VectorPageExporter,
     VectorPageBuilder,
     PathRecordCodec,
     ChannelImageCodec,
+    PSDParser,
   };
 }
 
