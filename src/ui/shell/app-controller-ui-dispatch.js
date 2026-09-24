@@ -10,6 +10,10 @@ import { basenameFromPath, stripFileExtension } from "../../core/file-names.js";
 
 import { LayerSystem } from "../../engine/layer-system.js";
 import { FileFormatRegistry } from "../../document/formats/registry/file-format-registry.js";
+import {
+  ensureFormatLoaders,
+  hasFormatLoaders,
+} from "../../document/formats/registry/format-loader-imports.js";
 import { EventChannel, ToolId, findToolIdForActionClass } from "../../document/model/tool-base.js";
 import { PathRecordCodec } from "../../document/formats/psd/path-record-codec.js";
 import { LayerEffectDefs } from "../../document/formats/psd/effect-defs.js";
@@ -207,9 +211,26 @@ export function applyUiDispatchHandlers(AppController) {
     this.writeDocumentToPath(doc, doc.nativeFilePath, fmt)
   };
 
+  /**
+   * The writer for a format lives in the same lazily imported module as its
+   * parser, so a session that has never opened that format has nothing to
+   * encode with. Fetch it, then run `retry`. Reports whether it took over.
+   */
+  AppController.prototype.deferSaveUntilFormatLoaders = function(fmt, retry) {
+    if (hasFormatLoaders(fmt)) return false;
+    ensureFormatLoaders(fmt).then(retry, function(err) {
+      console.error("[file-save] could not load the " + fmt + " writer:", err);
+      showToast("Could not save this file: " + String(fmt).toUpperCase() + " support failed to load.");
+    });
+    return true;
+  };
+
   /** Encode and overwrite an existing path without prompting. */
   AppController.prototype.writeDocumentToPath = function(doc, path, fmt) {
     const self = this;
+    if (this.deferSaveUntilFormatLoaders(fmt, function() {
+      self.writeDocumentToPath(doc, path, fmt);
+    })) return;
     let bytes;
     try {
       bytes = this.encodeDocumentBytes(doc, fmt)
@@ -246,6 +267,10 @@ export function applyUiDispatchHandlers(AppController) {
     let fmt = (doc.formatType || "psd").toLowerCase();
     const preservesEverything = fmt == "psd" || fmt == "psb";
     if (!preservesEverything && (doc.layers.length > 1 || !this.documentFormatIsEncodable(fmt))) fmt = "psd";
+    // `fmt` is derived from the document, so the retry lands on the same format.
+    if (this.deferSaveUntilFormatLoaders(fmt, function() {
+      self.saveDocumentToNewFile(doc);
+    })) return;
     const baseName = stripFileExtension(doc.name || "untitled"),
       defaultName = baseName + "." + fmt;
     pickSavePath(defaultName, this.savePathDialogOpts(doc)).then(function(path) {

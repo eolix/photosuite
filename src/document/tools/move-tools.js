@@ -13,6 +13,10 @@ import { Layer } from "../model/layer.js"
 import { Matrix2D } from "../../core/math/matrix2d.js";
 import { AxisDragAnchor } from "../model/axis-drag-anchor.js";
 import { FileFormatRegistry } from "../formats/registry/file-format-registry.js";
+import {
+  ensureFormatLoaders,
+  hasFormatLoaders,
+} from "../formats/registry/format-loader-imports.js";
 import { HistoryEntry } from "../model/document.js";
 import { PopupTypes } from "../../ui/config/popup-types.js";
 import { AdjustmentEngine } from "../../features/adjustments/adjustment-engine.js";
@@ -20,6 +24,7 @@ import { adjustmentKeyOf } from "../formats/psd/adjustment-parsers.js";
 import { ActionDescUtil } from "../../features/scripting/action-desc.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import { getDevicePixelRatio } from "../../core/dom.js";
+import { showToast } from "../../core/user-prompts.js";
 import { AppEvent } from "../../core/event-bus.js";
 import { packDoublesList, unpackDoublesList } from "../formats/psd/descriptor-codec.js";
 import { EventChannel, ToolBase, ToolId } from "../model/tool-base.js";
@@ -174,6 +179,18 @@ MoveTool.exportDocumentLayers = function(doc, formatIds, scale, appData, layerIn
 };
 MoveTool.prototype.exportSelectionAsFormat = function(doc, format, scale, appData, dispatcher) {
   if (doc == null || doc.selectedLayerIndices.length == 0) return;
+  // The SVG writer ships in the same on-demand module as the SVG parser, so a
+  // session that has never opened an SVG has nothing to export with yet.
+  if (!hasFormatLoaders(format)) {
+    var self = this;
+    ensureFormatLoaders(format).then(function() {
+      self.exportSelectionAsFormat(doc, format, scale, appData, dispatcher)
+    }, function(err) {
+      console.error("[export] could not load the " + format + " writer:", err);
+      showToast("Could not export: " + String(format).toUpperCase() + " support failed to load.")
+    });
+    return
+  }
   var encodedBlob = MoveTool.exportDocumentLayers(doc, [format], scale, appData, null)[0],
     downloadEvent = new AppEvent(EventType.uiDispatch, true);
   downloadEvent.data = {
