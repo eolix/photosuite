@@ -16,6 +16,7 @@ export const EDITOR_PERSISTED_PARAM_MAP = Object.freeze({
   pgrid: "showPixelGrid",
   slices: "slices",
   gpu: "gpuAcceleration",
+  zws: "zoomWithScrollWheel",
 });
 
 /**
@@ -37,6 +38,7 @@ export const DEFAULT_EDITOR_PREFS = Object.freeze({
   gridType: 0,
   AppWindow: 0,
   gpuAcceleration: true,
+  zoomWithScrollWheel: false,
 });
 
 /** A writable copy of {@link DEFAULT_EDITOR_PREFS}. */

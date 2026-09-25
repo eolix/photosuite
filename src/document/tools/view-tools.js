@@ -590,7 +590,10 @@ function installHandToolPrototype() {
       doc.dirty = true;
       doc.panelsDirty = true;
     }
-    if (eventKind == "scroll" && !keyboard.isPressed(KeyboardHandler.Alt)) {
+    // Whether a wheel gesture scrolls or zooms is settled by the router in
+    // app-controller before it is dispatched — including the Alt case, which
+    // "Zoom with Scroll Wheel" flips — so a scroll that arrives here pans.
+    if (eventKind == "scroll") {
       if (keyboard.isPressed(KeyboardHandler.Ctrl)) {
         HandTool.setViewScrollOrigin(
           doc,

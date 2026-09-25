@@ -15,6 +15,9 @@ let scaleEdgeAutoPanForFrame;
 let resolveCurrentDocFromOpenList;
 let buildCapFormatBlurbHtml;
 let createFileLoaderProcessRef;
+let resolveScrollGestureToolId;
+let KeyboardHandler;
+let ToolId;
 let CHROME_LAYOUT_NORMAL;
 let CHROME_LAYOUT_MENU_ONLY;
 let CHROME_LAYOUT_FULLSCREEN;
@@ -28,12 +31,15 @@ before(async () => {
     resolveCurrentDocFromOpenList,
     buildCapFormatBlurbHtml,
     createFileLoaderProcessRef,
+    resolveScrollGestureToolId,
     CHROME_LAYOUT_NORMAL,
     CHROME_LAYOUT_MENU_ONLY,
     CHROME_LAYOUT_FULLSCREEN,
     AppController
   } = await import("../../../src/ui/shell/app-controller.js"));
   ({ FileLoader } = await import("../../../src/ui/shell/file-loader.js"));
+  ({ KeyboardHandler } = await import("../../../src/core/keyboard-handler.js"));
+  ({ ToolId } = await import("../../../src/document/model/tool-base.js"));
 });
 
 describe("ui/shell/app-controller.js", () => {
@@ -104,5 +110,47 @@ describe("ui/shell/app-controller.js", () => {
     const ref = createFileLoaderProcessRef();
     assert.equal(ref.processLoadedBytes, FileLoader.processLoadedBytes);
     assert.equal(ref.qb, undefined);
+  });
+
+  // One wheel gesture, two meanings, and a preference that swaps them. The
+  // router is the only place that decides, so this is the whole contract:
+  // whichever tool it names acts on what it is handed.
+  describe("resolveScrollGestureToolId", () => {
+    // Built inside each test: the key constants arrive with the module import.
+    const keyboardWith = (...pressedKeys) => ({
+      isPressed: (key) => pressedKeys.indexOf(key) !== -1,
+    });
+
+    it("scrolls on a bare wheel and zooms on Alt by default", () => {
+      assert.equal(resolveScrollGestureToolId(keyboardWith(), false, false), ToolId.TOOL_HAND);
+      assert.equal(
+        resolveScrollGestureToolId(keyboardWith(KeyboardHandler.Alt), false, false),
+        ToolId.TOOL_ZOOM,
+      );
+      assert.equal(
+        resolveScrollGestureToolId(keyboardWith(KeyboardHandler.Ctrl), false, false),
+        ToolId.TOOL_HAND,
+      );
+    });
+
+    it("swaps the two when Zoom with Scroll Wheel is on", () => {
+      assert.equal(resolveScrollGestureToolId(keyboardWith(), false, true), ToolId.TOOL_ZOOM);
+      assert.equal(
+        resolveScrollGestureToolId(keyboardWith(KeyboardHandler.Alt), false, true),
+        ToolId.TOOL_HAND,
+      );
+    });
+
+    it("leaves Ctrl scrolling sideways under either setting", () => {
+      const ctrl = keyboardWith(KeyboardHandler.Ctrl);
+      assert.equal(resolveScrollGestureToolId(ctrl, false, true), ToolId.TOOL_HAND);
+      assert.equal(resolveScrollGestureToolId(ctrl, true, true), ToolId.TOOL_HAND);
+    });
+
+    // A trackpad pinch reaches the app as a Ctrl-less wheel flagged by the host.
+    it("zooms a reported pinch whatever the preference says", () => {
+      assert.equal(resolveScrollGestureToolId(keyboardWith(), true, false), ToolId.TOOL_ZOOM);
+      assert.equal(resolveScrollGestureToolId(keyboardWith(), true, true), ToolId.TOOL_ZOOM);
+    });
   });
 });
