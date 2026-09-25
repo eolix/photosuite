@@ -28,8 +28,8 @@ function selectMedianRankValue(valueHistogram, coarseHistogram, medianRank) {
 }
 
 
-function beginAsyncWasmLoad(relativeWasmPath, onExportsReady) {
-    fetch(new URL(relativeWasmPath, import.meta.url))
+function beginAsyncWasmLoad(relativeWasmPath, wasmIntegrityHash, onExportsReady) {
+    fetch(new URL(relativeWasmPath, import.meta.url), { integrity: wasmIntegrityHash })
         .then(function (response) { return response.arrayBuffer(); })
         .then(function (wasmBytes) { return WebAssembly.instantiate(wasmBytes); })
         .then(function (wasmModule) { onExportsReady(wasmModule.instance.exports); })
@@ -135,7 +135,7 @@ PixelEngine._medianWasm = null;
 PixelEngine.loadMedianWasm = function () {
     if (PixelEngine._medianWasmLoading || typeof fetch !== "function") return;
     PixelEngine._medianWasmLoading = true;
-    beginAsyncWasmLoad("../wasm/median.wasm", function (exports) {
+    beginAsyncWasmLoad("../wasm/median.wasm", "sha384-Q0TxUMA+LRvCbE2q6WHEGGR/kEVJlhOe5mlmwHpQ29Sx8YWK5rE4AThLDlAxqbLS", function (exports) {
         PixelEngine._medianWasm = exports;
     });
 };
@@ -160,7 +160,7 @@ PixelEngine._blurWasm = null;
 PixelEngine.loadBlurWasm = function () {
     if (PixelEngine._blurWasmLoading || typeof fetch !== "function") return;
     PixelEngine._blurWasmLoading = true;
-    beginAsyncWasmLoad("../wasm/blur.wasm", function (exports) {
+    beginAsyncWasmLoad("../wasm/blur.wasm", "sha384-oZWNUCVPMELLXPIsTcpC+dpiIcfBvRMmWfBP4ZaZbxpvdO1tY063zoNEIBFnHLAO", function (exports) {
         PixelEngine._blurWasm = exports;
     });
 };
