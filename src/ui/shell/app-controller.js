@@ -84,7 +84,7 @@ import {
   recordRecentFile
 } from "../../core/recent-files.js";
 import { createMenuBarData } from "../menu/menu-bar-data.js";
-import { applyEditorParamsToPrefs } from "../../core/editor-persisted-params.js";
+import { applyEditorParamsToPrefs, createDefaultEditorPrefs } from "../../core/editor-persisted-params.js";
 import { BrushPresetUtil } from "../../features/brush/brush-presets.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import { addClass, escapeHtml, isInDOM, makeElement } from "../../core/dom.js";
@@ -731,19 +731,7 @@ function createInitialAppData() {
     bgColor: 16777215,
     rulers: false,
     extras: true,
-    prefs: {
-      guides: true,
-      showGrid: false,
-      showSelectionEdges: true,
-      paths: true,
-      showPixelGrid: true,
-      slices: true,
-      gridSize: 20,
-      gridUnits: 0,
-      gridType: 0,
-      AppWindow: 0,
-      gpuAcceleration: true
-    },
+    prefs: createDefaultEditorPrefs(),
     snapEnabled: true,
     showToggles: [true, true, false, true, true],
     // Right-sidebar layout. The persisted-prefs key is effectRows; each
