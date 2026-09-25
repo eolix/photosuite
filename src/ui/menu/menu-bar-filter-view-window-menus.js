@@ -541,5 +541,15 @@ export function buildMoreMenu() {
         dialogRouteId: "shortcuts"
       }
     });
+    moreMenu.items.push({
+      name: "dialogs.licences"
+    });
+    moreMenu.menuActions.push({
+      appEventType: EventType.uiDispatch,
+      payload: {
+        dispatchKind: UiCommand.dispatchAppDialogRouter,
+        dialogRouteId: "licenses"
+      }
+    });
     return moreMenu
 }
