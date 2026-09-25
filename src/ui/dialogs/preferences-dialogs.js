@@ -37,6 +37,7 @@ const PREF_WIDGET = {
   GRID_UNITS: 4,
   RULER_UNITS: 5,
   GPU_ACCELERATION: 6,
+  ZOOM_WITH_SCROLL_WHEEL: 7,
 };
 
 /**
@@ -61,6 +62,11 @@ const PREFERENCE_SECTIONS = [
     id: "interface",
     labelKey: "dialogs.preferenceSections.interface",
     groups: [{ controls: ["theme", "language"] }],
+  },
+  {
+    id: "tools",
+    labelKey: "dialogs.preferenceSections.tools",
+    groups: [{ controls: [PREF_WIDGET.ZOOM_WITH_SCROLL_WHEEL] }],
   },
   {
     id: "units",
@@ -97,6 +103,7 @@ function applyPrefsToWidgets(preferenceWidgets, prefs) {
   preferenceWidgets[4].setValue(prefs.gridUnits);
   preferenceWidgets[5].setValue(prefs.AppWindow);
   preferenceWidgets[6].setValue(prefs.gpuAcceleration !== false);
+  preferenceWidgets[7].setValue(prefs.zoomWithScrollWheel === true);
 }
 
 function snapshotPrefsFromWidgets(preferenceWidgets, prefs) {
@@ -108,6 +115,7 @@ function snapshotPrefsFromWidgets(preferenceWidgets, prefs) {
   prefsCopy.gridUnits = preferenceWidgets[4].getValue();
   prefsCopy.AppWindow = preferenceWidgets[5].getValue();
   prefsCopy.gpuAcceleration = preferenceWidgets[6].getValue();
+  prefsCopy.zoomWithScrollWheel = preferenceWidgets[7].getValue();
   if (prefsCopy.gridUnits != 4) prefsCopy.gridSize = Math.round(prefsCopy.gridSize);
   return prefsCopy;
 }
@@ -152,7 +160,7 @@ function PreferencesDialog() {
   this.preferenceWidgets = [new Checkbox("view.guides"), new Checkbox("view.grid"), new Dropdown("properties.gridType", [
     "properties.shapeType.square",
     "properties.isometric"
-  ]), new RangeInput("properties.gridGap", 1, 100, null, 2), new Dropdown(null, UNIT_NAMES), new Dropdown("properties.rulerUnits", UNIT_NAMES), new Checkbox("properties.gpuAcceleration")];
+  ]), new RangeInput("properties.gridGap", 1, 100, null, 2), new Dropdown(null, UNIT_NAMES), new Dropdown("properties.rulerUnits", UNIT_NAMES), new Checkbox("properties.gpuAcceleration"), new Checkbox("properties.zoomWithScrollWheel")];
   for (let widgetIdx = 0; widgetIdx < this.preferenceWidgets.length; widgetIdx++) {
     this.preferenceWidgets[widgetIdx].on(EventType.widgetSelect, this.onPreferenceWidgetChange, this);
   }

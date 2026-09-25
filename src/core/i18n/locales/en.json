@@ -318,6 +318,7 @@
     "preferenceSections": {
       "general": "General",
       "interface": "Interface",
+      "tools": "Tools",
       "unitsAndRulers": "Units & Rulers",
       "guidesGridSlices": "Guides, Grid & Slices"
     },
@@ -605,6 +606,7 @@
     "gridGap": "Grid Gap",
     "rulerUnits": "Ruler Units",
     "gpuAcceleration": "GPU acceleration",
+    "zoomWithScrollWheel": "Zoom with Scroll Wheel",
     "collapsePanels": "Collapse",
     "expandPanels": "Expand",
     "panelMenu": "Panel menu",

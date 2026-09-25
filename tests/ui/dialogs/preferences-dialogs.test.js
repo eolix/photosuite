@@ -47,10 +47,11 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
   });
 
   it("snapshotPrefsFromWidgets copies widget values and rounds gridSize", () => {
-    const widgets = [0, 1, 2, 3, 4, 5, 6].map((value) => ({ getValue: () => value }));
+    const widgets = [0, 1, 2, 3, 4, 5, 6, 7].map((value) => ({ getValue: () => value }));
     widgets[3] = { getValue: () => 12.7 };
     widgets[4] = { getValue: () => 1 };
     widgets[6] = { getValue: () => false };
+    widgets[7] = { getValue: () => true };
     const snapped = snapshotPrefsFromWidgets(widgets, { extra: true });
     assert.equal(snapped.guides, 0);
     assert.equal(snapped.showGrid, 1);
@@ -59,6 +60,7 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
     assert.equal(snapped.gridUnits, 1);
     assert.equal(snapped.AppWindow, 5);
     assert.equal(snapped.gpuAcceleration, false);
+    assert.equal(snapped.zoomWithScrollWheel, true);
     assert.equal(snapped.extra, true);
   });
 
@@ -82,7 +84,7 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
 
     it("names each section once, with a label to translate", () => {
       const ids = PREFERENCE_SECTIONS.map((section) => section.id);
-      assert.deepEqual(ids, ["general", "interface", "units", "guides"]);
+      assert.deepEqual(ids, ["general", "interface", "tools", "units", "guides"]);
       assert.equal(new Set(ids).size, ids.length);
       for (const section of PREFERENCE_SECTIONS) {
         assert.match(section.labelKey, /^dialogs\.preferenceSections\./);
@@ -96,6 +98,7 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
       assert.equal(sectionOf(PREF_WIDGET.RULER_UNITS), "units");
       assert.equal(sectionOf(PREF_WIDGET.GUIDES), "guides");
       assert.equal(sectionOf(PREF_WIDGET.GRID_TYPE), "guides");
+      assert.equal(sectionOf(PREF_WIDGET.ZOOM_WITH_SCROLL_WHEEL), "tools");
       // Theme and language are not preferences; they belong to Interface.
       assert.equal(sectionOf("theme"), "interface");
       assert.equal(sectionOf("language"), "interface");

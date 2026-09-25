@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  DEFAULT_EDITOR_PREFS,
   EDITOR_PERSISTED_PARAM_MAP,
   applyEditorParamsToPrefs,
   snapshotEditorParamsFromPrefs,
@@ -20,6 +21,15 @@ describe("core/editor-persisted-params.js", () => {
     // The renderer flag itself is runtime state — an oversized document drops it
     // to CPU for that session. What persists is what the user asked for.
     assert.equal(EDITOR_PERSISTED_PARAM_MAP.gpu, "gpuAcceleration");
-    assert.equal(Object.keys(EDITOR_PERSISTED_PARAM_MAP).length, 11);
+    assert.equal(EDITOR_PERSISTED_PARAM_MAP.zws, "zoomWithScrollWheel");
+    assert.equal(Object.keys(EDITOR_PERSISTED_PARAM_MAP).length, 12);
+  });
+
+  // Every persisted key needs a starting value, or a fresh install writes
+  // `undefined` into the settings file on first save.
+  it("gives every persisted preference a default", () => {
+    for (const prefsKey of Object.values(EDITOR_PERSISTED_PARAM_MAP)) {
+      assert.notEqual(DEFAULT_EDITOR_PREFS[prefsKey], undefined, prefsKey + " has no default");
+    }
   });
 });
