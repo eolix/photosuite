@@ -3,17 +3,13 @@
  */
 
 import { KeyboardHandler } from "../../core/keyboard-handler.js";
-import { Locale } from "../../core/i18n/locale.js";
 import { ToolId, EventChannel } from "../../document/model/tool-base.js";
 import { FilterDefs } from "../../features/filters/filter-apply.js";
 import { PopupTypes } from "../config/popup-types.js";
-import { ThemeConfig } from "../config/theme-config.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import {
   menuWhenDocOpen,
-  menuWhenPanelVisible,
-  menuWhenLocaleSelected,
-  menuWhenThemeSelected
+  menuWhenPanelVisible
 } from "./menu-bar-predicates.js";
 
 function keyboardMods() {
@@ -461,7 +457,13 @@ export function buildWindowMenu(getRightSidebarRows) {
 }
 
 /**
- * Build the More menu (language, theme, shortcuts, WebGL).
+ * Build the More menu: the translation link, then the two reference dialogs.
+ *
+ * Theme and language used to live here as submenus. They are settings, and
+ * settings live in Preferences → Interface — one place to change them, one
+ * place to look. What stays is the invitation to translate the app, which is a
+ * link rather than a setting and has nowhere better to be.
+ *
  * @returns {{ name: string, items: Array, menuActions: Array }}
  */
 export function buildMoreMenu() {
@@ -469,68 +471,18 @@ export function buildMoreMenu() {
         name: "topMenu.more",
         items: [],
         menuActions: []
-      },
-      languageSubmenu = {
-        name: "topMenu.language",
-        sub: []
       };
-    moreMenu.items.push(languageSubmenu);
-    const languageActions = {
-      sub: []
-    };
-    moreMenu.menuActions.push(languageActions);
-    const sortedLanguages = Locale.getSortedLanguages();
-    for (let langIdx = 0; langIdx < sortedLanguages.length; langIdx++) {
-      const langEntry = sortedLanguages[langIdx],
-        langCode = langEntry.code,
-        langTableIndex = Locale.findLanguageIndex(langCode);
-      languageSubmenu.sub.push({
-        name: langEntry.name,
-        shortcut: langCode,
-        resolveRowState: menuWhenLocaleSelected(langCode)
-      });
-      languageActions.sub.push({
-        appEventType: EventType.uiDispatch,
-        payload: {
-          dispatchKind: UiCommand.openResourcePresetPopup,
-          popupType: PopupTypes.CHANGE_LANGUAGE,
-          lang: langTableIndex
-        }
-      })
-    }
-    languageSubmenu.sub.push({
-      name: "topMenu.createTranslation"
+    moreMenu.items.push({
+      name: "topMenu.createTranslation",
+      separatorAfter: true
     });
-    languageActions.sub.push({
+    moreMenu.menuActions.push({
       appEventType: EventType.uiDispatch,
       payload: {
         dispatchKind: UiCommand.openTranslateLink,
         link: "https://github.com/eolix/photosuite"
       }
     });
-    const themeSubmenu = {
-      name: "topMenu.theme",
-      sub: []
-    };
-    moreMenu.items.push(themeSubmenu);
-    const themeActions = {
-      sub: []
-    };
-    moreMenu.menuActions.push(themeActions);
-    for (let themeIdx = 0; themeIdx < ThemeConfig.themes.length; themeIdx++) {
-      themeSubmenu.sub.push({
-        name: ThemeConfig.themes[themeIdx].name,
-        resolveRowState: menuWhenThemeSelected(themeIdx)
-      });
-      themeActions.sub.push({
-        appEventType: EventType.uiDispatch,
-        payload: {
-          dispatchKind: UiCommand.openResourcePresetPopup,
-          popupType: PopupTypes.CHANGE_THEME,
-          theme: themeIdx
-        }
-      })
-    }
     moreMenu.items.push({
       name: "dialogs.keyboardShortcuts"
     });

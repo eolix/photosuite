@@ -3,7 +3,7 @@
  */
 
 import { Locale } from "./i18n/locale.js";
-import { snapshotEditorParamsFromPrefs } from "./editor-persisted-params.js";
+import { snapshotEditorParamsFromPrefs } from "./editor-preferences.js";
 
 /** Persisted under app_data_dir; see tauri-plugin-store. */
 export const APP_SETTINGS_FILE = "settings.json";
