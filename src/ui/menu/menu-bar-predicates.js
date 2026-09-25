@@ -5,7 +5,6 @@
  * Rows without `resolveRowState` are always enabled.
  */
 
-import { Locale } from "../../core/i18n/locale.js";
 import { ToolId } from "../../document/model/tool-base.js";
 import { canWriteClipboard } from "../../core/tauri-host.js";
 
@@ -84,21 +83,6 @@ export function isPanelInEffectRows(panelId, appData) {
 export function menuWhenPanelVisible(panelId) {
   return function(doc, appData) {
     return { checked: isPanelInEffectRows(panelId, appData) };
-  };
-}
-
-/** More → Language: exactly one row checked (radio-style). */
-export function menuWhenLocaleSelected(localeCode) {
-  return function(doc, appData) {
-    return { checked: localeCode === Locale.getCurrentLanguageCode() };
-  };
-}
-
-/** More → Theme: exactly one row checked (radio-style). */
-export function menuWhenThemeSelected(themeIndex) {
-  return function(doc, appData) {
-    const activeIndex = appData == null ? 0 : appData.theme;
-    return { checked: activeIndex === themeIndex };
   };
 }
 
