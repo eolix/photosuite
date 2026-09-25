@@ -81,4 +81,16 @@ describe("ui/menu/menu-bar-filter-view-window-menus.js", () => {
     assert.equal(moreMenu.items[1].name, "topMenu.theme");
     assert.equal(moreMenu.items.length, moreMenu.menuActions.length);
   });
+
+  // The rows and their actions are parallel arrays: a row added to one and not
+  // the other silently fires the neighbouring row's action.
+  it("buildMoreMenu opens the licences dialog from its own row", () => {
+    const moreMenu = buildMoreMenu();
+    const rowIndex = moreMenu.items.findIndex((item) => item.name === "dialogs.licences");
+    assert.notEqual(rowIndex, -1, "the More menu has no licences row");
+    assert.deepEqual(moreMenu.menuActions[rowIndex].payload, {
+      dispatchKind: "dispatchAppDialogRouter",
+      dialogRouteId: "licenses",
+    });
+  });
 });

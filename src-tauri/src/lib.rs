@@ -260,6 +260,33 @@ fn get_app_version(app: tauri::AppHandle) -> String {
     app.package_info().version.to_string()
 }
 
+/// The third-party notices shipped beside the binary, for the Licences dialog.
+///
+/// `tauri.conf.json` copies `THIRD-PARTY-NOTICES.md` into the bundle's resource
+/// directory, which is where a packaged app finds it. `tauri dev` runs the
+/// binary straight out of `target/` with no bundle around it, so the source-tree
+/// copy is the fallback — the path is the one this crate was compiled from.
+#[tauri::command]
+fn read_third_party_notices(app: tauri::AppHandle) -> Result<String, String> {
+    if let Ok(path) = app
+        .path()
+        .resolve("THIRD-PARTY-NOTICES.md", tauri::path::BaseDirectory::Resource)
+    {
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            return Ok(text);
+        }
+    }
+    let source_tree_copy = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(|repo_root| repo_root.join("THIRD-PARTY-NOTICES.md"));
+    if let Some(path) = source_tree_copy {
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            return Ok(text);
+        }
+    }
+    Err("THIRD-PARTY-NOTICES.md is not in the resource directory".to_string())
+}
+
 #[tauri::command]
 fn read_file_raw(path: String) -> Result<tauri::ipc::Response, String> {
     let data = std::fs::read(path).map_err(|e| e.to_string())?;
@@ -505,6 +532,7 @@ pub fn run() {
             open_files,
             read_file_raw,
             get_app_version,
+            read_third_party_notices,
             save_file,
             pick_save_path,
             list_system_fonts,
