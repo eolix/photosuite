@@ -62,6 +62,14 @@ export function nativeWriteFile(path, bytes) {
   });
 }
 /**
+ * The third-party notices packaged with the application, as Markdown text.
+ * Rejects when the file is not where the host expects it.
+ */
+export function readThirdPartyNotices() {
+  return window.__TAURI__.core.invoke("read_third_party_notices");
+}
+
+/**
  * Open an external URL in the OS default browser via the Tauri shell plugin.
  * Fire-and-forget; no-op when the Tauri bridge is unavailable.
  */
