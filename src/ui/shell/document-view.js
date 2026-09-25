@@ -33,6 +33,7 @@ import { NewProjectDialog } from "../dialogs/new-project-dialog.js";
 import { VectorizeBitmapDialog } from "../dialogs/vectorize-bitmap-dialog.js";
 import { CameraRawDialog } from "../dialogs/camera-raw-dialog.js";
 import { KeyboardShortcutsDialog, PreferencesDialog } from "../dialogs/preferences-dialogs.js";
+import { LicensesDialog } from "../dialogs/licenses-dialog.js";
 import { MergeChannelsDialog, NumericInputDialog, OpenURLDialog } from "../dialogs/document-input-dialogs.js";
 import { CreateShapeDialog, MakeSelectionDialog, SelectOptionsDialog, SelectionOptionsDialog } from "../dialogs/selection-shape-dialogs.js";
 import { WebImagesDialog } from "../dialogs/web-images-dialog.js";
@@ -180,6 +181,7 @@ function createCoreDialogCatalog() {
     new CameraDialog(),
     new PreferencesDialog(),
     new KeyboardShortcutsDialog(),
+    new LicensesDialog(),
     new ColorPickerDialog(),
     new GradientEditorDialog(),
     new ContourEditorDialog(),

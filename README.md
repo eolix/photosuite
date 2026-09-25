@@ -5,7 +5,7 @@
 <h1 align="center">PhotoSuite</h1>
 
 <p align="center">
-  <strong>A desktop image editor faithfully replicating classic Adobe Photoshop (~2020) with 1:1 native PSD/PSB compatibility.</strong>
+  <strong>A desktop image editor faithfully replicating classic Adobe Photoshop with 1:1 native PSD/PSB compatibility.</strong>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 
 ---
 
-## Quick Start
+## Quick start
 
 ```sh
 # Clone with submodules included
@@ -78,9 +78,9 @@ Click any image for the full-resolution version.
 
 ---
 
-## What This Is
+## What this is
 
-PhotoSuite is a full-featured desktop raster and vector graphics editor designed with fidelity in mind rather than reinterpretation. Panels sit where you expect them, shortcuts match your muscle memory, dialogs expose identical fields, and tools behave exactly like the originals — right down to modifier keys. If you know Photoshop ~2020, you already know PhotoSuite.
+PhotoSuite is a full-featured desktop raster and vector graphics editor designed with fidelity in mind rather than reinterpretation. Panels sit where you expect them, shortcuts match your muscle memory, dialogs expose identical fields, and tools behave exactly like the originals, right down to modifier keys. If you know Photoshop ~CS6, you already know PhotoSuite.
 
 * **PSD/PSB Native Format**: PSD is the native format, not a lossy import filter. Documents round-trip cleanly through the binary format: layer records, masks, blending modes, channel data, descriptors, layer effects, smart-filter stacks, text engine data, vector paths, slices, and colour profiles. A file saved in PhotoSuite opens in Photoshop with its layer tree intact, and vice versa. PSB is supported for large documents.
 * **Offline-First & Private**: Built as a [Tauri v2](https://v2.tauri.app) application. The editor runs HTML5, WebAssembly, and WebGL inside the system webview, backed by a lightweight Rust host for filesystem access, native menus, dialogs, clipboard, and printing. Everything stays local on your machine with zero telemetry or cloud requirements.
@@ -89,7 +89,13 @@ PhotoSuite is a full-featured desktop raster and vector graphics editor designed
 
 ---
 
-## Key Features
+## What this is not
+
+Gimp. Or Affinity. I'm certain they have great features, but my goal is not to make a mega-app with a billion functions (however, feel free to create any [plugins](docs/PLUGINS.md) you want!) - but to offer graphic designers a legal way to edit PSDs for free.
+
+---
+
+## Key features
 
 * **Layer Engine & Styles**:
   * Raster layers, vector layers, layer groups, clipping masks, and layer masks.
@@ -125,7 +131,7 @@ PhotoSuite is a full-featured desktop raster and vector graphics editor designed
 
 ---
 
-## Supported Formats
+## Supported formats
 
 PhotoSuite opens and exports a comprehensive range of raster, vector, and digital design formats:
 
@@ -152,7 +158,7 @@ Comprehensive architecture guides and development documentation are located in [
 
 ---
 
-## Building & Testing
+## Building & testing
 
 ### Prerequisites
 * **Node.js**: v25 or newer
@@ -173,13 +179,15 @@ Automated cross-platform builds (macOS universal, Linux deb/rpm, Windows x64) ar
 
 ---
 
-## Inspiration and Prior Art
+## Inspiration and prior art
 
 The primary inspiration for this project is **[Photopea](https://www.photopea.com)**, Ivan Kutskir's browser-based editor, which demonstrated that a desktop-class image editor with complete PSD fidelity is achievable in a web runtime. The author has also open-sourced many format libraries utilised by this project. An archive snapshot is available at [ruanjiyang/Photopea-Offline](https://github.com/ruanjiyang/Photopea-Offline).
 
 ---
 
-## Open Source Used Here
+## Open source used here
+
+Attribution and licence notices for everything bundled — vendored libraries, WebAssembly modules, icons, and the Rust crates linked into the binary — are collected in **[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**, which ships with the application alongside its own licence.
 
 All third-party libraries live in [`src/vendor/`](src/vendor/README.md) as pinned git submodules with their respective upstream licenses:
 
