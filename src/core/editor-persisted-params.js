@@ -18,6 +18,32 @@ export const EDITOR_PERSISTED_PARAM_MAP = Object.freeze({
   gpu: "gpuAcceleration",
 });
 
+/**
+ * What every `appData.prefs` key starts as: the state a fresh install has, and
+ * what Preferences → Reset puts back. Kept beside the persistence map so the
+ * two lists cannot drift apart.
+ *
+ * @type {Readonly<Record<string, boolean|number>>}
+ */
+export const DEFAULT_EDITOR_PREFS = Object.freeze({
+  guides: true,
+  showGrid: false,
+  showSelectionEdges: true,
+  paths: true,
+  showPixelGrid: true,
+  slices: true,
+  gridSize: 20,
+  gridUnits: 0,
+  gridType: 0,
+  AppWindow: 0,
+  gpuAcceleration: true,
+});
+
+/** A writable copy of {@link DEFAULT_EDITOR_PREFS}. */
+export function createDefaultEditorPrefs() {
+  return Object.assign({}, DEFAULT_EDITOR_PREFS);
+}
+
 /** @param {Record<string, unknown>} prefs */
 export function snapshotEditorParamsFromPrefs(prefs) {
   const snapshot = {};

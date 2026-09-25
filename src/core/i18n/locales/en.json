@@ -315,6 +315,12 @@
     "revealAll": "Reveal All",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "licences": "Licences",
+    "preferenceSections": {
+      "general": "General",
+      "interface": "Interface",
+      "unitsAndRulers": "Units & Rulers",
+      "guidesGridSlices": "Guides, Grid & Slices"
+    },
     "addGuides": "Add Guides",
     "clearGuides": "Clear Guides",
     "guidesFromLayer": "Guides from Layer",
