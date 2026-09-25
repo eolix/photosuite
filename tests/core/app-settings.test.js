@@ -5,7 +5,7 @@ import {
   EDITOR_PERSISTED_PARAM_MAP,
   applyEditorParamsToPrefs,
   snapshotEditorParamsFromPrefs,
-} from "../../src/core/editor-persisted-params.js";
+} from "../../src/core/editor-preferences.js";
 import {
   installTauriWindowMock,
   makeMinimalAppController,

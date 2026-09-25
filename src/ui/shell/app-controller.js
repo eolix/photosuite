@@ -84,7 +84,7 @@ import {
   recordRecentFile
 } from "../../core/recent-files.js";
 import { createMenuBarData } from "../menu/menu-bar-data.js";
-import { applyEditorParamsToPrefs, createDefaultEditorPrefs } from "../../core/editor-persisted-params.js";
+import { applyEditorParamsToPrefs, createDefaultEditorPrefs } from "../../core/editor-preferences.js";
 import { BrushPresetUtil } from "../../features/brush/brush-presets.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import { addClass, escapeHtml, isInDOM, makeElement } from "../../core/dom.js";

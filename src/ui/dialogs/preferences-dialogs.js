@@ -14,7 +14,11 @@ import { EventType, UiCommand } from "../../core/event-bus.js";
 import { addClass, appendBreak, appendHorizontalRule, escapeHtml, makeElement, removeClass } from "../../core/dom.js";
 import { AppEvent } from "../../core/event-bus.js";
 import { UNIT_NAMES } from "../../engine/compositing/geometry.js";
-import { createDefaultEditorPrefs } from "../../core/editor-persisted-params.js";
+import {
+  createDefaultEditorPrefs,
+  normalizeEditorPrefs,
+  readPrefValue,
+} from "../../core/editor-preferences.js";
 
 const SHORTCUT_COLUMN_OPEN =
   "<div style=\"line-height:1.4em; column-count:3; column-gap:3em; column-rule-width:1px;\" class=\"\">";
@@ -25,28 +29,39 @@ const TOOL_SHORTCUT_KEY_ROWS = [
 ];
 
 /**
- * Positions in `preferenceWidgets`. The array is the order the widgets are
- * created in, not the order they appear on screen — a section can show any of
- * them, and the two functions below are what keep prefs and widgets in step.
+ * Widget factories for the preference rows. Each takes no arguments and returns
+ * a fresh widget; the row it belongs to says which preference it edits.
  */
-const PREF_WIDGET = {
-  GUIDES: 0,
-  SHOW_GRID: 1,
-  GRID_TYPE: 2,
-  GRID_SIZE: 3,
-  GRID_UNITS: 4,
-  RULER_UNITS: 5,
-  GPU_ACCELERATION: 6,
-  ZOOM_WITH_SCROLL_WHEEL: 7,
-};
+function checkbox(labelKey) {
+  return function () {
+    return new Checkbox(labelKey);
+  };
+}
+
+function dropdown(labelKey, itemLabels) {
+  return function () {
+    return new Dropdown(labelKey, itemLabels);
+  };
+}
+
+function slider(labelKey, minValue, maxValue, unitSuffix, decimals) {
+  return function () {
+    return new RangeInput(labelKey, minValue, maxValue, unitSuffix, decimals);
+  };
+}
 
 /**
- * The sections in the left-hand list, in order. Each holds one or more groups,
- * separated by a rule the way the Shadows/Highlights panel separates its tone
- * ranges. A group lists its controls: a {@link PREF_WIDGET} index for a
- * preference, or a name from {@link PreferencesDialog#extraWidgets} for a
- * control that is not one (the theme and language pickers dispatch on their
- * own, and do not live in `appData.prefs`).
+ * What the dialog shows, in the order it shows it: sections down the left, each
+ * holding groups separated by a rule the way the Shadows/Highlights panel
+ * separates its tone ranges.
+ *
+ * A row is either a preference — `pref` names it, exactly as
+ * `core/editor-preferences.js` declares it, and `widget` says what edits it —
+ * or a control the dialog owns by name. Theme and language are the second kind:
+ * they dispatch their own commands and are not stored in `appData.prefs`.
+ *
+ * `trailing` puts a second control on the same row as the first, for a value
+ * and the unit it is counted in.
  *
  * A group can carry a `labelKey`, which heads it the way that panel heads
  * "Shadows" and "Highlights". The groups here need none: the rule is enough to
@@ -56,68 +71,112 @@ const PREFERENCE_SECTIONS = [
   {
     id: "general",
     labelKey: "dialogs.preferenceSections.general",
-    groups: [{ controls: [PREF_WIDGET.GPU_ACCELERATION] }],
+    groups: [
+      { rows: [{ pref: "gpuAcceleration", widget: checkbox("properties.gpuAcceleration") }] },
+    ],
   },
   {
     id: "interface",
     labelKey: "dialogs.preferenceSections.interface",
-    groups: [{ controls: ["theme", "language"] }],
+    groups: [{ rows: [{ control: "theme" }, { control: "language" }] }],
   },
   {
     id: "tools",
     labelKey: "dialogs.preferenceSections.tools",
-    groups: [{ controls: [PREF_WIDGET.ZOOM_WITH_SCROLL_WHEEL] }],
+    groups: [
+      { rows: [{ pref: "zoomWithScrollWheel", widget: checkbox("properties.zoomWithScrollWheel") }] },
+    ],
   },
   {
     id: "units",
     labelKey: "dialogs.preferenceSections.unitsAndRulers",
-    groups: [{ controls: [PREF_WIDGET.RULER_UNITS] }],
+    groups: [
+      { rows: [{ pref: "AppWindow", widget: dropdown("properties.rulerUnits", UNIT_NAMES) }] },
+    ],
   },
   {
     id: "guides",
     labelKey: "dialogs.preferenceSections.guidesGridSlices",
     groups: [
-      { controls: [PREF_WIDGET.GUIDES] },
-      { controls: [PREF_WIDGET.SHOW_GRID, PREF_WIDGET.GRID_TYPE, PREF_WIDGET.GRID_SIZE] },
+      { rows: [{ pref: "guides", widget: checkbox("view.guides") }] },
+      {
+        rows: [
+          { pref: "showGrid", widget: checkbox("view.grid") },
+          {
+            pref: "gridType",
+            widget: dropdown("properties.gridType", [
+              "properties.shapeType.square",
+              "properties.isometric",
+            ]),
+          },
+          {
+            pref: "gridSize",
+            widget: slider("properties.gridGap", 1, 100, null, 2),
+            // The gap and the unit it is counted in are one control, so they
+            // share a row and the units read as belonging to the gap.
+            trailing: { pref: "gridUnits", widget: dropdown(null, UNIT_NAMES) },
+          },
+        ],
+      },
     ],
   },
 ];
 
-/** Every control a section places, flattened; a number is a PREF_WIDGET index. */
-function sectionControlRefs(section) {
-  const refs = [];
+/** Every row a section shows, flattened, `trailing` rows included. */
+function sectionRows(section) {
+  const rows = [];
   for (let groupIdx = 0; groupIdx < section.groups.length; groupIdx++) {
-    const groupControls = section.groups[groupIdx].controls;
-    for (let controlIdx = 0; controlIdx < groupControls.length; controlIdx++) {
-      refs.push(groupControls[controlIdx]);
+    const groupRows = section.groups[groupIdx].rows;
+    for (let rowIdx = 0; rowIdx < groupRows.length; rowIdx++) {
+      rows.push(groupRows[rowIdx]);
+      if (groupRows[rowIdx].trailing) rows.push(groupRows[rowIdx].trailing);
     }
   }
-  return refs;
+  return rows;
 }
 
-function applyPrefsToWidgets(preferenceWidgets, prefs) {
-  preferenceWidgets[0].setValue(prefs.guides);
-  preferenceWidgets[1].setValue(prefs.showGrid);
-  preferenceWidgets[2].setValue(prefs.gridType);
-  preferenceWidgets[3].setValue(prefs.gridSize);
-  preferenceWidgets[4].setValue(prefs.gridUnits);
-  preferenceWidgets[5].setValue(prefs.AppWindow);
-  preferenceWidgets[6].setValue(prefs.gpuAcceleration !== false);
-  preferenceWidgets[7].setValue(prefs.zoomWithScrollWheel === true);
+/** The preference keys the sections place, in the order they appear. */
+function placedPreferenceKeys() {
+  const prefKeys = [];
+  for (let sectionIdx = 0; sectionIdx < PREFERENCE_SECTIONS.length; sectionIdx++) {
+    const rows = sectionRows(PREFERENCE_SECTIONS[sectionIdx]);
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+      if (rows[rowIdx].pref != null) prefKeys.push(rows[rowIdx].pref);
+    }
+  }
+  return prefKeys;
 }
 
-function snapshotPrefsFromWidgets(preferenceWidgets, prefs) {
+/**
+ * Show each preference's stored value in the widget that edits it. A widget
+ * whose preference the stored settings predate shows that preference's default
+ * rather than nothing.
+ *
+ * @param {Record<string, {setValue: Function}>} widgetsByPrefKey
+ * @param {Record<string, unknown>} prefs
+ */
+function applyPrefsToWidgets(widgetsByPrefKey, prefs) {
+  const prefKeys = Object.keys(widgetsByPrefKey);
+  for (let keyIdx = 0; keyIdx < prefKeys.length; keyIdx++) {
+    widgetsByPrefKey[prefKeys[keyIdx]].setValue(readPrefValue(prefs, prefKeys[keyIdx]));
+  }
+}
+
+/**
+ * `prefs` with every edited value taken from its widget. The result is
+ * normalised, so a rule about what a value may be holds here as it does on the
+ * way in from disk.
+ *
+ * @param {Record<string, {getValue: Function}>} widgetsByPrefKey
+ * @param {Record<string, unknown>} prefs
+ */
+function snapshotPrefsFromWidgets(widgetsByPrefKey, prefs) {
   const prefsCopy = JSON.parse(JSON.stringify(prefs));
-  prefsCopy.guides = preferenceWidgets[0].getValue();
-  prefsCopy.showGrid = preferenceWidgets[1].getValue();
-  prefsCopy.gridType = preferenceWidgets[2].getValue();
-  prefsCopy.gridSize = preferenceWidgets[3].getValue();
-  prefsCopy.gridUnits = preferenceWidgets[4].getValue();
-  prefsCopy.AppWindow = preferenceWidgets[5].getValue();
-  prefsCopy.gpuAcceleration = preferenceWidgets[6].getValue();
-  prefsCopy.zoomWithScrollWheel = preferenceWidgets[7].getValue();
-  if (prefsCopy.gridUnits != 4) prefsCopy.gridSize = Math.round(prefsCopy.gridSize);
-  return prefsCopy;
+  const prefKeys = Object.keys(widgetsByPrefKey);
+  for (let keyIdx = 0; keyIdx < prefKeys.length; keyIdx++) {
+    prefsCopy[prefKeys[keyIdx]] = widgetsByPrefKey[prefKeys[keyIdx]].getValue();
+  }
+  return normalizeEditorPrefs(prefsCopy);
 }
 
 /** Theme names for the Interface picker, in `ThemeConfig.themes` order. */
@@ -157,13 +216,13 @@ function PreferencesDialog() {
   BaseDialog.call(this, "properties.preferences", "preferences");
   this.doc = null;
   this.activeSectionId = PREFERENCE_SECTIONS[0].id;
-  this.preferenceWidgets = [new Checkbox("view.guides"), new Checkbox("view.grid"), new Dropdown("properties.gridType", [
-    "properties.shapeType.square",
-    "properties.isometric"
-  ]), new RangeInput("properties.gridGap", 1, 100, null, 2), new Dropdown(null, UNIT_NAMES), new Dropdown("properties.rulerUnits", UNIT_NAMES), new Checkbox("properties.gpuAcceleration"), new Checkbox("properties.zoomWithScrollWheel")];
-  for (let widgetIdx = 0; widgetIdx < this.preferenceWidgets.length; widgetIdx++) {
-    this.preferenceWidgets[widgetIdx].on(EventType.widgetSelect, this.onPreferenceWidgetChange, this);
-  }
+  /**
+   * The widget editing each preference, keyed by the preference's name. Built
+   * from the section table as the panes are laid out, so a row that is added
+   * there is edited, read and saved without touching anything else.
+   * @type {Record<string, object>}
+   */
+  this.widgetsByPrefKey = {};
 
   this.themeDropdown = new Dropdown("topMenu.theme", themePickerLabels());
   this.themeDropdown.on(EventType.widgetSelect, this.onThemePicked, this);
@@ -171,8 +230,8 @@ function PreferencesDialog() {
   this.languageTableIndices = [];
   this.languageDropdown = new Dropdown("topMenu.language", this.buildLanguagePickerLabels());
   this.languageDropdown.on(EventType.widgetSelect, this.onLanguagePicked, this);
-  /** Controls a section can place by name, for what is not a preference. */
-  this.extraWidgets = { theme: this.themeDropdown, language: this.languageDropdown };
+  /** Controls a row can place by name, for what is not a preference. */
+  this.dialogOwnedWidgets = { theme: this.themeDropdown, language: this.languageDropdown };
 
   addClass(this.body, "flexrow");
   const layoutEl = this.layoutEl = makeElement("div", "prefs-layout");
@@ -228,15 +287,21 @@ PreferencesDialog.prototype.buildLanguagePickerLabels = function() {
   return labels;
 };
 
-/** The widget a section's control reference names. */
-PreferencesDialog.prototype.widgetForControlRef = function(controlRef) {
-  if (typeof controlRef === "string") return this.extraWidgets[controlRef];
-  return this.preferenceWidgets[controlRef];
+/**
+ * Build the widget a row calls for and remember which preference it edits.
+ * A row naming a control the dialog owns hands back that control instead.
+ */
+PreferencesDialog.prototype.buildRowWidget = function(row) {
+  if (row.control != null) return this.dialogOwnedWidgets[row.control];
+  const widget = row.widget();
+  widget.on(EventType.widgetSelect, this.onPreferenceWidgetChange, this);
+  this.widgetsByPrefKey[row.pref] = widget;
+  return widget;
 };
 
 /**
  * Lay a section out: its groups in order, separated by a rule. A group heads
- * itself with a label when it has one, and its controls follow one per row.
+ * itself with a label when it has one, and its rows follow one per line.
  */
 PreferencesDialog.prototype.fillSectionPane = function(paneEl, section) {
   for (let groupIdx = 0; groupIdx < section.groups.length; groupIdx++) {
@@ -248,17 +313,16 @@ PreferencesDialog.prototype.fillSectionPane = function(paneEl, section) {
       paneEl.appendChild(groupLabel.el);
       appendBreak(paneEl);
     }
-    for (let controlIdx = 0; controlIdx < group.controls.length; controlIdx++) {
-      const controlRef = group.controls[controlIdx];
-      if (controlRef === PREF_WIDGET.GRID_SIZE) {
-        // The gap field and the unit dropdown after it are one control: they
-        // share a row so the units read as belonging to the gap.
-        const gridGapRowEl = makeElement("span", "fieldrow");
-        gridGapRowEl.appendChild(this.preferenceWidgets[PREF_WIDGET.GRID_SIZE].el);
-        gridGapRowEl.appendChild(this.preferenceWidgets[PREF_WIDGET.GRID_UNITS].el);
-        paneEl.appendChild(gridGapRowEl);
+    for (let rowIdx = 0; rowIdx < group.rows.length; rowIdx++) {
+      const row = group.rows[rowIdx];
+      const rowWidget = this.buildRowWidget(row);
+      if (row.trailing == null) {
+        paneEl.appendChild(rowWidget.el);
       } else {
-        paneEl.appendChild(this.widgetForControlRef(controlRef).el);
+        const pairedRowEl = makeElement("span", "fieldrow");
+        pairedRowEl.appendChild(rowWidget.el);
+        pairedRowEl.appendChild(this.buildRowWidget(row.trailing).el);
+        paneEl.appendChild(pairedRowEl);
       }
       appendBreak(paneEl);
     }
@@ -281,8 +345,9 @@ PreferencesDialog.prototype.setActiveSection = function(sectionId) {
 PreferencesDialog.prototype.buildUI = function() {
   BaseDialog.prototype.buildUI.call(this);
   if (this.sectionButtons == null) return;
-  for (let widgetIdx = 0; widgetIdx < this.preferenceWidgets.length; widgetIdx++) {
-    this.preferenceWidgets[widgetIdx].buildUI();
+  const prefKeys = Object.keys(this.widgetsByPrefKey);
+  for (let keyIdx = 0; keyIdx < prefKeys.length; keyIdx++) {
+    this.widgetsByPrefKey[prefKeys[keyIdx]].buildUI();
   }
   this.themeDropdown.buildUI();
   this.languageDropdown.buildUI();
@@ -322,13 +387,13 @@ PreferencesDialog.prototype.resize = function(contentWidth, contentHeight) {
 PreferencesDialog.prototype.open = function(currentDoc, dialogPayload, openDocs) {};
 PreferencesDialog.prototype.onUpdate = function(appData, popupType) {
   this.doc = appData;
-  applyPrefsToWidgets(this.preferenceWidgets, appData.prefs);
+  applyPrefsToWidgets(this.widgetsByPrefKey, appData.prefs);
   this.themeDropdown.setValue(appData.theme == null ? 0 : appData.theme);
   const activeLanguageRow = this.languageTableIndices.indexOf(Locale.activeTableIndex);
   if (activeLanguageRow !== -1) this.languageDropdown.setValue(activeLanguageRow);
 };
 PreferencesDialog.prototype.onPreferenceWidgetChange = function(widgetEvent) {
-  const prefsCopy = snapshotPrefsFromWidgets(this.preferenceWidgets, this.doc.prefs);
+  const prefsCopy = snapshotPrefsFromWidgets(this.widgetsByPrefKey, this.doc.prefs);
   const dispatchEvent = new AppEvent(EventType.uiDispatch, true);
   dispatchEvent.data = {
     dispatchKind: UiCommand.openResourcePresetPopup,
@@ -508,8 +573,9 @@ export {
   PreferencesDialog,
   KeyboardShortcutsDialog,
   PREFERENCE_SECTIONS,
-  PREF_WIDGET,
   TOOL_SHORTCUT_KEY_ROWS,
   flattenToolShortcutKeyRows,
+  placedPreferenceKeys,
+  sectionRows,
   snapshotPrefsFromWidgets,
 };
