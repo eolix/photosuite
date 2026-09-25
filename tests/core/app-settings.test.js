@@ -5,7 +5,7 @@ import {
   EDITOR_PERSISTED_PARAM_MAP,
   applyEditorParamsToPrefs,
   snapshotEditorParamsFromPrefs,
-} from "../../src/core/editor-persisted-params.js";
+} from "../../src/core/editor-preferences.js";
 import {
   installTauriWindowMock,
   makeMinimalAppController,
@@ -44,6 +44,7 @@ describe("contract: app-settings ↔ editor prefs", () => {
       showPixelGrid: false,
       slices: true,
       gpuAcceleration: true,
+      zoomWithScrollWheel: true,
     };
 
     assert.deepEqual(snapshotEditorParamsFromPrefs(prefs), {
@@ -58,6 +59,7 @@ describe("contract: app-settings ↔ editor prefs", () => {
       pgrid: false,
       slices: true,
       gpu: true,
+      zws: true,
     });
   });
 

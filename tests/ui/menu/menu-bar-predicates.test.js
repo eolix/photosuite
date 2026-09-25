@@ -19,7 +19,6 @@ let findPanelInEffectRowsIndex;
 let removePanelFromEffectRows;
 let isPanelInEffectRows;
 let menuWhenPanelVisible;
-let menuWhenThemeSelected;
 
 before(async () => {
   ({
@@ -34,7 +33,6 @@ before(async () => {
     removePanelFromEffectRows,
     isPanelInEffectRows,
     menuWhenPanelVisible,
-    menuWhenThemeSelected,
   } = await import("../../../src/ui/menu/menu-bar-predicates.js"));
 });
 
@@ -113,9 +111,8 @@ describe("ui/menu/menu-bar-predicates.js", () => {
     assert.deepEqual(appData.effectRows, [0, "101"]);
   });
 
-  it("menuWhenPanelVisible and menuWhenThemeSelected", () => {
+  it("menuWhenPanelVisible checks the row for a panel that is open", () => {
     assert.deepEqual(menuWhenPanelVisible("2")(null, { effectRows: [2] }), { checked: true });
-    assert.deepEqual(menuWhenThemeSelected(1)(null, { theme: 1 }), { checked: true });
-    assert.deepEqual(menuWhenThemeSelected(1)(null, { theme: 0 }), { checked: false });
+    assert.deepEqual(menuWhenPanelVisible("3")(null, { effectRows: [2] }), { checked: false });
   });
 });

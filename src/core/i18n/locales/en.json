@@ -315,6 +315,13 @@
     "revealAll": "Reveal All",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "licences": "Licences",
+    "preferenceSections": {
+      "general": "General",
+      "interface": "Interface",
+      "tools": "Tools",
+      "unitsAndRulers": "Units & Rulers",
+      "guidesGridSlices": "Guides, Grid & Slices"
+    },
     "addGuides": "Add Guides",
     "clearGuides": "Clear Guides",
     "guidesFromLayer": "Guides from Layer",
@@ -599,6 +606,7 @@
     "gridGap": "Grid Gap",
     "rulerUnits": "Ruler Units",
     "gpuAcceleration": "GPU acceleration",
+    "zoomWithScrollWheel": "Zoom with Scroll Wheel",
     "collapsePanels": "Collapse",
     "expandPanels": "Expand",
     "panelMenu": "Panel menu",

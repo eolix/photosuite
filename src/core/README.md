@@ -17,7 +17,7 @@ joined, so that no other module has to reach upward.
 | `i18n/` | locale lookup + translation tables |
 | events | `event-bus.js`, `event-emitter.js` |
 | input | `keyboard-handler.js` |
-| host/runtime | `startup-wiring.js` (layer wiring and script-host bindings), `app-settings.js`, `system-clipboard.js`, `render-buffer.js`, `editor-persisted-params.js` |
+| host/runtime | `startup-wiring.js` (layer wiring and script-host bindings), `app-settings.js`, `system-clipboard.js`, `render-buffer.js`, `editor-preferences.js` |
 
 **Rule:** if a module needs to know about layers, documents, file formats, or
 the UI, it does not belong in `core/`.

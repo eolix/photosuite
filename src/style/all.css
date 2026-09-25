@@ -754,6 +754,90 @@ body.photosuite-hide-html-menu .topbar {
 	font-variant-numeric: tabular-nums;
 }
 
+/* Preferences: sections down the left, the chosen section's pane on the right,
+   the confirm column last. The dialog takes a share of the window rather than
+   shrink-wrapping, so the columns stretch to its height and the pane scrolls
+   rather than the whole body. */
+.window.preferences .body.flexrow {
+	align-items: stretch;
+	gap: 1.35em;
+}
+
+.window.preferences .prefs-layout {
+	flex: 1 1 auto;
+	display: flex;
+	align-items: stretch;
+	gap: var(--space-4);
+	min-width: 0;
+	min-height: 0;
+}
+
+.window.preferences .prefs-nav {
+	flex: 0 0 11.5em;
+	display: flex;
+	flex-direction: column;
+	padding: var(--space-2) 0;
+	background-color: var(--surface-subtle);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-md);
+	line-height: normal;
+}
+
+.window.preferences .prefs-nav-item {
+	appearance: none;
+	margin: 0;
+	padding: var(--space-2) var(--space-4);
+	border: 0;
+	border-left: 2px solid transparent;
+	background: transparent;
+	color: var(--text-muted);
+	font: inherit;
+	text-align: left;
+	line-height: 1.9;
+	cursor: pointer;
+}
+
+.window.preferences .prefs-nav-item:hover {
+	background-color: var(--surface-hover);
+}
+
+.window.preferences .prefs-nav-item.selected {
+	background-color: var(--accent-subtle);
+	border-left-color: var(--accent);
+	color: var(--text-color);
+}
+
+.window.preferences .prefs-panes {
+	flex: 1 1 auto;
+	min-width: 18em;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding-right: var(--space-2);
+}
+
+/* Rows at reading rhythm rather than the form default's 2.3em, as the filter
+   modals set for the same reason: a short list of controls reads as one block,
+   and the rules between groups do the separating. */
+.window.preferences .prefs-pane {
+	line-height: 1.45;
+}
+
+.window.preferences .prefs-pane[hidden] {
+	display: none;
+}
+
+.window.preferences .prefs-pane > .labelitem {
+	margin-left: 0;
+	color: var(--text-muted);
+}
+
+/* The confirm column stays at the top, whatever the pane's height. */
+.window.preferences .body.flexrow > .dialog-actions {
+	align-self: flex-start;
+	margin-left: 0;
+}
+
 /* Layer Style dialog: the effect list, the selected effect's editor and the
    action column each take the dialog's full height, and the two content
    columns scroll rather than pushing the dialog taller. */

@@ -84,7 +84,7 @@ import {
   recordRecentFile
 } from "../../core/recent-files.js";
 import { createMenuBarData } from "../menu/menu-bar-data.js";
-import { applyEditorParamsToPrefs } from "../../core/editor-persisted-params.js";
+import { applyEditorParamsToPrefs, createDefaultEditorPrefs } from "../../core/editor-preferences.js";
 import { BrushPresetUtil } from "../../features/brush/brush-presets.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import { addClass, escapeHtml, isInDOM, makeElement } from "../../core/dom.js";
@@ -628,7 +628,8 @@ export {
   resolveCurrentDocFromOpenList,
   buildCapFormatBlurbHtml,
   createFileLoaderProcessRef,
-  createInitialAppData
+  createInitialAppData,
+  resolveScrollGestureToolId
 };
 
 // ---------------------------------------------------------------------------
@@ -731,19 +732,7 @@ function createInitialAppData() {
     bgColor: 16777215,
     rulers: false,
     extras: true,
-    prefs: {
-      guides: true,
-      showGrid: false,
-      showSelectionEdges: true,
-      paths: true,
-      showPixelGrid: true,
-      slices: true,
-      gridSize: 20,
-      gridUnits: 0,
-      gridType: 0,
-      AppWindow: 0,
-      gpuAcceleration: true
-    },
+    prefs: createDefaultEditorPrefs(),
     snapEnabled: true,
     showToggles: [true, true, false, true, true],
     // Right-sidebar layout. The persisted-prefs key is effectRows; each
@@ -1247,18 +1236,43 @@ function dispatchPointerToRightSidebar(
   }
 }
 
+/**
+ * Which tool a wheel gesture belongs to — the one place that decides, so the
+ * tools themselves act on what they are handed.
+ *
+ * By default the wheel scrolls the canvas and Alt zooms. With Preferences →
+ * Tools → "Zoom with Scroll Wheel" the two swap: the bare wheel zooms and Alt
+ * scrolls, so both gestures stay reachable either way. A trackpad pinch the
+ * host reports as a Ctrl-less wheel zooms whatever the preference says, and
+ * Ctrl keeps its "scroll sideways" meaning.
+ *
+ * @param {*} keyboard
+ * @param {boolean} wheelActsAsPinch
+ * @param {boolean} wheelZoomsWithoutModifier
+ * @returns {number} ToolId the scroll event routes to
+ */
+function resolveScrollGestureToolId(keyboard, wheelActsAsPinch, wheelZoomsWithoutModifier) {
+  const altPressed = keyboard.isPressed(KeyboardHandler.Alt);
+  const ctrlPressed = keyboard.isPressed(KeyboardHandler.Ctrl);
+  if (!wheelZoomsWithoutModifier) {
+    return altPressed || (!ctrlPressed && wheelActsAsPinch) ? ToolId.TOOL_ZOOM : ToolId.TOOL_HAND;
+  }
+  if (ctrlPressed) return ToolId.TOOL_HAND;
+  return altPressed ? ToolId.TOOL_HAND : ToolId.TOOL_ZOOM;
+}
+
 function dispatchScrollDocumentAction(controller, pointerEvent, keyboard, pointerState) {
-  const preferPinchZoom = !keyboard.isPressed(KeyboardHandler.Ctrl)
-    && pointerEvent.wheelActsAsPinch;
   const scrollEvent = new AppEvent(EventType.documentAction, true);
     scrollEvent.data = {
     actionKind: "scroll",
     scrollDelta: pointerEvent.scrollDelta.clone(),
       pointerState: pointerState
     };
-  scrollEvent.routingChannel = keyboard.isPressed(KeyboardHandler.Alt) || preferPinchZoom
-    ? ToolId.TOOL_ZOOM
-    : ToolId.TOOL_HAND;
+  scrollEvent.routingChannel = resolveScrollGestureToolId(
+    keyboard,
+    pointerEvent.wheelActsAsPinch === true,
+    controller.appData.prefs.zoomWithScrollWheel === true,
+  );
   controller.dispatch(scrollEvent);
 }
 
