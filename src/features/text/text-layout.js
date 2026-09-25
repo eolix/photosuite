@@ -712,11 +712,16 @@ TextLayout.ensureWasm = function() {
   if (TextLayout.wasmState == 1) return false;
   TextLayout.wasmState = 1;
 
+  const fribidiWasmSha384 = "vWJ/UI3tLknAmUHAkx14LJI+Ldh15Dnc6+3aIS+cC38hzwMwJrkplbgQPQtg1ZAu";
   function loadFribidiWasm() {
     fetch("vendor/wasm/fribidi/fribidi.wasm").then(function(wasmResponse) {
       return wasmResponse.arrayBuffer()
     }).then(function(wasmBytes) {
-      return WebAssembly.instantiate(wasmBytes)
+      return crypto.subtle.digest("SHA-384", wasmBytes).then(function(wasmDigest) {
+        const digestBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(wasmDigest)));
+        if (digestBase64 !== fribidiWasmSha384) throw new Error("fribidi.wasm failed integrity verification");
+        return WebAssembly.instantiate(wasmBytes)
+      })
     }).then(function(wasmModule) {
       const wasmExports = wasmModule.instance.exports;
       const wasmMemory = wasmExports.memory;
