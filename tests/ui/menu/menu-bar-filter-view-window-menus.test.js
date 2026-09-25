@@ -74,12 +74,18 @@ describe("ui/menu/menu-bar-filter-view-window-menus.js", () => {
     assert.equal(windowMenu.items[1].name, "panels.layers");
   });
 
-  it("buildMoreMenu includes language and theme submenus", () => {
+  // Theme and language moved to Preferences → Interface: one place to change a
+  // setting, one place to look for it. What is left here is not a setting.
+  it("buildMoreMenu offers the translation link and the reference dialogs", () => {
     const moreMenu = buildMoreMenu();
     assert.equal(moreMenu.name, "topMenu.more");
-    assert.equal(moreMenu.items[0].name, "topMenu.language");
-    assert.equal(moreMenu.items[1].name, "topMenu.theme");
+    assert.deepEqual(moreMenu.items.map((item) => item.name), [
+      "topMenu.createTranslation",
+      "dialogs.keyboardShortcuts",
+      "dialogs.licences",
+    ]);
     assert.equal(moreMenu.items.length, moreMenu.menuActions.length);
+    for (const item of moreMenu.items) assert.equal(item.sub, undefined, item.name + " is a submenu");
   });
 
   // The rows and their actions are parallel arrays: a row added to one and not

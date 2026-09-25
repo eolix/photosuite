@@ -207,10 +207,10 @@ function flattenToolShortcutKeyRows(toolShortcutKeyRows) {
  * {@link PREFERENCE_SECTIONS} and adding to that list is all a new section
  * needs.
  *
- * Interface holds the theme and language pickers, which the More menu also
- * offers. Neither place owns the setting: both dispatch the same
- * CHANGE_THEME / CHANGE_LANGUAGE command, and both read their state back from
- * `appData` and `Locale`, so changing one shows up in the other.
+ * Interface holds the theme and language pickers. They are not preferences —
+ * they dispatch CHANGE_THEME / CHANGE_LANGUAGE and read their state back from
+ * `appData.theme` and `Locale` — so they are placed by name rather than by
+ * preference key, and this dialog is the only place that offers them.
  */
 function PreferencesDialog() {
   BaseDialog.call(this, "properties.preferences", "preferences");
