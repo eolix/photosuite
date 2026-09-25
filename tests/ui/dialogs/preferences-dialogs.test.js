@@ -9,19 +9,23 @@ import { installBrowserGlobals } from "../../helpers/stub-browser-globals.js";
 installBrowserGlobals();
 
 let PREFERENCE_SECTIONS;
-let PREF_WIDGET;
 let TOOL_SHORTCUT_KEY_ROWS;
 let flattenToolShortcutKeyRows;
+let placedPreferenceKeys;
+let sectionRows;
 let snapshotPrefsFromWidgets;
+let DEFAULT_EDITOR_PREFS;
 
 before(async () => {
   ({
     PREFERENCE_SECTIONS,
-    PREF_WIDGET,
     TOOL_SHORTCUT_KEY_ROWS,
     flattenToolShortcutKeyRows,
+    placedPreferenceKeys,
+    sectionRows,
     snapshotPrefsFromWidgets,
   } = await import("../../../src/ui/dialogs/preferences-dialogs.js"));
+  ({ DEFAULT_EDITOR_PREFS } = await import("../../../src/core/editor-preferences.js"));
 });
 
 describe("ui/dialogs/preferences-dialogs.js", () => {
@@ -46,40 +50,51 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
     assert.equal(flat.includes("tools.blurTool"), false);
   });
 
-  it("snapshotPrefsFromWidgets copies widget values and rounds gridSize", () => {
-    const widgets = [0, 1, 2, 3, 4, 5, 6, 7].map((value) => ({ getValue: () => value }));
-    widgets[3] = { getValue: () => 12.7 };
-    widgets[4] = { getValue: () => 1 };
-    widgets[6] = { getValue: () => false };
-    widgets[7] = { getValue: () => true };
-    const snapped = snapshotPrefsFromWidgets(widgets, { extra: true });
-    assert.equal(snapped.guides, 0);
-    assert.equal(snapped.showGrid, 1);
-    assert.equal(snapped.gridType, 2);
-    assert.equal(snapped.gridSize, 13);
+  it("snapshotPrefsFromWidgets reads each widget into the preference it edits", () => {
+    const widgets = {
+      guides: { getValue: () => false },
+      gridSize: { getValue: () => 12.7 },
+      gridUnits: { getValue: () => 1 },
+      gpuAcceleration: { getValue: () => false },
+    };
+    const snapped = snapshotPrefsFromWidgets(widgets, { extra: true, slices: true });
+    assert.equal(snapped.guides, false);
     assert.equal(snapped.gridUnits, 1);
-    assert.equal(snapped.AppWindow, 5);
     assert.equal(snapped.gpuAcceleration, false);
-    assert.equal(snapped.zoomWithScrollWheel, true);
-    assert.equal(snapped.extra, true);
+    // The rounding rule belongs to the preference, not to this function.
+    assert.equal(snapped.gridSize, 13);
+    assert.equal(snapped.extra, true, "an unrelated pref was dropped");
+    assert.equal(snapped.slices, true);
   });
 
-  // The sections are the growth path for new preferences, so what matters is
-  // that every preference still has exactly one home: a widget listed twice
-  // would be moved into the second pane and vanish from the first, and one
-  // listed nowhere would stop being reachable at all.
-  describe("PREFERENCE_SECTIONS", () => {
-    const controlsOf = (section) => section.groups.flatMap((group) => group.controls);
+  it("snapshotPrefsFromWidgets keeps a percentage grid gap unrounded", () => {
+    const widgets = {
+      gridSize: { getValue: () => 12.7 },
+      gridUnits: { getValue: () => 4 },
+    };
+    assert.equal(snapshotPrefsFromWidgets(widgets, {}).gridSize, 12.7);
+  });
 
-    it("gives every preference widget exactly one section", () => {
-      const placements = PREFERENCE_SECTIONS.flatMap(controlsOf).filter(
-        (ref) => typeof ref === "number",
-      );
-      assert.deepEqual([...placements].sort(), [...new Set(placements)].sort(), "a widget is placed twice");
-      // GRID_UNITS is the exception: it shares the grid-gap row, so the pane
-      // that shows GRID_SIZE places it too.
-      const expected = Object.values(PREF_WIDGET).filter((index) => index !== PREF_WIDGET.GRID_UNITS);
-      assert.deepEqual([...placements].sort((a, b) => a - b), expected.sort((a, b) => a - b));
+  // The section table is the whole layout: what it lists is what is built,
+  // edited and saved, so the checks that matter are that it names real
+  // preferences and names each of them once.
+  describe("PREFERENCE_SECTIONS", () => {
+    it("places every row against a declared preference or a dialog control", () => {
+      for (const section of PREFERENCE_SECTIONS) {
+        for (const row of sectionRows(section)) {
+          if (row.control != null) {
+            assert.ok(["theme", "language"].includes(row.control), "unknown control " + row.control);
+            continue;
+          }
+          assert.notEqual(DEFAULT_EDITOR_PREFS[row.pref], undefined, row.pref + " is not a preference");
+          assert.equal(typeof row.widget, "function", row.pref + " has no widget");
+        }
+      }
+    });
+
+    it("gives every preference it places exactly one row", () => {
+      const placed = placedPreferenceKeys();
+      assert.deepEqual([...placed].sort(), [...new Set(placed)].sort(), "a preference is placed twice");
     });
 
     it("names each section once, with a label to translate", () => {
@@ -91,24 +106,25 @@ describe("ui/dialogs/preferences-dialogs.js", () => {
       }
     });
 
-    it("puts GPU acceleration in General and ruler units in Units & Rulers", () => {
-      const sectionOf = (controlRef) =>
-        PREFERENCE_SECTIONS.find((section) => controlsOf(section).includes(controlRef)).id;
-      assert.equal(sectionOf(PREF_WIDGET.GPU_ACCELERATION), "general");
-      assert.equal(sectionOf(PREF_WIDGET.RULER_UNITS), "units");
-      assert.equal(sectionOf(PREF_WIDGET.GUIDES), "guides");
-      assert.equal(sectionOf(PREF_WIDGET.GRID_TYPE), "guides");
-      assert.equal(sectionOf(PREF_WIDGET.ZOOM_WITH_SCROLL_WHEEL), "tools");
-      // Theme and language are not preferences; they belong to Interface.
-      assert.equal(sectionOf("theme"), "interface");
-      assert.equal(sectionOf("language"), "interface");
+    it("puts each preference in the section it belongs to", () => {
+      const sectionOf = (prefKey) =>
+        PREFERENCE_SECTIONS.find((section) =>
+          sectionRows(section).some((row) => row.pref === prefKey),
+        ).id;
+      assert.equal(sectionOf("gpuAcceleration"), "general");
+      assert.equal(sectionOf("zoomWithScrollWheel"), "tools");
+      assert.equal(sectionOf("AppWindow"), "units");
+      assert.equal(sectionOf("guides"), "guides");
+      assert.equal(sectionOf("gridType"), "guides");
+      const interfaceRows = sectionRows(PREFERENCE_SECTIONS[1]).map((row) => row.control);
+      assert.deepEqual(interfaceRows, ["theme", "language"]);
     });
 
-    it("gives every group controls, and every label a key to translate", () => {
+    it("gives every group rows, and every label a key to translate", () => {
       for (const section of PREFERENCE_SECTIONS) {
         assert.ok(section.groups.length > 0, section.id + " has no groups");
         for (const group of section.groups) {
-          assert.ok(group.controls.length > 0, section.id + " has an empty group");
+          assert.ok(group.rows.length > 0, section.id + " has an empty group");
           if (group.labelKey != null) assert.match(group.labelKey, /^[a-z]+\./);
         }
       }
