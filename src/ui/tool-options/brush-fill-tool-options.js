@@ -38,7 +38,7 @@ function StrenBrushOption() {
 StrenBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
 function PaintBrushOption() {
-  BrushOptionBase.call(this, "brush bmode opacity flow smth prsr".split(" "))
+  BrushOptionBase.call(this, "brush bmode Opct flow smth prsr".split(" "))
 }
 PaintBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
@@ -53,7 +53,7 @@ function BasicBrushOption() {
 BasicBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
 function BlurBrushOption() {
-  BrushOptionBase.call(this, ["brush", "bmode", "opacity", "smth", "prsr"])
+  BrushOptionBase.call(this, ["brush", "bmode", "Opct", "smth", "prsr"])
 }
 BlurBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
@@ -63,7 +63,7 @@ function DodgeBrushOption() {
 DodgeBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
 function CloneStampOption() {
-  BrushOptionBase.call(this, "brush bmode opacity algnd sfrom alt".split(" "))
+  BrushOptionBase.call(this, "brush bmode Opct algnd sfrom alt".split(" "))
 }
 CloneStampOption.prototype = Object.create(BrushOptionBase.prototype);
 
@@ -79,7 +79,7 @@ function SpongeBrushOption() {
 SpongeBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
 function AirbrushOption() {
-  BrushOptionBase.call(this, "brush emode opacity flow smth prsr".split(" "))
+  BrushOptionBase.call(this, "brush emode Opct flow smth prsr".split(" "))
 }
 AirbrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
@@ -391,7 +391,7 @@ function SetOpOption() {
 SetOpOption.prototype = Object.create(BrushOptionBase.prototype);
 
 function PatchBrushOption() {
-  BrushOptionBase.call(this, ["bmode", "opacity", "wconf"])
+  BrushOptionBase.call(this, ["bmode", "Opct", "wconf"])
 }
 PatchBrushOption.prototype = Object.create(BrushOptionBase.prototype);
 
