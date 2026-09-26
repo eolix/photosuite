@@ -20,6 +20,7 @@ import { LayerEffectDefs } from "../../../document/formats/psd/effect-defs.js";
 import { Layer } from "../../../document/model/layer.js";
 import { PopupTypes } from "../../config/popup-types.js";
 import { VectorMask } from "../../../document/model/layer-masks.js";
+import { shapeAspectRatio } from "../../../features/shape/shape-file.js";
 import { getIconUrl } from "../../../assets/icon-registry.js";
 import { EventType, UiCommand } from "../../../core/event-bus.js";
 import { addClass, appendBreak, getDevicePixelRatio, makeElement, resizeCanvasForDevicePixelRatio, setElementCssSizeForDeviceRatio } from "../../../core/dom.js";
@@ -32,7 +33,7 @@ import { invert } from "../../../engine/compositing/color-math.js";
 
 const SHAPE_PREVIEW_MARGIN = 0.9;
 const SHAPE_PREVIEW_INNER_SCALE = 0.95;
-const DEFAULT_SHAPE_RESOURCE_URL = "resources/libraries/extra_shapes.csh";
+const DEFAULT_SHAPE_RESOURCE_URL = "resources/libraries/shapes.csh";
 const STROKE_PREVIEW_RGBA_FILL = 4278190080;
 const STROKE_PREVIEW_RGBA_WHITE = 4294967295;
 const MM_PER_INCH = 25.4;
@@ -107,13 +108,22 @@ function cloneContourShapeData(shapeData) {
   };
 }
 
+/**
+ * Fit a unit-square shape path into a `width` x `height` thumbnail at the
+ * shape's own proportions.
+ *
+ * Only the design box's ratio matters, never its size: the path arrives
+ * normalised to the unit square, so scaling by the raw width and height of a
+ * box a library recorded as zero-height collapsed the thumbnail to nothing.
+ */
 function buildShapePreviewTransform(bounds, width, height) {
-  const scale = Math.min(width / bounds.width, height / bounds.height) * SHAPE_PREVIEW_MARGIN,
+  const aspectRatio = shapeAspectRatio(bounds),
+    fittedHeight = Math.min(width / aspectRatio, height) * SHAPE_PREVIEW_MARGIN,
     transform = new Matrix2D();
   transform.translate(-0.5, -0.5);
   transform.scale(SHAPE_PREVIEW_INNER_SCALE, SHAPE_PREVIEW_INNER_SCALE);
   transform.translate(0.5, 0.5);
-  transform.scale(scale * bounds.width, scale * bounds.height);
+  transform.scale(fittedHeight * aspectRatio, fittedHeight);
   return transform;
 }
 

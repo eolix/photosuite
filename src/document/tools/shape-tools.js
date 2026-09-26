@@ -12,6 +12,7 @@ import { Matrix2D } from "../../core/math/matrix2d.js";
 import { PathRecordCodec } from "../formats/psd/path-record-codec.js";
 import { LayerEffectDefs } from "../formats/psd/effect-defs.js";
 import { VectorMask } from "../model/layer-masks.js";
+import { shapeAspectRatio } from "../../features/shape/shape-file.js";
 import { TrackerRegistry } from "../../features/trackers/tracker-registry.js";
 import { EventType, UiCommand } from "../../core/event-bus.js";
 import { AppEvent } from "../../core/event-bus.js";
@@ -570,7 +571,7 @@ export function CustomShapeTool() {
 function installCustomShapeToolPrototype() {
   CustomShapeTool.prototype.buildShapePaths = function(startPoint, endPoint, isShiftPressed) {
     const shapePreset = this.toolOptions.shape;
-    const aspectRatio = shapePreset.boundsRect.width / shapePreset.boundsRect.height;
+    const aspectRatio = shapeAspectRatio(shapePreset.boundsRect);
     const pathRecords = VectorMask.clonePathRecords(shapePreset.pathRecords);
     endPoint = endPoint.clone();
     if (isShiftPressed) {

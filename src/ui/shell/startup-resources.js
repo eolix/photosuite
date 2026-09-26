@@ -23,7 +23,7 @@ export const STARTUP_PRESET_FILES = [
   "resources/startup/brushes.abr",
   "resources/startup/gradients.grd",
   "resources/startup/patterns.pat",
-  "resources/startup/shapes.shc"
+  "resources/startup/contours.shc"
 ];
 
 /**

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Converts the Font Awesome Free SVG icons vendored as a submodule at
-// src/vendor/fontawesome into src/resources/libraries/extra_shapes.csh. Only
+// src/vendor/fontawesome into src/resources/libraries/shapes.csh. Only
 // the `solid` and `regular` style directories are used — `brands` icons are
 // third-party trademarks (excluded from Font Awesome's own CC BY 4.0 grant
 // for redistribution as generic shapes) and must never be bundled here.
@@ -32,7 +32,7 @@ const { Point } = await import("../../../core/math/point.js");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 const FA_SVG_ROOT = path.join(ROOT, "src/vendor/fontawesome/svgs");
-const OUT_FILE = path.join(ROOT, "src/resources/libraries/extra_shapes.csh");
+const OUT_FILE = path.join(ROOT, "src/resources/libraries/shapes.csh");
 
 // Excludes `brands`: those are third-party company logos/trademarks, not
 // covered by the CC BY 4.0 grant that applies to the generic solid/regular
@@ -349,6 +349,52 @@ function parsePathToSubpaths(d) {
 
 // ---- ShapeFile record building ---------------------------------------------
 
+/**
+ * The box the glyph's knots occupy, handles included.
+ * @param {{cp1: object, anchor: object, anchorOut: object}[][]} subpaths
+ */
+function measureSubpathBounds(subpaths) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const knots of subpaths) {
+    for (const knot of knots) {
+      for (const point of [knot.cp1, knot.anchor, knot.anchorOut]) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/**
+ * Scale the glyph into the unit square, in place.
+ *
+ * A `.csh` knot coordinate is 8.24 fixed point, so it holds about ±128 — while
+ * a Font Awesome icon is drawn in a 512-unit viewBox. Writing those raw
+ * overflowed the field and wrapped: 256 came back as 0, 397.4 as -114.6, and
+ * every icon in the library came out as scribble. The format expects 0..1
+ * coordinates with the design box carrying the proportions, which is also what
+ * `ShapeFile.parse` re-derives on read.
+ *
+ * Scaling by the glyph's own bounds rather than the viewBox keeps that
+ * re-derivation a no-op, so the proportions the design box records are the
+ * proportions the shape is drawn at.
+ */
+function normalizeSubpathsToUnitSquare(subpaths, bounds) {
+  const scaleX = bounds.width > 0 ? 1 / bounds.width : 1;
+  const scaleY = bounds.height > 0 ? 1 / bounds.height : 1;
+  for (const knots of subpaths) {
+    for (const knot of knots) {
+      for (const point of [knot.cp1, knot.anchor, knot.anchorOut]) {
+        point.x = (point.x - bounds.x) * scaleX;
+        point.y = (point.y - bounds.y) * scaleY;
+      }
+    }
+  }
+}
+
 function buildShapePathRecords(subpaths) {
   const pathRecords = [{ type: 6 }, { type: 8, all: 0 }];
   for (const knots of subpaths) {
@@ -387,8 +433,6 @@ function fixupFillRules(pathRecords) {
 
 function svgFileToShapeEntries(filePath, labelSuffix) {
   const src = fs.readFileSync(filePath, "utf8");
-  const viewBoxMatch = src.match(/viewBox="([\d.\s-]+)"/);
-  const [, , , vbW, vbH] = viewBoxMatch ? viewBoxMatch[1].trim().split(/\s+/).map(Number) : [0, 0, 512, 512];
   const pathMatches = [...src.matchAll(/<path[^>]*\sd="([^"]+)"/g)];
   if (pathMatches.length === 0) return null;
 
@@ -398,6 +442,13 @@ function svgFileToShapeEntries(filePath, labelSuffix) {
   }
   if (allSubpaths.length === 0) return null;
 
+  // The design box is the glyph's own box, not the viewBox: an icon rarely
+  // fills its viewBox, and this is what tells the app the shape's proportions
+  // once the knots below are flattened into the unit square.
+  const designBounds = measureSubpathBounds(allSubpaths);
+  if (!(designBounds.width > 0) || !(designBounds.height > 0)) return null;
+  normalizeSubpathsToUnitSquare(allSubpaths, designBounds);
+
   const pathRecords = buildShapePathRecords(allSubpaths);
   fixupFillRules(pathRecords);
 
@@ -406,7 +457,7 @@ function svgFileToShapeEntries(filePath, labelSuffix) {
     categoryName: `${iconName} ${labelSuffix}`,
     shapeName: crypto.randomUUID(),
     pathRecords,
-    boundsRect: new Rect(0, 0, vbW, vbH),
+    boundsRect: new Rect(0, 0, designBounds.width, designBounds.height),
   };
 }
 
@@ -435,10 +486,38 @@ fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
 fs.writeFileSync(OUT_FILE, bytes);
 console.log(`Wrote ${OUT_FILE} (${bytes.length} bytes).`);
 
-// Round-trip sanity check.
+// Round-trip sanity check. Counting shapes is not enough: a knot coordinate
+// outside the 8.24 fixed-point range wraps silently, which is how a whole
+// library of scribble shipped once already. Compare the geometry itself.
 const reparsed = ShapeFile.parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 console.log(`Round-trip parsed ${reparsed.length} shapes.`);
 if (reparsed.length !== shapes.length) {
   console.error("MISMATCH between built and reparsed shape counts!");
+  process.exitCode = 1;
+}
+
+const COORD_LIMIT = 128; // 8.24 fixed point holds roughly +/-128.
+let outOfRange = 0;
+let geometryDrift = 0;
+for (let shapeIdx = 0; shapeIdx < shapes.length; shapeIdx++) {
+  const builtKnots = shapes[shapeIdx].pathRecords.filter((rec) => rec.anchor);
+  const readKnots = reparsed[shapeIdx].pathRecords.filter((rec) => rec.anchor);
+  if (builtKnots.length !== readKnots.length) {
+    geometryDrift++;
+    continue;
+  }
+  for (let knotIdx = 0; knotIdx < builtKnots.length; knotIdx++) {
+    const built = builtKnots[knotIdx].anchor;
+    const read = readKnots[knotIdx].anchor;
+    if (Math.abs(built.x) >= COORD_LIMIT || Math.abs(built.y) >= COORD_LIMIT) outOfRange++;
+    if (Math.abs(built.x - read.x) > 1e-3 || Math.abs(built.y - read.y) > 1e-3) {
+      geometryDrift++;
+      break;
+    }
+  }
+}
+console.log(`Coordinates outside the encodable range: ${outOfRange}. Shapes that did not survive the round trip: ${geometryDrift}.`);
+if (outOfRange !== 0 || geometryDrift !== 0) {
+  console.error("Geometry did not survive serialization — the library would ship distorted.");
   process.exitCode = 1;
 }

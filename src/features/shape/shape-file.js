@@ -55,12 +55,12 @@ ShapeFile.parseShape = function (bytes, offset, categoryName, outShapes) {
   blockCursor += 16;
   const pathByteLength = blockSize - (blockCursor - offset);
   const pathRecords = PathRecordCodec.readPathPoints(bytes, blockCursor, pathByteLength);
-  normalizePathRecordsToUnitSquare(pathRecords);
+  const pathBounds = normalizePathRecordsToUnitSquare(pathRecords);
   outShapes.push({
     categoryName,
     shapeName,
     pathRecords,
-    boundsRect,
+    boundsRect: usableDesignBounds(boundsRect, pathBounds),
   });
   return offset + blockSize;
 };
@@ -110,15 +110,55 @@ function readCategoryName(bytes, cursor) {
   return { name, cursor };
 }
 
+/**
+ * Scale the knots into the unit square, and report the box they came from.
+ *
+ * The two axes are scaled independently, so the shape's proportions do not
+ * survive this — {@link ShapeFile.parseShape} keeps the design box to restore
+ * them. A shape with no extent on an axis (a flat line) keeps that axis as it
+ * is rather than dividing by zero, which would leave every coordinate NaN.
+ *
+ * @param {object[]} pathRecords Knots, transformed in place.
+ * @returns {object} The bounds the knots occupied before normalisation.
+ */
 function normalizePathRecordsToUnitSquare(pathRecords) {
   const flatCoords = flattenPathKnotCoords(pathRecords);
   const pathBounds = boundsFromCoordPairs(flatCoords);
-  const scaleX = 1 / pathBounds.width;
-  const scaleY = 1 / pathBounds.height;
+  const scaleX = pathBounds.width > 0 ? 1 / pathBounds.width : 1;
+  const scaleY = pathBounds.height > 0 ? 1 / pathBounds.height : 1;
   transformPathRecordCoords(
     pathRecords,
     new Matrix2D(scaleX, 0, 0, scaleY, -pathBounds.x * scaleX, -pathBounds.y * scaleY),
   );
+  return pathBounds;
+}
+
+/**
+ * The design box to keep for a shape.
+ *
+ * It is the only record of the shape's proportions once the knots are
+ * normalised, so a library that stored a degenerate one — the bundled icon set
+ * writes `bottom == top`, leaving a height of zero — would otherwise flatten
+ * every preview and every placement. The box the knots actually occupied says
+ * the same thing and is always there.
+ */
+function usableDesignBounds(storedBounds, pathBounds) {
+  if (storedBounds != null && storedBounds.width > 0 && storedBounds.height > 0) return storedBounds;
+  return pathBounds;
+}
+
+/**
+ * Width-to-height ratio of a shape's design box, or 1 when it has none worth
+ * trusting. Callers scale a unit-square path by this, so a zero or a
+ * non-finite ratio does not reach the geometry.
+ *
+ * @param {{width: number, height: number}|null} boundsRect
+ * @returns {number}
+ */
+export function shapeAspectRatio(boundsRect) {
+  if (boundsRect == null) return 1;
+  const ratio = boundsRect.width / boundsRect.height;
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
 }
 
 function writeShapeEntry(buffer, cursor, shape) {

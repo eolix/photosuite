@@ -1,7 +1,7 @@
 # Font Awesome shapes (generated)
 
-`extra_shapes.csh` — the Shape tool's "bundled library" custom-shape file at
-`src/resources/libraries/extra_shapes.csh` — is **generated** from the
+`shapes.csh` — the Shape tool's "bundled library" custom-shape file at
+`src/resources/libraries/shapes.csh` — is **generated** from the
 [FortAwesome/Font-Awesome](https://github.com/FortAwesome/Font-Awesome)
 submodule at `src/vendor/fontawesome`. Do not edit it by hand — run `./build.sh`.
 

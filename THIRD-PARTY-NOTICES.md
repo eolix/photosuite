@@ -195,7 +195,7 @@ was chosen and how each generated bundle is produced.
 | Asset | Upstream | Licence |
 |-------|----------|---------|
 | Application icons in `src/assets/ico/` | [Tabler Icons](https://github.com/tabler/tabler-icons) (most; the rest drawn for this app) | MIT — `src/assets/ico/LICENSE` |
-| `src/resources/libraries/extra_shapes.csh` (custom shape library, "bundled library" row in the Shape tool's picker) | [Font Awesome Free](https://github.com/FortAwesome/Font-Awesome) `solid` + `regular` icon glyphs (submodule at `src/vendor/fontawesome`; `brands` icons are excluded — those are third-party trademarks, not covered by this grant) | Icons: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — Copyright Fonticons, Inc. Regenerate with `src/vendor/js/fontawesome/build.sh` after bumping the submodule pin. |
+| `src/resources/libraries/shapes.csh` (custom shape library, "bundled library" row in the Shape tool's picker) | [Font Awesome Free](https://github.com/FortAwesome/Font-Awesome) `solid` + `regular` icon glyphs (submodule at `src/vendor/fontawesome`; `brands` icons are excluded — those are third-party trademarks, not covered by this grant) | Icons: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — Copyright Fonticons, Inc. Regenerate with `src/vendor/js/fontawesome/build.sh` after bumping the submodule pin. |
 | `src/resources/startup/patterns.pat` (seed set) and `src/resources/libraries/extra_patterns.pat` (bundled library row) | [Subtle Patterns](https://github.com/atlemo/SubtlePatterns) — CC BY-SA 3.0, see below | See below |
 | Colour Lookup presets in `src/resources/luts/*.CUBE` | [Fresh LUTs](https://freshluts.com) | CC0 — `src/resources/luts/LICENSE` |
 

@@ -4,15 +4,22 @@
 import assert from "node:assert/strict";
 import { describe, it, before } from "node:test";
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { installBrowserGlobals } from "../../helpers/stub-browser-globals.js";
 
 installBrowserGlobals();
 
+const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
 let ShapeFile;
+let shapeAspectRatio;
 let PathRecordCodec;
 
 before(async () => {
-  ({ ShapeFile } = await import("../../../src/features/shape/shape-file.js"));
+  ({ ShapeFile, shapeAspectRatio } = await import("../../../src/features/shape/shape-file.js"));
   ({ PathRecordCodec } = await import("../../../src/document/formats/psd/path-record-codec.js"));
 });
 
@@ -139,5 +146,118 @@ describe("features/shape/shape-file.js", () => {
     const entry = { categoryName: "Old" };
     ShapeFile.setName(entry, "New");
     assert.equal(entry.categoryName, "New");
+  });
+
+  /** The created triangle's knots, stretched to twice as wide as they are tall. */
+  function wideTrianglePathRecords() {
+    const records = PathRecordCodec.create().pathRecords;
+    for (const record of records) {
+      for (const pointKey of ["cp1", "anchor", "anchorOut"]) {
+        if (record[pointKey]) record[pointKey].x *= 2;
+      }
+    }
+    return records;
+  }
+
+  // Parsing normalises the knots into the unit square, so the design box is the
+  // only thing left that remembers a shape's proportions. The bundled icon
+  // library records `bottom == top` for every entry, which left that box zero
+  // pixels tall — every preview came out blank and every placement distorted.
+  describe("design box", () => {
+    it("falls back to the knots' own box when the library records a flat one", () => {
+      const buffer = ShapeFile.serialize([
+        {
+          categoryName: "icons",
+          shapeName: "wide",
+          pathRecords: wideTrianglePathRecords(),
+          boundsRect: { x: 0, y: 0, width: 512, height: 0 },
+        },
+      ]);
+      const parsed = ShapeFile.parse(buffer)[0];
+      assert.ok(parsed.boundsRect.width > 0, "width must be usable");
+      assert.ok(parsed.boundsRect.height > 0, "a zero-height box flattens the shape");
+      assert.equal(
+        Math.round((parsed.boundsRect.width / parsed.boundsRect.height) * 100) / 100,
+        2,
+        "the knots' own proportions were not recovered",
+      );
+    });
+
+    it("keeps a design box the library records properly", () => {
+      const buffer = ShapeFile.serialize([
+        {
+          categoryName: "icons",
+          shapeName: "wide",
+          pathRecords: wideTrianglePathRecords(),
+          boundsRect: { x: 0, y: 0, width: 300, height: 100 },
+        },
+      ]);
+      const parsed = ShapeFile.parse(buffer)[0];
+      assert.equal(parsed.boundsRect.width, 300);
+      assert.equal(parsed.boundsRect.height, 100);
+    });
+
+    it("normalises a shape with no extent on one axis without NaN coords", () => {
+      const records = PathRecordCodec.create().pathRecords;
+      for (const record of records) {
+        for (const pointKey of ["cp1", "anchor", "anchorOut"]) {
+          if (record[pointKey]) record[pointKey].y = 10;
+        }
+      }
+      const buffer = ShapeFile.serialize([
+        { categoryName: "flat", shapeName: "line", pathRecords: records, boundsRect: { x: 0, y: 0, width: 50, height: 0 } },
+      ]);
+      const parsed = ShapeFile.parse(buffer)[0];
+      for (const record of parsed.pathRecords) {
+        if (!record.anchor) continue;
+        assert.ok(Number.isFinite(record.anchor.x) && Number.isFinite(record.anchor.y), "a coord came out NaN");
+      }
+    });
+  });
+
+  // Every caller scales a unit-square path by this, so it is the last place a
+  // bad design box can reach the geometry.
+  describe("shapeAspectRatio", () => {
+    it("reports the box's ratio, and 1 when there is none to trust", () => {
+      assert.equal(shapeAspectRatio({ width: 200, height: 100 }), 2);
+      assert.equal(shapeAspectRatio({ width: 100, height: 200 }), 0.5);
+      assert.equal(shapeAspectRatio({ width: 512, height: 0 }), 1, "a flat box must not divide by zero");
+      assert.equal(shapeAspectRatio({ width: 0, height: 0 }), 1);
+      assert.equal(shapeAspectRatio({ width: -5, height: 10 }), 1);
+      assert.equal(shapeAspectRatio(null), 1);
+    });
+  });
+
+  // The library that ships with the app is the one every user opens the picker
+  // onto.
+  it("parses the bundled shape library with a usable box for every shape", () => {
+    const libraryPath = path.join(repoRoot, "src/resources/libraries/shapes.csh");
+    const fileBytes = fs.readFileSync(libraryPath);
+    const shapes = ShapeFile.parse(
+      fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+    );
+    assert.ok(shapes.length > 100, "the bundled library did not parse");
+    const flattened = shapes.filter((shape) => !(shape.boundsRect.width > 0 && shape.boundsRect.height > 0));
+    assert.deepEqual(flattened.map((shape) => shape.categoryName), [], "shapes with an unusable design box");
+  });
+
+  // A `.csh` coordinate is 8.24 fixed point, so it holds about ±128 — writing a
+  // 512-unit icon raw wrapped every value and shipped a library of scribble.
+  // These icons are ones whose proportions are not in doubt.
+  it("keeps the bundled icons' proportions", () => {
+    const libraryPath = path.join(repoRoot, "src/resources/libraries/shapes.csh");
+    const fileBytes = fs.readFileSync(libraryPath);
+    const shapes = ShapeFile.parse(
+      fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+    );
+    const ratioOf = (categoryName) => {
+      const shape = shapes.find((candidate) => candidate.categoryName === categoryName);
+      assert.ok(shape, categoryName + " is missing from the library");
+      return shapeAspectRatio(shape.boundsRect);
+    };
+    assert.ok(ratioOf("arrow-up (solid)") < 0.9, "arrow-up should be taller than it is wide");
+    assert.ok(ratioOf("arrow-right (solid)") > 1.1, "arrow-right should be wider than it is tall");
+    assert.ok(ratioOf("minus (solid)") > 4, "minus should be a long thin dash");
+    assert.ok(Math.abs(ratioOf("circle (solid)") - 1) < 0.02, "circle should be square");
   });
 });

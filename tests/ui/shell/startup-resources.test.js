@@ -45,7 +45,7 @@ describe("ui/shell/startup-resources.js", () => {
   it("names each library so its format can be detected", () => {
     // The format comes from the extension, exactly as for a file opened from disk.
     assert.equal(resourceFileName("resources/startup/brushes.abr"), "brushes.abr");
-    assert.equal(resourceFileName("shapes.shc"), "shapes.shc");
+    assert.equal(resourceFileName("contours.shc"), "contours.shc");
     assert.deepEqual(
       STARTUP_PRESET_FILES.map((path) => resourceFileName(path).split(".").pop()).sort(),
       ["abr", "grd", "pat", "shc"]

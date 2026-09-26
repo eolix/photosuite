@@ -76,7 +76,7 @@ public surface: `UDOC.M/G/C/getState/getFont`, `From{PS,PDF,WMF,EMF}`,
 | `js/pdfjs-codecs/` | [mozilla/pdf.js](https://github.com/mozilla/pdf.js) | `v2.16.105` | Apache-2.0 | `JpegImage`, `JpxImage`, `Jbig2Image` as global `PDFJS` |
 | `js/linear-solve/` | [lovasoa/linear-solve](https://github.com/lovasoa/linear-solve) | default branch | MIT | Linear systems; wrapped in an IIFE exposing global `linear` |
 | `js/lensfun/` | [lensfun/lensfun](https://github.com/lensfun/lensfun) | default branch | LGPL (database CC) | `lens-database.json` for Lens Correction's Auto tab |
-| `js/fontawesome/` | [FortAwesome/Font-Awesome](https://github.com/FortAwesome/Font-Awesome) (submodule `fontawesome/`) | `7.3.1` | CC BY 4.0 (icons) | Generates `src/resources/libraries/extra_shapes.csh` — not loaded at runtime, see below |
+| `js/fontawesome/` | [FortAwesome/Font-Awesome](https://github.com/FortAwesome/Font-Awesome) (submodule `fontawesome/`) | `7.3.1` | CC BY 4.0 (icons) | Generates `src/resources/libraries/shapes.csh` — not loaded at runtime, see below |
 | `js/uigradients/` | [ghosh/uiGradients](https://github.com/ghosh/uiGradients) (data snapshot) | `afb0184` (master) | MIT | Generates `src/resources/libraries/extra_gradients.grd` — not loaded at runtime, see below |
 
 Why these pins:
