@@ -78,7 +78,7 @@ ToolOptionBase.prototype.syncWidgets = function() {};
 /**
  * Options bar for brush-family tools (brush, clone, heal, dodge/burn, blur,
  * smudge, eraser, …). `widgetKeys` is an ordered list of short option-kit ids —
- * "brush", "bmode" (blend mode), "opacity", "flow", "strn" (strength), "wconf"
+ * "brush", "bmode" (blend mode), "Opct" (opacity), "flow", "strn" (strength), "wconf"
  * (magic-wand options), "sfrom" (sample source), etc. Each id maps to a
  * concrete widget built below; the same ids are the keys under `this.widgets`
  * and the field names emitToolSettings sends back to the tool.
@@ -107,7 +107,7 @@ function BrushOptionBase(widgetKeys) {
         "tools.pencilTool"
       ])
     }
-    if (widgetKey == "opacity") {
+    if (widgetKey == "Opct") {
       widget = new SliderDropdown("properties.opacity", 0, 100, "%");
       widget.setValue(100)
     }
@@ -312,7 +312,7 @@ BrushOptionBase.prototype.emitToolSettings = function() {
   for (let widgetKey in this.widgets) {
     if (widgetKey == "brush" || widgetKey == "redge") continue;
     const widgetValue = this.widgets[widgetKey].getValue();
-    if (["opacity", "flow", "smth", "strn", "expo"].indexOf(widgetKey) != -1) uiEvent.data[widgetKey] = widgetValue / 100;
+    if (["Opct", "flow", "smth", "strn", "expo"].indexOf(widgetKey) != -1) uiEvent.data[widgetKey] = widgetValue / 100;
     else if (widgetKey == "bmode") uiEvent.data.bmode = BlendModes.psdCodes[widgetValue];
     else if (widgetKey == "bmode0") uiEvent.data.bmode = BlendModes.psdCodes[23 + widgetValue];
     else uiEvent.data[widgetKey] = widgetValue
