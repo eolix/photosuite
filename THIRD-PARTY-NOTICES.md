@@ -116,6 +116,51 @@ licensed under CC BY-SA 3.0**, as does any further adaptation of it.
 
 ---
 
+## Creative Commons Attribution-ShareAlike 3.0 — Subtle Patterns
+
+`src/resources/startup/patterns.pat` and
+`src/resources/libraries/extra_patterns.pat` are adapted from
+[Subtle Patterns](https://github.com/atlemo/SubtlePatterns), © Toptal with
+individual patterns credited to their original designers, licensed under
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). Full text and
+attribution: `src/resources/libraries/LICENSE-subtlepatterns.txt`.
+
+It is an adaptation: the upstream 341-pattern archive is split into a small
+seed set (the patterns loaded into the Pattern tool on every launch) and the
+rest (loaded on demand from the tool's "bundled library" row), with the
+upstream credit-tile pattern entry dropped from both. **Both files remain
+licensed under CC BY-SA 3.0**, as does any further adaptation of them.
+
+---
+
+## Creative Commons Attribution-NoDerivatives / Attribution-ShareAlike — Brusheezy brushes
+
+Three "bundled library" rows in the Brush tool's picker are unmodified brush
+packs from individual [Brusheezy](https://www.brusheezy.com) artists. Full
+license text and attribution: `src/resources/libraries/LICENSE-brusheezy-brushes.txt`.
+
+| File | Artist | Licence |
+|---|---|---|
+| `src/resources/libraries/Markers.abr` | brushchick | **CC BY-ND** — commercial use allowed, attribution required, **no modification** |
+| `src/resources/libraries/Paintbrush_Set.abr` | lovelace | **CC BY-ND** — commercial use allowed, attribution required, **no modification** |
+| `src/resources/libraries/Pencil_Scribbles.abr` | stuffwemake | **CC BY-SA** — attribution required; any adaptation stays CC BY-SA |
+
+All three are used byte-identical to their upstream download — this matters
+in particular for the two CC BY-ND files, whose license does not permit
+modification in any form.
+
+---
+
+## MIT — uiGradients
+
+`src/resources/libraries/extra_gradients.grd` is generated from
+[ghosh/uiGradients](https://github.com/ghosh/uiGradients) (382 community-contributed
+gradients), MIT licensed. The upstream `gradients.json` snapshot and licence text are
+vendored at `src/vendor/js/uigradients/`; `src/vendor/js/uigradients/build.sh` converts
+it into the `.grd` format.
+
+---
+
 ## Web libraries vendored in `src/vendor`
 
 Pinned upstream commits are recorded in the gitlinks and listed in
@@ -150,6 +195,9 @@ was chosen and how each generated bundle is produced.
 | Asset | Upstream | Licence |
 |-------|----------|---------|
 | Application icons in `src/assets/ico/` | [Tabler Icons](https://github.com/tabler/tabler-icons) (most; the rest drawn for this app) | MIT — `src/assets/ico/LICENSE` |
+| `src/resources/libraries/extra_shapes.csh` (custom shape library, "bundled library" row in the Shape tool's picker) | [Font Awesome Free](https://github.com/FortAwesome/Font-Awesome) `solid` + `regular` icon glyphs (submodule at `src/vendor/fontawesome`; `brands` icons are excluded — those are third-party trademarks, not covered by this grant) | Icons: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — Copyright Fonticons, Inc. Regenerate with `src/vendor/js/fontawesome/build.sh` after bumping the submodule pin. |
+| `src/resources/startup/patterns.pat` (seed set) and `src/resources/libraries/extra_patterns.pat` (bundled library row) | [Subtle Patterns](https://github.com/atlemo/SubtlePatterns) — CC BY-SA 3.0, see below | See below |
+| Colour Lookup presets in `src/resources/luts/*.CUBE` | [Fresh LUTs](https://freshluts.com) | CC0 — `src/resources/luts/LICENSE` |
 
 ## npm packages
 

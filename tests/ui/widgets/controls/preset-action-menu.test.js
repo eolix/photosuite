@@ -52,10 +52,14 @@ describe("preset popup bundled libraries", () => {
 
   it("each preset kind points at its own library", () => {
     const urlOf = (picker) => picker.prototype.listBundledPresetUrls.call({});
-    assert.deepEqual(urlOf(BrushPickerButton), ["basic/extra_brushes.abr"]);
-    assert.deepEqual(urlOf(GradientPickerButton), ["basic/extra_gradients.grd"]);
-    assert.deepEqual(urlOf(PatternPickerButton), ["basic/extra_patterns.pat"]);
-    assert.deepEqual(urlOf(ContourSizeButton), ["basic/extra_shapes.csh"]);
+    assert.deepEqual(urlOf(BrushPickerButton), [
+      "libraries/Markers.abr",
+      "libraries/Paintbrush_Set.abr",
+      "libraries/Pencil_Scribbles.abr",
+    ]);
+    assert.deepEqual(urlOf(GradientPickerButton), ["libraries/extra_gradients.grd"]);
+    assert.deepEqual(urlOf(PatternPickerButton), ["libraries/extra_patterns.pat"]);
+    assert.deepEqual(urlOf(ContourSizeButton), []);
     assert.deepEqual(PopupButton.prototype.listBundledPresetUrls.call({}), []);
   });
 });
@@ -100,7 +104,7 @@ describe("preset popup row mapping", () => {
   });
 
   it("maps each row of a picker with Define New", () => {
-    const picker = pickerStub("PATTERNS", ["basic/extra_patterns.pat"]);
+    const picker = pickerStub("PATTERNS", ["libraries/extra_patterns.pat"]);
     assert.equal(pickRow(picker, 0), "openResourcePresetPopup");
     assert.equal(pickRow(picker, 1), "viewMode");
     assert.equal(pickRow(picker, 2), "pickLocalFiles");

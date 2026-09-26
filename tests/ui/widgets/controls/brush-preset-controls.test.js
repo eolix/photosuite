@@ -36,7 +36,11 @@ before(async () => {
 describe("ui/widgets/controls/brush-preset-controls.js", () => {
   it("listBundledBrushPresetUrls names a library that ships with the app", () => {
     const urls = listBundledBrushPresetUrls();
-    assert.deepEqual(urls, ["basic/extra_brushes.abr"]);
+    assert.deepEqual(urls, [
+      "libraries/Markers.abr",
+      "libraries/Paintbrush_Set.abr",
+      "libraries/Pencil_Scribbles.abr",
+    ]);
     for (const url of urls) {
       assert.ok(existsSync("src/resources/" + url), url + " is missing from src/resources/");
     }

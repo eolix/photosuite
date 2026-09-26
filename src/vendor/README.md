@@ -13,6 +13,11 @@ pako comes first because other libraries expect it.
 > `src/wasm/` is **not** this folder — that is WebAssembly built from this
 > repository (blur, median, WebP encode).
 
+> `fontawesome/` and `js/uigradients/` are exceptions to "loaded as a
+> `<script>` global": both only feed a `build.sh` that generates a resource
+> file under `src/resources/libraries/`, never something `index.html` loads.
+> See the notes under "Libraries built into `js/`" below.
+
 ## Layout
 
 ```
@@ -71,6 +76,8 @@ public surface: `UDOC.M/G/C/getState/getFont`, `From{PS,PDF,WMF,EMF}`,
 | `js/pdfjs-codecs/` | [mozilla/pdf.js](https://github.com/mozilla/pdf.js) | `v2.16.105` | Apache-2.0 | `JpegImage`, `JpxImage`, `Jbig2Image` as global `PDFJS` |
 | `js/linear-solve/` | [lovasoa/linear-solve](https://github.com/lovasoa/linear-solve) | default branch | MIT | Linear systems; wrapped in an IIFE exposing global `linear` |
 | `js/lensfun/` | [lensfun/lensfun](https://github.com/lensfun/lensfun) | default branch | LGPL (database CC) | `lens-database.json` for Lens Correction's Auto tab |
+| `js/fontawesome/` | [FortAwesome/Font-Awesome](https://github.com/FortAwesome/Font-Awesome) (submodule `fontawesome/`) | `7.3.1` | CC BY 4.0 (icons) | Generates `src/resources/libraries/extra_shapes.csh` — not loaded at runtime, see below |
+| `js/uigradients/` | [ghosh/uiGradients](https://github.com/ghosh/uiGradients) (data snapshot) | `afb0184` (master) | MIT | Generates `src/resources/libraries/extra_gradients.grd` — not loaded at runtime, see below |
 
 Why these pins:
 
@@ -84,6 +91,13 @@ Why these pins:
   ships commented out; without it HarfBuzz overflows on `heapu8.set`.
 - **lensfun** — only the measurement database is generated; the C++ library is
   not compiled or loaded.
+- **fontawesome** and **uigradients** are the two rows in this table that
+  produce a resource file under `src/resources/libraries/` rather than
+  something `index.html` loads — `submodules-setup.sh` still regenerates
+  them the same way, `build.sh` just writes somewhere else. Only
+  `svgs/solid/` and `svgs/regular/` are read from Font Awesome; `svgs/brands/`
+  is skipped, since those are third-party company trademarks excluded from
+  Font Awesome's own CC BY 4.0 grant for redistribution as generic icon shapes.
 
 ## WebAssembly in `wasm/`
 

@@ -46,3 +46,6 @@
 [submodule "src/vendor/libheif"]
 	path = src/vendor/libheif
 	url = https://github.com/strukturag/libheif.git
+[submodule "src/vendor/fontawesome"]
+	path = src/vendor/fontawesome
+	url = https://github.com/FortAwesome/Font-Awesome.git

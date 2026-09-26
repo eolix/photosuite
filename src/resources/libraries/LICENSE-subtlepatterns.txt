@@ -1,0 +1,16 @@
+Subtle Patterns
+https://github.com/atlemo/SubtlePatterns
+https://www.toptal.com/designers/subtlepatterns/
+
+© Toptal. Individual patterns are credited to their original designers on
+Subtle Patterns.
+
+Licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported
+License (CC BY-SA 3.0): https://creativecommons.org/licenses/by-sa/3.0/
+
+src/resources/startup/patterns.pat and src/resources/libraries/extra_patterns.pat
+are adapted from the upstream SubtlePatterns.pat archive: split into a small
+seed set (loaded on every launch) and the remaining library (loaded on demand),
+with the upstream "From Subtlepatterns.com" credit-tile pattern entry removed
+from both (its attribution is carried here instead). Both files, and any
+further adaptation of them, remain licensed under CC BY-SA 3.0.

@@ -25,8 +25,12 @@ import { AppEvent } from "../../../core/event-bus.js";
 import { allocBuffer, fillBuffer } from "../../../engine/compositing/buffer-utils.js";
 import { rgbToHex } from "../../../engine/compositing/color-math.js";
 
-/** Extra brush library offered at the bottom of the brush picker's menu. */
-const BUNDLED_BRUSH_PRESET_URLS = ["basic/extra_brushes.abr"];
+/** Extra brush libraries offered at the bottom of the brush picker's menu. */
+const BUNDLED_BRUSH_PRESET_URLS = [
+  "libraries/Markers.abr",
+  "libraries/Paintbrush_Set.abr",
+  "libraries/Pencil_Scribbles.abr",
+];
 const STYLE_PREVIEW_FILL_ARGB = 4284045657;
 
 /**

@@ -46,7 +46,7 @@ const ZOOM_BAR_CLEAR_MARGIN = 1000;
 /** Bundled LUT cube preset paths shown in the ICC profile picker. */
 function buildCubePresetPaths() {
   const presetNames =
-    "Arabica 12,Ava 614,Azrael 93,Bourbon 64,Byers 11,Clayton 33,Clouseau 54,Cobi 3,Contrail 35,Cubicle 99,Django 25,Domingo 145,Faded 47,Folger 50,Fusion 88,Hyla 68,Chemical 168,Korben 214,Lenox 340,Lucky 64,McKinnon 75,Milo 5,Neon 770,Paladin 1875,Pasadena 21,Pitaya 15,Reeve 38,Remy 24,Sprocket 231,Teigen 28,Trent 18,Tweed 71,Vireo 37,Zed 32,Zeke 39".split(
+    "BMPCC 4K,BMPCC 6K,Beauty Advert,Blackmagic BMD,Bleach Bypass,Celluloid,CineStill-800,Cinema 3,Cinematic,Cinematic Clean,Cinematic Cn,Cinematic Forest,Cinematic Green,Cinematic Green Orange,Cinematic Kctrk,Cinematic Teal,Cinematic Thriller,Cinematic Wedding,Cinematic for Flog,Colour Pop,Cool and Soft,Hong Kong,Hydracore,Hypnosis,Kdk 2383,Kdk Prtr 400,Killstreak,Kold,Late Afternoon Wanderlust,Mvc Drone,PeakyB,Pocket 3 Low Light,Powerful Cold,Royals,Serpent,Severn,Sn Low Light Urban,Sn Neutral AZ,Sn S-Log3,Teal Look R709,Turkiest,Vintage Gold,Vintage Warmth,Warm Natural,WonderW".split(
       ","
     );
   const cubePaths = [];

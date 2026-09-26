@@ -15,7 +15,6 @@ let computePatternPreviewScales;
 let ContourButton;
 let PatternPickerButton;
 let ShadowOffsetWidget;
-let DEFAULT_PATTERN_URL;
 
 before(async () => {
   ({
@@ -25,8 +24,7 @@ before(async () => {
     computePatternPreviewScales,
     ContourButton,
     PatternPickerButton,
-    ShadowOffsetWidget,
-    DEFAULT_PATTERN_URL
+    ShadowOffsetWidget
   } = await import("../../../../src/ui/widgets/controls/effect-pickers.js"));
 });
 
@@ -73,8 +71,7 @@ describe("ui/widgets/controls/effect-pickers.js", () => {
     assert.deepEqual(points[1].v.Cnty, { t: "bool", v: false });
   });
 
-  it("DEFAULT_PATTERN_URL + constructors", () => {
-    assert.equal(DEFAULT_PATTERN_URL, "resources/basic/default.pat");
+  it("constructors", () => {
     assert.equal(typeof ContourButton, "function");
     assert.equal(typeof PatternPickerButton, "function");
     assert.equal(typeof ShadowOffsetWidget, "function");

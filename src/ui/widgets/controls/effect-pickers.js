@@ -24,8 +24,6 @@ import { transformPixels } from "../../../document/render/raster-transform.js";
 import { copyBuffer } from "../../../engine/compositing/buffer-utils.js";
 import { renderCurvePreview } from "../../../engine/compositing/tone-curves.js";
 
-const DEFAULT_PATTERN_URL = "resources/basic/default.pat";
-
 /**
  * Contour (transfer curve) preset popup button.
  * Contour descriptors keep PSD wire keys Nm / Crv / Cnty.
@@ -105,10 +103,8 @@ PatternPickerButton.prototype = Object.create(PopupButton.prototype);
 PatternPickerButton.prototype.constructor = PatternPickerButton;
 
 PatternPickerButton.prototype.listBundledPresetUrls = function() {
-  return ["basic/extra_patterns.pat"];
+  return ["libraries/extra_patterns.pat"];
 };
-
-PatternPickerButton.defaultPatternLoadRequested = false;
 
 PatternPickerButton.prototype.onPick = function() {
   const patternEntry = this.presets[this.menuList.getValue()];
@@ -119,12 +115,7 @@ PatternPickerButton.prototype.onPick = function() {
 
 PatternPickerButton.prototype.populatePopup = function() {
   if (!this.popupContentStale) return;
-  const presets = this.presets;
-  if (presets == null || !PatternPickerButton.defaultPatternLoadRequested) {
-    dispatchDefaultPatternImport(this);
-    PatternPickerButton.defaultPatternLoadRequested = true;
-    return
-  }
+  const presets = this.presets || [];
   const thumbWidthPx = Math.floor(34 * getDevicePixelRatio()),
     thumbHeightPx = Math.floor(34 * getDevicePixelRatio()),
     previewUrls = [],
@@ -234,8 +225,7 @@ export {
   ensureContourPointContinuityFlags,
   buildPatternPtrnDescriptor,
   buildShadowOffsetDescriptor,
-  computePatternPreviewScales,
-  DEFAULT_PATTERN_URL
+  computePatternPreviewScales
 };
 
 // --- Contour helpers ---------------------------------------------------------
@@ -266,17 +256,6 @@ function buildPatternPtrnDescriptor(name, id) {
       v: id
     }
   }
-}
-
-function dispatchDefaultPatternImport(picker) {
-  const importEvent = new AppEvent(EventType.uiDispatch, true);
-  importEvent.data = {
-    dispatchKind: UiCommand.importFromUrl,
-    importSpec: {
-      url: DEFAULT_PATTERN_URL
-    }
-  };
-  picker.dispatch(importEvent)
 }
 
 /**

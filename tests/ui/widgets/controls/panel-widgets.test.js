@@ -45,9 +45,9 @@ before(async () => {
 describe("ui/widgets/controls/panel-widgets.js", () => {
   it("buildCubePresetPaths golden", () => {
     var paths = buildCubePresetPaths();
-    assert.equal(paths.length, 35);
-    assert.equal(paths[0], "luts/Arabica_12.CUBE");
-    assert.equal(paths[34], "luts/Zeke_39.CUBE");
+    assert.equal(paths.length, 45);
+    assert.equal(paths[0], "luts/BMPCC_4K.CUBE");
+    assert.equal(paths[44], "luts/WonderW.CUBE");
   });
 
   it("orientation wire mapping goldens", () => {

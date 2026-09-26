@@ -1,0 +1,45 @@
+Brusheezy brush packs bundled as loadable brush libraries.
+
+Note: the provenance notes that accompanied these files labelled their
+licenses "CC0 BY-ND" / "CC0 BY-SA". CC0 (public domain dedication) and the
+Creative Commons attribution licenses are mutually exclusive — that label was
+in error. The terms below are the actual license text from each pack's
+Brusheezy license page as of 2026-09-26, confirmed independently, not the
+label the notes carried.
+
+--------------------------------------------------------------------------------
+
+Markers.abr
+Source: https://www.brusheezy.com/brushes/51128-free-photoshop-marker-brushes-24-deadbeat-marker
+Artist: brushchick (https://www.brusheezy.com/members/brushchick)
+License: Creative Commons Attribution-NoDerivatives (CC BY-ND)
+  "You may use this file commercially. However, you may not change it in any
+  way and you must provide proper attribution according to the Creative
+  Commons guidelines."
+Used unmodified — byte-identical to the upstream download. Do not modify.
+
+--------------------------------------------------------------------------------
+
+Paintbrush_Set.abr
+Source: https://www.brusheezy.com/brushes/17881-paint-brushes-1
+Artist: lovelace (https://www.brusheezy.com/members/lovelace)
+License: Creative Commons Attribution-NoDerivatives (CC BY-ND)
+  "You may use this file commercially. However, you may not change it in any
+  way and you must provide proper attribution according to the Creative
+  Commons guidelines."
+Used unmodified — byte-identical to the upstream download. Do not modify.
+
+--------------------------------------------------------------------------------
+
+Pencil_Scribbles.abr
+Source: https://www.brusheezy.com/brushes/56096-pencil-scribbles-brushes
+Artist: stuffwemake (https://www.brusheezy.com/members/stuffwemake)
+License: Creative Commons Attribution-ShareAlike (CC BY-SA)
+  "You are free to use this file however you want, but you must provide
+  proper attribution according to the Creative Commons guidelines."
+Used unmodified in this build. If it is ever adapted, the adaptation must
+remain licensed under CC BY-SA.
+
+--------------------------------------------------------------------------------
+
+Full Creative Commons license texts and guidelines: https://support.brusheezy.com

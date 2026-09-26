@@ -32,7 +32,7 @@ import { invert } from "../../../engine/compositing/color-math.js";
 
 const SHAPE_PREVIEW_MARGIN = 0.9;
 const SHAPE_PREVIEW_INNER_SCALE = 0.95;
-const DEFAULT_SHAPE_RESOURCE_URL = "resources/basic/default.csh";
+const DEFAULT_SHAPE_RESOURCE_URL = "resources/libraries/extra_shapes.csh";
 const STROKE_PREVIEW_RGBA_FILL = 4278190080;
 const STROKE_PREVIEW_RGBA_WHITE = 4294967295;
 const MM_PER_INCH = 25.4;
@@ -163,7 +163,7 @@ ContourSizeButton.prototype.onSearchInput = function() {
 };
 
 ContourSizeButton.prototype.listBundledPresetUrls = function() {
-  return ["basic/extra_shapes.csh"];
+  return [];
 };
 
 ContourSizeButton.defaultShapeLoadRequested = false;

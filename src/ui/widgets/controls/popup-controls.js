@@ -682,7 +682,7 @@ GradientPickerButton.prototype = Object.create(PopupButton.prototype);
 GradientPickerButton.prototype.constructor = GradientPickerButton;
 
 GradientPickerButton.prototype.listBundledPresetUrls = function() {
-  return ["basic/extra_gradients.grd"];
+  return ["libraries/extra_gradients.grd"];
 };
 
 GradientPickerButton.prototype.onPick = function(pickEvent) {
@@ -787,7 +787,7 @@ SwatchButton.prototype = Object.create(PopupButton.prototype);
 SwatchButton.prototype.constructor = SwatchButton;
 
 SwatchButton.prototype.listBundledPresetUrls = function() {
-  return ["swatches/pantone.aco"];
+  return ["swatches/Pntn.aco"];
 };
 
 SwatchButton.prototype.setPresets = function(presetList) {

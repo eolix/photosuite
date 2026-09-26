@@ -100,7 +100,7 @@ BrushFileCodec.serialize = function(brushFile) {
   blockStart = offset;
   BinaryUtils.writeSize(out, offset, 16);
   offset += 4;
-  offset = DescriptorCodec.writeDescriptor(out, descRoot, offset);
+  offset += DescriptorCodec.writeDescriptor(out, descRoot, offset);
   BinaryUtils.writeSize(out, blockStart - 4, offset - blockStart);
   return out.data.slice(0, offset).buffer
 };
