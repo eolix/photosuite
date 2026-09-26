@@ -10,6 +10,7 @@
  *
  * Supported commands:
  * - `getComposite` — temporary composite (no layer flatten) as PNG bytes
+ * - `getSelectionMask` — current selection's coverage, as a raw byte buffer
  * - `ping` — readiness check
  */
 
@@ -20,9 +21,6 @@ export const PLUGIN_IPC_MARKER = 1;
 
 /** Attribute {@link PluginPanel} stamps on the iframes it creates. */
 export const PLUGIN_FRAME_ATTRIBUTE = "data-plugin-panel";
-
-/** Soft cap so OCR round-trips stay responsive. */
-const MAX_COMPOSITE_EDGE_PX = 2048;
 
 /**
  * @param {*} data
@@ -76,6 +74,10 @@ export function handlePluginIpcMessage(controller, message, source) {
     }
     if (message.cmd === "getComposite") {
       handleGetComposite(controller, requestId, source);
+      return;
+    }
+    if (message.cmd === "getSelectionMask") {
+      handleGetSelectionMask(controller, requestId, source);
       return;
     }
     replyToPlugin(source, {
@@ -149,18 +151,7 @@ function handleGetComposite(controller, requestId, source) {
     return;
   }
 
-  const scale = Math.min(1, MAX_COMPOSITE_EDGE_PX / Math.max(sourceWidth, sourceHeight));
-  let outWidth = sourceWidth;
-  let outHeight = sourceHeight;
-  let outBuffer;
-
-  if (scale < 1) {
-    outWidth = Math.max(1, Math.round(sourceWidth * scale));
-    outHeight = Math.max(1, Math.round(sourceHeight * scale));
-    outBuffer = downscaleRgba(rgba, sourceWidth, sourceHeight, outWidth, outHeight);
-  } else {
-    outBuffer = copyRgbaToArrayBuffer(rgba);
-  }
+  const outBuffer = copyBytesToArrayBuffer(rgba);
 
   const pngFormat = FileFormatRegistry.getFormat("PNG");
   if (pngFormat == null || typeof pngFormat.encode !== "function") {
@@ -173,21 +164,73 @@ function handleGetComposite(controller, requestId, source) {
     return;
   }
 
-  const encoded = pngFormat.encode([[outBuffer, 0]], outWidth, outHeight);
+  const encoded = pngFormat.encode([[outBuffer, 0]], sourceWidth, sourceHeight);
   const pngBytes = toArrayBuffer(encoded);
 
+  // width/height/scale are kept alongside sourceWidth/sourceHeight for wire
+  // compatibility with clients written against the old downscaled reply;
+  // the composite is always full resolution now, so width == sourceWidth
+  // and scale is always 1.
   replyToPlugin(source, {
     psPlugin: PLUGIN_IPC_MARKER,
     cmd: "composite",
     requestId,
-    width: outWidth,
-    height: outHeight,
+    width: sourceWidth,
+    height: sourceHeight,
     sourceWidth,
     sourceHeight,
-    scale: outWidth / sourceWidth,
+    scale: 1,
     mime: "image/png",
     png: pngBytes
   }, [pngBytes]);
+}
+
+/**
+ * Export the current selection's coverage as a raw, tightly packed byte buffer:
+ * one byte per pixel over the selection's bounding rect, 0 excluded, 255 fully
+ * included, intermediate values for feathering and antialiasing. No selection
+ * (as opposed to "Select All", which is a full-coverage selection like any
+ * other) is reported as an error rather than an all-255 or all-0 buffer.
+ * @param {*} controller
+ * @param {string|null} requestId
+ * @param {MessageEventSource|null} source
+ */
+function handleGetSelectionMask(controller, requestId, source) {
+  const doc = controller.getCurrentDoc && controller.getCurrentDoc();
+  if (doc == null) {
+    replyToPlugin(source, {
+      psPlugin: PLUGIN_IPC_MARKER,
+      cmd: "error",
+      requestId,
+      error: "No open document"
+    });
+    return;
+  }
+
+  const selectionMask = doc.selectionMask;
+  if (selectionMask == null) {
+    replyToPlugin(source, {
+      psPlugin: PLUGIN_IPC_MARKER,
+      cmd: "error",
+      requestId,
+      error: "No selection"
+    });
+    return;
+  }
+
+  const rect = selectionMask.rect;
+  const maskBuffer = copyBytesToArrayBuffer(selectionMask.channel);
+
+  replyToPlugin(source, {
+    psPlugin: PLUGIN_IPC_MARKER,
+    cmd: "selectionMask",
+    requestId,
+    documentWidth: doc.width | 0,
+    documentHeight: doc.height | 0,
+    rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+    mime: "application/octet-stream",
+    mask: maskBuffer
+  }, [maskBuffer]);
 }
 
 /**
@@ -206,48 +249,15 @@ function toArrayBuffer(encoded) {
 }
 
 /**
- * @param {Uint8Array|Uint8ClampedArray|ArrayBuffer} rgba
+ * @param {Uint8Array|Uint8ClampedArray|ArrayBuffer} bytes
  * @returns {ArrayBuffer}
  */
-function copyRgbaToArrayBuffer(rgba) {
-  if (rgba instanceof ArrayBuffer) return rgba.slice(0);
+function copyBytesToArrayBuffer(bytes) {
+  if (bytes instanceof ArrayBuffer) return bytes.slice(0);
   const view = new Uint8Array(
-    rgba.buffer || rgba,
-    rgba.byteOffset || 0,
-    rgba.byteLength != null ? rgba.byteLength : rgba.length
+    bytes.buffer || bytes,
+    bytes.byteOffset || 0,
+    bytes.byteLength != null ? bytes.byteLength : bytes.length
   );
   return view.slice(0).buffer;
-}
-
-/**
- * Nearest-neighbor RGBA downscale for OCR (fast; lossy is fine).
- * @param {Uint8Array|Uint8ClampedArray|ArrayBuffer} rgba
- * @param {number} srcW
- * @param {number} srcH
- * @param {number} dstW
- * @param {number} dstH
- * @returns {ArrayBuffer}
- */
-function downscaleRgba(rgba, srcW, srcH, dstW, dstH) {
-  const src = rgba instanceof ArrayBuffer
-    ? new Uint8Array(rgba)
-    : new Uint8Array(
-      rgba.buffer || rgba,
-      rgba.byteOffset || 0,
-      rgba.byteLength != null ? rgba.byteLength : rgba.length
-    );
-  const dst = new Uint8Array(dstW * dstH * 4);
-  for (let y = 0; y < dstH; y++) {
-    const srcY = Math.min(srcH - 1, Math.floor(y * srcH / dstH));
-    for (let x = 0; x < dstW; x++) {
-      const srcX = Math.min(srcW - 1, Math.floor(x * srcW / dstW));
-      const si = (srcY * srcW + srcX) * 4;
-      const di = (y * dstW + x) * 4;
-      dst[di] = src[si];
-      dst[di + 1] = src[si + 1];
-      dst[di + 2] = src[si + 2];
-      dst[di + 3] = src[si + 3];
-    }
-  }
-  return dst.buffer;
 }
