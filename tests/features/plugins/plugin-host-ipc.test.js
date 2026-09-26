@@ -106,4 +106,53 @@ describe("features/plugins/plugin-host-ipc.js", () => {
     assert.equal(pluginWindow.replies[1].requestId, "r6");
     assert.match(pluginWindow.replies[1].error, /No open document/);
   });
+
+  it("reports no selection, and no document, for getSelectionMask", () => {
+    const pluginWindow = makeFrameWindow();
+    withPluginFrames([pluginWindow]);
+
+    handlePluginIpcMessage(
+      { getCurrentDoc: () => null },
+      { psPlugin: 1, cmd: "getSelectionMask", requestId: "r7" },
+      pluginWindow
+    );
+    assert.equal(pluginWindow.replies[0].cmd, "error");
+    assert.match(pluginWindow.replies[0].error, /No open document/);
+
+    handlePluginIpcMessage(
+      { getCurrentDoc: () => ({ width: 10, height: 10, selectionMask: null }) },
+      { psPlugin: 1, cmd: "getSelectionMask", requestId: "r8" },
+      pluginWindow
+    );
+    assert.equal(pluginWindow.replies[1].cmd, "error");
+    assert.match(pluginWindow.replies[1].error, /No selection/);
+  });
+
+  it("returns the selection's bounding rect and coverage bytes", () => {
+    const pluginWindow = makeFrameWindow();
+    withPluginFrames([pluginWindow]);
+
+    const channel = new Uint8Array([0, 128, 255, 255]);
+    const doc = {
+      width: 100,
+      height: 80,
+      selectionMask: { rect: { x: 5, y: 6, width: 2, height: 2 }, channel }
+    };
+
+    handlePluginIpcMessage(
+      { getCurrentDoc: () => doc },
+      { psPlugin: 1, cmd: "getSelectionMask", requestId: "r9" },
+      pluginWindow
+    );
+
+    const reply = pluginWindow.replies[0];
+    assert.equal(reply.cmd, "selectionMask");
+    assert.equal(reply.requestId, "r9");
+    assert.deepEqual(reply.rect, { x: 5, y: 6, width: 2, height: 2 });
+    assert.equal(reply.documentWidth, 100);
+    assert.equal(reply.documentHeight, 80);
+    assert.deepEqual(new Uint8Array(reply.mask), channel);
+    // The reply must own its bytes, not alias the document's live buffer.
+    assert.notEqual(reply.mask, channel.buffer);
+  });
 });

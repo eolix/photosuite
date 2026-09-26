@@ -153,13 +153,22 @@ const shot = await request("getComposite");
 |---|---|---|
 | `ping` | `pong` | — |
 | `getComposite` | `composite` | `png` (transferred `ArrayBuffer`), `mime`, `width`, `height`, `sourceWidth`, `sourceHeight`, `scale` |
+| `getSelectionMask` | `selectionMask` | `mask` (transferred `ArrayBuffer`), `mime`, `rect`, `documentWidth`, `documentHeight` |
 
 Anything that fails comes back as `cmd: "error"` with an `error` string.
 
-`getComposite` renders the visible document without flattening its layers. The
-result is capped at 2048px on its longest edge; `scale` tells you the ratio
-applied, and `sourceWidth`/`sourceHeight` give the true document size, so you can
-map coordinates back.
+`getComposite` renders the visible document without flattening its layers, at
+full resolution. `width`/`height` and `sourceWidth`/`sourceHeight` are always
+equal and `scale` is always `1`; they're kept for compatibility with clients
+written against an earlier, downscaled version of this reply.
+
+`getSelectionMask` returns the current selection's coverage as raw bytes: one
+byte per pixel, row-major, over `rect` (the selection's bounding box in
+document coordinates — not the full canvas). `0` excludes a pixel, `255`
+includes it fully, and feathered or antialiased edges land in between.
+`documentWidth`/`documentHeight` are the canvas size, so you can place `rect`
+correctly. "Select All" is a real, full-coverage selection like any other; only
+having *no* selection is an error (`"No selection"`).
 
 Only frames the sidebar created are answered — other embedded content cannot ask
 for your document by copying the message shape.
