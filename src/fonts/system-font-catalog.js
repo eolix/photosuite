@@ -65,10 +65,52 @@ async function readFileBytesViaTauri(path) {
   throw new Error("Unexpected read_file result type");
 }
 
-function normalizeSystemFontStyle(style) {
-  if (style === "Italic") return "Italic";
-  if (style === "Oblique") return "Oblique";
-  return "Regular";
+/**
+ * Style-name word for a weight class, by the usual naming: 400 is unnamed
+ * because "Regular" is what a face with no other distinguishing word is called.
+ * A face declaring something between two classes takes the nearer one.
+ */
+const WEIGHT_CLASS_NAMES = [
+  [150, "Thin"],
+  [250, "ExtraLight"],
+  [350, "Light"],
+  [450, ""],
+  [550, "Medium"],
+  [650, "SemiBold"],
+  [750, "Bold"],
+  [850, "ExtraBold"],
+  [Infinity, "Black"],
+];
+
+function weightClassName(weight) {
+  const weightValue = typeof weight === "number" && weight > 0 ? weight : 400;
+  for (let classIdx = 0; classIdx < WEIGHT_CLASS_NAMES.length; classIdx++) {
+    if (weightValue < WEIGHT_CLASS_NAMES[classIdx][0]) return WEIGHT_CLASS_NAMES[classIdx][1];
+  }
+  return "";
+}
+
+/**
+ * The style name for one installed face, from the three things that actually
+ * distinguish it: width, weight and slant — "Bold", "Light Italic",
+ * "Condensed Bold", "Regular".
+ *
+ * The host reports those separately. Flattening them here, as this once did by
+ * answering "Regular" for anything upright, is what filed Arial Bold under
+ * Arial Regular and left the family looking like it had two faces.
+ *
+ * @param {{slant?: string, weight?: number, stretch?: string}} entry
+ * @returns {string}
+ */
+export function systemFontStyleName(entry) {
+  const styleWords = [];
+  const stretch = entry == null ? null : entry.stretch;
+  if (stretch && stretch !== "Normal") styleWords.push(stretch);
+  const weightWord = weightClassName(entry == null ? 400 : entry.weight);
+  if (weightWord !== "") styleWords.push(weightWord);
+  const slant = entry == null ? null : entry.slant;
+  if (slant === "Italic" || slant === "Oblique") styleWords.push(slant);
+  return styleWords.length === 0 ? "Regular" : styleWords.join(" ");
 }
 
 function normalizePostScriptName(family, style, postscriptName) {
@@ -87,11 +129,18 @@ export function buildFontCatalogFromSystemFonts(entries) {
   const subsetNames = [];
   const cats = ["System"];
   const list = [];
+  // Two files claiming the same family and style — an old copy of a font left
+  // beside a new one — would otherwise resolve to whichever the host happened
+  // to enumerate last, which differs between platforms. First one wins.
+  const seenFamilyStyles = new Set();
   for (const entry of entries) {
     const family = entry?.family;
     const path = entry?.path;
     if (!family || !path) continue;
-    const style = normalizeSystemFontStyle(entry?.style);
+    const style = systemFontStyleName(entry);
+    const familyStyleKey = family + "---" + style;
+    if (seenFamilyStyles.has(familyStyleKey)) continue;
+    seenFamilyStyles.add(familyStyleKey);
     const postScript = normalizePostScriptName(family, style, entry?.postscript_name);
     const fileKey = "sys:" + path;
     list.push([family, style, postScript, SYSTEM_FONT_SUBSET_MASK, 0, fileKey].join(","));

@@ -348,12 +348,38 @@ fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
     std::fs::write(path, data).map_err(|e| e.to_string())
 }
 
+/// One installed font face.
+///
+/// Slant, weight and width are reported separately rather than as one "style"
+/// string: a family's faces differ in all three, and flattening them to
+/// "Regular" / "Italic" made Arial's four faces look like two — with Bold
+/// filed under Regular, so Regular drew bold. The front end composes the style
+/// name, where the weight vocabulary already lives.
 #[derive(Serialize)]
 struct SystemFontEntry {
     family: String,
-    style: String,
+    /// Slant only: "Regular", "Italic" or "Oblique".
+    slant: String,
+    /// OS/2 usWeightClass, 100–900.
+    weight: u16,
+    /// Width class name, "Normal" unless the face is condensed or expanded.
+    stretch: String,
     postscript_name: Option<String>,
     path: Option<String>,
+}
+
+fn stretch_name(stretch: fontdb::Stretch) -> &'static str {
+    match stretch {
+        fontdb::Stretch::UltraCondensed => "UltraCondensed",
+        fontdb::Stretch::ExtraCondensed => "ExtraCondensed",
+        fontdb::Stretch::Condensed => "Condensed",
+        fontdb::Stretch::SemiCondensed => "SemiCondensed",
+        fontdb::Stretch::Normal => "Normal",
+        fontdb::Stretch::SemiExpanded => "SemiExpanded",
+        fontdb::Stretch::Expanded => "Expanded",
+        fontdb::Stretch::ExtraExpanded => "ExtraExpanded",
+        fontdb::Stretch::UltraExpanded => "UltraExpanded",
+    }
 }
 
 #[tauri::command]
@@ -368,7 +394,7 @@ fn list_system_fonts() -> Result<Vec<SystemFontEntry>, String> {
             .first()
             .map(|f| f.0.clone())
             .unwrap_or_else(|| "Unknown".to_string());
-        let style = match face.style {
+        let slant = match face.style {
             fontdb::Style::Normal => "Regular",
             fontdb::Style::Italic => "Italic",
             fontdb::Style::Oblique => "Oblique",
@@ -382,7 +408,9 @@ fn list_system_fonts() -> Result<Vec<SystemFontEntry>, String> {
 
         out.push(SystemFontEntry {
             family,
-            style,
+            slant,
+            weight: face.weight.0,
+            stretch: stretch_name(face.stretch).to_string(),
             postscript_name: Some(face.post_script_name.clone()),
             path,
         });
