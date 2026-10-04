@@ -10,7 +10,12 @@
 #
 # Needs: cargo; nfpm for deb/rpm (https://nfpm.goreleaser.com); appimagetool for the AppImage
 # (downloaded into $CARGO_TARGET_DIR if missing). Build on an old distro (CI: Ubuntu 22.04,
-# glibc 2.35) so the binaries run on newer ones. Optional: desktop-file-validate, appstreamcli.
+# glibc 2.35) so the binaries run on newer ones. Optional: desktop-file-validate, appstreamcli,
+# and zsyncmake (package zsync) for the AppImage's .zsync if appimagetool doesn't write it.
+#
+# The AppImage carries update information for AppImageUpdate: the newest GitHub release of
+# $PHOTOSUITE_UPDATE_REPO (default: $GITHUB_REPOSITORY in CI, else eolix/photosuite), found
+# through the .zsync published beside it. packaging/linux/verify-appimage.sh checks the result.
 set -euo pipefail
 # shellcheck source=../env.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../env.sh"
@@ -95,8 +100,8 @@ fi
 # ---- AppImage -----------------------------------------------------------------------------------
 if has appimage; then
   APPDIR="$WORK/PhotoSuite.AppDir"
+  # The whole staged tree, licences and notices included (NOTICE must travel with the binary).
   cp -R "$STAGE" "$APPDIR"
-  mv "$APPDIR/usr/share/doc" "$WORK/doc-unused"
   ln -s usr/bin/photosuite "$APPDIR/AppRun"
   cp "$HERE/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
   cp "$ROOT/assets/app-icon/hicolor/256x256/apps/$APP_ID.png" "$APPDIR/$APP_ID.png"
@@ -110,10 +115,30 @@ if has appimage; then
       chmod +x "$TOOL"
     fi
   fi
-  OUT="$DIST/$BASENAME.AppImage"
+  # Absolute paths: appimagetool runs from $DIST, where it writes the .zsync.
+  mkdir -p "$DIST"
+  abs() { echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; }
+  TOOL="$(abs "$TOOL")"
+  APPDIR="$(abs "$APPDIR")"
+  OUT="$(abs "$DIST/$BASENAME.AppImage")"
+  # Delta updates: `gh-releases-zsync` resolves the newest release through the GitHub API, so
+  # the channel doesn't go stale when the version in the file name changes. The file name is a
+  # glob for that reason, and must match the asset each release publishes.
+  UPDATE_REPO="${PHOTOSUITE_UPDATE_REPO:-${GITHUB_REPOSITORY:-eolix/photosuite}}"
+  UPDATE_INFO="gh-releases-zsync|${UPDATE_REPO%%/*}|${UPDATE_REPO#*/}|latest|photosuite-*-linux-$ARCH.AppImage.zsync"
+  rm -f "$OUT" "$OUT.zsync"
   # Extract-and-run: works without FUSE (containers, CI). The output embeds the static runtime,
-  # so users don't need libfuse2 either.
-  ARCH="$ARCH" APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" --no-appstream "$APPDIR" "$OUT"
+  # so users don't need libfuse2 either. `-u` embeds the update information and writes the
+  # .zsync control file beside the AppImage.
+  (cd "$DIST" && ARCH="$ARCH" APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" --no-appstream -u "$UPDATE_INFO" "$APPDIR" "$OUT")
+  if [ ! -f "$OUT.zsync" ]; then
+    if command -v zsyncmake >/dev/null; then
+      # The URL is relative: AppImageUpdate fetches the AppImage from beside the .zsync.
+      (cd "$DIST" && zsyncmake -u "$(basename "$OUT")" -o "$(basename "$OUT").zsync" "$(basename "$OUT")")
+    else
+      warn "no .zsync written (install zsync): AppImageUpdate can't update this AppImage"
+    fi
+  fi
   echo "wrote $OUT"
 fi
 

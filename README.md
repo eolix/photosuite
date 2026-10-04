@@ -48,6 +48,9 @@ Installers are on the **[Releases](https://github.com/eolix/photosuite/releases)
 | **Linux** | `.AppImage`, `.deb`, `.rpm`, `.tar.gz` | x86_64 and arm64 |
 | **Linux** | `.flatpak` | x86_64 |
 
+The AppImage carries update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate)
+fetches only what changed in a new release.
+
 ## What this is
 
 A native desktop editor that tries to work the way Photoshop does: menus where you expect them,
