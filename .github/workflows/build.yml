@@ -1,9 +1,10 @@
 # PhotoSuite CI: lint the JS tree, then bundle installers on GitHub-hosted runners.
 #
 # Artifacts per run:
-#   PhotoSuite-macos    universal (arm64 + x86_64) .dmg
-#   PhotoSuite-windows  x64 NSIS .exe installer
-#   PhotoSuite-linux    x64 .deb and .rpm
+#   PhotoSuite-macos        universal (arm64 + x86_64) .dmg
+#   PhotoSuite-windows      x64 NSIS .exe installer
+#   PhotoSuite-linux        x64 .deb and .rpm
+#   PhotoSuite-linux-arm64  arm64 .deb and .rpm
 #
 # Installers are only built for a `v*` tag push (or a manual workflow_dispatch run),
 # not on a plain push to main. A tag push additionally publishes those files to a
@@ -88,6 +89,15 @@ jobs:
           - label: Linux x64
             os: ubuntu-24.04
             artifact: PhotoSuite-linux
+            rust_targets: ''
+            tauri_args: ''
+            bundle_paths: |
+              src-tauri/target/release/bundle/deb/*.deb
+              src-tauri/target/release/bundle/rpm/*.rpm
+
+          - label: Linux arm64
+            os: ubuntu-24.04-arm
+            artifact: PhotoSuite-linux-arm64
             rust_targets: ''
             tauri_args: ''
             bundle_paths: |

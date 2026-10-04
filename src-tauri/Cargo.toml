@@ -32,7 +32,10 @@ opt-level = 1
 strip = false
 
 [target."cfg(unix)".dependencies]
-cups_rs = "0.3.0"
+# 0.3.0 hardcodes `i8` for C strings and does not compile on aarch64. Pinned to
+# the first upstream commit after the 0.3.0 tag, which only fixes those casts;
+# replace with a plain version once a newer release is published.
+cups_rs = { git = "https://github.com/Gmin2/cups-rs", rev = "d56e4495ad7885f268bb0ec8b511cb83543d695b" }
 
 [target."cfg(windows)".dependencies]
 windows = { version = "0.62", features = ["Win32_Graphics_Printing", "Win32_Foundation"] }

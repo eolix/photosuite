@@ -672,8 +672,7 @@ checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
 [[package]]
 name = "cups_rs"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77ad179868ddceb8948487316c7094aa251e3efb0ecf15cab88b08f22eabf724"
+source = "git+https://github.com/Gmin2/cups-rs?rev=d56e4495ad7885f268bb0ec8b511cb83543d695b#d56e4495ad7885f268bb0ec8b511cb83543d695b"
 dependencies = [
  "bindgen",
  "chrono",
