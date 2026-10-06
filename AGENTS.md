@@ -14,7 +14,7 @@
 > default what PhotoSuite doesn't offer yet.
 
 
-PhotoSuite is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **PhotoSuite** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names stay lowercase: crates (`photosuite-*`), binaries, file names, ids (`app.photosuite`). The aim is to work the way Photoshop does (menus, shortcuts, behaviour, PSD fidelity) without claiming to be a full replacement, with every feature drivable by agents. Read this file first, then `docs/`.
+PhotoSuite is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **PhotoSuite** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names stay lowercase: crates (`photosuite-*`), binaries, file names, ids (`io.github.eolix.PhotoSuite` on Linux: Flatpak, desktop file, AppStream, icons; `app.photosuite` for the macOS bundle and the settings folder). The aim is to work the way Photoshop does (menus, shortcuts, behaviour, PSD fidelity) without claiming to be a full replacement, with every feature drivable by agents. Read this file first, then `docs/`.
 
 ## 1. Orientation (5 minutes)
 
@@ -107,6 +107,7 @@ cargo xtask scorecard       # if you moved a number: flip the checklist row in s
                             # in perf/budgets.toml)
 cargo xtask perf --quick    # if you touched a hot path; `cargo xtask perf --update-baseline` publishes a full run
 cargo xtask test-corpus     # if you touched psd, io, codecs, compose, gpu, text or format (or: --changed decides)
+cargo test -p photosuite-ui-egui --lib every_tl_literal -- --ignored   # translation report: tl! labels missing from a catalogue
 packaging/notices/generate.sh   # if Cargo.lock changed; commit the regenerated THIRD-PARTY-CRATES.md (CI checks it)
 ```
 

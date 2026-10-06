@@ -9,9 +9,9 @@
 # Wayland, xkbcommon and Vulkan at runtime; the freedesktop runtime has all of them, and the
 # GPU driver comes from its org.freedesktop.Platform.GL extension.
 #
-# app.photosuite.yml (same directory) is the from-source manifest for Flathub. Keep
+# io.github.eolix.PhotoSuite.yml (same directory) is the from-source manifest for Flathub. Keep
 # runtime-version and finish-args identical in both (packaging-lint checks this).
-id: app.photosuite
+id: io.github.eolix.PhotoSuite
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -31,7 +31,7 @@ finish-args:
   - --filesystem=xdg-pictures
   - --filesystem=xdg-documents
   # Deliberately not granted: network (the optional --control server listens on 127.0.0.1 in
-  # the sandbox; `flatpak override --user --share=network app.photosuite` exposes it to
+  # the sandbox; `flatpak override --user --share=network io.github.eolix.PhotoSuite` exposes it to
   # host agents) and home/host filesystem access.
 modules:
   - name: photosuite
@@ -39,11 +39,11 @@ modules:
     build-commands:
       - install -Dm755 bin/photosuite /app/bin/photosuite
       - install -Dm755 bin/photosuite-cli /app/bin/photosuite-cli
-      - install -Dm644 share/applications/app.photosuite.desktop /app/share/applications/app.photosuite.desktop
+      - install -Dm644 share/applications/io.github.eolix.PhotoSuite.desktop /app/share/applications/io.github.eolix.PhotoSuite.desktop
       # .pcraft, .psb and .qoi; the runtime's shared-mime-info already knows PSD and the rest.
-      - install -Dm644 share/mime/packages/app.photosuite.xml /app/share/mime/packages/app.photosuite.xml
+      - install -Dm644 share/mime/packages/io.github.eolix.PhotoSuite.xml /app/share/mime/packages/io.github.eolix.PhotoSuite.xml
       # Already has the release's version and date substituted by package.sh.
-      - install -Dm644 share/metainfo/app.photosuite.metainfo.xml /app/share/metainfo/app.photosuite.metainfo.xml
+      - install -Dm644 share/metainfo/io.github.eolix.PhotoSuite.metainfo.xml /app/share/metainfo/io.github.eolix.PhotoSuite.metainfo.xml
       - mkdir -p /app/share/icons /app/share/doc && cp -R share/icons/hicolor /app/share/icons/ && cp -R share/doc/photosuite /app/share/doc/
       # LUTs, lens profiles and preset libraries (found beside the binary at ../share/photosuite/resources).
       - cp -R share/photosuite /app/share/

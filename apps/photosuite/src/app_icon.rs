@@ -29,7 +29,7 @@ pub fn window_icon() -> egui::IconData {
 #[cfg(target_os = "macos")]
 const PNG: &[u8] = include_bytes!("../../../assets/app-icon/photosuite-1024.png");
 #[cfg(not(target_os = "macos"))]
-const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/app.photosuite.png");
+const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/io.github.eolix.PhotoSuite.png");
 
 #[cfg(test)]
 mod tests {

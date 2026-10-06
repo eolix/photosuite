@@ -4,7 +4,7 @@
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="application/x-photosuite">
     <comment>PhotoSuite document</comment>
-    <icon name="app.photosuite"/>
+    <icon name="io.github.eolix.PhotoSuite"/>
     <glob pattern="*.pcraft"/>
   </mime-type>
   <mime-type type="image/x-psb">

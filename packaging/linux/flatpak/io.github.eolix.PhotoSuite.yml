@@ -4,13 +4,13 @@
 #
 #   curl -fsSLO https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
 #   python3 flatpak-cargo-generator.py Cargo.lock -o packaging/linux/flatpak/cargo-sources.json
-#   flatpak-builder --user --install --force-clean build-flatpak packaging/linux/flatpak/app.photosuite.yml
-#   flatpak run app.photosuite
+#   flatpak-builder --user --install --force-clean build-flatpak packaging/linux/flatpak/io.github.eolix.PhotoSuite.yml
+#   flatpak run io.github.eolix.PhotoSuite
 #
 # For Flathub, replace the `dir` source with a `git` source pinned to a release tag and commit.
-# The single-file .flatpak attached to each release comes from app.photosuite.bundle.yml,
+# The single-file .flatpak attached to each release comes from io.github.eolix.PhotoSuite.bundle.yml,
 # which repackages the prebuilt release binaries. Keep runtime-version and finish-args identical.
-id: app.photosuite
+id: io.github.eolix.PhotoSuite
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -32,7 +32,7 @@ finish-args:
   - --filesystem=xdg-pictures
   - --filesystem=xdg-documents
   # Deliberately not granted: network (the optional --control server listens on 127.0.0.1 in
-  # the sandbox; `flatpak override --user --share=network app.photosuite` exposes it to
+  # the sandbox; `flatpak override --user --share=network io.github.eolix.PhotoSuite` exposes it to
   # host agents) and home/host filesystem access.
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
@@ -46,8 +46,8 @@ modules:
     build-commands:
       - cargo --offline build --release --locked -p photosuite
       - install -Dm755 target/release/photosuite /app/bin/photosuite
-      - install -Dm644 packaging/linux/app.photosuite.desktop /app/share/applications/app.photosuite.desktop
-      - install -Dm644 packaging/linux/app.photosuite.mime.xml /app/share/mime/packages/app.photosuite.xml
+      - install -Dm644 packaging/linux/io.github.eolix.PhotoSuite.desktop /app/share/applications/io.github.eolix.PhotoSuite.desktop
+      - install -Dm644 packaging/linux/io.github.eolix.PhotoSuite.mime.xml /app/share/mime/packages/io.github.eolix.PhotoSuite.xml
       - mkdir -p /app/share/icons && cp -R assets/app-icon/hicolor /app/share/icons/
       # The bundled resources (the same list as SHIPPED_RESOURCES in packaging/env.sh) and notices.
       - mkdir -p /app/share/photosuite/resources /app/share/doc/photosuite
@@ -57,7 +57,7 @@ modules:
         version=$(awk '/^\[/{p=($0=="[workspace.package]");next} p&&$1=="version"{gsub(/[" ]/,"",$3);print $3;exit}' Cargo.toml);
         install -d /app/share/metainfo;
         sed -e "s/@VERSION@/$version/" -e "s/@DATE@/$(date -u +%Y-%m-%d)/"
-        packaging/linux/app.photosuite.metainfo.xml.in > /app/share/metainfo/app.photosuite.metainfo.xml
+        packaging/linux/io.github.eolix.PhotoSuite.metainfo.xml.in > /app/share/metainfo/io.github.eolix.PhotoSuite.metainfo.xml
     sources:
       - type: dir
         path: ../../..

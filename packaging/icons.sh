@@ -30,11 +30,11 @@ render "$MAC" 1024 "$DIR/photosuite-1024.png"
 # Linux hicolor theme.
 for s in 16 24 32 48 64 128 256 512; do
   mkdir -p "$DIR/hicolor/${s}x${s}/apps"
-  render "$TIGHT" "$s" "$DIR/hicolor/${s}x${s}/apps/app.photosuite.png"
+  render "$TIGHT" "$s" "$DIR/hicolor/${s}x${s}/apps/io.github.eolix.PhotoSuite.png"
 done
 mkdir -p "$DIR/hicolor/scalable/apps"
 # The lighter trace (photosuite-small.svg) keeps the scalable theme icon cheap to render.
-cp "$DIR/photosuite-small.svg" "$DIR/hicolor/scalable/apps/app.photosuite.svg"
+cp "$DIR/photosuite-small.svg" "$DIR/hicolor/scalable/apps/io.github.eolix.PhotoSuite.svg"
 
 # Windows .ico.
 ICO_PNGS=()

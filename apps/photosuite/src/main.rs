@@ -39,7 +39,7 @@ use photosuite_engine::Session;
 use photosuite_ui_egui::PhotosuiteApp;
 
 /// Matches the `.desktop` file and hicolor icon name, so Wayland docks pick up the icon.
-const APP_ID: &str = "app.photosuite";
+const APP_ID: &str = "io.github.eolix.PhotoSuite";
 
 fn main() -> eframe::Result {
     crash_guard::install_hook();

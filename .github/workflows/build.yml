@@ -42,6 +42,10 @@ jobs:
   test:
     name: Test (Linux)
     runs-on: ubuntu-22.04
+    env:
+      # No debuginfo: faster to compile and link, and a much smaller cache. The tests themselves
+      # take seconds; nearly all of this job is the build.
+      CARGO_PROFILE_DEV_DEBUG: 0
     # Pull requests from branches of this repository already ran on push.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
@@ -53,6 +57,9 @@ jobs:
             libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Keep the build cache even when a test fails, so the next run isn't a cold build.
+          cache-on-failure: true
       - name: Tests
         run: cargo test --workspace --locked
       - uses: taiki-e/install-action@v2

@@ -9,7 +9,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST="${DIST:-$ROOT/dist/release}"
-APP_ID=app.photosuite
+APP_ID=io.github.eolix.PhotoSuite
 
 if [ $# -gt 0 ]; then
   image="$1"
@@ -56,8 +56,8 @@ PY
   cd "$work"
   env -u APPIMAGE_EXTRACT_AND_RUN "$image" --appimage-extract >/dev/null
   desktop-file-validate "squashfs-root/$APP_ID.desktop"
-  # Errors fail; warnings are reported only (`app.photosuite` draws a reverse-DNS warning, and
-  # `--override` is too new for Ubuntu 22.04's appstream).
+  # Errors fail; warnings are reported only, so a new style hint in a later appstream release
+  # doesn't block a release.
   report="$(appstreamcli validate --no-net "squashfs-root/usr/share/metainfo/$APP_ID.metainfo.xml" 2>&1 || true)"
   echo "$report"
   if grep -q '^E:' <<<"$report"; then

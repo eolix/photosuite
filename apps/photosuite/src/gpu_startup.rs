@@ -492,6 +492,20 @@ mod tests {
         assert_eq!(Marker::parse(&long).adapter.len(), 256);
     }
 
+    /// `Sentinel::begin` once the lock is free. A test elsewhere in this binary that spawns a
+    /// process can briefly hold a copy of the marker's descriptor (between fork and exec), and
+    /// with it the lock, so "busy" right after a release is retried rather than failed.
+    fn begin_unlocked(dir: &Path) -> (Previous, Option<Sentinel>) {
+        for _ in 0..200 {
+            let r = Sentinel::begin(dir);
+            if r.0 != Previous::Busy {
+                return r;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        Sentinel::begin(dir)
+    }
+
     fn temp_dir(name: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("photosuite-gpu-startup-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
@@ -513,7 +527,7 @@ mod tests {
         assert!(none.is_none());
         // The process dies in the driver: the lock goes, the marker stays.
         drop(s);
-        let (prev, s) = Sentinel::begin(&dir);
+        let (prev, s) = begin_unlocked(&dir);
         let m = prev.crashed().cloned().expect("crash detected");
         assert_eq!((m.adapter.as_str(), m.tried()), ("GPU", Some(Vulkan)));
         // This start succeeds: the next one finds nothing.
@@ -521,7 +535,7 @@ mod tests {
         s.write(Marker { backend: "dx12".into(), ..Default::default() }).unwrap();
         s.finish();
         assert!(!dir.join(MARKER_FILE).exists());
-        let (prev, _s) = Sentinel::begin(&dir);
+        let (prev, _s) = begin_unlocked(&dir);
         assert_eq!(prev, Previous::Clean);
         let _ = std::fs::remove_dir_all(&dir);
     }

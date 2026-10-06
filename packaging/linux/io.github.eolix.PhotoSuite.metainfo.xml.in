@@ -2,12 +2,12 @@
 <!-- AppStream metadata (software centres, Flathub). Template: package.sh and the Flatpak
      manifest substitute @VERSION@ and @DATE@ from Cargo.toml and the build date. -->
 <component type="desktop-application">
-  <id>app.photosuite</id>
+  <id>io.github.eolix.PhotoSuite</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT OR Apache-2.0</project_license>
   <name>PhotoSuite</name>
   <summary>Edit photos and layered Photoshop documents</summary>
-  <developer id="app.photosuite">
+  <developer id="io.github.eolix">
     <name>The PhotoSuite authors</name>
   </developer>
   <description>
@@ -23,8 +23,8 @@
       <li>Every action is a command, scriptable from a CLI, a JSON control channel and an MCP server</li>
     </ul>
   </description>
-  <launchable type="desktop-id">app.photosuite.desktop</launchable>
-  <icon type="stock">app.photosuite</icon>
+  <launchable type="desktop-id">io.github.eolix.PhotoSuite.desktop</launchable>
+  <icon type="stock">io.github.eolix.PhotoSuite</icon>
   <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser.
        The same addresses as Help › Website / GitHub / Report Issue (crates/ui-egui/src/links.rs). -->
   <url type="homepage">https://photosuite.app</url>
