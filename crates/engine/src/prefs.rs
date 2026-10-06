@@ -887,7 +887,6 @@ pub const HIDDEN_UNTIL_IMPLEMENTED: &[&str] = &[
     "tools.enableFlickPanning",
     "tools.varyRoundBrushHardnessOnHud",
     "tools.showTransformationValues",
-    "tools.overscroll",
     "tools.doubleClickLayerMaskLaunchesSelectAndMask",
     "fileHandling.imagePreviews",
     "fileHandling.lowercaseExtension",

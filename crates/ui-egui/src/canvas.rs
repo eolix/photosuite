@@ -1377,6 +1377,10 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
     if view.fit_pending && rect.width() > 50.0 {
         fit_view(&mut view, &doc, rect.size());
     }
+    // Preferences › Tools › Overscroll off: clamp before anything is drawn (scrollbars.rs).
+    if !app.session.prefs().tools.overscroll && crate::scrollbars::clamp_view(&mut view, rect.size()) {
+        ctx.request_repaint();
+    }
     let flip = app.ui.view.flip_horizontal;
     let xf = ViewXform { rect, zoom: view.zoom, center: view.center, flip };
     let pixel_grid = app.ui.view.shows(app.ui.view.show.pixel_grid);
@@ -1555,7 +1559,10 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
     let under_dialog = !app.ui.dialogs.is_empty();
     let free_hover = under_dialog && crate::dialogs::free_pointer_over(&ctx, rect).is_some();
     // Navigation: scroll pans, pinch / ⌘-scroll zooms around the pointer.
-    if response.hovered() || free_hover {
+    // The wheel also scrolls over the scrollbars drawn on top of the canvas (last frame's hover).
+    let bars_id = egui::Id::new(("pc-canvas-bars-hover", idx));
+    let over_bars = ctx.data(|d| d.get_temp::<bool>(bars_id)).unwrap_or(false);
+    if response.hovered() || free_hover || over_bars {
         let (scroll, zoom_delta, pointer) = ui.input(|i| (i.smooth_scroll_delta, i.zoom_delta(), i.pointer.hover_pos()));
         if zoom_delta != 1.0
             && let Some(p) = pointer
@@ -1849,7 +1856,16 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
             crate::stroke_constraint::draw_line_preview(app, &painter, &xf, p, tool, held.shift);
         }
     }
+    // Scrollbars (scrollbars.rs): drawn over the canvas edges, they take the pointer there.
+    let t0 = crate::gpu_canvas::now_ms();
+    let before = view.center;
+    let over_bars = crate::scrollbars::show(ui, rect, &mut view, flip, egui::Id::new(("pc-canvas", idx)));
+    ctx.data_mut(|d| d.insert_temp(bars_id, over_bars));
+    if view.center != before {
+        ctx.request_repaint();
+    }
     if primary {
+        app.perf.span("scrollbars", crate::gpu_canvas::now_ms() - t0);
         app.hover_doc = response.hover_pos().map(|p| xf.to_doc(p));
     }
     if primary && app.ui.extras.rulers {
