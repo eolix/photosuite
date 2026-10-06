@@ -41,6 +41,11 @@ impl PhotosuiteApp {
                 return Ok(Vec::new());
             }
         }
+        if self.background_jobs {
+            // The path and Open Recent are recorded when the background open finishes.
+            crate::jobs_ui::start_open(self, &display_name(path), Some(path.to_string()), crate::jobs_ui::bytes(bytes))?;
+            return Ok(Vec::new());
+        }
         let warnings = self.open_bytes(&display_name(path), bytes)?;
         if let Some(st) = self.session.active_mut() {
             st.path = Some(path.to_string());
@@ -53,6 +58,13 @@ impl PhotosuiteApp {
     /// Read and open the file at `path` (see [`open_file`](Self::open_file)).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_path(&mut self, path: &str) -> Result<Vec<String>, String> {
+        // Documents opening in the background are read on the worker too (a 2 GB PSB read
+        // would block the window). Preset files (brushes, gradients) go the usual way.
+        let ext = std::path::Path::new(path).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+        if self.background_jobs && !crate::preset_files_ui::PRESET_EXTS.contains(&ext.as_str()) {
+            crate::jobs_ui::start_open(self, &display_name(path), Some(path.to_string()), photosuite_engine::jobs::OpenSource::Path(path.to_string()))?;
+            return Ok(Vec::new());
+        }
         let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
         self.open_file(path, &bytes)
     }

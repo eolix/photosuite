@@ -24,6 +24,9 @@
 //! - `ui.focus`: bring the main window to the front
 //! - `app.open {path}` / `app.save {path}`: relative file I/O under the automation roots; reply with `warnings`
 //! - `app.quit`
+//! - `jobs.list` / `jobs.cancel {job?}`: background jobs (#210) with progress; cancel one (or all).
+//!   `engine.execute` waits for a command that runs as a job unless `wait: false` (then the reply
+//!   is `{job, pending: true}`)
 
 use std::sync::mpsc::Sender;
 
@@ -58,6 +61,9 @@ pub enum Outcome {
     /// Synthetic input queued: reply once the app has processed all of it (so a following
     /// `ui.inspect`/`engine.execute` observes the effect).
     AfterInput,
+    /// A command started a background job and the caller waits for it: reply with its result
+    /// once it has been applied (or with its error / "cancelled").
+    AfterJob(photosuite_engine::jobs::JobId),
 }
 
 fn ok(v: Value) -> Outcome {
@@ -90,7 +96,17 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
             // params and never open a dialog (an agent would otherwise get a modal instead of a
             // result). `ui.menu.invoke` behaves like a menu click, so it may open the dialog.
             if req.method == "engine.execute" && photosuite_engine::commands::find(id).is_some() {
-                return wrap(app.run_automation(id, params));
+                // Long commands may run as background jobs: by default the reply waits for the
+                // result (backward compatible); with `"wait": false` it is `{job, pending}`.
+                let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
+                app.jobs.last_started = None;
+                let r = app.run_automation(id, params);
+                if let (Ok(_), Some(job)) = (&r, app.jobs.last_started.take())
+                    && wait
+                {
+                    return Outcome::AfterJob(job);
+                }
+                return wrap(r);
             }
             let events_enabled = app.session.prefs().script_events.enabled;
             if events_enabled {
@@ -103,6 +119,26 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
             wrap(result)
         }
         "engine.commands" => wrap(app.run("command.list", json!({}))),
+        // Background jobs (#210): running ones with progress, then the last few that ended.
+        "jobs.list" => wrap(app.session.execute("jobs.list", json!({})).map_err(|e| e.to_string())),
+        "jobs.cancel" => {
+            let all = p.get("job").is_none_or(Value::is_null);
+            match p.get("job").and_then(Value::as_u64) {
+                Some(j) if app.session.job(photosuite_engine::jobs::JobId(j)).is_some() => {
+                    crate::jobs_ui::cancel(app, photosuite_engine::jobs::JobId(j));
+                    ok(json!({"cancelled": 1}))
+                }
+                Some(j) => err(format!("no running job {j}")),
+                None if all => {
+                    let ids: Vec<_> = app.session.jobs().into_iter().map(|j| j.id).collect();
+                    for j in &ids {
+                        crate::jobs_ui::cancel(app, *j);
+                    }
+                    ok(json!({"cancelled": ids.len()}))
+                }
+                None => err("`job` must be a job id"),
+            }
+        }
         "ui.menu.list" => ok(serde_json::to_value(crate::menus::menu_items(app)).unwrap_or_default()),
         "ui.inspect" => ok(inspect(app, ctx)),
         "ui.set" => {
@@ -463,6 +499,7 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
         "perf": {"fps": app.fps, "timings": app.perf},
         "brush": {"size": app.session.tools.brush.size, "hardness": app.session.tools.brush.hardness, "opacity": app.session.tools.brush.opacity},
         "distort": app.distort.describe(),
+        "jobs": crate::jobs_ui::inspect(app),
     })
 }
 

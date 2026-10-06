@@ -180,7 +180,7 @@ pub fn pressed_command(app: &PhotosuiteApp, ctx: &egui::Context, focus: Focus, e
 /// Why `id` can't run now (the engine's reason when it has one).
 pub fn disabled_reason(app: &PhotosuiteApp, id: &str) -> String {
     photosuite_engine::commands::find(id)
-        .and_then(|c| (c.enabled)(&app.session).err())
+        .and_then(|_| app.session.disabled_reason(id))
         .unwrap_or_else(|| if app.session.active().is_none() { "no document open".into() } else { "not available in the current state".into() })
 }
 

@@ -233,7 +233,7 @@ id = "P20"
 title = "Open a 2 GB PSD / 4–5 GB PSB"
 issue = 210
 target = "opens with progress, editable, never blank"
-not_measurable = "no progress or background open (#210) and no generated large-file fixtures (#216)"
+not_measurable = "opens run in the background with progress (#210), but there are no generated large-file fixtures yet (#216)"
 
 [[scenario]]
 id = "P21"
@@ -260,17 +260,38 @@ not_measurable = "the previews run inside the UI tools; no headless frame harnes
 
 [[scenario]]
 id = "P24"
-title = "Import 500 brushes"
+title = "Import 500 brushes (longest UI-thread step)"
 issue = 210
-target = "no UI pause over 100 ms"
-not_measurable = "import runs synchronously on the UI thread (no job system, #210)"
+bench = "perf_scenarios"
+row = "import 500 brushes: longest UI-thread step"
+metric = "max"
+budget_ms = 100
 
 [[scenario]]
 id = "P25"
-title = "Cancel any long job"
+title = "Cancel a Gaussian Blur job on 24 MP (until the worker exits)"
 issue = 210
-target = "takes effect within 200 ms, document unchanged"
-not_measurable = "no operation can be cancelled yet (#210)"
+bench = "perf_scenarios"
+row = "cancel Gaussian Blur r 50 job on 24 MP"
+metric = "max"
+budget_ms = 200
+
+[[scenario]]
+id = "P49"
+title = "Cancel a Content-Aware Fill job on 24 MP (until the worker exits)"
+issue = 210
+bench = "perf_scenarios"
+row = "cancel Content-Aware Fill job on 24 MP"
+metric = "max"
+budget_ms = 200
+
+[[scenario]]
+id = "P50"
+title = "App frame time while a 24 MP Gaussian Blur job runs"
+issue = 210
+bench = "perf_scenarios"
+row = "app frame during 24 MP Gaussian Blur r 50 job"
+budget_ms = 16
 
 # ---- #211: slow algorithms ---------------------------------------------------------------------
 

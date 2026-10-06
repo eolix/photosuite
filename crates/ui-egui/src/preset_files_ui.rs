@@ -43,6 +43,12 @@ pub fn open(app: &mut PhotosuiteApp, name: &str, bytes: &[u8]) -> Option<Result<
         p["select"] = json!(true);
     }
     Some(app.run(cmd, p).map(|r| {
+        // A background import (#210): `jobs_ui` reports the count when it lands.
+        if r.get("pending").and_then(Value::as_bool) == Some(true) {
+            app.ui.status_error = false;
+            app.ui.status = format!("Importing {what} from {stem}…");
+            return;
+        }
         let n = r.get("count").and_then(Value::as_u64).unwrap_or(0);
         let warnings: Vec<String> = r.get("warnings").and_then(|w| serde_json::from_value(w.clone()).ok()).unwrap_or_default();
         app.ui.status_error = false;

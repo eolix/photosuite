@@ -4309,6 +4309,7 @@ dependencies = [
  "photosuite-gpu",
  "photosuite-io",
  "photosuite-plugins",
+ "photosuite-psd",
  "photosuite-raster",
  "photosuite-testkit",
  "photosuite-text",

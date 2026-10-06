@@ -46,10 +46,15 @@ fn main() {
     let lensdb = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../resources/lensfun/lens-database.json");
     photosuite_engine::lens_cmds::set_lens_database_loader(Box::new(move || std::fs::read(&lensdb).ok()));
     let safe_gpu = args.iter().any(|a| a == "--safe-gpu");
+    // `--background-jobs`: long commands run as background jobs, as in the desktop app (#210).
+    let background_jobs = args.iter().any(|a| a == "--background-jobs");
+    // `--settle-ms N`: keep rendering frames for N ms before the capture (e.g. mid-job).
+    let settle_ms: u64 = arg(&args, "--settle-ms").and_then(|s| s.parse().ok()).unwrap_or(0);
     let mut harness =
         egui_kittest::Harness::builder().with_size(egui::vec2(w, h)).with_pixels_per_point(scale).with_max_steps(64).wgpu().build_eframe(move |cc| {
             PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), services);
+            app.background_jobs = background_jobs;
             // `--safe-gpu`: the CPU canvas, as the desktop app's `--safe-gpu` launch.
             if safe_gpu {
                 app.perf.gpu_info.selected = "cpu".into();
@@ -94,6 +99,10 @@ fn main() {
         if timing {
             eprintln!("{:>8.1} ms  {label}", t0.elapsed().as_secs_f64() * 1000.0);
         }
+    }
+    let t_settle = std::time::Instant::now();
+    while t_settle.elapsed() < std::time::Duration::from_millis(settle_ms) {
+        harness.step();
     }
     // Let fade animations settle.
     for _ in 0..12 {
