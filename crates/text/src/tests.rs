@@ -708,3 +708,46 @@ fn kerning_modes_split_pairs() {
     assert!((adv(&mixed, 1) - adv(&plain, 1)).abs() < 1e-3, "VA into the manual character");
     assert!((adv(&mixed, 2) - adv(&plain, 2)).abs() < 1e-3, "AV out of it");
 }
+
+#[test]
+fn japanese_dictionary_word_boundaries() {
+    // Use only the existing bundled Latin fonts: segmentation must not require a CJK font.
+    let text = "私は学生です";
+    let mut fonts = fonts::FontDb::new();
+    let mut context = parley::LayoutContext::<[u8; 4]>::new();
+    let mut layout = parley::Layout::new();
+    let mut builder = context.ranged_builder(&mut fonts.fcx, text, 1.0, false);
+    builder.push_default(parley::StyleProperty::FontFamily(parley::FontFamily::named("Inter")));
+    // Suppress CJK line-break opportunities so these flags expose word boundaries alone.
+    builder.push_default(parley::StyleProperty::WordBreak(parley::WordBreak::KeepAll));
+    builder.build_into(&mut layout, text);
+    layout.break_all_lines(None);
+    let mut boundaries = Vec::new();
+    for line in layout.lines() {
+        for run in line.runs() {
+            for cluster in run.clusters() {
+                if cluster.is_word_boundary() {
+                    boundaries.push(cluster.text_range().start);
+                }
+            }
+        }
+    }
+    assert_eq!(boundaries, vec![0, 3, 6, 12]);
+}
+
+#[test]
+fn japanese_box_text_preserves_wrap_boundaries() {
+    let mut engine = TextEngine::new();
+    let mut text = point("日本語の文章を折り返します。", 12.0);
+    text.shape = TextShape::Box { x: 0.0, y: 0.0, width: 40.0, height: 1000.0 };
+    let layout = engine.layout(&text, 72.0);
+    assert!(layout.lines.len() > 1);
+    let mut end = 0;
+    for line in &layout.lines {
+        assert_eq!(line.range.start, end);
+        let content = text.text.get(line.range.clone()).expect("UTF-8 line boundaries");
+        assert!(!content.starts_with('。'), "closing punctuation must stay with its preceding text");
+        end = line.range.end;
+    }
+    assert_eq!(end, text.text.len());
+}
