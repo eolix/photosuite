@@ -932,7 +932,12 @@ fn render_level_rows(ui: &mut egui::Ui, items: &[&MenuItem], depth: usize, click
             let enabled = any_enabled || !child.is_empty();
             ui.add_enabled_ui(enabled, |ui| {
                 nav.row(ui, depth - 1, enabled, None, |ui, nav| {
-                    (ui.menu_button(crate::i18n::tr(lang, name), |ui| render_level(ui, &child, depth + 1, clicked, nav)).response, ())
+                    let r = ui.menu_button(crate::i18n::tr(lang, name), |ui| render_level(ui, &child, depth + 1, clicked, nav));
+                    if r.inner.is_some() {
+                        // Where the submenu hangs from, to keep it below the menu bar (#319).
+                        nav.set_anchor(depth, r.response.rect);
+                    }
+                    (r.response, ())
                 });
             });
             last_was_sep = false;
