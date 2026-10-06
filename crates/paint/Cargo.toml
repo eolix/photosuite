@@ -1,0 +1,17 @@
+[package]
+name = "photosuite-paint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+photosuite-raster = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

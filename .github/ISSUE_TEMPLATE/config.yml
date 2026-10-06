@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Plug-in development
+    url: https://github.com/eolix/photosuite/blob/main/docs/plugins.md
+    about: Writing a filter plug-in — the sandboxed WebAssembly ABI.
+  - name: How the source is organised
+    url: https://github.com/eolix/photosuite/blob/main/docs/architecture.md
+    about: The crates, their layering and the engine / UI seam.

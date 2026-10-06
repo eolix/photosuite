@@ -1,0 +1,1951 @@
+# தமிழ் (ta) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# தமிழ் translations for PhotoSuite UI.
+
+	File	கோப்பு
+	Edit	தொகு
+	Image	படம்
+	Layer	அடுக்கு
+	Type	வகை
+	Select	தெரிவு செய்
+	Filter	வடிகட்டு
+	View	காட்சி
+	Window	சாளரம்
+	Help	உதவி
+	(coming soon)	(விரைவில்)
+	New…	புதிது…
+	Open…	திற…
+	Open As…	இவ்வாறு திற…
+	Open Recent	சமீபத்தியதைத் திற
+	Clear Recent Files	சமீபத்திய கோப்புகளை அழிக்கவும்
+	Clear history	வரலாற்றை அழி
+	Close	மூடு
+	Close All	அனைத்தையும் மூடு
+	Close Others	மற்றவற்றை மூடு
+	Save	சேமி
+	Save As…	இப்படி சேமி…
+	Save a Copy…	நகலை சேமிக்கவும்…
+	Revert	திரும்பவும்
+	Export	ஏற்றுமதி
+	Quick Export as PNG	PNG ஆக விரைவான ஏற்றுமதி
+	Export As…	இவ்வாறு சேமி…
+	Export Preferences…	ஏற்றுமதி விருப்பத்தேர்வுகள்…
+	Save for Web (Legacy)…	இணையத்தில் சேமி (மரபு)…
+	Artboards to Files…	ஆர்ட்போர்டுகள் முதல் கோப்புகள்…
+	Artboards to PDF…	ஆர்ட்போர்டுகளை PDF க்கு…
+	Layers to Files…	கோப்புகளுக்கான அடுக்குகள்…
+	Layer Comps to Files…	கோப்புகளுக்கு அடுக்கு தொகுப்புகள்…
+	Color Lookup Tables…	வண்ணத் தேடல் அட்டவணைகள்…
+	Data Sets as Files…	தரவு கோப்புகளாக அமைகிறது…
+	Paths to Illustrator…	இல்லஸ்ட்ரேட்டருக்கான பாதைகள்…
+	Render Video…	வீடியோ ரெண்டர்…
+	Generate	உருவாக்கு
+	Image Assets	பட சொத்துக்கள்
+	Place Embedded…	உட்பொதிக்கப்பட்ட இடம்…
+	Place Linked…	இணைக்கப்பட்ட இடம்…
+	Package…	தொகுப்பு…
+	Automate	தானியங்கு
+	Batch…	தொகுதி…
+	Create Droplet…	துளியை உருவாக்கு…
+	Crop and Straighten Photos	புகைப்படங்களை செதுக்கி நேராக்குங்கள்
+	Contact Sheet II…	தொடர்பு தாள் II…
+	Conditional Mode Change…	நிபந்தனை முறை மாற்றம்…
+	Fit Image…	படத்தைப் பொருத்து…
+	Lens Correction…	வில்லை திருத்தம்…
+	Merge to HDR Pro…	HDR Pro உடன் இணை…
+	Photomerge…	ஒளிச்சேர்க்கை…
+	Scripts	ஸ்கிரிப்டுகள்
+	Image Processor…	பட செயலி…
+	Delete All Empty Layers	அனைத்து வெற்று அடுக்குகளையும் நீக்கு
+	Flatten All Layer Effects	அனைத்து அடுக்கு விளைவுகளையும் சமன் செய்யவும்
+	Flatten All Masks	அனைத்து முகமூடிகளையும் சமன் செய்யுங்கள்
+	Script Events Manager…	ஸ்கிரிப்ட் நிகழ்வுகள் மேலாளர்…
+	Import	இறக்குமதி
+	Browse…	உலாவுக…
+	Reveal in Finder	ஃபைண்டரில் வெளிப்படுத்தவும்
+	File Info…	கோப்பு தகவல்…
+	Print…	Print…
+	Print One Copy	ஒரு நகலை அச்சிடுங்கள்
+	Exit	வெளியேறு
+	Undo	செயல்தவிர்
+	Redo	மீண்டும் செய்
+	Toggle Last State	கடைசி நிலையை நிலைமாற்று
+	Fade…	மங்க செய்…
+	Cut	வெட்டு
+	Copy	நகலெடு
+	Copy Merged	ஒன்றுபட்டதை நகலெடு
+	Paste	ஒட்டு
+	Paste Special	பேஸ்ட் ஸ்பெஷல்
+	Paste in Place	இடத்தில் ஒட்டவும்
+	Paste Into	இதில் ஒட்டவும்
+	Paste Outside	வெளியே ஒட்டவும்
+	Paste Lorem Ipsum	லோரெம் இப்சம் ஒட்டவும்
+	Clear	தெளிநீக்கு
+	Search…	தேடு…
+	Check Spelling…	எழுத்துப்பிழை சரிபார்க்கவும்…
+	Find and Replace Text…	உரையைக் கண்டுபிடித்து மாற்றவும்…
+	Fill…	நிரப்பு…
+	Stroke…	கீரல்…
+	Content-Aware Fill…	உள்ளடக்க விழிப்புணர்வு நிரப்பு…
+	Content-Aware Scale	உள்ளடக்க விழிப்பு அளவி
+	Puppet Warp	பாவை உருமாற்றி
+	Perspective Warp	முன்னோக்கு வார்ப்
+	Free Transform	விடுவித்த உருமாற்று
+	Transform	உருமாற்று
+	Again	மீண்டும்
+	Scale	அளவி
+	Rotate	உருட்டு
+	Skew	வளைவு
+	Distort	திரி
+	Perspective	உளப்பார்வை
+	Warp	உருமாற்றி
+	Flip Horizontal	கிடைமட்டமாக புரட்டவும்
+	Flip Vertical	செங்குத்து புரட்டவும்
+	Rotate 180°	180° சுழற்று
+	Rotate 90° Clockwise	கடிகார திசையில் 90° சுழற்று
+	Rotate 90° Counter Clockwise	90° எதிர் கடிகார திசையில் சுழற்று
+	180°	180°
+	90° Clockwise	90° கடிகார திசையில்
+	90° Counter Clockwise	90° எதிர் கடிகார திசையில்
+	Arbitrary…	தன்னிச்சையான…
+	Auto-Align Layers…	அடுக்குகளை தானாக சீரமைக்கவும்…
+	Auto-Blend Layers…	தானியங்கு-கலப்பு அடுக்குகள்…
+	Define Brush Preset…	தூரிகை முன்னமைவை வரையறுக்கவும்…
+	Define Pattern…	வடிவத்தை வரையறுக்கவும்…
+	Define Custom Shape…	தனிப்பயன் வடிவத்தை வரையறுக்கவும்…
+	Purge	தூய்மைப்படுத்து
+	Clipboard	கிளிப்போர்டு
+	Histories	வரலாறுகள்
+	Video Cache	வீடியோ கேச்
+	All	அனைத்தையும்
+	Presets	முன்னமைவுகள்
+	Preset Manager…	முன்னமைக்கப்பட்ட மேலாளர்…
+	Migrate Presets	முன்னமைவுகளை நகர்த்தவும்
+	Export/Import Presets…	முன்னமைவுகளை ஏற்றுமதி/இறக்குமதி…
+	Color Settings…	வண்ண அமைப்புகள்…
+	Assign Profile…	சுயவிவரத்தை ஒதுக்கு…
+	Convert to Profile…	சுயவிவரத்திற்கு மாற்று…
+	Keyboard Shortcuts…	விசைப்பலகை குறுக்குவழிகள்…
+	Menus…	மெனுக்கள்…
+	Toolbar…	கருவிப்பட்டி…
+	Preferences	விருப்பத்தேர்வுகள்
+	General…	பொது…
+	Interface…	இடைமுகம்…
+	Workspace…	பணியிடம்…
+	Tools…	கருவிகள்…
+	History Log…	வரலாற்றுப் பதிவு…
+	File Handling…	கோப்பு கையாளுதல்…
+	Export…	ஏற்றுமதி…
+	Performance…	செயல்திறன்…
+	Scratch Disks…	ஸ்கிராட்ச் டிஸ்க்குகள்…
+	Cursors…	கர்சர்கள்…
+	Transparency & Gamut…	வெளிப்படைத்தன்மை மற்றும் வரம்பு…
+	Units & Rulers…	அலகுகள் & வரைகோல்கள்…
+	Guides, Grid & Slices…	வழிகாட்டு கோடுகள், கோட்டு சட்டம் & துண்டுகள்…
+	Plug-ins…	செருகுநிரல்கள்…
+	Type…	வகை…
+	Enhanced Controls…	மேம்படுத்தப்பட்ட கட்டுப்பாடுகள்…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	அசல் இயல்புநிலைகள்…
+	Integrations…	ஒருங்கிணைப்புகள்…
+	AI Integrations…	AI ஒருங்கிணைப்புகள்…
+	Install Plug-in…	செருகுநிரலை நிறுவவும்…
+	Language Options	மொழி விருப்பங்கள்
+	Settings…	அமைப்புகள்…
+	Mode	பயன்முறை
+	Bitmap	பிட்மேப்
+	Grayscale	Grayscale
+	Duotone	டியோடோன்
+	Indexed Color	அட்டவணைப்படுத்தப்பட்ட நிறம்
+	RGB Color	RGB நிறம்
+	CMYK Color	CMYK நிறம்
+	Lab Color	ஆய்வக நிறம்
+	Multichannel	மல்டிசனல்
+	8 Bits/Channel	8 பிட்கள்/சேனல்
+	16 Bits/Channel	16 பிட்கள்/சேனல்
+	32 Bits/Channel	32 பிட்கள்/சேனல்
+	Color Table…	வண்ண மேசை…
+	Bitmap…	பிட்மேப்…
+	Duotone…	டியோடோன்…
+	Indexed Color…	அட்டவணைப்படுத்தப்பட்ட வண்ணம்…
+	Adjustments	சீரமைப்புகள்
+	Brightness/Contrast…	ஒளிர்வு/உறழ்பொருவு…
+	Levels…	மட்டங்கள்…
+	Curves…	வளைவுகள்…
+	Exposure…	ஒளிபலுக்கல்…
+	Vibrance…	வண்ண அதிர்வு…
+	Hue/Saturation…	சாயல்/செறிவு…
+	Color Balance…	நிறம் நிறைகோல்…
+	Black & White…	கருப்பு வெள்ளை…
+	Photo Filter…	பட வடிகட்டி…
+	Channel Mixer…	ஒளிவழித்தட கலப்பி…
+	Color Lookup…	வண்ண அட்டவணை…
+	Invert	கவிழ்
+	Posterize…	போஸ்டரிஸ்டு…
+	Threshold…	தொடக்க வரம்பு…
+	Gradient Map…	சாய்வுப்படம்…
+	Selective Color…	தேர்விட்ட நிறம்…
+	Shadows/Highlights…	நிழல்கள்/சிறப்பம்சங்கள்…
+	HDR Toning…	HDR டோனிங்…
+	Desaturate	செறிவு குறை
+	Match Color…	பொருந்தும் வண்ணம்…
+	Replace Color…	நிறத்தை இடமாற்று…
+	Equalize	சமப்படுத்து
+	Auto Tone	தானியங்கு தொனி
+	Auto Contrast	தானியங்கு உறழ்பொருவு
+	Auto Color	தானியங்கு நிறம்
+	Image Size…	பட அளவு…
+	Canvas Size…	இரட்டு அளவு…
+	Image Rotation	பட சுழற்சி
+	Flip Canvas Horizontal	கேன்வாஸை கிடைமட்டமாக புரட்டவும்
+	Flip Canvas Vertical	கேன்வாஸை செங்குத்தாக புரட்டவும்
+	Crop	சுருக்கு
+	Trim…	நேர்த்தியாக்கு…
+	Reveal All	அனைத்தையும் காட்டு
+	Duplicate…	மறுநகல்…
+	Apply Image…	படத்தை ஓட்டிடு…
+	Calculations…	கணக்கீடுகள்…
+	Variables	மாறிகள்
+	Define…	வரையறு…
+	Data Sets…	தரவுத் தொகுப்புகள்…
+	Apply Data Set…	தரவுத் தொகுப்பைப் பயன்படுத்து…
+	Variable Data Sets…	மாறக்கூடிய தரவுத் தொகுப்புகள்…
+	Trap…	பொறி…
+	Analysis	பகுப்பாய்வு
+	Set Measurement Scale…	அளவீட்டு அளவை அமைக்கவும்…
+	Select Data Points…	தரவுப் புள்ளிகளைத் தேர்ந்தெடு…
+	Record Measurements	பதிவு அளவீடுகள்
+	Ruler Tool	ஆட்சியாளர் கருவி
+	Count Tool	எண்ணும் கருவி
+	Place Scale Marker…	இட அளவு குறிப்பான்…
+	Custom…	தனிவழக்கம்…
+	New	புதிது
+	Layer…	அடுக்கு…
+	Group…	குழு…
+	Group from Layers…	அடுக்குகளிலிருந்து குழு…
+	Artboard…	ஆர்ட்போர்டு…
+	Artboard from Group…	குழுவிலிருந்து ஆர்ட்போர்டு…
+	Artboard from Layers…	லேயர்களில் இருந்து ஆர்ட்போர்டு…
+	Layer via Copy	நகலின் வழியே அடுக்கு
+	Layer via Cut	வெட்டி அடுக்கு உருவாக்கு
+	Layer From Background…	பின்னணியில் இருந்து அடுக்கு…
+	Layer from Background…	பின்னணியில் இருந்து அடுக்கு…
+	New Shape Layer	புதிய வடிவ அடுக்கு
+	New Type Layer	புதிய வகை அடுக்கு
+	New Fill Layer	புதிய நிரப்பு அடுக்கு
+	New Adjustment Layer	புதிய சரிசெய்தல் அடுக்கு
+	New Layer Based Slice	புதிய அடுக்கு அடிப்படையிலான துண்டு
+	New Smart Object via Copy	நகல் மூலம் புதிய ஸ்மார்ட் பொருள்
+	New Blank Video Layer	புதிய வெற்று வீடியோ லேயர்
+	New Video Layer from File…	கோப்பிலிருந்து புதிய வீடியோ லேயர்…
+	Duplicate Layer…	படிவை மறுநகலெடு…
+	Delete Layer	அடுக்கை நீக்கு
+	Delete	நீக்கு
+	Rename Layer	லேயரின் பெயரை மாற்றவும்
+	Create Layer	அடுக்கு உருவாக்கவும்
+	Layer Style	அடுக்கு பாங்கு
+	Blending Options…	ஒருக்கலப்பு விருப்பங்கள்…
+	Bevel & Emboss…	பெவல் & எம்போஸ்…
+	Inner Shadow…	உள்நிழல்…
+	Inner Glow…	உள் ஒளிர்வு…
+	Satin…	பளபளப்பு…
+	Color Overlay…	நிற மேலடுக்கு…
+	Gradient Overlay…	நிறச்சாய்வு மேலடுக்கு…
+	Pattern Overlay…	கோல மேலடுக்கு…
+	Outer Glow…	வெளி ஒளிர்வு…
+	Drop Shadow…	விழுநிழல்…
+	Copy Layer Style	அடுக்கு நடையை நகலெடுக்கவும்
+	Paste Layer Style	லேயர் ஸ்டைலை ஒட்டவும்
+	Clear Layer Style	லேயர் ஸ்டைலை அழி
+	Global Light…	உலகளாவிய ஒளி…
+	Hide All Effects	அனைத்து விளைவுகளையும் மறை
+	Scale Effects…	அளவு விளைவுகள்…
+	Smart Filter	ஸ்மார்ட் வடிகட்டி
+	Convert for Smart Filters	ஸ்மார்ட் வடிப்பான்களுக்கு மாற்றவும்
+	Clear Smart Filters	சூட்டிகை ஒளிமறைகளை தெளிநீக்கு
+	Disable Smart Filters	சூட்டிகை வடிகட்டல்களை முடக்கு
+	Delete Filter Mask	வடிகட்டல் ஒளிமறையை நீக்கு
+	Disable Filter Mask	வடிகட்டு ஒளிமறையை முடக்கு
+	Solid Color…	திட நிறம்…
+	Gradient…	நிற சாய்வு…
+	Pattern…	கோலம்…
+	Layer Mask	அடுக்கு மாஸ்க்
+	Vector Mask	திசையன் ஒளிமறை
+	Reveal Selection	தேர்வை காண்பி
+	Hide Selection	தேர்வை மறை
+	Hide All	அனைத்தையும் மறை
+	From Transparency	ஒளியூடுவிலிருந்து
+	Delete Vector Mask	திசையன் ஒளிமறை நீக்கு
+	Enable Layer Mask	லேயர் மாஸ்க்கை இயக்கவும்
+	Disable Layer Mask	லேயர் மாஸ்க்கை முடக்கு
+	Enable Vector Mask	திசையன் ஒளிமறையை இயல்வி
+	Link Layer Mask	இணைப்பு அடுக்கு மாஸ்க்
+	Unlink Layer Mask	லேயர் மாஸ்க் இணைப்பை நீக்கவும்
+	Link Vector Mask	திசையன் ஒளிமறை இணை
+	Add Vector Mask	திசையன் ஒளிமறை சேர்
+	Vector Mask from Current Path	தற்போதைய பாதையில் இருந்து வெக்டர் மாஸ்க்
+	Create Clipping Mask	கிளிப்பிங் மாஸ்க்கை உருவாக்கவும்
+	Release Clipping Mask	கிளிப்பிங் மாஸ்க்கை வெளியிடவும்
+	Smart Objects	ஸ்மார்ட் பொருள்கள்
+	Smart Object	ஸ்மார்ட் பொருள்
+	Convert to Smart Object	சூட்டிகை பொருளாக மாற்று
+	Convert to Embedded	உட்பொதிக்கப்பட்டதாக மாற்றவும்
+	Convert to Linked…	இணைக்கப்பட்டதாக மாற்றவும்…
+	Edit Contents	உள்ளடக்கத்தைத் திருத்து
+	Replace Contents…	உள்ளடக்கங்களை மாற்றவும்…
+	Relink to File…	கோப்புடன் மீண்டும் இணைக்கவும்…
+	Export Contents…	உள்ளடக்கங்களை ஏற்றுமதி செய்யவும்…
+	Update Modified Content	மாற்றியமைக்கப்பட்ட உள்ளடக்கத்தைப் புதுப்பிக்கவும்
+	Update All Modified Content	அனைத்து மாற்றியமைக்கப்பட்ட உள்ளடக்கத்தையும் புதுப்பிக்கவும்
+	Stack Mode	குவிப்பு முறை
+	Entropy	என்ட்ரோபி
+	Kurtosis	குர்டோசிஸ்
+	Maximum	பெருமம்
+	Mean	சராசரி
+	Median	இடைக்கோடு
+	Minimum	சிறுமம்
+	Range	எல்லை
+	Skewness	வளைவு
+	Standard Deviation	நிலையான விலகல்
+	Summation	கூட்டுத்தொகை
+	Variance	மாறுபாடு
+	Video Layers	வீடியோ அடுக்குகள்
+	Interpret Footage…	காட்சிகளை விளக்கவும்…
+	Replace Footage…	காட்சிகளை மாற்றவும்…
+	Reload Frame	சட்டத்தை மீண்டும் ஏற்றவும்
+	Show Altered Video	மாற்றப்பட்ட வீடியோவைக் காட்டு
+	Restore Frame	சட்டத்தை மீட்டமை
+	Restore All Frames	அனைத்து சட்டங்களையும் மீட்டமைக்கவும்
+	Insert Blank Frame	வெற்று சட்டத்தை செருகவும்
+	Delete Frame	சட்டத்தை நீக்கு
+	Duplicate Frame	நகல் சட்டகம்
+	Frame from Layers	அடுக்குகளிலிருந்து சட்டகம்
+	Video Frames to Layers…	லேயர்களுக்கு வீடியோ பிரேம்கள்…
+	Rasterize	Rasterize
+	Rasterize Type	Rasterize வகை
+	Rasterize Type Layer	Rasterize வகை அடுக்கு
+	Rasterize Shape	Rasterize Shape
+	New Guide Layout…	புதிய வழிகாட்டி தளவமைப்பு…
+	New Guides From Shape	வடிவத்திலிருந்து புதிய வழிகாட்டிகள்
+	Lock Layers…	பூட்டு அடுக்குகள்…
+	Link Layers	அடுக்குகளை இணை
+	Select Linked Layers	இணைக்கப்பட்ட அடுக்குகளைத் தேர்ந்தெடுக்கவும்
+	Merge Layers	அடுக்குகளை ஒன்றினை
+	Merge Down	கீழோடு இணை
+	Merge Visible	காணும் அடுக்குகளை இணை
+	Flatten Image	படத்தை சமநிலையாக்கு
+	Matting	மேட்டிங்
+	Color Decontaminate…	கலர் மாசுபடுத்து…
+	Remove Black Matte	கருப்பு மேட்டை அகற்றவும்
+	Remove White Matte	வெள்ளை மேட்டை அகற்றவும்
+	Defringe…	விலக்கு…
+	Group Layers	குழு அடுக்குகள்
+	Ungroup Layers	அடுக்குகளை குழுநீக்கவும்
+	Hide Layers	அடுக்குகளை மறை
+	Arrange	வரிசை முறை
+	Bring to Front	முன் கொணறு
+	Bring Forward	முன்னே கொணறு
+	Send Backward	பின்னே அனுப்பு
+	Send to Back	பின்னுக்கு அனுப்பு
+	Reverse	மறிநிலை
+	Combine Shapes	வடிவங்களை இணைக்கவும்
+	Unite Shapes	வடிவங்களை ஒன்றிணைக்கவும்
+	Subtract Front Shape	முன் வடிவத்தை கழிக்கவும்
+	Intersect Shape Areas	வடிவ பகுதிகளை வெட்டுங்கள்
+	Exclude Overlapping Shapes	ஒன்றுடன் ஒன்று வடிவங்களைத் தவிர்த்து விடுங்கள்
+	Merge Shape Components	வடிவ கூறுகளை ஒன்றிணைக்கவும்
+	Align	சீரமைக்கவும்
+	Top Edges	மேல் முனைகள்
+	Vertical Centers	செங்குத்து மையங்கள்
+	Bottom Edges	கீழ் விளிம்புகள்
+	Left Edges	இடது விளிம்புகள்
+	Horizontal Centers	கிடைமட்ட மையங்கள்
+	Right Edges	வலது விளிம்புகள்
+	Distribute	விநியோகிக்கவும்
+	Vertically	செங்குத்தாக
+	Horizontally	கிடைமட்டமாக
+	Layer Edges	அடுக்கு விளிம்புகள்
+	Isolate Layers	தனிமைப்படுத்தப்பட்ட அடுக்குகள்
+	Layer Content Options…	அடுக்கு உள்ளடக்க விருப்பங்கள்…
+	Fill Content	உள்ளடக்கத்தை நிரப்பவும்
+	Deselect Layers	அடுக்குகளைத் தேர்வுநீக்கவும்
+	Find Layers	அடுக்குகளைக் கண்டறியவும்
+	Layer Comps	அடுக்கு கலவைகள்
+	Layers	அடுக்குகள்
+	All Layers	அனைத்து அடுக்குகளும்
+	Hidden Layers	மறைக்கப்பட்ட அடுக்குகள்
+	Mask All Objects	அனைத்து பொருட்களையும் மறைக்கவும்
+	Subject	பொருள்
+	Sky	வானம்
+	Panels	பேனல்கள்
+	Character Panel	கேரக்டர் பேனல்
+	Paragraph Panel	பத்தி பேனல்
+	Character Styles Panel	எழுத்து நடைகள் குழு
+	Paragraph Styles Panel	பத்தி பாங்குகள் குழு
+	Glyphs Panel	கிளிஃப்ஸ் பேனல்
+	Anti-Alias	விளிம்பு மென்மை
+	Sharp	கூர்மையான
+	Crisp	மிருதுவான
+	Strong	வலுவான
+	Smooth	மென்மையாக்கு
+	Windows LCD	விண்டோஸ் எல்சிடி
+	Windows	விண்டோஸ்
+	Orientation	திசை
+	Horizontal	கிடைமட்டம்
+	Vertical	செங்குத்து
+	OpenType	OpenType
+	Standard Ligatures	நிலையான லிகேச்சர்கள்
+	Contextual Alternates	சூழ்நிலை மாற்றுகள்
+	Discretionary Ligatures	விருப்பமான லிகேச்சர்கள்
+	Swash	ஸ்வாஷ்
+	Oldstyle	பழைய பாணி
+	Stylistic Alternates	ஸ்டைலிஸ்டிக் மாற்றுகள்
+	Titling Alternates	தலைப்பு மாற்று
+	Ornaments	ஆபரணங்கள்
+	Ordinals	ஆர்டினல்கள்
+	Fractions	பின்னங்கள்
+	Create Work Path	வேலை பாதையை உருவாக்கவும்
+	Convert to Shape	வடிவமாக உருமாற்று
+	Warp Text…	வார்ப் உரை…
+	Convert to Point Text	புள்ளி உரைக்கு மாற்ற்று
+	Convert to Paragraph Text	பத்தி உரைக்கு மாற்று
+	Default Features	இயல்புநிலை அம்சங்கள்
+	East Asian Features	கிழக்கு ஆசிய அம்சங்கள்
+	Middle Eastern Features	மத்திய கிழக்கு அம்சங்கள்
+	Middle Eastern & South Asian Composer	மத்திய கிழக்கு மற்றும் தெற்காசிய இசையமைப்பாளர்
+	Update All Text Layers	அனைத்து உரை அடுக்குகளையும் புதுப்பிக்கவும்
+	Replace All Missing Fonts	விடுபட்ட அனைத்து எழுத்துருக்களையும் மாற்றவும்
+	Resolve Missing Fonts…	விடுபட்ட எழுத்துருக்களை தீர்க்கவும்…
+	Font Preview Size	எழுத்துரு மாதிரிக்காட்சி அளவு
+	None	ஏதுமில்லை
+	Small	சிறிது
+	Medium	நடுத்தரம்
+	Large	பெரிது
+	Extra Large	கூடுதல் பெரியது
+	Huge	மிகப்பெரிய
+	Load Default Type Styles	இயல்புநிலை வகை பாங்குகளை ஏற்றவும்
+	Save Default Type Styles	இயல்புநிலை வகை பாங்குகளைச் சேமிக்கவும்
+	Deselect	தேர்வுநீக்கு
+	Reselect	மீண்டும் தேர்ந்தெடு
+	Inverse	கவிழ்
+	Inverse Selection	தலைகீழ் தேர்வு
+	Similar	ஒத்த
+	Color Range…	நிற எல்லைகள்…
+	Focus Area…	கவனம் செலுத்தும் பகுதி…
+	Select and Mask…	தேர்ந்தெடுத்து முகமூடி…
+	Modify	முறை மாற்று
+	Border…	ஓரம்…
+	Smooth…	மென்மையாக்கு…
+	Expand…	vkfuyfyrr65er7t673465e67rte5…
+	Contract…	சுருக்கு…
+	Feather…	மென்மையாக்கு…
+	Grow	வளருங்கள்
+	Transform Selection	தேர்வை உருமாற்று
+	Edit in Quick Mask Mode	விரைவு மாஸ்க் பயன்முறையில் திருத்தவும்
+	Load Selection…	ஏற்ற தேர்வு…
+	Save Selection…	தேர்வைச் சேமி…
+	Match All	அனைத்தையும் பொருத்து
+	Last Filter	கடைசி வடிகட்டி
+	Filter Gallery…	வடிகட்டி தொகுப்பு…
+	Adaptive Wide Angle…	அடாப்டிவ் வைட் ஆங்கிள்…
+	Camera Raw Filter…	கேமரா ரா வடிகட்டி…
+	Liquify…	வழிமமாக்கு…
+	Vanishing Point…	வானிஷிங் பாயிண்ட்…
+	Blur	மங்கல்
+	Blur Gallery	மங்கலான தொகுப்பு
+	Field Blur…	புல மங்கல்…
+	Iris Blur…	ஐரிஸ் ப்ளர்…
+	Tilt-Shift…	டில்ட்-ஷிப்ட்…
+	Path Blur…	பாதை தெளிவின்மை…
+	Spin Blur…	ஸ்பின் ப்ளர்…
+	Blur More	மேலும் மங்கலாக்கு
+	Box Blur…	பெட்டி மங்கல்…
+	Gaussian Blur…	காசியன் மங்கல்…
+	Lens Blur…	வில்லை மங்கல்…
+	Motion Blur…	அசைவு மங்கல்…
+	Radial Blur…	ஆரச்சீர் மங்கல்…
+	Shape Blur…	வடிவ மங்கல்…
+	Smart Blur…	ஸ்மார்ட் ப்ளர்…
+	Surface Blur…	மேற்பரப்பு மங்கல்…
+	Average	நிரலளவு
+	Displace…	பெயரு…
+	Pinch…	கிள்ளு…
+	Polar Coordinates…	முனைவு ஒருங்கிணைப்புகள்…
+	Ripple…	சிற்றலை…
+	Shear…	தரி…
+	Spherize…	கோளமாக்கு…
+	Twirl…	சுழற்று…
+	Wave…	அலை…
+	ZigZag…	ஜிக்ஜாக்…
+	Noise	இரைச்சல்
+	Add Noise…	இரைச்சல் சேர்…
+	Despeckle	பொட்டுபெருக்கு
+	Dust & Scratches…	தூசி & கீறல்கள்…
+	Median…	இடைக்கோடு…
+	Reduce Noise…	இரைச்சலை குறை…
+	Pixelate	படத்துணுக்காக்கு
+	Color Halftone…	நிற தொனிப்பாதி…
+	Crystallize…	படிகமாக்கு…
+	Facet	முகம்
+	Fragment	துண்டு
+	Mezzotint…	உலர்ப்புள்ளி முறை…
+	Mosaic…	பல்லடுக்கு…
+	Pointillize…	சுட்டிக் காட்டு…
+	Render	ஒப்படை
+	Clouds	மேகங்கள்
+	Difference Clouds	வேற்றுமை மேகங்கள்
+	Fibers…	இழைகள்…
+	Flame…	சுடர்…
+	Lens Flare…	வில்லை பட்டொளி…
+	Lighting Effects…	லைட்டிங் எஃபெக்ட்ஸ்…
+	Picture Frame…	படச்சட்டம்…
+	Tree…	மரம்…
+	Sharpen	கூர்தீட்டு
+	Sharpen Edges	முனைகளை கூர்தீட்டு
+	Sharpen More	மேலும் கூர்தீட்டு
+	Smart Sharpen…	சூட்டிகை கூர்தீட்டு…
+	Unsharp Mask…	கூரில்லா ஒளிமறை…
+	High Pass…	உயர் நுழை…
+	Stylize	ஸ்டைலிஸ்டு
+	Diffuse…	விரவு…
+	Emboss…	புடை…
+	Extrude…	வெளியேற்று…
+	Find Edges	விளிம்புகளை தேடு
+	Oil Paint…	எண்ணெய் வரையல்…
+	Solarize	சோலரைஸ்
+	Tiles…	டைல்ஸ்…
+	Trace Contour…	ட்ரேஸ் காண்டூர்…
+	Wind…	காற்று…
+	Video	வீடியோ
+	De-Interlace…	டி-இன்டர்லேஸ்…
+	NTSC Colors	NTSC நிறங்கள்
+	Other	மற்றவை
+	Maximum…	பெருமம்…
+	Minimum…	சிறுமம்…
+	Offset…	ஈடு…
+	Plug-ins	செருகுநிரல்கள்
+	Proof Setup	ஆதார அமைப்பு
+	Proof Colors	ஆதார நிறங்கள்
+	Gamut Warning	வரம்பு எச்சரிக்கை
+	Working CMYK	CMYK வேலை
+	Working Cyan Plate	வேலை செய்யும் சியான் தட்டு
+	Working Magenta Plate	வேலை செய்யும் மெஜந்தா தட்டு
+	Working Yellow Plate	வேலை செய்யும் மஞ்சள் தட்டு
+	Working Black Plate	வேலை செய்யும் கருப்பு தட்டு
+	Working CMY Plate	வேலை செய்யும் CMY தட்டு
+	Legacy Macintosh RGB	மரபு மேகிண்டோஷ் RGB
+	Internet Standard RGB	இணைய தரநிலை RGB
+	Monitor RGB	RGB ஐ கண்காணிக்கவும்
+	Color Blindness — Protanopia-type	வண்ண குருட்டுத்தன்மை - புரோட்டானோபியா வகை
+	Color Blindness — Deuteranopia-type	நிற குருட்டுத்தன்மை - டியூட்டரனோபியா வகை
+	Zoom In	பெரிதாக்கு
+	Zoom Out	சிறிதாக்கு
+	Fit on Screen	திரையில் பொருத்தவும்
+	Fit Layer(s) on Screen	திரையில் லேயர்(களை) பொருத்தவும்
+	Fit Artboard on Screen	ஆர்ட்போர்டை திரையில் பொருத்தவும்
+	100%	100%
+	200%	200%
+	Print Size	அச்சு அளவு
+	Pixel Aspect Ratio	பிக்சல் தோற்ற விகிதம்
+	Pixel Aspect Ratio Correction	பிக்சல் விகிதத் திருத்தம்
+	Custom Pixel Aspect Ratio…	தனிப்பயன் பிக்சல் தோற்ற விகிதம்…
+	Square	சதுரம்
+	D1/DV NTSC (0.91)	D1/DV NTSC (0.91)
+	D1/DV NTSC Widescreen (1.21)	D1/DV NTSC அகலத்திரை (1.21)
+	D1/DV PAL (1.09)	டி1/டிவி பிஏஎல் (1.09)
+	D1/DV PAL Widescreen (1.46)	D1/DV PAL அகலத்திரை (1.46)
+	Anamorphic 2:1 (2)	அனமார்பிக் 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080/DVCPRO HD 720 (1.33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080/HDV 1080 (1.5)
+	32-bit Preview Options…	32-பிட் முன்னோட்ட விருப்பங்கள்…
+	Screen Mode	திரை முறை
+	Standard Screen Mode	நிலையான திரை முறை
+	Full Screen Mode With Menu Bar	மெனு பட்டியுடன் முழுத்திரை பயன்முறை
+	Full Screen Mode	முழுத்திரை பயன்முறை
+	Cycle Screen Mode	சுழற்சி திரை முறை
+	Show	காண்பி
+	Extras	கூடுதல்
+	Selection Edges	தேர்வு முனைகள்
+	Target Path	இலக்கு பாதை
+	Current Path	தற்போதைய பாதை
+	Grid	கோட்டு சட்டம்
+	Guides	வழிகாட்டு கோடுகள்
+	Canvas Guides	கேன்வாஸ் வழிகாட்டிகள்
+	Artboard Guides	ஆர்ட்போர்டு வழிகாட்டிகள்
+	Count	எண்ணிக்கை
+	Smart Guides	ஸ்மார்ட் வழிகாட்டிகள்
+	Slices	துண்டுகள்
+	Notes	குறிப்புகள்
+	Pixel Grid	படத்துணுக்கு சட்டம்
+	Pixel Art	பிக்சல் கலை
+	Pixel Art Preview	பிக்சல் கலை முன்னோட்டம்
+	Pattern Preview	வடிவ முன்னோட்டம்
+	Brush Preview	தூரிகை முன்னோட்டம்
+	Mesh	கண்ணி
+	Edit Pins	பின்களைத் திருத்தவும்
+	Document Bounds	ஆவண எல்லைகள்
+	Show Extras Options…	கூடுதல் விருப்பங்களைக் காட்டு…
+	Rulers	வரைகோல்
+	Snap	ஈர்த்தொட்டு
+	Snap To	ஈர்த்தொட்டு இதனோடு
+	Lock Guides	பூட்டு வழிகாட்டிகள்
+	Clear Guides	வழிகாட்டிகளை வழுநீக்கு
+	Clear Selected Artboard Guides	தேர்ந்தெடுக்கப்பட்ட ஆர்ட்போர்டு வழிகாட்டிகளை அழிக்கவும்
+	Clear Canvas Guides	கேன்வாஸ் வழிகாட்டிகளை அழிக்கவும்
+	New Guide…	புதிய வழிகாட்டி…
+	Lock Slices	பூட்டு துண்டுகள்
+	Clear Slices	துண்டுகளை அழிக்கவும்
+	Match Zoom	மேட்ச் ஜூம்
+	Match Location	போட்டி இடம்
+	Match Rotation	போட்டி சுழற்சி
+	Cascade	அடுக்கை
+	Tile	ஓடுகள்
+	Tile All Horizontally	அனைத்து கிடைமட்டமாக ஓடு
+	Tile All Vertically	அனைத்தும் செங்குத்தாக ஓடு
+	2-up Horizontal	2-மேல் கிடைமட்ட
+	2-up Vertical	2-மேலே செங்குத்து
+	3-up Horizontal	3-அப் கிடைமட்ட
+	3-up Stacked	3-அப் அடுக்கப்பட்ட
+	3-up Vertical	3-மேலே செங்குத்து
+	4-up	4-அப்
+	6-up	6-அப்
+	Consolidate All to Tabs	அனைத்தையும் ஒருங்கிணைக்கவும்
+	Float in Window	ஜன்னலில் மிதக்க
+	Float All in Windows	விண்டோஸில் அனைத்தையும் மிதக்கவும்
+	New Window for Document	ஆவணத்திற்கான புதிய சாளரம்
+	Workspace	பணியிடம்
+	Essentials	அத்தியாவசியமானவை
+	Graphic and Web	கிராஃபிக் மற்றும் வலை
+	Painting	ஓவியம்
+	Photography	புகைப்படம் எடுத்தல்
+	New Workspace…	புதிய பணியிடம்…
+	Delete Workspace…	பணியிடத்தை நீக்கு…
+	Reset Workspace	பணியிடத்தை மீட்டமைக்கவும்
+	Lock Workspace	பணியிடத்தை பூட்டு
+	Theme	தோற்றம்
+	Pro Theme	புரோ தீம்
+	Pro Medium Gray Theme	புரோ நடுத்தர சாம்பல் தீம்
+	Studio Theme	ஸ்டுடியோ தீம்
+	Studio Light Theme	ஸ்டுடியோ லைட் தீம்
+	Classic Theme	கிளாசிக் தீம்
+	Next Theme	அடுத்த தீம்
+	Midnight	நள்ளிரவு
+	Anthracite	ஆந்த்ராசைட்
+	Slate	ஸ்லேட்
+	Pearl	முத்து
+	Aubergine	கத்தரிக்காய்
+	Ocean	பெருங்கடல்
+	Actions	செயல்கள்
+	Brush Settings	தூரிகை அமைப்புகள்
+	Brushes	தூரிகைகள்
+	Channels	அலைத்தடங்கள்
+	Character	எழுத்து
+	Character Styles	பாத்திரப் பாங்குகள்
+	Clone Source	குளோன் மூல
+	Color	நிறம்
+	Glyphs	செதுக்குகள்
+	Gradients	சாய்வுகள்
+	Histogram	வரலாற்று வரிபட்டை
+	History	வரலாறு
+	Info	தகவல்
+	Measurement Log	அளவீட்டு பதிவு
+	Modifier Keys	மாற்றி விசைகள்
+	Navigator	மீகான்
+	Options	விருப்பங்கள்
+	Paragraph	பத்தி
+	Paragraph Styles	பத்தி பாங்குகள்
+	Paths	பாதை
+	Patterns	வடிவங்கள்
+	Properties	பண்புகள்
+	Shapes	வடிவங்கள்
+	Styles	பாணிகள்
+	Swatches	நிற துணி
+	Timeline	காலவரிசை
+	Tool Presets	கருவி முன்னமைவுகள்
+	Tools	கருவிகள்
+	About PhotoSuite	PhotoSuite பற்றி
+	Website	இணையதளம்
+	Report an Issue…	சிக்கலைப் புகாரளிக்கவும்…
+	WIA Support…	WIA ஆதரவு…
+	Apply	ஓட்டிடு
+	HSB/HSL	HSB/HSL
+	Invert…	கவிழ்…
+	Load Files into Stack…	கோப்புகளை அடுக்கில் ஏற்றவும்…
+	Motion	இயக்கம்
+	Notes…	குறிப்புகள்…
+	Other…	மற்றவை…
+	Remove Warp Split	வார்ப் பிளவை அகற்று
+	Shape	வடிவம்
+	Split Warp Crosswise	ஸ்பிலிட் வார்ப் குறுக்குவழி
+	Split Warp Horizontally	வார்ப்பை கிடைமட்டமாக பிரிக்கவும்
+	Split Warp Vertically	வார்ப்பை செங்குத்தாக பிரிக்கவும்
+	Statistics…	புள்ளிவிவரங்கள்…
+@plural	{n} item|{n} items	{n} உருப்படி|{n} பொருட்கள்
+	Auto	ஆட்டோ
+	(print to the printer)	(அச்சுப்பொறியில் அச்சிடவும்)
+	+ Add variable	+ மாறியைச் சேர்க்கவும்
+	30 frames @ 30 fps	30 ஃப்ரேம்கள் @ 30 fps
+	3D LUT File	3D LUT கோப்பு
+	Absolute	அறுதி
+	Absolute Colorimetric	முழுமையான வண்ண அளவீடு
+	Action	செயல்
+	Adaptive	தழுவல்
+	Adaptive Wide Angle isn't open	அடாப்டிவ் வைட் ஆங்கிள் திறக்கப்படவில்லை
+	Add	சேர்
+	Add Layer Mask	லேயர் மாஸ்க்கைச் சேர்க்கவும்
+	Add Stop	நிறுத்தத்தைச் சேர்க்கவும்
+	Add a layer style	லேயர் ஸ்டைலைச் சேர்க்கவும்
+	Add a mask  (from the selection; {key} inverts)	முகமூடியைச் சேர்க்கவும் (தேர்வு; {key} தலைகீழ்)
+	Add an adjustment	சரிசெய்தலைச் சேர்க்கவும்
+	Add disk	வட்டு சேர்க்கவும்
+	Add space after paragraph	பத்திக்குப் பிறகு இடத்தைச் சேர்க்கவும்
+	Add space before paragraph	பத்திக்கு முன் இடத்தைச் சேர்க்கவும்
+	Add to Sample	மாதிரியில் சேர்
+	Add to selection  ({key})	தேர்வில் சேர் ({key})
+	Adjust for Zoom	பெரிதாக்குவதற்கு சரிசெய்யவும்
+	Adjustment visible	சரிசெய்தல் தெரியும்
+	Adobe RGB (1998) compatible	Adobe RGB (1998) இணக்கமானது
+	Align and Distribute	சீரமைத்து விநியோகிக்கவும்
+	Align and distribute	சீரமைத்து விநியோகிக்கவும்
+	Align horizontal centers	கிடைமட்ட மையங்களை சீரமைக்கவும்
+	Align left edges	இடது விளிம்புகளை சீரமை
+	Align right edges	வலது விளிம்புகளை சீரமை
+	Aligned	சீரமைந்தது
+	All Caps	அனைத்து கேப்ஸ்
+	All Slices	அனைத்து துண்டுகள்
+	All User Slices	அனைத்து பயனர் துண்டுகள்
+	All shortcuts reset to Photoshop defaults.	அனைத்து குறுக்குவழிகளும் ஃபோட்டோஷாப் இயல்புநிலைக்கு மீட்டமைக்கப்படும்
+	Alt	Alt
+	Always use pressure for opacity	ஒளிபுகாநிலைக்கு எப்போதும் அழுத்தத்தைப் பயன்படுத்தவும்
+	Always use pressure for size	அளவிற்கான அழுத்தத்தை எப்போதும் பயன்படுத்தவும்
+	Amount	தொகை
+	Anchor:	தொகுப்பாளர்:
+	Angle	கோணம்
+	Angle Gradient	கோண சாய்வு
+	Angle Jitter	கோண நடுக்கம்
+	Answer the unsaved-changes prompt first	சேமிக்கப்படாத-மாற்றங்கள் வரிக்கு முதலில் பதிலளிக்கவும்
+	Anti-alias	விளிம்பு மென்மை
+	Appearance	தோற்றம்
+	Appearance (Layer Style)	தோற்றம் (அடுக்கு உடை)
+	Apply Layer Mask	லேயர் மாஸ்க்கைப் பயன்படுத்துங்கள்
+	Apply Per Tip	ஒரு உதவிக்குறிப்புக்கு விண்ணப்பிக்கவும்
+	Apply next selected layer comp	அடுத்து தேர்ந்தெடுக்கப்பட்ட லேயர் கம்ப்யூட்டரைப் பயன்படுத்தவும்
+	Apply previous selected layer comp	முந்தைய தேர்ந்தெடுக்கப்பட்ட அடுக்கு தொகுப்பைப் பயன்படுத்தவும்
+	Artboard	கலைப் பலகை
+	Artboard Background Color	ஆர்ட்போர்டு பின்னணி நிறம்
+	Assign working space	வேலை இடத்தை ஒதுக்குங்கள்
+	Author:	ஆசிரியர்:
+	Auto Hide	தானாக மறை
+	Auto-Select:	தானாகத் தேர்ந்தெடு:
+	Automatically level near-horizontal line segments	கிடைமட்டக் கோடுகளுக்கு அருகில் உள்ள பகுதிகளைத் தானாகவே சமன் செய்யவும்
+	Automatically straighten and level	தானாக நேராக்க மற்றும் நிலை
+	Automatically straighten near-vertical line segments	அருகில் செங்குத்து கோடு பகுதிகளை தானாக நேராக்கவும்
+	Background	பின்புலம்
+	Background Color	பின்னணி நிறம்
+	Background Contents	பின்னணி உள்ளடக்கம்
+	Balance	சமநிலை
+	Baseline	அடிப்படை
+	Baseline shift	அடிக்கோடு மாற்றம்
+	Basic	அடிப்படை
+	Before (Y)	முன் (Y)
+	Begin recording	பதிவு செய்யத் தொடங்குங்கள்
+	Bend:	வளைவு:
+	Bicubic	பைகுபிக்
+	Bicubic (smooth gradients)	பைகுபிக் (மென்மையான சாய்வு)
+	Bilinear	ஈரோர்படு
+	Black	கருப்பு
+	Black & White	கருப்பு வெள்ளை
+	Black Point Compensation	பிளாக் பாயிண்ட் இழப்பீடு
+	Black, White	கருப்பு, வெள்ளை
+	Blacks	கறுப்பர்கள்
+	Blending	கலத்தல்
+	Blending Options	ஒருக்கலப்பு விருப்பங்கள்
+	Blue	நீலம்
+	Blue, Red, Yellow	நீலம், சிவப்பு, மஞ்சள்
+	Both	இரண்டும்
+	Both Axes	இரண்டு அச்சுகள்
+	Bottom	கீழ்
+	Brightness	ஒளிர்மை
+	Brightness Jitter	ஒளிர்வு நடுக்கம்
+	Brightness/Contrast	ஒளிர்வு/உறழ்பொருவு
+	Bring the selected pin forward	தேர்ந்தெடுக்கப்பட்ட பின்னை முன்னோக்கி கொண்டு வாருங்கள்
+	Brush Preset picker	தூரிகை ப்ரீசெட் பிக்கர்
+	Brush Reconstruct Options	தூரிகை மறுகட்டமைப்பு விருப்பங்கள்
+	Brush Tool Options	தூரிகை கருவி விருப்பங்கள்
+	Cache Level:	தற்காலிக சேமிப்பு நிலை:
+	Camera Raw isn't open	கேமரா ரா திறக்கப்படவில்லை
+	Cancel	ரத்து செய்யுங்கள்
+	Cancel (Esc)	ரத்து செய் (Esc)
+	Cancel any current edits (Esc)	தற்போதைய திருத்தங்களை ரத்துசெய் (Esc)
+	Cancel current crop operation  (Esc)	தற்போதைய பயிர் செயல்பாட்டை ரத்துசெய் (Esc)
+	Cancel transform (Esc)	மாற்றத்தை ரத்துசெய் (Esc)
+	Cancel warp (Esc)	வார்ப்பை ரத்து செய் (Esc)
+	Canvas	இரட்டு
+	Canvas extension color:	கேன்வாஸ் நீட்டிப்பு நிறம்:
+	Capture	பிடிப்பு
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	ஒவ்வொரு லேயரின் தெரிவுநிலை, நிலை மற்றும் பாணியை + கீழே படமெடுத்து, பின்னர் பதிப்புகளுக்கு இடையில் மாறவும்
+	Catch-up on Stroke End	ஸ்ட்ரோக் முடிவில் கேட்ச்-அப்
+	Center	நடுவே
+	Center Crop Marks	மைய பயிர் மதிப்பெண்கள்
+	Center text	மைய உரை
+	Change	மாற்றவும்
+	Change All	அனைத்தையும் மாற்றவும்
+	Change Screen Mode  (F)	திரை பயன்முறையை மாற்றவும் (F)
+	Change To:	இதற்கு மாற்று:
+	Channel Mixer	ஒளிவழித்தட கலப்பி
+	Channel:	சேனல்:
+	Check All Layers	அனைத்து அடுக்குகளையும் சரிபார்க்கவும்
+	Check Spelling	எழுத்துப்பிழை சரிபார்க்கவும்
+	Clarity	தெளிவு
+	Clear All	அனைத்தையும் அழி
+	Clear Override	மேலெழுதுதலை அழிக்கவும்
+	Clear Samples	தெளிவான மாதிரிகள்
+	Click sets foreground · right-click sets background	முன்புறத்தை அமைக்கிறது என்பதைக் கிளிக் செய்யவும் · பின்னணியை அமைக்கிறது என்பதை வலது கிளிக் செய்யவும்
+	Click the first point or press {key} to close · Esc cancels	மூடுவதற்கு முதல் புள்ளியைக் கிளிக் செய்யவும் அல்லது {key}ஐ அழுத்தவும் · Esc ரத்துசெய்
+	Click to add a point · drag off or {key}-click or Delete to remove	ஒரு புள்ளியைச் சேர்க்க கிளிக் செய்யவும் · இழுக்கவும் அல்லது அகற்ற {key}-கிளிக் செய்யவும் அல்லது நீக்கவும்
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	விண்ணப்பிக்க கிளிக் செய்யவும், {key} - மேலெழுதலை அழிக்க கிளிக் செய்யவும், உடை விருப்பங்களுக்கு இருமுறை கிளிக் செய்யவும்
+	Click to edit the gradient	சாய்வைத் திருத்த கிளிக் செய்யவும்
+	Click to restore the current colour	தற்போதைய நிறத்தை மீட்டெடுக்க கிளிக் செய்யவும்
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	பெரிதாக்க கிளிக் செய்யவும் · {key}-பெரிதாக்க கிளிக் செய்யவும் · பெரிதாக்க / அவுட் செய்ய வலது/இடதுபுறமாக இழுக்கவும்
+	Click with the Note tool to add a note.	குறிப்பைச் சேர்க்க குறிப்பு கருவியைக் கிளிக் செய்யவும்
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	கிளிக் செய்யவும்: கார்னர் · இழுக்கவும்: மென்மையாகவும் · முதல் புள்ளியை கிளிக் செய்யவும்: மூடவும் · {key} ஃபினிஷ் · Esc ரத்து செய்யவும்
+	Clip to layer below	கீழே உள்ள அடுக்குக்கு கிளிப் செய்யவும்
+	Clipped	கிளிப் செய்யப்பட்டது
+	Close Style Options	உடை விருப்பங்களை மூடு
+	Cmd	Cmd
+	Coated CMYK	பூசப்பட்ட CMYK
+	Color & Swatches	நிறம் & ஸ்வாட்ச்கள்
+	Color Balance	நிறம் நிறைகோல்
+	Color Detail	வண்ண விவரம்
+	Color Grading	வண்ண தரப்படுத்தல்
+	Color Lookup	வண்ண அட்டவணை
+	Color Management	வண்ண மேலாண்மை
+	Color Mixer	வண்ண கலவை
+	Color Mode	வண்ண முறை
+	Color Priority	வண்ண முன்னுரிமை
+	Color Range preview	வண்ண வரம்பு மாதிரிக்காட்சி
+	Color:	நிறம்:
+	Colorize	வண்ணமயமாக்கு
+	Colors	நிறங்கள்
+	Commit Perspective Warp ({key})	கமிட் பெர்ஸ்பெக்டிவ் வார்ப் ({key})
+	Commit Puppet Warp ({key})	கமிட் பப்பட் வார்ப் ({key})
+	Commit any current edits ({key})	தற்போதைய திருத்தங்களைச் செய்யுங்கள் ({key})
+	Commit current crop operation  ({key})	தற்போதைய பயிர் செயல்பாட்டிற்கு ({key})
+	Commit transform ({key})	மாற்றத்தை உறுதிசெய்க ({key})
+	Commit warp ({key})	கமிட் வார்ப் ({key})
+	Constant	நிலையான
+	Constrain proportions	விகிதாச்சாரத்தை கட்டுப்படுத்துங்கள்
+	Contact Sheet II	தொடர்பு தாள் II
+	Content-Aware	உள்ளடக்கம்-அறிவு
+	Contiguous	தொடர்ச்சியானது
+	Contrast	உறழ்பொருவு
+	Control:	கட்டுப்பாடு:
+	Convert document's colors to the working space	ஆவணத்தின் வண்ணங்களை வேலை செய்யும் இடத்திற்கு மாற்றவும்
+	Convert to sRGB	sRGB ஆக மாற்றவும்
+	Copies	பிரதிகள்
+	Copper	செம்பு
+	Copyright	காப்புரிமை
+	Copyright and Contact Info	பதிப்புரிமை மற்றும் தொடர்புத் தகவல்
+	Corner Crop Marks	மூலை பயிர் அடையாளங்கள்
+	Corner radius	வளைவு ஆரம்
+	Correction	திருத்தம்
+	Count Jitter	எண்ணு நடுக்கம்
+	Create	படை
+	Create Droplet	துளியை உருவாக்கவும்
+	Create Texture	அமைப்பை உருவாக்கவும்
+	Create Video Timeline	வீடியோ காலவரிசையை உருவாக்கவும்
+	Create a new count group	புதிய எண்ணிக்கை குழுவை உருவாக்கவும்
+	Create a new document or open an existing file.	புதிய ஆவணத்தை உருவாக்கவும் அல்லது ஏற்கனவே உள்ள கோப்பை திறக்கவும்
+	Create a new group	புதிய குழுவை உருவாக்கவும்
+	Create a new layer	புதிய லேயரை உருவாக்கவும்
+	Create new action	புதிய செயலை உருவாக்கவும்
+	Create new channel	புதிய சேனலை உருவாக்கவும்
+	Create new document from current state	தற்போதைய நிலையில் இருந்து புதிய ஆவணத்தை உருவாக்கவும்
+	Create new fill or adjustment layer	புதிய நிரப்பு அல்லது சரிசெய்தல் அடுக்கை உருவாக்கவும்
+	Create new gradient	புதிய சாய்வு உருவாக்கவும்
+	Create new group	புதிய குழுவை உருவாக்கவும்
+	Create new layer comp	புதிய அடுக்கு தொகுப்பை உருவாக்கவும்
+	Create new pattern from the selection	தேர்விலிருந்து புதிய வடிவத்தை உருவாக்கவும்
+	Create new shape from the current path	தற்போதைய பாதையில் இருந்து புதிய வடிவத்தை உருவாக்கவும்
+	Create new snapshot	புதிய ஸ்னாப்ஷாட்டை உருவாக்கவும்
+	Create new style (from the selected type)	புதிய பாணியை உருவாக்கவும் (தேர்ந்தெடுக்கப்பட்ட வகையிலிருந்து)
+	Create new style from the selected layer	தேர்ந்தெடுக்கப்பட்ட அடுக்கிலிருந்து புதிய பாணியை உருவாக்கவும்
+	Create new tool preset	புதிய கருவி முன்னமைவை உருவாக்கவும்
+	Crop Factor	பயிர் காரணி
+	Ctrl	Ctrl
+	Current & Below	நடப்பு & கீழே
+	Current Layer	நடப்பு அடுக்கு
+	Current Size	தற்போதைய அளவு
+	Current Tool Only	நடப்பு கருவி மட்டும்
+	Curve	வளைவு
+	Curves	வளைவுகள்
+	Custom	தனிவழக்கம்
+	Custom Shapes	விருப்ப வடிவங்கள்
+	Cyan	நீலப்பச்சை
+	Cyan  ·  Red	சியான் · சிவப்பு
+	Darken	இருளாக்கு
+	Darks	இருள்கள்
+	Data Sets	தரவுத் தொகுப்புகள்
+	Default	இயல்புநிலை
+	Default colours (D)	இயல்பு நிறங்கள் (D)
+	Default printer	இயல்புநிலை அச்சுப்பொறி
+	Default restored.	இயல்புநிலை மீட்டமைக்கப்பட்டது
+	Define	வரையறுக்கவும்
+	Define at least one variable first.	முதலில் குறைந்தது ஒரு மாறியை வரையறுக்கவும்
+	Dehaze	டீஹேஸ்
+	Delete Cropped Pixels	செதுக்கப்பட்ட பிக்சல்களை நீக்கு
+	Delete Group	குழுவை நீக்கு
+	Delete Layer Mask	லேயர் மாஸ்க்கை நீக்கு
+	Delete Layers	அடுக்குகளை நீக்கு
+	Delete Shortcut	குறுக்குவழியை நீக்கு
+	Delete Timeline	காலவரிசையை நீக்கு
+	Delete Tool Preset	கருவி முன்னமைவை நீக்கு
+	Delete count group	எண்ணிக்கை குழுவை நீக்கு
+	Delete current channel	தற்போதைய சேனலை நீக்கு
+	Delete current state	தற்போதைய நிலையை நீக்கு
+	Delete effect layer	விளைவு அடுக்கை நீக்கு
+	Delete layer	அடுக்கை நீக்கு
+	Delete layer comp	அடுக்கு சுருக்கத்தை நீக்கு
+	Delete note	குறிப்பை நீக்கு
+	Delete selected measurements	தேர்ந்தெடுக்கப்பட்ட அளவீடுகளை நீக்கவும்
+	Delete style	நடையை நீக்கு
+	Delete tool preset	கருவி முன்னமைவை நீக்கு
+	Density	நெருக்கம்
+	Density:	அடர்த்தி:
+	Depth	ஆழம்
+	Depth Jitter	ஆழம் நடுக்கம்
+	Description	விளக்கம்
+	Deselect All	அனைத்தையும் தேர்வுநீக்கவும்
+	Detail	விவரம்
+	Diamond Gradient	வைர சாய்வு
+	Difference	வேறுபாடு
+	Diffusion	பரவல்
+	Discard the embedded profile (don't color manage)	உட்பொதிக்கப்பட்ட சுயவிவரத்தை நிராகரிக்கவும் (வண்ண மேலாண்மை வேண்டாம்)
+	Discontiguous	தொடர்பற்றது
+	Feedback	பின்னூட்டம்
+	Dismiss	நிராகரி
+	Display P3	காட்சி P3
+	Display Text	காட்சி உரை
+	Dither	டிதர்
+	Divide…	வகுத்தம்…
+	Document	ஆவணம்
+	Don't Save	சேமிக்க வேண்டாம்
+	Done	முடிந்தது
+	Dots	புள்ளிகள்
+	Drag a rectangle around the object	பொருளைச் சுற்றி ஒரு செவ்வகத்தை இழுக்கவும்
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	ஒரு தடையைச் சேர்க்க படத்தின் மீது இழுக்கவும்; கிடைமட்ட/செங்குத்துக்கான ஷிப்ட்; நீக்க வலது கிளிக் செய்யவும்
+	Drag to move the active shape's path or the Work Path	செயலில் உள்ள வடிவத்தின் பாதை அல்லது பணிப் பாதையை நகர்த்த இழுக்கவும்
+	Draw with the Pen tool (P) or make a work path from a selection.	பென் டூல் (P) மூலம் வரையவும் அல்லது தேர்வில் இருந்து பணிப் பாதையை உருவாக்கவும்
+	Drop an image or PSD anywhere to open it.	ஒரு படத்தையோ அல்லது PSDயையோ எங்கும் திறந்து விடவும்
+	Duplicate Layers…	நகல் அடுக்குகள்…
+	Duplicate style	நகல் நடை
+	Edit Toolbar…	கருவிப்பட்டியைத் திருத்து…
+	Edit in Quick Mask Mode  (Q)	விரைவு மாஸ்க் பயன்முறையில் திருத்தவும் (Q)
+	Edit in Standard Mode  (Q)	நிலையான பயன்முறையில் திருத்தவும் (Q)
+	Effects	விளைவுகள்
+	Embed Color Profile	வண்ண சுயவிவரத்தை உட்பொதிக்கவும்
+	Embedded Profile Mismatch	உட்பொதிக்கப்பட்ட சுயவிவரம் பொருந்தவில்லை
+	Enable airbrush-style build-up effects	ஏர்பிரஷ்-ஸ்டைல் பில்ட்-அப் விளைவுகளை இயக்கவும்
+	Enhance Edge	விளிம்பை மேம்படுத்தவும்
+	Entire Font	முழு எழுத்துரு
+	Exact	துல்லியமானது
+	Expansion:	விரிவாக்கம்:
+	Export Presets	ஏற்றுமதி முன்னமைவுகள்
+	Export selected measurements (CSV)	தேர்ந்தெடுக்கப்பட்ட அளவீடுகளை ஏற்றுமதி செய்யவும் (CSV)
+	Exposure	ஒளிபலுக்கல்
+	Exposure and Gamma	வெளிப்பாடு மற்றும் காமா
+	Exposure:	வெளிப்பாடு:
+	Eyedropper	நிறத்தேர்வு கருவி
+	Factor:	காரணி:
+	Faux Bold	ஃபாக்ஸ் போல்ட்
+	Faux Italic	போலி சாய்வு
+	Feather	மென்மையாக்கு
+	Fewer Points	குறைவான புள்ளிகள்
+	File Settings	கோப்பு அமைப்புகள்
+	Fill	நிரப்பு
+	Fill:	நிரப்பவும்:
+	Filter for adjustment layers	சரிசெய்தல் அடுக்குகளுக்கான வடிகட்டி
+	Filter for pixel layers	பிக்சல் அடுக்குகளுக்கான வடிகட்டி
+	Filter for shape layers	வடிவ அடுக்குகளுக்கு வடிகட்டி
+	Filter for smart objects	ஸ்மார்ட் பொருள்களுக்கான வடிகட்டி
+	Filter for type layers	வகை அடுக்குகளுக்கான வடிகட்டி
+	Filter:	வடிகட்டி:
+	Finger Painting	விரல் ஓவியம்
+	Fisheye	மீன் கண்
+	Fit	பொருத்தம்
+	Fit Screen	ஃபிட் ஸ்கிரீன்
+	Fit in View	பார்வையில் பொருத்தவும்
+	Fixed	சரி செய்யப்பட்டது
+	Fixed Ratio	நிலைத்த விகிதம்
+	Fixed Size	நிலைத்த அளவு
+	Flip	புரட்டவும்
+	Flip X	Flip X
+	Flip X Jitter	Flip X நடுக்கம்
+	Flip Y	ஃபிளிப் ஒய்
+	Flip Y Jitter	ஃபிளிப் ஒய் ஜிட்டர்
+	Flow	ஓட்டம்
+	Flow Jitter	ஓட்டம் நடுக்கம்
+	Focal Length	குவிய நீளம்
+	Font	எழுத்துரு
+	Font Size:	எழுத்துரு அளவு:
+	Font size	எழுத்துரு அளவு
+	Foreground	முன்புறம்
+	Foreground to Background	முன்புறம் பின்னணி
+	Foreground/Background Jitter	முன்புற/ பின்புற நடுக்கம்
+	Format	படவடிவம்
+	Frame from Layers…	அடுக்குகளிலிருந்து சட்டகம்…
+	Free	விடுவித்த
+	Full Spherical	முழு உருண்டை
+	Fuzziness:	தெளிவின்மை:
+	GPU	GPU
+	Gamma Correction	காமா திருத்தம்
+	Gamma:	காமா:
+	Global	உலகளாவிய
+	Glow Color	ஒளிரும் வண்ணம்
+	Gradient Map	சாய்வுப்படம்
+	Grain	தூள்
+	Gray	சாம்பல்
+	Gray Gamma 2.2	சாம்பல் காமா 2.2
+	Green	பச்சை
+	Group	குழு
+	Hardness	தின்மை
+	Heart	இதயம்
+	Height	உயரம்
+	Height:	உயரம்:
+	Hide Auto Slices	தானியங்கு துண்டுகளை மறை
+	Hide Properties	பண்புகளை மறை
+	Highlight Compression	சுருக்கத்தை முன்னிலைப்படுத்தவும்
+	Highlight Priority	முன்னுரிமையை முன்னிலைப்படுத்தவும்
+	Highlights	ஒளிர்வுகள்
+	Home	வீடு
+	Horizontal scale	கிடைமட்ட அளவி
+	Hue	சாயல்
+	Hue Jitter	சாயல் நடுக்கம்
+	Hue/Saturation	சாயல்/செறிவு
+	Hyphenate	ஹைபனேட்
+	Ignore	புறக்கணிக்கவும்
+	Ignore All	அனைத்தையும் புறக்கணிக்கவும்
+	Image Size	பட அளவு
+	Import Brushes…	தூரிகைகளை இறக்குமதி செய்…
+	Import Photoshop brushes (.abr)	ஃபோட்டோஷாப் தூரிகைகளை இறக்குமதி செய் (.abr)
+	Import Presets	முன்னமைவுகளை இறக்குமதி செய்யவும்
+	Imported	இறக்குமதி செய்யப்பட்டது
+	Indent First	முதலில் உள்தள்ளுங்கள்
+	Indent Left	உள்தள்ளல் இடது
+	Indent Right	உள்தள்ளல் உரிமை
+	Indent first line	முதல் வரியை உள்தள்ளவும்
+	Indent left margin	இடது விளிம்பு உள்தள்ளல்
+	Indent right margin	வலது ஓரத்தை உள்தள்ளவும்
+	Input:	உள்ளீடு:
+	Inside	உட்புறம்
+	Interlaced	ஒன்றோடொன்று இணைக்கப்பட்டது
+	Interpolation:	இடைக்கணிப்பு:
+	Intersect with selection  ({key})	தேர்வு ({key}) உடன் வெட்டு
+	Invert All	அனைத்தையும் தலைகீழாக மாற்றவும்
+	Invert has no settings.	இன்வெர்ட்டில் அமைப்புகள் இல்லை
+	Italic	சாய்வு
+	Justify all	அனைத்தையும் நியாயப்படுத்துங்கள்
+	Justify last centered	கடைசியாக மையப்படுத்து
+	Justify last left	கடைசி இடதுபுறத்தை நியாயப்படுத்தவும்
+	Justify last right	கடைசி உரிமையை நியாயப்படுத்தவும்
+	Kerning	கெர்னிங்
+	Keyboard Shortcuts	விசைப்பலகை குறுக்குவழிகள்
+	Keyboard Shortcuts and Menus	விசைப்பலகை குறுக்குவழிகள் மற்றும் மெனுக்கள்
+	Kind	வகையான
+	Label Size	லேபிள் அளவு
+	Labels	லேபிள்கள்
+	Lanczos (sharp)	லான்சோஸ் (கூர்மையான)
+	Landscape	கிடைக்கு
+	Last Document State	கடைசி ஆவண நிலை
+	Layout	அமைப்பு
+	Leading	முன்னணி
+	Leading (set to the font size × auto-leading when Auto)	லீடிங் (எழுத்துரு அளவு × ஆட்டோ லீடிங் ஆக அமைக்கப்பட்டுள்ளது)
+	Leave as is (don't color manage)	அப்படியே விடுங்கள் (வண்ண மேலாண்மை வேண்டாம்)
+	Left	இடது
+	Left align text	உரையை இடப்புறம் சீரமைக்கவும்
+	Length:	நீளம்:
+	Level	நிலை
+	Levels	மட்டங்கள்
+	Lighten	ஒளிரச்செய்
+	Lightness	ஒளிமை
+	Lights	விளக்குகள்
+	Limits:	வரம்புகள்:
+	Linear Gradient	நேரியல் சாய்வு
+	Link layers	அடுக்குகளை இணை
+	Link width and height	இணைப்பு அகலம் மற்றும் உயரம்
+	Liquify is not open	Liquify திறக்கப்படவில்லை
+	Load	ஏற்றவும்
+	Load 3D LUT…	3D LUTஐ ஏற்றவும்…
+	Load Photoshop brushes (.abr)	ஃபோட்டோஷாப் தூரிகைகளை ஏற்றவும் (.abr)
+	Load channel as selection	சேனலை தேர்வாக ஏற்றவும்
+	Load…	ஏற்று…
+	Localized Color Clusters	உள்ளூர்மயமாக்கப்பட்ட வண்ணக் கொத்துகள்
+	Lock	பூட்டு
+	Lock all	அனைத்தையும் பூட்டு
+	Lock image pixels	பட பிக்சல்களைப் பூட்டு
+	Lock layer	பூட்டு அடுக்கு
+	Lock position	பூட்டு நிலை
+	Lock transparent pixels	வெளிப்படையான பிக்சல்களைப் பூட்டு
+	Lock:	பூட்டு:
+	Logical Length:	தருக்க நீளம்:
+	Logical Units:	தருக்க அலகுகள்:
+	Luminance	ஒளிர்வு
+	Luminance Detail	ஒளிர்வு விவரம்
+	Magenta	சென்னீலம்
+	Magenta  ·  Green	மெஜந்தா · பச்சை
+	Maintain aspect ratio	விகிதத்தை பராமரிக்கவும்
+	Marker Size	குறிப்பான் அளவு
+	Mask All	அனைத்தையும் மாஸ்க் செய்யவும்
+	Mask Options	முகமூடி விருப்பங்கள்
+	Masking	மறைத்தல்
+	Master	முதன்மை
+	Matte	மேட்
+	Median:	சராசரி:
+	Menus	மெனுக்கள்
+	Mesh Size	கண்ணி அளவு
+	Metadata	மெட்டாடேட்டா
+	Metrics	அளவீடுகள்
+	Midpoint	நடுப்புள்ளி
+	Midtones	நடு தொனிகள்
+	Midtones from:	மிட்டோன்கள்:
+	Midtones to:	மிட்டோன்கள்:
+	Minimum Depth	குறைந்தபட்ச ஆழம்
+	Minimum Diameter	குறைந்தபட்ச விட்டம்
+	Minimum Roundness	குறைந்தபட்ச வட்டத்தன்மை
+	Mode:	பயன்முறை:
+	Monochrome	ஒரே வண்ணமுடையது
+	More Points	மேலும் புள்ளிகள்
+	Move effect layer down	விளைவு அடுக்கை கீழே நகர்த்தவும்
+	Move effect layer up	விளைவு அடுக்கை மேலே நகர்த்தவும்
+	Move to	இதற்கு நகர்த்தவும்
+	Name	பெயர்
+	Name:	பெயர்:
+	Nearest Neighbor	அருகில் உள்ளவர்
+	Nearest Neighbor (hard edges)	அருகிலுள்ள அண்டை (கடினமான விளிம்புகள்)
+	New Size	புதிய அளவு
+	New document…	புதிய ஆவணம்…
+	New effect layer	புதிய விளைவு அடுக்கு
+	New selection	புதிய தேர்வு
+	Next frame	அடுத்த சட்டகம்
+	Next note	அடுத்த குறிப்பு
+	No Color	நிறம் இல்லை
+	No Color Management	வண்ண மேலாண்மை இல்லை
+	No Dither	டிதர் இல்லை
+	No author	ஆசிரியர் இல்லை
+	No character style	பாத்திர நடை இல்லை
+	No document	ஆவணம் இல்லை
+	No matching commands	பொருந்தக்கூடிய கட்டளைகள் இல்லை
+	No presets for the current tool.	தற்போதைய கருவிக்கு முன்னமைவுகள் இல்லை
+	No presets of this type.	இந்த வகை முன்னமைவுகள் இல்லை
+	No properties	சொத்துக்கள் இல்லை
+	No tool presets.	கருவி முன்னமைவுகள் இல்லை
+	Noise Reduction	சத்தம் குறைப்பு
+	Normal	இயல்பானது
+	Not in Dictionary:	அகராதியில் இல்லை:
+	OK	OK
+	Offset	ஈடு
+	Only Web Colors	இணைய வண்ணங்கள் மட்டுமே
+	Opacity	ஒளிபுகாமை
+	Opacity Jitter	ஒளிபுகா நடுக்கம்
+	Opacity:	ஒளிபுகாநிலை:
+	Open a document to define variables.	மாறிகளை வரையறுக்க ஒரு ஆவணத்தைத் திறக்கவும்
+	Open a document to select a colour range.	வண்ண வரம்பைத் தேர்ந்தெடுக்க ஆவணத்தைத் திறக்கவும்
+	Open a document to use the timeline.	காலவரிசையைப் பயன்படுத்த ஆவணத்தைத் திறக்கவும்
+	Optical	ஆப்டிகல்
+	Optimized	உகந்ததாக்கப்பட்டது
+	Option-click to define a source point to clone from	குளோன் செய்ய ஒரு மூலப் புள்ளியை வரையறுக்க விருப்பம்-கிளிக் செய்யவும்
+	Original	அசல்
+	Output Channel:	வெளியீட்டு சேனல்:
+	Output Levels:	வெளியீட்டு நிலைகள்:
+	Output:	வெளியீடு:
+	Outside	வெளிப்புறம்
+	Overlay Color	மேலடுக்கு நிறம்
+	Overlay Opacity	மேலடுக்கு ஒளிபுகா
+	Overlay: Rule of Thirds	மேலடுக்கு: மூன்றில் விதி
+	Override Pressure	அழுத்தத்தை மீறுங்கள்
+	Override Rotation	சுழற்சியை மீறு
+	Override Tilt	சாய்வை மேலெழுதவும்
+	PRESET DETAILS	முன்னமைவு விவரங்கள்
+	PSD	PSD
+	Paint Overlay	பெயிண்ட் மேலடுக்கு
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	பேனல் இருப்பிடங்கள் பணியிடத்தில் சேமிக்கப்படும். விசைப்பலகை குறுக்குவழிகள், மெனுக்கள் மற்றும் கருவிப்பட்டி ஆகியவை விருப்பமானவை
+	Paper	காகிதம்
+	Path	வழி
+	Pattern	கோலம்
+	Pattern Size	வடிவ அளவு
+	Pause	இடைநிறுத்தம்
+	Percent	சதவீதம்
+	Perceptual	புலனுணர்வு
+	Perspective Warp is not active	முன்னோக்கு வார்ப் செயலில் இல்லை
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	முன்னோக்கு வார்ப்: படத்தின் கண்ணோட்டத்தில் விமானங்களை வரையவும், பின்னர் வார்ப்புக்கு மாறவும்
+	Photo Filter	பட வடிகட்டி
+	PhotoSuite	போட்டோகிராஃப்ட்
+	PhotoSuite Manages Colors	PhotoSuite நிறங்களை நிர்வகிக்கிறது
+	PhotoSuite — an open-source, native image editor written in Rust.	ஃபோட்டோகிராஃப்ட் - ஒரு திறந்த மூல, ரஸ்டில் எழுதப்பட்ட நேட்டிவ் இமேஜ் எடிட்டர்
+	Pin Depth:	பின் ஆழம்:
+	Pixel Length:	பிக்சல் நீளம்:
+	Pixels/Centimeter	பிக்சல்கள்/சென்டிமீட்டர்
+	Pixels/Inch	பிக்சல்கள்/அங்குலம்
+	Pixels:	பிக்சல்கள்:
+	Play	விளையாடு
+	Play selection	விளையாடு தேர்வு
+	Portrait	நெடுக்கு
+	Position	இடம்
+	Position and Size	நிலை மற்றும் அளவு
+	Posterize	போஸ்டரைடு
+	Preserve Details	விவரங்களை சேமிக்கவும்
+	Preserve Luminosity	ஒளிர்மையை காத்திடு
+	Preset	முன்னமைவு
+	Preset Type	முன்னமைக்கப்பட்ட வகை
+	Preset:	முன்னமைவு:
+	Presets:	முன்னமைவுகள்:
+	Press keys…	விசைகளை அழுத்தவும்…
+	Pressure	அழுத்தம்
+	Pressure for Opacity	ஒளிபுகாநிலைக்கான அழுத்தம்
+	Pressure for Size	அளவுக்கான அழுத்தம்
+	Prevent auto-nesting in and out of Artboards and Frames	ஆர்ட்போர்டுகள் மற்றும் ஃப்ரேம்களுக்கு உள்ளேயும் வெளியேயும் தானாக கூடு கட்டுவதைத் தடுக்கவும்
+	Preview	முற்காட்சி
+	Previous frame	முந்தைய சட்டகம்
+	Previous note	முந்தைய குறிப்பு
+	Print	Print
+	Printer	அச்சுப்பொறி
+	Printer Manages Colors	அச்சுப்பொறி நிறங்களை நிர்வகிக்கிறது
+	Printer Setup	அச்சுப்பொறி அமைப்பு
+	Printing Marks	அச்சிடும் மதிப்பெண்கள்
+	Progressive	முற்போக்கானது
+	Promote	ஊக்குவிக்கவும்
+	Protect Detail	படவிவரங்களை காத்திடு
+	Protect Foreground Color	முன்புற நிறத்தைப் பாதுகாக்கவும்
+	Protect Tones	டோன்களைப் பாதுகாக்கவும்
+	Proximity Match	அருகாமை பொருத்தம்
+	Pulled String Mode	இழுக்கப்பட்ட சரம் பயன்முறை
+	Puppet Warp is not active	பப்பட் வார்ப் செயலில் இல்லை
+	Purity	தூய்மை
+	Quality	தரம்
+	Quick Actions	விரைவான செயல்கள்
+	Quick Export As PNG	PNG ஆக விரைவான ஏற்றுமதி
+	Radial Gradient	ரேடியல் கிரேடியன்ட்
+	Radius	ஆரம்
+	Radius:	ஆரம்:
+	Range:	வரம்பு:
+	Rate	வீதம்
+	Recently Used	சமீபத்தில் பயன்படுத்தப்பட்டது
+	Reconstruct	புனரமை
+	Record ● a sequence of edits, then play ▶ it on any document.	● திருத்தங்களின் வரிசையைப் பதிவுசெய்து, எந்த ஆவணத்திலும் ▶ இயக்கவும்
+	Red	சிவப்பு
+	Redefine style by current selection	தற்போதைய தேர்வின் மூலம் பாணியை மறுவரையறை செய்யவும்
+	Reflected Gradient	பிரதிபலித்த சாய்வு
+	Registration Marks	பதிவு மதிப்பெண்கள்
+	Regular	வழக்கமான
+	Relative	உறவெண்
+	Relative Colorimetric	ரிலேட்டிவ் கலரிமெட்ரிக்
+	Remove	அகற்று
+	Remove All Pins	அனைத்து பின்களையும் அகற்று
+	Remove Background	பின்னணியை அகற்று
+	Remove Planes	விமானங்களை அகற்று
+	Remove stop	நிறுத்தத்தை அகற்று
+	Remove variable	மாறியை அகற்று
+	Rename	மறுபெயரிடவும்
+	Rename Group…	குழுவின் பெயரை மாற்று…
+	Rename Layer…	லேயரின் பெயரை மாற்று…
+	Rename Tool Preset…	கருவி முன்னமைவை மறுபெயரிடவும்…
+	Rename…	மறுபெயரிடுங்கள்…
+	Resample	மீளுருமாதிரி
+	Reset All to Defaults	அனைத்தையும் இயல்புநிலைக்கு மீட்டமைக்கவும்
+	Reset Section	பிரிவை மீட்டமைக்கவும்
+	Reset Transform	மாற்றத்தை மீட்டமைக்கவும்
+	Reset to defaults	இயல்புநிலைக்கு மீட்டமைக்கவும்
+	Resolution	தெளிவுத்திறன்
+	Resolution:	தீர்மானம்:
+	Restore All	அனைத்தையும் மீட்டெடுக்கவும்
+	Restore Defaults	இயல்புநிலைகளை மீட்டமை
+	Restrictive (Web)	கட்டுப்பாட்டு (இணையம்)
+	Right	வலது
+	Right align text	உரையை வலது சீரமைக்கவும்
+	Rigid	திடமான
+	Rotate:	சுழற்று:
+	Rotation	சுழற்சி
+	Roughness	முரட்டுத்தனம்
+	Roundness	வட்டத்தன்மை
+	Roundness Jitter	வட்டமை நடுக்கம்
+	Rulers & Grids	ஆட்சியாளர்கள் & கட்டங்கள்
+	Sample All Layers	அனைத்து அடுக்குகளின் மாதிரி
+	Sample:	மாதிரி:
+	Sampling: Background Swatch	மாதிரி: பின்னணி ஸ்வாட்ச்
+	Sampling: Continuous	மாதிரி: தொடர்ந்து
+	Sampling: Once	மாதிரி: ஒருமுறை
+	Saturate	செறிவு கூட்டு
+	Saturation	நிற செறிவு
+	Saturation Jitter	செறிவு நடுக்கம்
+	Save HTML and Images	HTML மற்றும் படங்களை சேமிக்கவும்
+	Save as PDF	PDF ஆக சேமிக்கவும்
+	Save selection as channel	தேர்வை சேனலாக சேமிக்கவும்
+	Save…	சேமி…
+	Scale to Fit Media	ஃபிட் மீடியாவிற்கு அளவிடவும்
+	Scatter	சிதறல்
+	Scratch disks	கீறல் வட்டுகள்
+	Search	தேடு
+	Search commands	தேடல் கட்டளைகள்
+	Search commands, tools and panels…	தேடல் கட்டளைகள், கருவிகள் மற்றும் பேனல்கள்…
+	Search fonts	எழுத்துருக்களைத் தேடுங்கள்
+	Select All	அனைத்தையும் தேர்ந்தெடுக்கவும்
+	Select Subject	பாடத்தைத் தேர்ந்தெடுக்கவும்
+	Select a type layer or click into text to insert glyphs	வகை அடுக்கைத் தேர்ந்தெடுக்கவும் அல்லது கிளிஃப்களை செருக உரையில் கிளிக் செய்யவும்
+	Select text to apply a character style	எழுத்து நடையைப் பயன்படுத்த உரையைத் தேர்ந்தெடுக்கவும்
+	Select:	தேர்ந்தெடு:
+	Selections	தேர்வுகள்
+	Selective	தேர்ந்தெடுக்கப்பட்ட
+	Selective Color	தேர்விட்ட நிறம்
+	Send the selected pin backward	தேர்ந்தெடுக்கப்பட்ட பின்னை பின்னோக்கி அனுப்பவும்
+	Set additional smoothing options	கூடுதல் மென்மையான விருப்பங்களை அமைக்கவும்
+	Set background color	பின்னணி நிறத்தை அமைக்கவும்
+	Set foreground color	முன்புற நிறத்தை அமைக்கவும்
+	Set painting symmetry options	ஓவியம் சமச்சீர் விருப்பங்களை அமைக்கவும்
+	Set shape fill type	வடிவ நிரப்பு வகையை அமைக்கவும்
+	Set shape stroke type	வடிவ ஸ்ட்ரோக் வகையை அமைக்கவும்
+	Set the text color	உரை நிறத்தை அமைக்கவும்
+	Shadows	நிழல்கள்
+	Shape:	வடிவம்:
+	Sharpening	கூர்மைப்படுத்துதல்
+	Shift	Shift
+	Shortcut removed.	குறுக்குவழி அகற்றப்பட்டது
+	Show All Menu Items	அனைத்து மெனு உருப்படிகளையும் காட்டு
+	Show Backdrop	பின்னணியைக் காட்டு
+	Show Guides	வழிகாட்டிகளைக் காட்டு
+	Show Mask	முகமூடியைக் காட்டு
+	Show Mesh	மெஷ் காட்டு
+	Show Overlay	மேலோட்டத்தைக் காட்டு
+	Show Transform Controls	உருமாற்றக் கட்டுப்பாடுகளைக் காட்டு
+	Show or hide the Notes panel	குறிப்புகள் பேனலைக் காட்டு அல்லது மறைக்கவும்
+	Show:	காட்டு:
+	Sides	பக்கங்கள்
+	Sides:	பக்கங்கள்:
+	Size	அளவு
+	Size Jitter	நடுங்கு அளவு
+	Size:	அளவு:
+	Slice Options…	துண்டு விருப்பங்கள்…
+	Slices From Guides	வழிகாட்டிகளிலிருந்து துண்டுகள்
+	Slices are locked (View › Lock Slices)	துண்டுகள் பூட்டப்பட்டுள்ளன (காண்க › பூட்டு துண்டுகள்)
+	Small Caps	சிறிய தொப்பிகள்
+	Smoothing	மென்மையாக்கும்
+	Space After	இடைவெளிக்குப் பிறகு
+	Space Before	முன் விண்வெளி
+	Spacing	இடைவெளி
+	Spell check complete.	எழுத்துப்பிழை சரிபார்ப்பு முடிந்தது
+	Split:	பிரித்தல்:
+	Star ratio	நட்சத்திர விகிதம்
+	Stop playing/recording	விளையாடுவதை/பதிவு செய்வதை நிறுத்துங்கள்
+	Straighten	நேராக்கு
+	Straighten Layer	அடுக்கை நேராக்கு
+	Strength:	வலிமை:
+	Strikethrough	வேலைநிறுத்தம்
+	Stroke	கீரல்
+	Stroke Catch-up	ஸ்ட்ரோக் கேட்ச்-அப்
+	Stroke:	பக்கவாதம்:
+	Style	பாங்கு
+	Style Options	உடை விருப்பங்கள்
+	Style Options…	உடை விருப்பங்கள்…
+	Style: Normal	உடை: இயல்பானது
+	Subtract from Sample	மாதிரியிலிருந்து நீக்கு
+	Subtract from selection  ({key})	தேர்வில் இருந்து கழிக்கவும் ({key})
+	Suggestions:	பரிந்துரைகள்:
+	Swap colours (X)	வண்ணங்களை மாற்றவும் (X)
+	Swaps height and width	உயரத்தையும் அகலத்தையும் மாற்றுகிறது
+	Switch between free transform and warp modes	இலவச உருமாற்றம் மற்றும் வார்ப் முறைகளுக்கு இடையில் மாறவும்
+	Switch theme	தீம் மாறவும்
+	Temperature	வெப்பநிலை
+	Tetrahedral	டெட்ராஹெட்ரல்
+	Text Position:	உரை நிலை:
+	Texture	இழைநயம்
+	Texture Each Tip	ஒவ்வொரு குறிப்பும் அமைப்பு
+	Threshold	தொடக்க வரம்பு
+	Threshold Level	வரம்பு நிலை
+	Thumbnail size (smallest: list)	சிறுபட அளவு (சிறியது: பட்டியல்)
+	Tilt X	டில்ட் எக்ஸ்
+	Tilt Y	டில்ட் ஒய்
+	Tint	சாயல்
+	Toggle count group visibility	எண்ணிக்கை குழு தெரிவுநிலையை நிலைமாற்று
+	Toggle text orientation	உரை நோக்குநிலையை நிலைமாற்று
+	Tolerance	பொறுத்தல்
+	Tolerance:	சகிப்புத்தன்மை:
+	Tone:	தொனி:
+	Toolbar	கருவிப்பட்டி
+	Top	மேல்
+	Total:	மொத்தம்:
+	Tracking	பின்தொடர்
+	Tracking (1/1000 em)	கண்காணிப்பு (1/1000 em)
+	Transparency	ஒளிபுகாமை
+	Transparent	ஒளிபுகுமை
+	Trilinear	ட்ரைலீனியர்
+	Type Styles	வகை பாணிகள்
+	Type:	வகை:
+	Underline	அடிக்கோடு
+	Untitled	தலைப்பற்றது
+	Untitled-1	பெயரிடப்படாத-1
+	Update layer comp (visibility, position and appearance)	லேயர் தொகுப்பைப் புதுப்பிக்கவும் (தெரிவு, நிலை மற்றும் தோற்றம்)
+	Use Default	இயல்புநிலையைப் பயன்படுத்தவும்
+	Use Legacy	பழையமரபு ஐ பயன்படுத்து
+	Use Measurement Scale	அளவீட்டு அளவைப் பயன்படுத்தவும்
+	Use the embedded profile (instead of the working space)	உட்பொதிக்கப்பட்ட சுயவிவரத்தைப் பயன்படுத்தவும் (வேலை செய்யும் இடத்திற்குப் பதிலாக)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	மாறிகள் ஒரு லேயரின் தெரிவுநிலை, உரை அல்லது பிக்சல்களை பெயரிடப்பட்ட தரவு ஸ்லாட்டுடன் பிணைக்கிறது
+	Vertical scale	செங்குத்து அளவி
+	Vibrance	வண்ண அதிர்வு
+	View Options	விருப்பங்களைப் பார்க்கவும்
+	Vignetting	விக்னெட்டிங்
+	Violet, Orange	வயலட், ஆரஞ்சு
+	Visibility	தெரிவுநிலை
+	Visible	தெரியும்
+	Warp:	வார்ப்:
+	Web Snap	வெப் ஸ்னாப்
+	Weight	எடை
+	Weight:	எடை:
+	White	வெள்ளை
+	White Balance: As Shot	வெள்ளை இருப்பு: ஷாட்
+	Whites	வெள்ளையர்கள்
+	Width	அகலம்
+	Width:	அகலம்:
+	Work Path	வேலை பாதை
+	Yellow	மஞ்சள்
+	Yellow  ·  Blue	மஞ்சள் · நீலம்
+	Zoom	பெரிதாக்கம்
+	Zoom in	பெரிதாக்கு
+	Zoom out	சிறிதாக்கு
+	command or shortcut	கட்டளை அல்லது குறுக்குவழி
+	current	தற்போதைய
+	image file path	பட கோப்பு பாதை
+	modified	மாற்றியமைக்கப்பட்டது
+	name	பெயர்
+	new	புதிது
+	{name} options	{name} விருப்பங்கள்
+	↑↓ navigate   {key} run   esc close	↑↓ வழிசெலுத்து {key} இயக்க esc Close
+	Version {version}	பதிப்பு {version}
+	New Document	புதிய ஆவணம்
+	Error	பிழை
+	Command	கட்டளை
+	Adjustment layers have nothing to transform	சரிசெய்தல் அடுக்குகள் மாற்றுவதற்கு எதுவும் இல்லை
+	Altitude	உயரம்
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	ஆப்பிள் வாட்ச் 45 மிமீ
+	Aqua	அக்வா
+	Art & Illustration	கலை & விளக்கப்படம்
+	Background Eraser Tool	பின்னணி அழிப்பான் கருவி
+	Bevel & Emboss	பெவல் & எம்போஸ்
+	Blend Mode	ஒருக்கலப்பு முறை
+	Blues	ப்ளூஸ்
+	Blur Tool	மங்கு கருவி
+	Bold	தடித்த
+	Brush	தூரிகை
+	Brush Pose	தூரிகை போஸ்
+	Brush Tip Shape	தூரிகை முனை வடிவம்
+	Brush Tool	தூரிகை கருவி
+	Build-up	பில்ட்-அப்
+	Burn Tool	இருளாக்கு கருவி
+	Centimeters	சதமமீற்றர்
+	Choke	மூச்சுத்திணறல்
+	Classic	கிளாசிக்
+	Click to add text	உரையைச் சேர்க்க கிளிக் செய்யவும்
+	Click to fill similar colours	ஒத்த வண்ணங்களை நிரப்ப கிளிக் செய்யவும்
+	Clone Stamp Tool	குளோன் முத்திரை கருவி
+	Color Burn	நிற எரிப்பு
+	Color Dodge	நிற ஒளிர்வு
+	Color Dynamics	நிற இயங்குவியல்
+	Color Overlay	நிற மேலடுக்கு
+	Comic Book	காமிக் புத்தகம்
+	Conform	இணக்கம்
+	Content-Aware Fill needs a selection on a pixel layer	Content-Aware Fillக்கு பிக்சல் லேயரில் தேர்வு தேவை
+	Could not transform: the layer is empty	மாற்ற முடியவில்லை: அடுக்கு காலியாக உள்ளது
+	Could not use Perspective Warp: the layer is empty	பெர்ஸ்பெக்டிவ் வார்ப்பைப் பயன்படுத்த முடியவில்லை: லேயர் காலியாக உள்ளது
+	Could not use Puppet Warp: no opaque pixels	பப்பட் வார்ப்பைப் பயன்படுத்த முடியவில்லை: ஒளிபுகா பிக்சல்கள் இல்லை
+	Could not use Puppet Warp: the layer is empty	பப்பட் வார்ப்பைப் பயன்படுத்த முடியவில்லை: லேயர் காலியாக உள்ளது
+	Crop Tool	சிறிதாக்கி கருவி
+	Crosswise	குறுக்கு வழியில்
+	Current Tool	தற்போதைய கருவி
+	Custom Shape Tool	தனிப்பயன் வடிவ கருவி
+	Cyans	சியான்ஸ்
+	Default Photoshop Size	இயல்புநிலை ஃபோட்டோஷாப் அளவு
+	Delete Workspace	பணியிடத்தை நீக்கு
+	Diamond	வைரம்
+	Dimensions:	பரிமாணங்கள்:
+	Direction	திசை
+	Distance	தொலைவு
+	Document Dimensions	ஆவண அளவுகள்
+	Document Profile	ஆவணச் சுயவிவரம்
+	Document Sizes	ஆவண அளவுகள்
+	Dodge Tool	ஒளிர்வாக்கு கருவி
+	Down	கீழ்
+	Drag to draw a gradient	சாய்வு வரைய இழுக்கவும்
+	Drag to move the active layer	செயலில் உள்ள லேயரை நகர்த்த இழுக்கவும்
+	Drag to pan  ·  hold Space with any tool	பான் செய்ய இழுக்கவும் · ஏதேனும் ஒரு கருவி மூலம் ஸ்பேஸைப் பிடிக்கவும்
+	Drop Shadow	விழுநிழல்
+	Dual Brush	இரட்டை தூரிகை
+	Edge	விளிம்புமுனை
+	Efficiency	திறன்
+	Efficiency: 100%	செயல்திறன்: 100%
+	Ellipse Tool	நீள்வட்ட கருவி
+	Elliptical Marquee Tool	எலிப்டிகல் மார்க்யூ கருவி
+	Emboss	புடை
+	Eraser	அழிப்பான்
+	Eraser Tool	அழிப்பான் கருவி
+	ExtraBold	ExtraBold
+	ExtraLight	எக்ஸ்ட்ரா லைட்
+	Eyedropper Tool	ஐட்ராப்பர் கருவி
+	Fade	மங்க செய்
+	Fill Opacity	ஒளிபுகாநிலையை நிரப்பவும்
+	Film & Video	திரைப்படம் & வீடியோ
+	From	இருந்து
+	General	பொது
+	GitHub	கிட்ஹப்
+	Gradient Overlay	நிறச்சாய்வு மேலடுக்கு
+	Gradient Tool	சாய்வு கருவி
+	Greens	கீரைகள்
+	Hand Tool	கை கருவி
+	Hard	கடினமான
+	Hard Mix	கடின கலவை
+	Healing Brush Tool	குணமாக்கி தூரிகை கருவி
+	Highlights from:	இதிலிருந்து சிறப்பம்சங்கள்:
+	History Brush Tool	வரலாறு தூரிகை கருவி
+	Horizontal Type Tool	கிடைமட்ட வகை கருவி
+	Image Size:	படத்தின் அளவு:
+	Inches	அங்குலங்கள்
+	Indexed	அட்டவணைப்படுத்தப்பட்டது
+	Initial Direction	ஆரம்ப திசை
+	Inner Bevel	உள் நுனி
+	Inner Glow	உள் ஒளிர்வு
+	Inner Shadow	உள்நிழல்
+	Lab	Lab
+	Landscape, 10 x 8	நிலப்பரப்பு, 10 x 8
+	Landscape, 6 x 4	நிலப்பரப்பு, 6 x 4
+	Landscape, 7 x 5	நிலப்பரப்பு, 7 x 5
+	Lasso	லாஸ்ஸோ
+	Lasso Tool	லாசோ கருவி
+	Layer Count	அடுக்கு எண்ணிக்கை
+	Layer Knocks Out Drop Shadow	லேயர் நாக் அவுட் டிராப் ஷேடோ
+	Legal	சட்டபூர்வமானது
+	Letter	கடிதம்
+	Light	வெளிச்சம்
+	Line Tool	வரி கருவி
+	Linear	நேரியல்
+	Linear Burn	நேரியல் எரிப்பு
+	Linear Height	நேரியல் உயரம்
+	Link with Layer	அடுக்குடன் இணைக்கவும்
+	Lorem Ipsum	லோரெம் இப்சம்
+	Magentas	கருநீலம்
+	Magic Eraser Tool	மேஜிக் அழிப்பான் கருவி
+	Magic Wand Tool	மந்திரக்கோல் கருவி
+	Marquee	மார்கியூ
+	Mean:	அர்த்தம்:
+	Measurement Scale	அளவீட்டு அளவுகோல்
+	Measurement Scale Marker	அளவீட்டு அளவு குறிப்பான்
+	Millimeters	மில்லிமீட்டர்
+	Mobile	திறன்பேசி
+	Move Tool	நகர்ப்பான் கருவி
+	Multiply	பெருக்கு
+	My Brushes	என் தூரிகைகள்
+	Neutrals	நடுநிலையாளர்கள்
+	New Workspace	புதிய பணியிடம்
+	Note Tool	குறிப்பு கருவி
+	Object Selection Tool	பொருள் தேர்வு கருவி
+	Off	ஆஃப்
+	Open	திற
+	Orange	செம்மஞ்சள்
+	Original Ratio	அசல் விகிதம்
+	Out Of Gamut	அவுட் ஆஃப் கேமுட்
+	Outer Bevel	வெளி நுனி
+	Outer Glow	வெளி ஒளிர்வு
+	Overlay	மேலே கவி
+	Paint Bucket Tool	நிற வாளி கருவி
+	Paints from the document's opening state	ஆவணத்தின் தொடக்க நிலையில் இருந்து வண்ணப்பூச்சுகள்
+	Path Selection Tool	பாதை தேர்வு கருவி
+	Pattern Overlay	கோல மேலடுக்கு
+	Pen Pressure	பேனா அழுத்தம்
+	Pen Tilt	பேனா சாய்வு
+	Pen Tool	பேனா கருவி
+	Photo	நிழற்படம்
+	PhotoSuite website	போட்டோகிராஃப்ட் இணையதளம்
+	Picas	பிகாஸ்
+	Pillow Emboss	தலையணை புடைப்பு
+	Pixel Replacement	பிக்சல் மாற்று
+	Pixels	படத்துணுக்குகள்
+	Points	புள்ளிகள்
+	Polygon Tool	பலகோணக் கருவி
+	Polygonal Lasso Tool	பலகோண லஸ்ஸோ கருவி
+	Portrait, 4 x 6	உருவப்படம், 4 x 6
+	Portrait, 5 x 7	உருவப்படம், 5 x 7
+	PostScript (72 points/inch)	போஸ்ட்ஸ்கிரிப்ட் (72 புள்ளிகள்/இன்ச்)
+	Postcard	அஞ்சல் அட்டை
+	Poster	சுவரொட்டி
+	Pro (Dark)	புரோ (இருண்ட)
+	Pro (Medium Gray)	புரோ (நடுத்தர சாம்பல்)
+	Protect Texture	அமைப்பைப் பாதுகாக்கவும்
+	Purple	ஊதா
+	Quick Mask	விரைவான முகமூடி
+	Quick Selection Tool	விரைவான தேர்வு கருவி
+	Radial	ஆரியல்
+	Rasterize Layer	லேயரை ராஸ்டரைஸ் செய்யவும்
+	Ratio	விகிதம்
+	Recent	சமீபத்தியவை
+	Rectangle Tool	செவ்வக கருவி
+	Rectangular Marquee Tool	செவ்வக மார்க்யூ கருவி
+	Reds	சிவப்பு
+	Reflected	எதிரொளித்தது
+	Sample: foreground colour	மாதிரி: முன்புற நிறம்
+	Sampled Colors	மாதிரி நிறங்கள்
+	Satin	பளபளப்பு
+	Save Pixel Aspect Ratio	பிக்சல் விகிதத்தை சேமிக்கவும்
+	Scattering	சிதறல்
+	Scratch Sizes	கீறல் அளவுகள்
+	Select Data Points	தரவு புள்ளிகளைத் தேர்ந்தெடுக்கவும்
+	Selection	தேர்வு
+	SemiBold	அரை போல்ட்
+	Shadows up to:	நிழல்கள் வரை:
+	Shape Dynamics	வடிவ இயக்கவியல்
+	Sharpen Tool	கூராக்கு கருவி
+	Show Extras Options	கூடுதல் விருப்பங்களைக் காட்டு
+	Slice Select Tool	துண்டு தேர்வு கருவி
+	Slice Tool	துண்டாக்கி கருவி
+	Smart Filters	சூட்டிகை வடிகட்டல்கள்
+	Smudge Tool	கறையாக்கு கருவி
+	Soft	மென்மையான
+	Soften	மென்மையாக்கு
+	Source	மூலம்
+	Source: set	ஆதாரம்: தொகுப்பு
+	Sponge Tool	நிறவற்றி  கருவி
+	Spot Healing Brush Tool	புள்ளி குணமாக்கி தூரிகை கருவி
+	Spread	விரி
+	Square, 12 x 12	சதுரம், 12 x 12
+	Square, 5 x 5	சதுரம், 5 x 5
+	Std Dev:	படிப்பு தேவ்:
+	Studio (Dark)	ஸ்டுடியோ (இருண்ட)
+	Studio (Light)	ஸ்டுடியோ (ஒளி)
+	Stylus Wheel	ஸ்டைலஸ் வீல்
+	Subtract	கழித்தம்
+	Tabloid	சிறுபத்திரிகை
+	Text Replacement	உரை மாற்றீடு
+	Thin	மெல்லிய
+	Traditional (72.27 points/inch)	பாரம்பரியம் (72.27 புள்ளிகள்/இன்ச்)
+	Transfer	இடமாற்றம்
+	Triangle Tool	முக்கோண கருவி
+	Unsaved changes	சேமிக்கப்படாத மாற்றங்கள்
+	Uses the foreground and background colours.	முன்புறம் மற்றும் பின்னணி வண்ணங்களைப் பயன்படுத்துகிறது
+	Web	இணையம்
+	Web Large	வலை பெரியது
+	Web Minimum	வலை குறைந்தபட்சம்
+	Web Most Common	இணையம் மிகவும் பொதுவானது
+	WebP (lossless)	WebP (இழப்பற்றது)
+	Wet Edges	ஈரமான விளிம்புகள்
+	Yellows	மஞ்சள்
+	Zoom Tool	பெரிதாக்கி கருவி
+	{name} Properties	{name} பண்புகள்
+	Revert “{name}” to the last saved version? Your changes will be lost.	கடைசியாக சேமித்த பதிப்பிற்கு “{name}” ஐ மாற்றவா? உங்கள் மாற்றங்கள் இழக்கப்படும்
+	Do you want to save the changes you made to “{name}” before quitting?	வெளியேறும் முன் “{name}” இல் நீங்கள் செய்த மாற்றங்களைச் சேமிக்க விரும்புகிறீர்களா?
+	Do you want to save the changes you made to “{name}” before closing?	மூடுவதற்கு முன் “{name}” இல் நீங்கள் செய்த மாற்றங்களைச் சேமிக்க விரும்புகிறீர்களா?
+	Doc: {flat}/{layered}	ஆவணம்: {flat}/{layered}
+	Scratch: {size}	கீறல்: {size}
+	Untagged {mode}	குறியிடப்படாத {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} px x {h} px ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	தீர்மானம்: {dpi} பிக்சல்கள்/இன்ச்
+	Doc: {w} × {h} px	ஆவணம்: {w} × {h} px
+	Frame {current} / {total}	சட்டகம் {current} / {total}
+	Count: {n}	எண்ணிக்கை: {n}
+	BLANK DOCUMENT PRESETS ({n})	வெற்று ஆவண முன்னமைவுகள் ({n})
+	Constraints ({n})	கட்டுப்பாடுகள் ({n})
+	Align {what}	சீரமை {what}
+@plural	{n} Layer|{n} Layers	{n} அடுக்கு|{n} அடுக்குகள்
+@plural	Group · {n} layer|Group · {n} layers	குழு · {n} அடுக்கு|குழு · {n} அடுக்குகள்
+	Additional plugins folder	கூடுதல் செருகுநிரல்கள் கோப்புறை
+	Adobe	அடோப்
+	Adobe rgb	அடோப் ஆர்ஜிபி
+	Allow agent control	முகவர் கட்டுப்பாட்டை அனுமதிக்கவும்
+	Allow scripts to connect	ஸ்கிரிப்ட்களை இணைக்க அனுமதிக்கவும்
+	Always	எப்போதும்
+	Always create smart objects when placing	வைக்கும் போது எப்போதும் ஸ்மார்ட் பொருட்களை உருவாக்கவும்
+	Animated zoom	அனிமேஷன் ஜூம்
+	Apply auto tone	ஆட்டோ டோனைப் பயன்படுத்துங்கள்
+	Ask	கேள்
+	Ask before saving layered tiff	லேயர்டு டிஃப்பைச் சேமிப்பதற்கு முன் கேளுங்கள்
+	Auto collapse icon panels	ஐகான் பேனல்களைத் தானாகச் சுருக்கவும்
+	Auto show hidden panels	மறைக்கப்பட்ட பேனல்களை தானாகக் காட்டு
+	Auto show home screen	முகப்புத் திரையைத் தானாகக் காட்டு
+	Autosave	தானாக சேமிக்கவும்
+	Autosave minutes	நிமிடங்களை தானாக சேமிக்கவும்
+	Beep when done	முடிந்ததும் பீப்
+	Bicubic automatic	பைகுபிக் தானியங்கி
+	Bicubic sharper	பைக்யூபிக் கூர்மை
+	Bicubic smoother	பைகுபிக் மென்மையானது
+	Bit depth	பிட் ஆழம்
+	Brush preview color	தூரிகை மாதிரிக்காட்சி நிறம்
+	Cache levels	கேச் நிலைகள்
+	Cache tile size	கேச் டைல் அளவு
+	Camera Raw Defaults	கேமரா ரா இயல்புநிலைகள்
+	Canvas border	கேன்வாஸ் பார்டர்
+	Canvas color	கேன்வாஸ் நிறம்
+	Canvas custom color	கேன்வாஸின் தனிப்பயன் நிறம்
+	Color picker	வண்ண தெரிவி
+	Color space	வண்ண இடம்
+	Column width	நெடுவரிசை அகலம்
+	Concise	சுருக்கமான
+	Control port	கட்டுப்பாட்டு துறைமுகம்
+	Convert to srgb	srgb ஆக மாற்றவும்
+	Cursors	கர்சர்கள்
+	Custom dark	தனிப்பயன் இருட்டு
+	Custom light	தனிப்பயன் ஒளி
+	Dark	இருள்
+	Dark gray	அடர் சாம்பல்
+	Dashed lines	கோடிட்ட கோடுகள்
+	Destination	இலக்கு
+	Detailed	விரிவான
+	Disks	வட்டுகள்
+	Display p3	காட்சி p3
+	Double click layer mask launches select and mask	டபுள் கிளிக் லேயர் மாஸ்க் லான்ச்கள் தேர்வு மற்றும் மாஸ்க்
+	Drop shadow	விழுநிழல்
+	Dynamic color sliders	டைனமிக் வண்ண ஸ்லைடர்கள்
+	East asian	கிழக்கு ஆசிய
+	Effect cache mb	விளைவு கேச் எம்பி
+	Enable flick panning	ஃபிளிக் பேனிங்கை இயக்கு
+	Enable floating document window docking	மிதக்கும் ஆவண சாளர நறுக்குதலை இயக்கு
+	Enable narrow options bar	குறுகிய விருப்பங்கள் பட்டியை இயக்கவும்
+	Enabled	இயக்கப்பட்டது
+	Enhanced Controls	மேம்படுத்தப்பட்ட கட்டுப்பாடுகள்
+	Export clipboard	கிளிப்போர்டை ஏற்றுமதி செய்யவும்
+	Extra large	கூடுதல் பெரியது
+	File Handling	கோப்பு கையாளுதல்
+	File path	கோப்பு பாதை
+	Fill new type layers with placeholder	புதிய வகை அடுக்குகளை ஒதுக்கிடத்துடன் நிரப்பவும்
+	Font preview	எழுத்துரு முன்னோட்டம்
+	Full size tip	முழு அளவு முனை
+	Gamut warning color	வரம்பு எச்சரிக்கை நிறம்
+	Gamut warning opacity	வரம்பு எச்சரிக்கை ஒளிபுகாநிலை
+	Generator enabled	ஜெனரேட்டர் இயக்கப்பட்டது
+	Gif	Gif
+	Glossy	பளபளப்பானது
+	Grid color	கட்டத்தின் நிறம்
+	Grid colors	கட்டத்தின் நிறங்கள்
+	Grid size	கட்ட அளவு
+	Grid style	கட்டம் பாணி
+	Grid unit	கட்ட அலகு
+	Gridline every	ஒவ்வொரு கிரிட்லைன்
+	Guide color	வழிகாட்டி நிறம்
+	Guide style	வழிகாட்டி நடை
+	Guides, Grid & Slices	வழிகாட்டு கோடுகள், கோட்டு சட்டம் & துண்டுகள்
+	Gutter	சாக்கடை
+	History Log	வரலாற்று பதிவு
+	History states	வரலாறு கூறுகிறது
+	Ignore exif profile tag	exif சுயவிவர குறிச்சொல்லை புறக்கணிக்கவும்
+	Image interpolation	பட இடைச்செருகல்
+	Image previews	பட முன்னோட்டங்கள்
+	Integrations	ஒருங்கிணைப்புகள்
+	Interface	இடைமுகம்
+	Jpeg quality	Jpeg தரம்
+	Jpg	Jpg
+	Language	மொழி
+	Large tabs	பெரிய தாவல்கள்
+	Legacy compositing	மரபு தொகுத்தல்
+	Light gray	வெளிர் சாம்பல்
+	Line	கோடு
+	Lines	கோடுகள்
+	Lowercase extension	சிறிய எழுத்து நீட்டிப்பு
+	Maximize psd compatibility	PSD இணக்கத்தன்மையை அதிகரிக்கவும்
+	Medium gray	நடுத்தர சாம்பல்
+	Memory usage mb	நினைவக பயன்பாடு எம்பி
+	Missing glyph protection	கிளிஃப் பாதுகாப்பு இல்லை
+	Modern	நவீனமானது
+	Nearest neighbor	அருகில் உள்ள அண்டை
+	Never	ஒருபோதும் இல்லை
+	Normal tip	சாதாரண முனை
+	Open as smart object	ஸ்மார்ட் பொருளாகத் திற
+	Open documents as tabs	ஆவணங்களை தாவல்களாகத் திறக்கவும்
+	Overscroll	ஓவர்ஸ்க்ரோல்
+	Performance	செயல்திறன்
+	Png	Png
+	Point size	புள்ளி அளவு
+	Precise	துல்லியமான
+	Preserve details	விவரங்களைப் பாதுகாக்கவும்
+	Print resolution	அச்சு தீர்மானம்
+	Pro	ப்ரோ
+	Pro medium	ப்ரோ மீடியம்
+	Pro photo	ப்ரோ புகைப்படம்
+	Quick export format	விரைவான ஏற்றுமதி வடிவம்
+	Quick export location	விரைவான ஏற்றுமதி இடம்
+	Recent file count	சமீபத்திய கோப்பு எண்ணிக்கை
+	Recent files	சமீபத்திய கோப்புகள்
+	Recent fonts	சமீபத்திய எழுத்துருக்கள்
+	Recover on launch	துவக்கத்தில் மீட்கவும்
+	Remember workspace changes	பணியிட மாற்றங்களை நினைவில் கொள்க
+	Resize image during place	இடத்தின் போது படத்தின் அளவை மாற்றவும்
+	Rotate view with trackpad	டிராக்பேடுடன் பார்வையை சுழற்று
+	Same folder	அதே கோப்புறை
+	Save in background	பின்னணியில் சேமிக்கவும்
+	Scratch Disks	கீறல் வட்டுகள்
+	Screen	கணினித்திரை
+	Screen resolution	திரை தீர்மானம்
+	Scrubby slider acceleration	ஸ்க்ரப்பி ஸ்லைடர் முடுக்கம்
+	Sessions only	அமர்வுகள் மட்டுமே
+	Sharpen for	கூர்மைப்படுத்து
+	Show channels in color	சேனல்களை வண்ணத்தில் காட்டு
+	Show crosshair in brush tip	தூரிகை முனையில் குறுக்கு நாற்காலியைக் காட்டு
+	Show extension panels	நீட்டிப்பு பேனல்களைக் காட்டு
+	Show font names in english	எழுத்துரு பெயர்களை ஆங்கிலத்தில் காட்டு
+	Show menu colors	மெனு வண்ணங்களைக் காட்டு
+	Show only crosshair while painting	ஓவியம் தீட்டும்போது குறுக்கு நாற்காலியை மட்டும் காட்டு
+	Show slice numbers	துண்டு எண்களைக் காட்டு
+	Show tooltips	உதவிக்குறிப்புகளைக் காட்டு
+	Show transformation values	உருமாற்ற மதிப்புகளைக் காட்டு
+	Slice color	துண்டு நிறம்
+	Smart guide color	ஸ்மார்ட் கைடு நிறம்
+	Smart quotes	ஸ்மார்ட் மேற்கோள்கள்
+	Snap vector tools and transforms to pixel grid	திசையன் கருவிகளை ஸ்னாப் செய்து பிக்சல் கட்டமாக மாற்றுகிறது
+	Srgb	Srgb
+	Standard	தரநிலை
+	Studio	ஸ்டுடியோ
+	Studio light	ஸ்டுடியோ விளக்கு
+	Subdivisions	உட்பிரிவுகள்
+	System	அமைப்பு
+	Text engine	உரை இயந்திரம்
+	Text file	உரை கோப்பு
+	Tiny	சிறியது
+	Touch gestures	தொடு சைகைகள்
+	Transparency & Gamut	வெளிப்படைத்தன்மை & வரம்பு
+	Type units	வகை அலகுகள்
+	UI font size	UI எழுத்துரு அளவு
+	UI scale	UI அளவுகோல்
+	Units & Rulers	அலகுகள் & வரைகோல்கள்
+	Use additional plugins folder	கூடுதல் செருகுநிரல்கள் கோப்புறையைப் பயன்படுத்தவும்
+	Use esc to commit	உறுதி செய்ய esc ஐப் பயன்படுத்தவும்
+	Use gpu	gpu ஐப் பயன்படுத்தவும்
+	Use legacy free transform	மரபு இல்லாத மாற்றத்தைப் பயன்படுத்தவும்
+	Use shift key for tool switch	கருவி மாறுவதற்கு ஷிப்ட் விசையைப் பயன்படுத்தவும்
+	Vary round brush hardness on hud	ஹட் மீது வட்ட தூரிகை கடினத்தன்மையை மாற்றவும்
+	Webp	Webp
+	World ready	உலகம் தயார்
+	Zoom clicked point to center	புள்ளியை மையமாக பெரிதாக்கு கிளிக் செய்யவும்
+	Zoom resizes windows	பெரிதாக்கு சாளரங்களின் அளவை மாற்றுகிறது
+	Zoom with scroll wheel	ஸ்க்ரோல் வீல் மூலம் பெரிதாக்கம்
+	Zoom with trackpad pinch	டிராக்பேட் பிஞ்ச் மூலம் பெரிதாக்கவும்
+	Pass Through	ஒளி ஊடு
+	Dissolve	கரைப்பு
+	Darker Color	இருண்ட நிறம்
+	Linear Dodge (Add)	லீனியர் டாட்ஜ் (சேர்)
+	Lighter Color	இலகுவான நிறம்
+	Soft Light	மென்மையான ஒளி
+	Hard Light	கடின ஒளி
+	Vivid Light	தெளிவான ஒளி
+	Linear Light	நேரியல் ஒளி
+	Pin Light	குத்திய ஒளி
+	Exclusion	விலக்கம்
+	Divide	வகுத்தம்
+	Luminosity	ஒளிர்வு
+@plural	{n} sample|{n} samples	{n} மாதிரி|{n} மாதிரிகள்
+	{added}, {removed} subtracted	{added}, {removed} கழிக்கப்பட்டது
+	Adjustment Preview	சரிசெய்தல் முன்னோட்டம்
+	Airbrush: keeps depositing paint while the pointer rests.	ஏர்பிரஷ்: சுட்டிக்காட்டி ஓய்வெடுக்கும் போது பெயிண்ட் டெபாசிட் செய்கிறது
+	Angle:	கோணம்:
+	Blend If	கலப்பு தொனி எல்லை
+	Close Tab Group	தாவல் குழுவை மூடு
+	Collapse	சுருக்கு
+	Collapse All Groups	அனைத்து குழுக்களையும் சுருக்கவும்
+	Collapse Panel Group	பேனல் குழுவைச் சுருக்கவும்
+	Collapse group  ({key}-click: all groups)	குழுவைச் சுருக்கு ({key}-கிளிக்: அனைத்து குழுக்களும்)
+	Create new brush from the current settings	தற்போதைய அமைப்புகளிலிருந்து புதிய தூரிகையை உருவாக்கவும்
+	Create new brush from these settings	இந்த அமைப்புகளிலிருந்து புதிய தூரிகையை உருவாக்கவும்
+	Delete brush	தூரிகையை நீக்கு
+	Drag the arrow to set the angle, the dots to set the roundness	கோணத்தை அமைக்க அம்புக்குறியையும், வட்டத்தை அமைக்க புள்ளிகளையும் இழுக்கவும்
+	Expand	vkfuyfyrr65er7t673465e67rte5
+	Expand Panel Group	பேனல் குழுவை விரிவாக்கு
+	Expand group  ({key}-click: all groups)	குழுவை விரிவாக்கு ({key}-கிளிக்: அனைத்து குழுக்களும்)
+	Fade steps	மங்கலான படிகள்
+	Hide the layer's effects  ({key}-click: all layers)	லேயரின் விளைவுகளை மறை ({key}-கிளிக்: அனைத்து அடுக்குகளும்)
+	Import Brushes… (.abr)	தூரிகைகளை இறக்குமதி செய்... (.abr)
+	Move Group Down	குழுவை கீழே நகர்த்தவும்
+	Move Group Up	குழுவை மேலே நகர்த்தவும்
+	Reset the brush to the defaults	தூரிகையை இயல்புநிலைக்கு மீட்டமைக்கவும்
+	Restore original size	அசல் அளவை மீட்டெடுக்கவும்
+	Roundness:	வட்டத்தன்மை:
+	Search Brushes	தூரிகைகளைத் தேடுங்கள்
+	Show the layer's effects  ({key}-click: all layers)	லேயரின் விளைவுகளைக் காட்டு ({key}-கிளிக்: அனைத்து அடுக்குகளும்)
+	Brush picker	தூரிகை எடுப்பவர்
+	Erase	அழிக்கவும்
+	Right click with painting tools	ஓவியக் கருவிகள் மூலம் வலது கிளிக் செய்யவும்
+	System Info…	சிஸ்டம் தகவல்…
+	System Info	கணினி தகவல்
+	More panels	மேலும் பேனல்கள்
+	These settings aren't available in PhotoSuite yet.	இந்த அமைப்புகள் PhotoSuite இல் இன்னும் கிடைக்கவில்லை
+	Graphics	கிராபிக்ஸ்
+	Reset GPU Backend	GPU பின்தளத்தை மீட்டமைக்கவும்
+	Applies at next launch.	அடுத்த வெளியீட்டில் பொருந்தும்
+	Click to sample the foreground colour  ·  {key}-click for background	முன்புற நிறத்தை மாதிரி செய்ய கிளிக் செய்யவும் · {key}-பின்னணிக்கு கிளிக் செய்யவும்
+	{key}-click to set the source	மூலத்தை அமைக்க {key}-கிளிக் செய்யவும்
+	{key} to subtract	கழிக்க {key}
+	Clone source {n} ({key}-click with Clone Stamp to set)	குளோன் மூல {n} ({key}-அமைக்க குளோன் முத்திரையுடன் கிளிக் செய்யவும்)
+	Source: not set ({key}-click with Clone Stamp)	ஆதாரம்: அமைக்கப்படவில்லை ({key}-க்ளோன் முத்திரையுடன் கிளிக் செய்யவும்)
+	Pixel Layer	பிக்சல் அடுக்கு
+	Type Layer	வகை அடுக்கு
+	Shape Layer	வடிவ அடுக்கு
+	Group Layer	குழு அடுக்கு
+	Fill Layer	அடுக்கு நிரப்பவும்
+	Smart Object Layer	ஸ்மார்ட் ஆப்ஜெக்ட் லேயர்
+	Create Warped Text	சிதைந்த உரையை உருவாக்கவும்
+	Rasterize Smart Object	ஸ்மார்ட் பொருளை ராஸ்டெரைஸ் செய்யவும்
+	Rasterize Fill Content	நிரப்பு உள்ளடக்கத்தை Rasterize
+	Unlock: picking a preset replaces these settings	திறத்தல்: முன்னமைவைத் தேர்ந்தெடுப்பது இந்த அமைப்புகளை மாற்றும்
+	Lock: keep these settings when picking another preset	பூட்டு: மற்றொரு முன்னமைவைத் தேர்ந்தெடுக்கும்போது இந்த அமைப்புகளை வைத்திருங்கள்
+	Diameter:	விட்டம்:
+	Hardness:	கடினத்தன்மை:
+	No brush presets	தூரிகை முன்னமைவுகள் இல்லை
+	Toggle the Brush Settings panel  (F5)	தூரிகை அமைப்புகள் பேனலை (F5) நிலைமாற்று
+	Create new brush preset from the current settings	தற்போதைய அமைப்புகளில் இருந்து புதிய பிரஷ் முன்னமைவை உருவாக்கவும்
+	Brush Settings…  (F5): every option of this brush	தூரிகை அமைப்புகள்... (F5): இந்த பிரஷ்ஷின் ஒவ்வொரு விருப்பமும்
+	Rename Brush…	தூரிகையின் பெயரை மாற்று…
+	Delete Brush	தூரிகையை நீக்கு
+	Group name	குழுவின் பெயர்
+	Brush name	தூரிகை பெயர்
+	Grid view	கட்டக் காட்சி
+	List view	பட்டியல் காட்சி
+	Off: the speed of the pointer sets the spacing	ஆஃப்: சுட்டியின் வேகம் இடைவெளியை அமைக்கிறது
+	Tilt Scale	சாய்வு அளவுகோல்
+	Brush Projection	தூரிகை திட்டம்
+	Apply the pen's tilt and rotation to the tip shape	பேனாவின் சாய்வையும் சுழற்சியையும் முனை வடிவத்திற்குப் பயன்படுத்தவும்
+	Mixer Brush	கலவை தூரிகை
+	Wet	ஈரமானது
+	Mix	கலக்கவும்
+	Wetness Jitter	ஈரம் நடுக்கம்
+	Mix Jitter	நடுக்கத்தை கலக்கவும்
+	Show the layer mask as an overlay	அடுக்கு முகமூடியை மேலடுக்காகக் காட்டு
+	Toggle visibility	தெரிவுநிலையை நிலைமாற்று
+	Unlink the mask from the layer	லேயரில் இருந்து முகமூடியின் இணைப்பை நீக்கவும்
+	Link the mask to the layer	முகமூடியை லேயருடன் இணைக்கவும்
+	Gradient	நிற சாய்வு
+	Gradient Options	சாய்வு விருப்பங்கள்
+	Align with layer	அடுக்குடன் சீராக்கு
+	Reset Alignment	சீரமைப்பை மீட்டமைக்கவும்
+	Centre the gradient (offset 0, 0)	சாய்வை மையப்படுத்து (ஆஃப்செட் 0, 0)
+	The current gradient (pick one in Window › Gradients)	தற்போதைய சாய்வு (சாளரம் › சாய்வுகளில் ஒன்றைத் தேர்ந்தெடுக்கவும்)
+	Select a type layer to edit its character and paragraph settings.	அதன் எழுத்து மற்றும் பத்தி அமைப்புகளைத் திருத்த வகை அடுக்கைத் தேர்ந்தெடுக்கவும்
+	Text color	உரை நிறம்
+	Type Options	வகை விருப்பங்கள்
+	Anti-aliasing method	மாற்று மாற்று முறை
+	Horizontal type	கிடைமட்ட வகை
+	Vertical type	செங்குத்து வகை
+	Fill path with foreground color	பாதையை முன்புற வண்ணத்துடன் நிரப்பவும்
+	Stroke path with brush	தூரிகை மூலம் ஸ்ட்ரோக் பாதை
+	Load path as a selection	ஒரு தேர்வாக பாதையை ஏற்றவும்
+	Make work path from selection	தேர்விலிருந்து பணிப் பாதையை உருவாக்கவும்
+	Add vector mask	திசையன் ஒளிமறை சேர்
+	Create new path	புதிய பாதையை உருவாக்குங்கள்
+	Delete path	பாதையை நீக்கு
+	Delete vector mask	திசையன் ஒளிமறை நீக்கு
+	CPU (no GPU acceleration)	CPU (GPU முடுக்கம் இல்லை)
+	DirectX 12	டைரக்ட்எக்ஸ் 12
+	GPU backend	GPU பின்தளம்
+	Metal	உலோகம்
+	OpenGL	OpenGL
+	Use tablet pressure	மாத்திரை அழுத்தம் பயன்படுத்தவும்
+	Vulkan	வல்கன்

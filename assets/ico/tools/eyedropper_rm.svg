@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+	<style>
+		tspan { white-space:pre }
+		.shp0 { fill: none;stroke: #000000;stroke-linecap:round;stroke-linejoin:round;stroke-width: 1.25 } 
+	</style>
+	<path id="Layer" class="shp0" d="m11 7l6 6" />
+	<path id="Layer" class="shp0" d="m4 16l11.7-11.7c0.09-0.09 0.2-0.16 0.32-0.21 0.12-0.05 0.25-0.08 0.38-0.08 0.13 0 0.26 0.03 0.38 0.08 0.12 0.05 0.23 0.12 0.32 0.21l2.6 2.6c0.09 0.09 0.16 0.2 0.21 0.32 0.05 0.12 0.08 0.25 0.08 0.38 0 0.13-0.03 0.26-0.08 0.38-0.05 0.12-0.12 0.23-0.21 0.32l-11.7 11.7h-4z" />
+	<path id="Shape 1" class="shp0" d="m16.16 18.06l5.82-0.09" />
+</svg>

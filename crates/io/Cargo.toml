@@ -1,0 +1,37 @@
+[package]
+name = "photosuite-io"
+description = "Import/export between photosuite documents and PSD/PSB and flat raster formats"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Real-file corpus tests (opt-in; `cargo xtask test-corpus`). Fail when the corpus is missing.
+corpus = []
+
+[dependencies]
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+photosuite-cms = { workspace = true }
+photosuite-raster = { workspace = true }
+photosuite-doc = { workspace = true }
+photosuite-compose = { workspace = true }
+photosuite-psd = { workspace = true }
+photosuite-codecs = { workspace = true }
+# PDF pages as pixels (pure Rust, Apache-2.0 OR MIT).
+hayro = "0.8"
+photosuite-raw = { workspace = true }
+photosuite-text = { workspace = true }
+photosuite-paint = { workspace = true }
+photosuite-vector = { workspace = true }
+photosuite-format = { path = "../format" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+photosuite-psd = { workspace = true, features = ["testgen"] }
+photosuite-raw = { workspace = true, features = ["testgen"] }
+proptest = { workspace = true }

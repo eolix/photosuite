@@ -1,0 +1,1951 @@
+# Eesti (et) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# Eesti translations for PhotoSuite UI.
+
+	File	Fail
+	Edit	Muuda
+	Image	Pilt
+	Layer	Kiht
+	Type	Tüüp
+	Select	Märgista
+	Filter	Filter
+	View	Vaade
+	Window	Aken
+	Help	Abi
+	(coming soon)	(varsti tulemas)
+	New…	Uus…
+	Open…	Ava…
+	Open As…	Ava kui…
+	Open Recent	Ava hiljutised
+	Clear Recent Files	Kustuta hiljutised failid
+	Clear history	Tühjenda ajalugu
+	Close	Sulge
+	Close All	Sule kõik
+	Close Others	Sulgege teised
+	Save	Salvesta
+	Save As…	Salvesta nimega…
+	Save a Copy…	Salvesta koopia…
+	Revert	Taasta
+	Export	Ekspordi
+	Quick Export as PNG	Kiire eksport PNG-vormingus
+	Export As…	Ekspordi nagu…
+	Export Preferences…	Ekspordi eelistused…
+	Save for Web (Legacy)…	Salvesta veebi jaoks (pärand)…
+	Artboards to Files…	Joonistahvlid failidesse…
+	Artboards to PDF…	Joonistahvlid PDF-i…
+	Layers to Files…	Failide kihid…
+	Layer Comps to Files…	Failide tihendamise kiht…
+	Color Lookup Tables…	Värviotsingu tabelid…
+	Data Sets as Files…	Andmekomplektid failidena…
+	Paths to Illustrator…	Illustratori teed…
+	Render Video…	Renderda video…
+	Generate	Genereeri
+	Image Assets	Pildivarad
+	Place Embedded…	Koht manustatud…
+	Place Linked…	Koht lingitud…
+	Package…	Pakett…
+	Automate	Automatiseerida
+	Batch…	Partii…
+	Create Droplet…	Loo tilk…
+	Crop and Straighten Photos	Kärbi ja sirgenda fotosid
+	Contact Sheet II…	Kontaktileht II…
+	Conditional Mode Change…	Tingimusliku režiimi muutmine…
+	Fit Image…	Sobi pilt…
+	Lens Correction…	Läätsekorrektsioon…
+	Merge to HDR Pro…	Ühenda HDR Proga…
+	Photomerge…	Fotode ühendamine…
+	Scripts	Skriptid
+	Image Processor…	Pildiprotsessor…
+	Delete All Empty Layers	Kustuta kõik tühjad kihid
+	Flatten All Layer Effects	Tasandage kõik kihiefektid
+	Flatten All Masks	Tasandage kõik maskid
+	Script Events Manager…	Skripti sündmuste haldur…
+	Import	Import
+	Browse…	Sirvi…
+	Reveal in Finder	Näidake Finderis
+	File Info…	Failiteave…
+	Print…	Print…
+	Print One Copy	Printige üks eksemplar
+	Exit	Välju
+	Undo	Võta tagasi
+	Redo	Tee uuesti
+	Toggle Last State	Viimase oleku sisse- ja väljalülitamine
+	Fade…	Tuhmuma…
+	Cut	Lõika
+	Copy	Kopeeri
+	Copy Merged	Kopeeri Kõik
+	Paste	Kleebi
+	Paste Special	Kleebi spetsiaalselt
+	Paste in Place	Kleepige kohale
+	Paste Into	Kleebi sisse
+	Paste Outside	Kleebi väljapoole
+	Paste Lorem Ipsum	Kleepige Lorem Ipsum
+	Clear	Tühjenda
+	Search…	Otsi…
+	Check Spelling…	Kontrolli õigekirja…
+	Find and Replace Text…	Otsi ja asenda tekst…
+	Fill…	Täida…
+	Stroke…	Servajoon…
+	Content-Aware Fill…	Sisuteadlik täitmine…
+	Content-Aware Scale	Sisu teadvustav skaleerimine
+	Puppet Warp	Nuku moonutus
+	Perspective Warp	Perspektiivi lõime
+	Free Transform	Vaba Transformatsioon
+	Transform	Transformeeri
+	Again	Uuesti
+	Scale	Skaala
+	Rotate	Pööra
+	Skew	Viltus
+	Distort	Vääna
+	Perspective	Perspektiiv
+	Warp	Venita
+	Flip Horizontal	Pöörake horisontaalselt
+	Flip Vertical	Pööra vertikaalselt
+	Rotate 180°	Pöörake 180°
+	Rotate 90° Clockwise	Pöörake 90° päripäeva
+	Rotate 90° Counter Clockwise	Pöörake 90° vastupäeva
+	180°	180°
+	90° Clockwise	90° päripäeva
+	90° Counter Clockwise	90° vastupäeva
+	Arbitrary…	Suvaline…
+	Auto-Align Layers…	Joonda kihid automaatselt…
+	Auto-Blend Layers…	Kihtide automaatne segamine…
+	Define Brush Preset…	Pintsli eelseadistuse määratlemine…
+	Define Pattern…	Määra muster…
+	Define Custom Shape…	Määratle kohandatud kuju…
+	Purge	Puhastamine
+	Clipboard	Lõikelaud
+	Histories	Ajalood
+	Video Cache	Video vahemälu
+	All	Kõik
+	Presets	Eelseaded
+	Preset Manager…	Eelseadistatud haldur…
+	Migrate Presets	Eelseadete migreerimine
+	Export/Import Presets…	Ekspordi/impordi eelseaded…
+	Color Settings…	Värviseaded…
+	Assign Profile…	Määra profiil…
+	Convert to Profile…	Teisenda profiiliks…
+	Keyboard Shortcuts…	Klaviatuuri kiirkäsud…
+	Menus…	Menüüd…
+	Toolbar…	Tööriistariba…
+	Preferences	Seaded
+	General…	Üldine…
+	Interface…	Liides…
+	Workspace…	Tööruum…
+	Tools…	Tööriistad…
+	History Log…	Ajaloo logi…
+	File Handling…	Faili käsitlemine…
+	Export…	Ekspordi…
+	Performance…	Jõudlus…
+	Scratch Disks…	Kraapimiskettad…
+	Cursors…	Kursorid…
+	Transparency & Gamut…	Läbipaistvus ja ulatus…
+	Units & Rulers…	Ühikud ja joonlauad…
+	Guides, Grid & Slices…	Abijooned, võrk ja viilud…
+	Plug-ins…	Pistikprogrammid…
+	Type…	Tüüp…
+	Enhanced Controls…	Täiustatud juhtnupud…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	töötlemata vaikesätted…
+	Integrations…	Integratsioonid…
+	AI Integrations…	AI integratsioonid…
+	Install Plug-in…	Installi pistikprogramm…
+	Language Options	Keelevalikud
+	Settings…	Seaded…
+	Mode	Reziim
+	Bitmap	Bitmap
+	Grayscale	Grayscale
+	Duotone	Duotone
+	Indexed Color	Indekseeritud värv
+	RGB Color	RGB värv
+	CMYK Color	CMYK värv
+	Lab Color	Labori värv
+	Multichannel	Mitme kanaliga
+	8 Bits/Channel	8 bitti / kanal
+	16 Bits/Channel	16 bitti / kanal
+	32 Bits/Channel	32 bitti kanali kohta
+	Color Table…	Värvitabel…
+	Bitmap…	Bitmap…
+	Duotone…	Duotone…
+	Indexed Color…	Indekseeritud värv…
+	Adjustments	Kohandused
+	Brightness/Contrast…	Heledus/Kontrast…
+	Levels…	Heledustasemed…
+	Curves…	Kurvid…
+	Exposure…	Säri…
+	Vibrance…	Paindlik värviküllastus…
+	Hue/Saturation…	Toon/Küllastus…
+	Color Balance…	Värvi tasakaal…
+	Black & White…	Must & Valge…
+	Photo Filter…	Foto filter…
+	Channel Mixer…	Kanalite mikser…
+	Color Lookup…	Värvi leidja…
+	Invert	Pööra ringi
+	Posterize…	Plakati…
+	Threshold…	Barjäär…
+	Gradient Map…	Gradiendi kaart…
+	Selective Color…	Valikuline Värv…
+	Shadows/Highlights…	Varjud/esile…
+	HDR Toning…	HDR toonimine…
+	Desaturate	Desatureeri
+	Match Color…	Sobitage värv…
+	Replace Color…	Asenda Värv…
+	Equalize	võrdsustada
+	Auto Tone	Auto Toon
+	Auto Contrast	Auto Kontrast
+	Auto Color	Auto Värv
+	Image Size…	Pildi Suurus…
+	Canvas Size…	Lõuendi Suurus…
+	Image Rotation	Pildi pööramine
+	Flip Canvas Horizontal	Pöörake lõuendit horisontaalselt
+	Flip Canvas Vertical	Pööra lõuend vertikaalselt
+	Crop	Kärbi
+	Trim…	Trimmi…
+	Reveal All	Näita kõike
+	Duplicate…	Tee koopia…
+	Apply Image…	Rakenda pilt…
+	Calculations…	Arvutused…
+	Variables	Muutujad
+	Define…	Määratle…
+	Data Sets…	Andmekogumid…
+	Apply Data Set…	Rakenda andmekogum…
+	Variable Data Sets…	Muutuvad andmekogumid…
+	Trap…	Lõks…
+	Analysis	Analüüs
+	Set Measurement Scale…	Mõõtmisskaala määramine…
+	Select Data Points…	Valige andmepunktid…
+	Record Measurements	Salvestage mõõtmised
+	Ruler Tool	Joonlaua tööriist
+	Count Tool	Loendamise tööriist
+	Place Scale Marker…	Asetage skaala marker…
+	Custom…	Kohandatud…
+	New	Uus
+	Layer…	Kiht…
+	Group…	Grupp…
+	Group from Layers…	Rühmitamine kihtidest…
+	Artboard…	Artboard…
+	Artboard from Group…	Grupi joonistustahvel…
+	Artboard from Layers…	Kihtide graafikaplaat…
+	Layer via Copy	Kiht Kopeerides
+	Layer via Cut	Kiht lõikamise teel
+	Layer From Background…	Tausta kiht…
+	Layer from Background…	Kiht taustalt…
+	New Shape Layer	Uus kuju kiht
+	New Type Layer	Uus tüüpi kiht
+	New Fill Layer	Uus Täitekiht
+	New Adjustment Layer	Uus Kohanduskiht
+	New Layer Based Slice	Uus kihipõhine viil
+	New Smart Object via Copy	Uus nutikas objekt kopeerimise kaudu
+	New Blank Video Layer	Uus tühi videokiht
+	New Video Layer from File…	Uus videokiht failist…
+	Duplicate Layer…	Koopia Kihist…
+	Delete Layer	Kustuta Kiht
+	Delete	Kustuta
+	Rename Layer	Nimeta kiht ümber
+	Create Layer	Loo kiht
+	Layer Style	Kihi Stiil
+	Blending Options…	Segamise seaded…
+	Bevel & Emboss…	Kaldus ja reljeef…
+	Inner Shadow…	Sisemine vari…
+	Inner Glow…	Sisemine helendus…
+	Satin…	Satiin…
+	Color Overlay…	Värvi ülekate…
+	Gradient Overlay…	Gradiendiga ülekate…
+	Pattern Overlay…	Mustriga ülekate…
+	Outer Glow…	Helendav serv…
+	Drop Shadow…	Vari…
+	Copy Layer Style	Kopeeri kihi stiil
+	Paste Layer Style	Kleebi kihi stiil
+	Clear Layer Style	Selge kihi stiil
+	Global Light…	Globaalne valgus…
+	Hide All Effects	Peida kõik efektid
+	Scale Effects…	Skaalaefektid…
+	Smart Filter	Nutikas filter
+	Convert for Smart Filters	Teisenda nutikate filtrite jaoks
+	Clear Smart Filters	Tühjenda Targad Filtrid
+	Disable Smart Filters	Keela Targad Filtrid
+	Delete Filter Mask	Kustuta Filtri Mask
+	Disable Filter Mask	Keela Filtrite Mask
+	Solid Color…	Ühevärviline…
+	Gradient…	Gradient…
+	Pattern…	Muster…
+	Layer Mask	Kihi mask
+	Vector Mask	Vektormask
+	Reveal Selection	Näita Märgistust
+	Hide Selection	Peida Märgistust
+	Hide All	Peida kõik
+	From Transparency	Läbipaistvusest
+	Delete Vector Mask	Kustuta Vektormask
+	Enable Layer Mask	Kihimaski lubamine
+	Disable Layer Mask	Keela kihimask
+	Enable Vector Mask	Võimalda Vektormask
+	Link Layer Mask	Linkikihi mask
+	Unlink Layer Mask	Tühista kihimaski linkimine
+	Link Vector Mask	Ühenda Vektormask
+	Add Vector Mask	Lisa Vektormask
+	Vector Mask from Current Path	Vektormask praegusest teest
+	Create Clipping Mask	Loo lõikemask
+	Release Clipping Mask	Vabastage lõikemask
+	Smart Objects	Nutikad objektid
+	Smart Object	Nutikas objekt
+	Convert to Smart Object	Teisenda Targaks Objektiks
+	Convert to Embedded	Teisenda manusteks
+	Convert to Linked…	Teisenda lingitud…
+	Edit Contents	Muuda sisu
+	Replace Contents…	Asenda sisu…
+	Relink to File…	Linkige uuesti failiga…
+	Export Contents…	Ekspordi sisu…
+	Update Modified Content	Värskendage muudetud sisu
+	Update All Modified Content	Värskendage kogu muudetud sisu
+	Stack Mode	Segamise režiim
+	Entropy	Entroopia
+	Kurtosis	Kurtosis
+	Maximum	Maksimum
+	Mean	Tähendab
+	Median	Mediaan
+	Minimum	Miinimum
+	Range	Piirkond
+	Skewness	Viltus
+	Standard Deviation	Standardhälve
+	Summation	Summeerimine
+	Variance	Dispersioon
+	Video Layers	Videokihid
+	Interpret Footage…	Tõlge kaadrit…
+	Replace Footage…	Asenda kaadrid…
+	Reload Frame	Laadi raam uuesti
+	Show Altered Video	Kuva muudetud video
+	Restore Frame	Taasta raam
+	Restore All Frames	Taasta kõik raamid
+	Insert Blank Frame	Sisesta tühi raam
+	Delete Frame	Kustuta raam
+	Duplicate Frame	Dubleeritud raam
+	Frame from Layers	Raam kihtidest
+	Video Frames to Layers…	Videokaadritest kihtideni…
+	Rasterize	Rasterda
+	Rasterize Type	Rasterise tüüp
+	Rasterize Type Layer	Rasteriseeri tüüpkiht
+	Rasterize Shape	Kuju rasterdamine
+	New Guide Layout…	Uus juhendi paigutus…
+	New Guides From Shape	Uued juhised vormist
+	Lock Layers…	Lukusta kihid…
+	Link Layers	Ühenda Kihid
+	Select Linked Layers	Valige Lingitud kihid
+	Merge Layers	Liida Kihid
+	Merge Down	Liida alumisega
+	Merge Visible	Ühenda nähtavad
+	Flatten Image	Ühenda kõik kihtid dokumendis üheks
+	Matting	Mattimine
+	Color Decontaminate…	Värv Desinfitseeri…
+	Remove Black Matte	Eemalda must matt
+	Remove White Matte	Eemaldage valge matt
+	Defringe…	Piirake…
+	Group Layers	Grupeeri Kihid
+	Ungroup Layers	Lahutage kihtide rühmitamine
+	Hide Layers	Peida kihid
+	Arrange	Järjesta
+	Bring to Front	Too Esimeseks
+	Bring Forward	Too ettepoole
+	Send Backward	Saada Tahapoole
+	Send to Back	Saada Tagumiseks
+	Reverse	Pööra Ümber
+	Combine Shapes	Kombineeri kujundeid
+	Unite Shapes	Ühendage kujundid
+	Subtract Front Shape	Lahutage esiosa kuju
+	Intersect Shape Areas	Lõikuvad kujulised alad
+	Exclude Overlapping Shapes	Kattuvate kujundite välistamine
+	Merge Shape Components	Kujukomponentide ühendamine
+	Align	Joonda
+	Top Edges	Ülemised servad
+	Vertical Centers	Vertikaalsed keskused
+	Bottom Edges	Alumised servad
+	Left Edges	Vasakpoolsed servad
+	Horizontal Centers	Horisontaalsed keskused
+	Right Edges	Paremad servad
+	Distribute	Levitada
+	Vertically	Vertikaalne
+	Horizontally	Horisontaalne
+	Layer Edges	Kihtide servad
+	Isolate Layers	Eraldage kihid
+	Layer Content Options…	Kihi sisu valikud…
+	Fill Content	Täitke sisu
+	Deselect Layers	Tühistage valik Kihid
+	Find Layers	Otsige kihte
+	Layer Comps	Kihikomplektid
+	Layers	Kihid
+	All Layers	Kõik kihid
+	Hidden Layers	Peidetud kihid
+	Mask All Objects	Maskeeri kõik objektid
+	Subject	Teema
+	Sky	Taevas
+	Panels	Paneelid
+	Character Panel	Tegelaste paneel
+	Paragraph Panel	Lõike paneel
+	Character Styles Panel	Tähemärgi stiilide paneel
+	Paragraph Styles Panel	Lõigu stiilide paneel
+	Glyphs Panel	Glüüfide paneel
+	Anti-Alias	Servade pehmendus
+	Sharp	Terav
+	Crisp	Karge
+	Strong	Tugev
+	Smooth	Pehme
+	Windows LCD	Windowsi LCD
+	Windows	Windows
+	Orientation	Suund
+	Horizontal	Horisontaalne
+	Vertical	Vertikaalne
+	OpenType	OpenType
+	Standard Ligatures	Standardsed ligatuurid
+	Contextual Alternates	Kontekstuaalsed alternatiivid
+	Discretionary Ligatures	Diskretsioonilised ligatuurid
+	Swash	Swash
+	Oldstyle	Vanastiil
+	Stylistic Alternates	Stilistilised asendusliikmed
+	Titling Alternates	Pealkirjade asendajad
+	Ornaments	Kaunistused
+	Ordinals	Ordinaalid
+	Fractions	Murrud
+	Create Work Path	Loo töötee
+	Convert to Shape	Teisenda Kujuks
+	Warp Text…	Teksti koolutamine…
+	Convert to Point Text	Teisenda punkttekstiks
+	Convert to Paragraph Text	Teisenda lõigutekstiks
+	Default Features	Vaikefunktsioonid
+	East Asian Features	Ida-Aasia omadused
+	Middle Eastern Features	Lähis-Ida omadused
+	Middle Eastern & South Asian Composer	Lähis-Ida ja Lõuna-Aasia helilooja
+	Update All Text Layers	Värskendage kõiki tekstikihte
+	Replace All Missing Fonts	Asendage kõik puuduvad fondid
+	Resolve Missing Fonts…	Puuduvate fondide lahendamine…
+	Font Preview Size	Fondi eelvaate suurus
+	None	Ei ole
+	Small	Väike
+	Medium	Keskmine
+	Large	Suur
+	Extra Large	Eriti suur
+	Huge	Tohutu
+	Load Default Type Styles	Laadige vaiketüüpi stiilid
+	Save Default Type Styles	Salvestage vaiketüübi stiilid
+	Deselect	Eemalda Märgistus
+	Reselect	Valige uuesti
+	Inverse	Pööra Ringi
+	Inverse Selection	Pöördvalik
+	Similar	Sarnased
+	Color Range…	Värvi Piirkond…
+	Focus Area…	Fookusala…
+	Select and Mask…	Valige ja maskeerige…
+	Modify	Muuda
+	Border…	Serv…
+	Smooth…	Pehme…
+	Expand…	Laienda…
+	Contract…	Tõmba koomale…
+	Feather…	Pehme Serv…
+	Grow	Kasvama
+	Transform Selection	Transformeeri Märgistust
+	Edit in Quick Mask Mode	Redigeeri kiirmaski režiimis
+	Load Selection…	Laadi valik…
+	Save Selection…	Salvesta valik…
+	Match All	Sobi kõik
+	Last Filter	Viimati kasutatud filter
+	Filter Gallery…	Filtrite galerii…
+	Adaptive Wide Angle…	Adaptiivne lainurk…
+	Camera Raw Filter…	Kaamera töötlemata filter…
+	Liquify…	Vedelda…
+	Vanishing Point…	Kaduv punkt…
+	Blur	Udu
+	Blur Gallery	Blur Gallery
+	Field Blur…	Välja hägu…
+	Iris Blur…	Iirise hägusus…
+	Tilt-Shift…	Tilt-Shift…
+	Path Blur…	Tee hägusus…
+	Spin Blur…	Spin Blur…
+	Blur More	Uduta rohkem
+	Box Blur…	Kandiline Udu…
+	Gaussian Blur…	Gaussiani Udu…
+	Lens Blur…	Läätse udu…
+	Motion Blur…	Liikuv udu…
+	Radial Blur…	Radiaalne udu…
+	Shape Blur…	Kuju hägusus…
+	Smart Blur…	Nutikas hägu…
+	Surface Blur…	Pinna udu…
+	Average	Keskmine
+	Displace…	Paiguta ümber…
+	Pinch…	Venita kokku…
+	Polar Coordinates…	Polaarkordinaadid…
+	Ripple…	Lainetus…
+	Shear…	Rebi…
+	Spherize…	Sfääri…
+	Twirl…	Keeruta…
+	Wave…	Laine…
+	ZigZag…	ZigZag…
+	Noise	Müra
+	Add Noise…	Lisa Müra…
+	Despeckle	Eemalda täpid
+	Dust & Scratches…	Mustus & Kriimud…
+	Median…	Mediaan…
+	Reduce Noise…	Vähenda müra…
+	Pixelate	Pikseliseeri
+	Color Halftone…	Värvide pooltoonid…
+	Crystallize…	Kristalliseeri…
+	Facet	Tahk
+	Fragment	Fragment
+	Mezzotint…	Mezzotint…
+	Mosaic…	Mosaiik…
+	Pointillize…	Osutage…
+	Render	Renderda
+	Clouds	Pilved
+	Difference Clouds	Eriilmelised pilved
+	Fibers…	Kiud…
+	Flame…	Leek…
+	Lens Flare…	Objektiivi sähvatus…
+	Lighting Effects…	Valgusefektid…
+	Picture Frame…	Pildiraam…
+	Tree…	Puu…
+	Sharpen	Teravusta
+	Sharpen Edges	Teravusta servi
+	Sharpen More	Teravusta rohkem
+	Smart Sharpen…	Tark teravustamine…
+	Unsharp Mask…	Teravusmask…
+	High Pass…	Kõrge läbilase…
+	Stylize	Stiliseerida
+	Diffuse…	Hajutus…
+	Emboss…	Süvatrükk…
+	Extrude…	Ekstrudeerida…
+	Find Edges	Leia servad
+	Oil Paint…	Õlivärv…
+	Solarize	Solariseeruda
+	Tiles…	Plaadid…
+	Trace Contour…	Jälgi kontuuri…
+	Wind…	Tuul…
+	Video	Video
+	De-Interlace…	De-interlace…
+	NTSC Colors	NTSC värvid
+	Other	Teine
+	Maximum…	Maksimum…
+	Minimum…	Miinimum…
+	Offset…	Nihe…
+	Plug-ins	Pistikprogrammid
+	Proof Setup	Tõestuse seadistus
+	Proof Colors	Tõestavad värvid
+	Gamut Warning	Tootmisulatuse hoiatus
+	Working CMYK	Töökorras CMYK
+	Working Cyan Plate	Töökorras tsüaanplaat
+	Working Magenta Plate	Töökorras magenta plaat
+	Working Yellow Plate	Töökorras kollane plaat
+	Working Black Plate	Töökorras must plaat
+	Working CMY Plate	Töökorras CMY plaat
+	Legacy Macintosh RGB	Pärand Macintoshi RGB
+	Internet Standard RGB	Interneti standardne RGB
+	Monitor RGB	Jälgige RGB-d
+	Color Blindness — Protanopia-type	Värvipimedus - Protanopia tüüpi
+	Color Blindness — Deuteranopia-type	Värvipimedus - deuteranoopia tüüpi
+	Zoom In	Suurenda Sisse
+	Zoom Out	Suurenda Välja
+	Fit on Screen	Ekraanile sobitamine
+	Fit Layer(s) on Screen	Sobitage kiht(id) ekraanile
+	Fit Artboard on Screen	Paigaldage kujundustahvel ekraanile
+	100%	100%
+	200%	200%
+	Print Size	Prindi suurus
+	Pixel Aspect Ratio	Pikslite kuvasuhe
+	Pixel Aspect Ratio Correction	Pikslite kuvasuhte korrigeerimine
+	Custom Pixel Aspect Ratio…	Kohandatud pikslite kuvasuhe…
+	Square	Ruut
+	D1/DV NTSC (0.91)	D1/DV NTSC (0,91)
+	D1/DV NTSC Widescreen (1.21)	D1/DV NTSC laiekraan (1.21)
+	D1/DV PAL (1.09)	D1/DV PAL (1.09)
+	D1/DV PAL Widescreen (1.46)	D1/DV PAL laiekraan (1,46)
+	Anamorphic 2:1 (2)	Anamorfne 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080 / DVCPRO HD 720 (1,33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080 / HDV 1080 (1,5)
+	32-bit Preview Options…	32-bitise eelvaate valikud…
+	Screen Mode	Ekraanirežiim
+	Standard Screen Mode	Standardne ekraanirežiim
+	Full Screen Mode With Menu Bar	Täisekraanirežiim koos menüüribaga
+	Full Screen Mode	Täisekraani režiim
+	Cycle Screen Mode	Lülitage ekraanirežiim sisse
+	Show	Näita
+	Extras	Lisad
+	Selection Edges	Valik Servad
+	Target Path	Sihttee
+	Current Path	Praegune tee
+	Grid	Võrk
+	Guides	Abijooned
+	Canvas Guides	Lõuendi juhendid
+	Artboard Guides	Tahvli juhendid
+	Count	Arv
+	Smart Guides	Nutikad juhendid
+	Slices	Viilud
+	Notes	Märkmed
+	Pixel Grid	Pikslite Võrk
+	Pixel Art	Pixel Art
+	Pixel Art Preview	Pixel Art eelvaade
+	Pattern Preview	Mustri eelvaade
+	Brush Preview	Pintsli eelvaade
+	Mesh	Võrk
+	Edit Pins	Redigeeri Pins
+	Document Bounds	Dokumendi Piirid
+	Show Extras Options…	Näita lisavalikuid…
+	Rulers	Joonlauad
+	Snap	Napsa
+	Snap To	Tõmme
+	Lock Guides	Lukustusjuhikud
+	Clear Guides	Tühjenda juhikud
+	Clear Selected Artboard Guides	Tühjendage valitud joonistahvli juhised
+	Clear Canvas Guides	Selge lõuendi juhendid
+	New Guide…	Uus juhend…
+	Lock Slices	Lukusta Viilud
+	Clear Slices	Tühjenda viilud
+	Match Zoom	Match Zoom
+	Match Location	Matši asukoht
+	Match Rotation	Match Rotation
+	Cascade	Kaskaad
+	Tile	Korda
+	Tile All Horizontally	Plaat kõik horisontaalselt
+	Tile All Vertically	Plaat kõik vertikaalselt
+	2-up Horizontal	2-up Horisontaalne
+	2-up Vertical	2-up Vertikaalne
+	3-up Horizontal	3-up Horisontaalne
+	3-up Stacked	3-up virnastatud
+	3-up Vertical	3-up vertikaalne
+	4-up	4-üles
+	6-up	6-üles
+	Consolidate All to Tabs	Konsolideerige kõik vahekaartideks
+	Float in Window	Hõlju aknas
+	Float All in Windows	Float All Windowsis
+	New Window for Document	Uus aken dokumendi jaoks
+	Workspace	Tööruum
+	Essentials	Essentials
+	Graphic and Web	Graafika ja veeb
+	Painting	Maalimine
+	Photography	Fotograafia
+	New Workspace…	Uus tööruum…
+	Delete Workspace…	Kustuta tööruum…
+	Reset Workspace	Tööruumi lähtestamine
+	Lock Workspace	Lukusta tööala
+	Theme	Teema
+	Pro Theme	Pro teema
+	Pro Medium Gray Theme	Pro keskmine hall teema
+	Studio Theme	Stuudio teema
+	Studio Light Theme	Stuudio valguse teema
+	Classic Theme	Klassikaline teema
+	Next Theme	Järgmine teema
+	Midnight	Kesköö
+	Anthracite	Antratsiit
+	Slate	Kiltkivi
+	Pearl	Pärl
+	Aubergine	Baklažaan
+	Ocean	Ookean
+	Actions	Makros
+	Brush Settings	Pintsli sätted
+	Brushes	Pintslid
+	Channels	Kanalid
+	Character	Kiri
+	Character Styles	Tegelaste stiilid
+	Clone Source	Klooni allikas
+	Color	Värv
+	Glyphs	Glüüfid
+	Gradients	Gradiendid
+	Histogram	Histogramm
+	History	Kulgemine
+	Info	Info
+	Measurement Log	Mõõtmise logi
+	Modifier Keys	Muutmisklahvid
+	Navigator	Navigator
+	Options	Valikud
+	Paragraph	Lõik
+	Paragraph Styles	Lõigu stiilid
+	Paths	Vektorjooned
+	Patterns	Mustrid
+	Properties	Seaded
+	Shapes	Kujundid
+	Styles	Stiilid
+	Swatches	Värvikaardid
+	Timeline	Ajaskaala
+	Tool Presets	Tööriista eelseadistused
+	Tools	Tööriistad
+	About PhotoSuite	PhotoSuitei kohta
+	Website	Veebisait
+	Report an Issue…	Teata probleemist…
+	WIA Support…	WIA tugi…
+	Apply	Rakenda
+	HSB/HSL	HSB/HSL
+	Invert…	Pööra ringi…
+	Load Files into Stack…	Laadi failid virna…
+	Motion	Liikumine
+	Notes…	Märkmed…
+	Other…	Teine…
+	Remove Warp Split	Eemalda Warp Split
+	Shape	Kujund
+	Split Warp Crosswise	Lõigake lõime risti
+	Split Warp Horizontally	Lõigake lõime horisontaalselt
+	Split Warp Vertically	Lõigake lõime vertikaalselt
+	Statistics…	Statistika…
+@plural	{n} item|{n} items	{n} üksus|{n} eset
+	Auto	Automaatne
+	(print to the printer)	(prindi printerisse)
+	+ Add variable	+ Lisa muutuja
+	30 frames @ 30 fps	30 kaadrit @ 30 kaadrit sekundis
+	3D LUT File	3D LUT-fail
+	Absolute	Absoluutne
+	Absolute Colorimetric	Absoluutne kolorimeetriline
+	Action	Tegevus
+	Adaptive	Kohanduv
+	Adaptive Wide Angle isn't open	Adaptiivne lainurk ei ole avatud
+	Add	Lisa
+	Add Layer Mask	Lisage kihimask
+	Add Stop	Lisa peatus
+	Add a layer style	Lisage kihi stiil
+	Add a mask  (from the selection; {key} inverts)	Lisa mask (valikust; {key} inverteerib)
+	Add an adjustment	Lisa korrigeerimine
+	Add disk	Lisa ketas
+	Add space after paragraph	Lisage lõigu järele tühik
+	Add space before paragraph	Lisage lõigu ette tühik
+	Add to Sample	Lisa proovile
+	Add to selection  ({key})	Lisa valikusse ({key})
+	Adjust for Zoom	Reguleerige suumi jaoks
+	Adjustment visible	Reguleerimine nähtav
+	Adobe RGB (1998) compatible	Adobe RGB (1998) ühilduv
+	Align and Distribute	Joonda ja levita
+	Align and distribute	Joondage ja levitage
+	Align horizontal centers	Joondage horisontaalsed keskpunktid
+	Align left edges	Joonda vasakud servad
+	Align right edges	Joonda paremad servad
+	Aligned	Joondatud
+	All Caps	Suurtähed
+	All Slices	Kõik viilud
+	All User Slices	Kõik kasutajalõigud
+	All shortcuts reset to Photoshop defaults.	Kõik otseteed lähtestatakse Photoshopi vaikeseadetele
+	Alt	Alt
+	Always use pressure for opacity	Läbipaistmatuse tagamiseks kasutage alati survet
+	Always use pressure for size	Kasutage alati suuruse jaoks survet
+	Amount	Väärtus
+	Anchor:	Ankur:
+	Angle	Nurk
+	Angle Gradient	Nurga gradient
+	Angle Jitter	Nurga jaotus
+	Answer the unsaved-changes prompt first	Esmalt vastake salvestamata muudatuste viibale
+	Anti-alias	Servade pehmendus
+	Appearance	Välimus
+	Appearance (Layer Style)	Välimus (kihi stiil)
+	Apply Layer Mask	Rakenda kihtmaski
+	Apply Per Tip	Rakenda näpunäidete järgi
+	Apply next selected layer comp	Rakenda järgmine valitud kihikomp
+	Apply previous selected layer comp	Rakenda eelmine valitud kihikomp
+	Artboard	Artboard
+	Artboard Background Color	Joonistahvli taustavärv
+	Assign working space	Määrake tööruum
+	Author:	Autor:
+	Auto Hide	Automaatne peitmine
+	Auto-Select:	Automaatne valik:
+	Automatically level near-horizontal line segments	Tasandage peaaegu horisontaalsed joonelõigud automaatselt
+	Automatically straighten and level	Automaatselt sirgendada ja tasandada
+	Automatically straighten near-vertical line segments	Sirgendage peaaegu vertikaalsed joonelõigud automaatselt
+	Background	Tagaplaani värv
+	Background Color	Taustavärv
+	Background Contents	Tausta sisu
+	Balance	Tasakaal
+	Baseline	Lähtejoon
+	Baseline shift	Baasjoone nihe
+	Basic	Põhiline
+	Before (Y)	Enne (Y)
+	Begin recording	Alustage salvestamist
+	Bend:	Pain:
+	Bicubic	Bicubic
+	Bicubic (smooth gradients)	Bicubic (sujuvad kalded)
+	Bilinear	Bilineaarne
+	Black	Must
+	Black & White	Must & Valge
+	Black Point Compensation	Musta punkti kompenseerimine
+	Black, White	Must, Valge
+	Blacks	Mustanahalised
+	Blending	Segamine
+	Blending Options	Segamise seaded
+	Blue	Sinine
+	Blue, Red, Yellow	Sinine, Punane, Kollane
+	Both	Mõlemad
+	Both Axes	Mõlemad teljed
+	Bottom	Alumine
+	Brightness	Heledus
+	Brightness Jitter	Heleduse jaotus
+	Brightness/Contrast	Heledus/Kontrast
+	Bring the selected pin forward	Tooge valitud tihvt ette
+	Brush Preset picker	Pintsli eelseadistatud valija
+	Brush Reconstruct Options	Pintsli rekonstrueerimise valikud
+	Brush Tool Options	Pintsli tööriista valikud
+	Cache Level:	Vahemälu tase:
+	Camera Raw isn't open	Camera Raw ei ole avatud
+	Cancel	Loobu
+	Cancel (Esc)	Tühista (Esc)
+	Cancel any current edits (Esc)	Tühista kõik praegused muudatused (Esc)
+	Cancel current crop operation  (Esc)	Praeguse kärpimistoimingu tühistamine (Esc)
+	Cancel transform (Esc)	Tühista teisendus (Esc)
+	Cancel warp (Esc)	Tühista lõime (Esc)
+	Canvas	Lõuend
+	Canvas extension color:	Lõuendilaiendi värv:
+	Capture	Jäädvusta
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	Jäädvustage iga kihi nähtavus, asukoht ja stiil alloleva + nupuga, seejärel vahetage versioonide vahel
+	Catch-up on Stroke End	Järelejõudmine Stroke Endis
+	Center	Keskel
+	Center Crop Marks	Keskmised kärpimismärgid
+	Center text	Keskmise tekst
+	Change	Muuda
+	Change All	Muuda kõik
+	Change Screen Mode  (F)	Ekraanirežiimi muutmine (F)
+	Change To:	Muuda järgmiseks:
+	Channel Mixer	Kanalite mikser
+	Channel:	Kanal:
+	Check All Layers	Kontrollige kõiki kihte
+	Check Spelling	Kontrolli õigekirja
+	Clarity	Selgus
+	Clear All	Kustuta kõik
+	Clear Override	Tühjenda alistamine
+	Clear Samples	Puhasta proovid
+	Click sets foreground · right-click sets background	Klõps määrab esiplaani · Paremklõps määrab tausta
+	Click the first point or press {key} to close · Esc cancels	Klõpsake esimest punkti või vajutage sulgemiseks {key} · Esc tühistab
+	Click to add a point · drag off or {key}-click or Delete to remove	Klõpsake punkti lisamiseks · lohistage maha või {key}-klõpsake või eemaldamiseks Kustuta
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	Klõpsake rakendamiseks, {key}-klõpsake alistamiste kustutamiseks, topeltklõpsake stiilivalikute jaoks
+	Click to edit the gradient	Gradiendi muutmiseks klõpsake nuppu
+	Click to restore the current colour	Klõpsake praeguse värvi taastamiseks
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	Sissesuumimiseks klõpsake · {key}-klõpsake väljasuumimiseks · Lohistage sisse/vähendamiseks paremale/vasakule
+	Click with the Note tool to add a note.	Märkme lisamiseks klõpsake Märkme tööriistaga
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	Klõps: nurk · Lohistamine: sile · Klõpsa esimene punkt: sulge · {key} lõpeta · Esc tühistada
+	Clip to layer below	Lõika allolevale kihile
+	Clipped	Kärbitud
+	Close Style Options	Sulgege stiilivalikud
+	Cmd	Cmd
+	Coated CMYK	Kaetud CMYK
+	Color & Swatches	Värvid ja proovid
+	Color Balance	Värvi tasakaal
+	Color Detail	Värvi detail
+	Color Grading	Värvi klassifitseerimine
+	Color Lookup	Värvi leidja
+	Color Management	Värvihaldus
+	Color Mixer	Värvimikser
+	Color Mode	Värvirežiim
+	Color Priority	Värvi prioriteet
+	Color Range preview	Värvivahemiku eelvaade
+	Color:	Värv:
+	Colorize	Värvige
+	Colors	Värvid
+	Commit Perspective Warp ({key})	Perspektiivikaarde rakendamine ({key})
+	Commit Puppet Warp ({key})	Soorita nukute lõime ({key})
+	Commit any current edits ({key})	Tehke kõik praegused muudatused ({key})
+	Commit current crop operation  ({key})	Soorita praegune kärpimistoiming ({key})
+	Commit transform ({key})	Kinnita teisendus ({key})
+	Commit warp ({key})	Kinnita deformatsioon ({key})
+	Constant	Püsiv
+	Constrain proportions	Piirake proportsioone
+	Contact Sheet II	Kontaktileht II
+	Content-Aware	Sisutundlik
+	Contiguous	Jätkuv
+	Contrast	Kontrast
+	Control:	Juhtimine:
+	Convert document's colors to the working space	Teisendage dokumendi värvid tööruumiks
+	Convert to sRGB	Teisendage sRGB-vormingusse
+	Copies	Koopiad
+	Copper	Vask
+	Copyright	Autoriõigus
+	Copyright and Contact Info	Autoriõigus ja kontaktteave
+	Corner Crop Marks	Nurga viljamärgid
+	Corner radius	Nurga raadius
+	Correction	Korrektsioon
+	Count Jitter	Arvu jaotus
+	Create	Loo
+	Create Droplet	Loo tilk
+	Create Texture	Loo tekstuur
+	Create Video Timeline	Looge video ajaskaala
+	Create a new count group	Looge uus loendusrühm
+	Create a new document or open an existing file.	Looge uus dokument või avage olemasolev fail
+	Create a new group	Looge uus grupp
+	Create a new layer	Looge uus kiht
+	Create new action	Loo uus tegevus
+	Create new channel	Loo uus kanal
+	Create new document from current state	Looge praegusest olekust uus dokument
+	Create new fill or adjustment layer	Looge uus täite- või reguleerimiskiht
+	Create new gradient	Loo uus gradient
+	Create new group	Loo uus grupp
+	Create new layer comp	Loo uus kihikomp
+	Create new pattern from the selection	Loo valikust uus muster
+	Create new shape from the current path	Looge praegusest teest uus kujund
+	Create new snapshot	Looge uus hetktõmmis
+	Create new style (from the selected type)	Loo uus stiil (valitud tüübist)
+	Create new style from the selected layer	Loo valitud kihist uus stiil
+	Create new tool preset	Looge uus tööriista eelseadistus
+	Crop Factor	Põllukultuuride tegur
+	Ctrl	Ctrl
+	Current & Below	Praegune & Allpool olev
+	Current Layer	Praegune kiht
+	Current Size	Praegune suurus
+	Current Tool Only	Ainult praegune tööriist
+	Curve	Kõver
+	Curves	Kurvid
+	Custom	Kohandatud
+	Custom Shapes	Kohandatud kujundid
+	Cyan	Tsüaan
+	Cyan  ·  Red	Tsüaan · Punane
+	Darken	Tumedama
+	Darks	Tumedad
+	Data Sets	Andmekogumid
+	Default	Vaikimisi
+	Default colours (D)	Vaikevärvid (D)
+	Default printer	Vaikimisi printer
+	Default restored.	Vaikimisi taastatud
+	Define	Defineeri
+	Define at least one variable first.	Esmalt määratlege vähemalt üks muutuja
+	Dehaze	Dehaze
+	Delete Cropped Pixels	Kustutage kärbitud pikslid
+	Delete Group	Kustuta grupp
+	Delete Layer Mask	Kustuta kihimask
+	Delete Layers	Kustuta kihid
+	Delete Shortcut	Kustuta otsetee
+	Delete Timeline	Kustuta ajaskaala
+	Delete Tool Preset	Kustuta tööriista eelseadistus
+	Delete count group	Kustuta loendusrühm
+	Delete current channel	Kustuta praegune kanal
+	Delete current state	Kustuta praegune olek
+	Delete effect layer	Kustuta efektikiht
+	Delete layer	Kustuta Kiht
+	Delete layer comp	Kustuta kihikomp
+	Delete note	Kustuta märge
+	Delete selected measurements	Kustutage valitud mõõtmised
+	Delete style	Kustuta stiil
+	Delete tool preset	Kustuta tööriista eelseadistus
+	Density	Tugevus
+	Density:	Tihedus:
+	Depth	Sügavus
+	Depth Jitter	Sügavuse värin
+	Description	Kirjeldus
+	Deselect All	Tühistage valik Kõik
+	Detail	Detail
+	Diamond Gradient	Teemantgradient
+	Difference	Erinevus
+	Diffusion	Difusioon
+	Discard the embedded profile (don't color manage)	Loobu manustatud profiilist (ära värvi halda)
+	Discontiguous	Katkestatav
+	Feedback	Tagasiside
+	Dismiss	Loobu
+	Display P3	Ekraan P3
+	Display Text	Kuva tekst
+	Dither	Dither
+	Divide…	Jaga…
+	Document	Dokument
+	Don't Save	Ära salvesta
+	Done	Valmis
+	Dots	Punktid
+	Drag a rectangle around the object	Lohistage objekti ümber ristkülik
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	Piirangu lisamiseks lohistage pilti; Shift horisontaalse/vertikaalse jaoks; kustutamiseks paremklõpsake
+	Drag to move the active shape's path or the Work Path	Lohistage aktiivse kujundi tee või töötee liigutamiseks
+	Draw with the Pen tool (P) or make a work path from a selection.	Joonistage pliiatsi tööriistaga (P) või tehke valikust töötee
+	Drop an image or PSD anywhere to open it.	Pukseerige pilt või PSD kuhugi, et see avada
+	Duplicate Layers…	Dubleerivad kihid…
+	Duplicate style	Dubleeri stiil
+	Edit Toolbar…	Redigeeri tööriistariba…
+	Edit in Quick Mask Mode  (Q)	Redigeerimine kiirmaski režiimis (Q)
+	Edit in Standard Mode  (Q)	Redigeerimine standardrežiimis (Q)
+	Effects	Efektid
+	Embed Color Profile	Manusta värviprofiil
+	Embedded Profile Mismatch	Manustatud profiili mittevastavus
+	Enable airbrush-style build-up effects	Lubage airbrush-stiilis kogumisefektid
+	Enhance Edge	Täiustage serva
+	Entire Font	Kogu font
+	Exact	Täpne
+	Expansion:	Laiendus:
+	Export Presets	Ekspordi eelseaded
+	Export selected measurements (CSV)	Ekspordi valitud mõõtmised (CSV)
+	Exposure	Säri
+	Exposure and Gamma	Säritus ja gamma
+	Exposure:	Kokkupuude:
+	Eyedropper	Pipett
+	Factor:	Tegur:
+	Faux Bold	Faux Bold
+	Faux Italic	Faux Italic
+	Feather	Pehme Serv
+	Fewer Points	Vähem punkte
+	File Settings	Faili seaded
+	Fill	Täida
+	Fill:	Täida:
+	Filter for adjustment layers	Reguleerimiskihtide filter
+	Filter for pixel layers	Filter pikslikihtide jaoks
+	Filter for shape layers	Kujukihtide filter
+	Filter for smart objects	Filter nutikate objektide jaoks
+	Filter for type layers	Tüübikihtide filter
+	Filter:	Filter:
+	Finger Painting	Sõrmede maalimine
+	Fisheye	Kalasilm
+	Fit	Sobivad
+	Fit Screen	Ekraani sobitamine
+	Fit in View	Sobib vaatesse
+	Fixed	Parandatud
+	Fixed Ratio	Fikseeritud Suhe
+	Fixed Size	Fikseeritud Suurus
+	Flip	Pöörake
+	Flip X	Keerake X
+	Flip X Jitter	Flip X Jitter
+	Flip Y	Pöörake Y
+	Flip Y Jitter	Pöörake Y Jitter
+	Flow	Voolavus
+	Flow Jitter	Voolu värin
+	Focal Length	Fookuskaugus
+	Font	Kirjastiil
+	Font Size:	Fondi suurus:
+	Font size	Fondi suurus
+	Foreground	Eesplaani värv
+	Foreground to Background	Esiplaanist taustaks
+	Foreground/Background Jitter	Esi/Tagaplaani jaotus
+	Format	Formaat
+	Frame from Layers…	Raam kihtidest…
+	Free	Vaba
+	Full Spherical	Täissfääriline
+	Fuzziness:	Hägusus:
+	GPU	GPU
+	Gamma Correction	Gamma korrektsioon
+	Gamma:	Gamma:
+	Global	Globaalne
+	Glow Color	Hõõguv värv
+	Gradient Map	Gradiendi kaart
+	Grain	Tera
+	Gray	Hall
+	Gray Gamma 2.2	Hall gamma 2.2
+	Green	Roheline
+	Group	Grupp
+	Hardness	Nurgelisus
+	Heart	Süda
+	Height	Kõrgus
+	Height:	Kõrgus:
+	Hide Auto Slices	Peida automaatsed lõigud
+	Hide Properties	Peida omadused
+	Highlight Compression	Tõstke esile Compression
+	Highlight Priority	Tõstke esile Priority
+	Highlights	Heledad
+	Home	Kodu
+	Horizontal scale	Horisontaalne skaala
+	Hue	Toon
+	Hue Jitter	Tooni jaotus
+	Hue/Saturation	Toon/Küllastus
+	Hyphenate	sidekriipsutamine
+	Ignore	Ignoreeri
+	Ignore All	Ignoreeri kõiki
+	Image Size	Pildi Suurus
+	Import Brushes…	Impordi pintslid…
+	Import Photoshop brushes (.abr)	Importige Photoshopi pintslid (.abr)
+	Import Presets	Impordi eelseaded
+	Imported	Imporditud
+	Indent First	Esimene taane
+	Indent Left	Taane vasakule
+	Indent Right	Taane paremale
+	Indent first line	Esimese rea taane
+	Indent left margin	Taane vasak veeris
+	Indent right margin	Taande parem veeris
+	Input:	Sisend:
+	Inside	Seespool
+	Interlaced	Põimitud
+	Interpolation:	Interpolatsioon:
+	Intersect with selection  ({key})	Lõikumine valikuga ({key})
+	Invert All	Invert All
+	Invert has no settings.	Invertil pole sätteid
+	Italic	Kursiiv
+	Justify all	Põhjendage kõike
+	Justify last centered	Joonda viimati tsentreeritud
+	Justify last left	Põhjenda viimast vasakut
+	Justify last right	Põhjenda viimast õigust
+	Kerning	Kerning
+	Keyboard Shortcuts	Klaviatuuri kiirkäsud
+	Keyboard Shortcuts and Menus	Klaviatuuri otseteed ja menüüd
+	Kind	Lahke
+	Label Size	Sildi suurus
+	Labels	Sildid
+	Lanczos (sharp)	Lanczos (terav)
+	Landscape	Rõhtne
+	Last Document State	Viimase dokumendi olek
+	Layout	Paigutus
+	Leading	Rea kõrgus
+	Leading (set to the font size × auto-leading when Auto)	Juhtiv (määratakse fondi suurusele × automaatne algus, kui Auto)
+	Leave as is (don't color manage)	Jäta nii nagu on (ära värvi halda)
+	Left	Vasak
+	Left align text	Teksti joondamine vasakule
+	Length:	Pikkus:
+	Level	Tase
+	Levels	Heledustasemed
+	Lighten	Heledam
+	Lightness	Heledus
+	Lights	Tuled
+	Limits:	Piirangud:
+	Linear Gradient	Lineaarne gradient
+	Link layers	Ühenda Kihid
+	Link width and height	Lingi laius ja kõrgus
+	Liquify is not open	Liquify ei ole avatud
+	Load	Laadige
+	Load 3D LUT…	Laadi 3D LUT…
+	Load Photoshop brushes (.abr)	Laadige Photoshopi pintslid (.abr)
+	Load channel as selection	Laadi kanal valikuna
+	Load…	Laadi…
+	Localized Color Clusters	Lokaliseeritud värviklastrid
+	Lock	Lukus
+	Lock all	Lukusta kõik
+	Lock image pixels	Lukusta pildi pikslid
+	Lock layer	Lukustuskiht
+	Lock position	Luku asend
+	Lock transparent pixels	Lukusta läbipaistvad pikslid
+	Lock:	Lukk:
+	Logical Length:	Loogiline pikkus:
+	Logical Units:	Loogilised ühikud:
+	Luminance	Heledus
+	Luminance Detail	Heleduse detail
+	Magenta	Magenta
+	Magenta  ·  Green	Magenta · Roheline
+	Maintain aspect ratio	Säilitage kuvasuhe
+	Marker Size	Markeri suurus
+	Mask All	Mask kõik
+	Mask Options	Maski valikud
+	Masking	Maskeerimine
+	Master	Peamine
+	Matte	Matt
+	Median:	Mediaan:
+	Menus	Menüüd
+	Mesh Size	Võrgusilma suurus
+	Metadata	Metaandmed
+	Metrics	Mõõdikud
+	Midpoint	Keskpunkt
+	Midtones	Kesktoonid
+	Midtones from:	Kesktoonid alates:
+	Midtones to:	Kesktoonid kuni:
+	Minimum Depth	Minimaalne sügavus
+	Minimum Diameter	Minimaalne läbimõõt
+	Minimum Roundness	Minimaalne ümarus
+	Mode:	Režiim:
+	Monochrome	Ühevärviline
+	More Points	Rohkem punkte
+	Move effect layer down	Liigutage efektikihti allapoole
+	Move effect layer up	Liigutage efektikiht üles
+	Move to	Teisalda
+	Name	Nimi
+	Name:	Nimi:
+	Nearest Neighbor	Lähim naaber
+	Nearest Neighbor (hard edges)	Lähim naaber (kõvad servad)
+	New Size	Uus suurus
+	New document…	Uus dokument…
+	New effect layer	Uus efektikiht
+	New selection	Uus valik
+	Next frame	Järgmine kaader
+	Next note	Järgmine märkus
+	No Color	Värv puudub
+	No Color Management	Värvihaldus puudub
+	No Dither	Ei Ditherit
+	No author	Autorit pole
+	No character style	Pole iseloomu stiili
+	No document	Dokument puudub
+	No matching commands	Ühtegi sobivat käsku pole
+	No presets for the current tool.	Praeguse tööriista jaoks pole eelseadeid
+	No presets of this type.	Seda tüüpi eelseadeid pole
+	No properties	Ei mingeid omadusi
+	No tool presets.	Tööriista eelseadeid pole
+	Noise Reduction	Müra vähendamine
+	Normal	Tavaline
+	Not in Dictionary:	Pole sõnastikus:
+	OK	OK
+	Offset	Nihe
+	Only Web Colors	Ainult veebivärvid
+	Opacity	Nähtavus
+	Opacity Jitter	Läbipaistmatus värin
+	Opacity:	Läbipaistmatus:
+	Open a document to define variables.	Muutujate määratlemiseks avage dokument
+	Open a document to select a colour range.	Värvivahemiku valimiseks avage dokument
+	Open a document to use the timeline.	Ajaskaala kasutamiseks avage dokument
+	Optical	Optiline
+	Optimized	Optimeeritud
+	Option-click to define a source point to clone from	Klõpsake valikuklahvi all, et määrata lähtepunkt, millest kloonida
+	Original	Originaal
+	Output Channel:	Väljundkanal:
+	Output Levels:	Väljundtasemed:
+	Output:	Väljund:
+	Outside	Väljaspool
+	Overlay Color	Ülekatte värv
+	Overlay Opacity	Katte läbipaistmatus
+	Overlay: Rule of Thirds	Ülekate: Kolmandate reegel
+	Override Pressure	Rõhu alistamine
+	Override Rotation	Pööramise alistamine
+	Override Tilt	Kallutamise alistamine
+	PRESET DETAILS	Eelseade üksikasjad
+	PSD	PSD
+	Paint Overlay	Värvi ülekate
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	Paneelide asukohad salvestatakse tööruumi. Klaviatuuri otseteed, menüüd ja tööriistariba on valikulised
+	Paper	Paber
+	Path	Joon
+	Pattern	Muster
+	Pattern Size	Mustri suurus
+	Pause	Paus
+	Percent	Protsent
+	Perceptual	Tajuv
+	Perspective Warp is not active	Perspective Warp ei ole aktiivne
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Perspektiivi kõverus: joonistage tasapinnad piki pildi perspektiivi, seejärel lülituge kõverusele
+	Photo Filter	Foto filter
+	PhotoSuite	PhotoSuite
+	PhotoSuite Manages Colors	PhotoSuite haldab värve
+	PhotoSuite — an open-source, native image editor written in Rust.	PhotoSuite – avatud lähtekoodiga natiivne pildiredaktor, mis on kirjutatud Rusti keeles
+	Pin Depth:	Pin sügavus:
+	Pixel Length:	Piksli pikkus:
+	Pixels/Centimeter	Pikslit/sentimeeter
+	Pixels/Inch	Pikslit/toll
+	Pixels:	Pikslid:
+	Play	Mängi
+	Play selection	Esita valik
+	Portrait	Püstine
+	Position	Asukoht
+	Position and Size	Asend ja suurus
+	Posterize	Plakati
+	Preserve Details	Säilita üksikasjad
+	Preserve Luminosity	Hoidke värvi heledus
+	Preset	Eelseadistatud
+	Preset Type	Eelseadistatud tüüp
+	Preset:	Eelseadistatud:
+	Presets:	Eelseaded:
+	Press keys…	Vajutage klahve…
+	Pressure	Surve
+	Pressure for Opacity	Läbipaistmatuse surve
+	Pressure for Size	Suuruse surve
+	Prevent auto-nesting in and out of Artboards and Frames	Vältige joonistustahvlite ja raamide automaatset sisse- ja väljapesastamist
+	Preview	Eelvaade
+	Previous frame	Eelmine kaader
+	Previous note	Eelmine märkus
+	Print	Print
+	Printer	Printer
+	Printer Manages Colors	Printer haldab värve
+	Printer Setup	Printeri häälestus
+	Printing Marks	Trükimärgid
+	Progressive	Progressiivne
+	Promote	Edendada
+	Protect Detail	Säilita Detaile
+	Protect Foreground Color	Kaitske esiplaani värvi
+	Protect Tones	Kaitske toone
+	Proximity Match	Läheduse matš
+	Pulled String Mode	Tõmmatud stringi režiim
+	Puppet Warp is not active	Puppet Warp ei ole aktiivne
+	Purity	Puhtus
+	Quality	Kvaliteet
+	Quick Actions	Kiired toimingud
+	Quick Export As PNG	Kiire eksport PNG-vormingus
+	Radial Gradient	Radiaalne gradient
+	Radius	Raadius
+	Radius:	Raadius:
+	Range:	Vahemik:
+	Rate	Suhe
+	Recently Used	Hiljuti kasutatud
+	Reconstruct	Konstrueeri tagasi
+	Record ● a sequence of edits, then play ▶ it on any document.	Salvestage ● muudatuste jada ja esitage see ▶ mis tahes dokumendil
+	Red	Punane
+	Redefine style by current selection	Määrake stiil uuesti praeguse valiku järgi
+	Reflected Gradient	Peegeldunud gradient
+	Registration Marks	Registreerimismärgid
+	Regular	Tavaline
+	Relative	Relatiivne
+	Relative Colorimetric	Suhteline kolorimeetriline
+	Remove	Eemalda
+	Remove All Pins	Eemalda kõik nööpnõelad
+	Remove Background	Eemalda taust
+	Remove Planes	Eemaldage lennukid
+	Remove stop	Eemalda stopp
+	Remove variable	Eemalda muutuja
+	Rename	Nimeta ümber
+	Rename Group…	Nimeta grupp ümber…
+	Rename Layer…	Nimeta kiht ümber…
+	Rename Tool Preset…	Tööriista eelseadistuse ümbernimetamine…
+	Rename…	Nimeta ümber…
+	Resample	Ümberproovi
+	Reset All to Defaults	Lähtestage kõik vaikeseadetele
+	Reset Section	Lähtesta jaotis
+	Reset Transform	Lähtesta teisendus
+	Reset to defaults	Lähtestage vaikeseadetele
+	Resolution	Resolutsioon
+	Resolution:	Resolutsioon:
+	Restore All	Taasta kõik
+	Restore Defaults	Taasta vaikeseaded
+	Restrictive (Web)	Piirav (veeb)
+	Right	Parem
+	Right align text	Joonda tekst paremale
+	Rigid	Jäik
+	Rotate:	Pööra:
+	Rotation	Pöörlemine
+	Roughness	Karedus
+	Roundness	Ümarus
+	Roundness Jitter	Ümaruse jaotus
+	Rulers & Grids	Joonlauad ja võred
+	Sample All Layers	Proovige kõiki kihte
+	Sample:	Näidis:
+	Sampling: Background Swatch	Proovide võtmine: Background Swatch
+	Sampling: Continuous	Proovide võtmine: pidev
+	Sampling: Once	Proovide võtmine: üks kord
+	Saturate	Satureeri
+	Saturation	Küllastus
+	Saturation Jitter	Küllastuse jaotus
+	Save HTML and Images	Salvestage HTML ja pildid
+	Save as PDF	Salvesta PDF-ina
+	Save selection as channel	Salvesta valik kanalina
+	Save…	Salvesta…
+	Scale to Fit Media	Skaala sobitada meediasse
+	Scatter	Jaotus
+	Scratch disks	Kraapimiskettad
+	Search	Otsi
+	Search commands	Otsi käsud
+	Search commands, tools and panels…	Otsige käske, tööriistu ja paneele…
+	Search fonts	Otsi fonte
+	Select All	Valige Kõik
+	Select Subject	Valige Teema
+	Select a type layer or click into text to insert glyphs	Valige tüübikiht või klõpsake glüüfide sisestamiseks teksti
+	Select text to apply a character style	Valige märgistiili rakendamiseks tekst
+	Select:	Valige:
+	Selections	Valikud
+	Selective	Valikuline
+	Selective Color	Valikuline Värv
+	Send the selected pin backward	Saada valitud nööpnõel tagasi
+	Set additional smoothing options	Määrake täiendavad silumisvalikud
+	Set background color	Määra taustavärv
+	Set foreground color	Määra esiplaani värv
+	Set painting symmetry options	Määrake maali sümmeetria valikud
+	Set shape fill type	Määrake kuju täitetüüp
+	Set shape stroke type	Määrake kuju löögi tüüp
+	Set the text color	Määrake teksti värv
+	Shadows	Varjud
+	Shape:	Kuju:
+	Sharpening	Teritamine
+	Shift	Shift
+	Shortcut removed.	Otsetee eemaldatud
+	Show All Menu Items	Kuva kõik menüüelemendid
+	Show Backdrop	Kuva taustadekoratsioon
+	Show Guides	Näita juhendeid
+	Show Mask	Näita maski
+	Show Mesh	Näita võrgusilma
+	Show Overlay	Kuva ülekate
+	Show Transform Controls	Kuva teisendusjuhtelemendid
+	Show or hide the Notes panel	Märkmete paneeli kuvamine või peitmine
+	Show:	Näita:
+	Sides	Küljed
+	Sides:	Küljed:
+	Size	Suurus
+	Size Jitter	Suuruse jaotus
+	Size:	Suurus:
+	Slice Options…	Viiluvalikud…
+	Slices From Guides	Viilud juhenditest
+	Slices are locked (View › Lock Slices)	Lõigud on lukus (vaade › Lukusta lõigud)
+	Small Caps	Väikesed suurtähed
+	Smoothing	Silumine
+	Space After	Kosmos pärast
+	Space Before	Kosmos enne
+	Spacing	Vaheruum
+	Spell check complete.	Õigekirjakontroll on lõpetatud
+	Split:	Jagamine:
+	Star ratio	Tähtede suhe
+	Stop playing/recording	Lõpetage esitamine/salvestus
+	Straighten	Sirgenda
+	Straighten Layer	Sirgenda kiht
+	Strength:	Tugevus:
+	Strikethrough	Läbikriipsutatud
+	Stroke	Servajoon
+	Stroke Catch-up	Insuldi järelejõudmine
+	Stroke:	Insult:
+	Style	Stiil
+	Style Options	Stiilivalikud
+	Style Options…	Stiilivalikud…
+	Style: Normal	Stiil: tavaline
+	Subtract from Sample	Eemalda proovist
+	Subtract from selection  ({key})	Lahutage valikust ({key})
+	Suggestions:	Soovitused:
+	Swap colours (X)	Vaheta värve (X)
+	Swaps height and width	Vahetab kõrguse ja laiuse
+	Switch between free transform and warp modes	Lülitage vaba teisendus- ja kõverdusrežiimide vahel
+	Switch theme	Vaheta teemat
+	Temperature	Temperatuur
+	Tetrahedral	Tetraeedriline
+	Text Position:	Teksti asukoht:
+	Texture	Tekstuur
+	Texture Each Tip	Tekstuur iga otsa
+	Threshold	Barjäär
+	Threshold Level	Lävitase
+	Thumbnail size (smallest: list)	Pisipildi suurus (väikseim: loend)
+	Tilt X	Kallutage X
+	Tilt Y	Kallutage Y
+	Tint	Toon
+	Toggle count group visibility	Loendusrühma nähtavuse sisse- ja väljalülitamine
+	Toggle text orientation	Lülitage teksti suund
+	Tolerance	Tolerants
+	Tolerance:	Tolerants:
+	Tone:	Toon:
+	Toolbar	Tööriistariba
+	Top	Ülemine
+	Total:	Kokku:
+	Tracking	Tähe vahe
+	Tracking (1/1000 em)	Jälgimine (1/1000 em)
+	Transparency	Läbipaistvus
+	Transparent	Läbipaistev
+	Trilinear	Trilineaarne
+	Type Styles	Tippige Stiilid
+	Type:	Tüüp:
+	Underline	Allajoonimine
+	Untitled	Nimetu
+	Untitled-1	Pealkirjata-1
+	Update layer comp (visibility, position and appearance)	Värskenda kihtide koostamist (nähtavus, asukoht ja välimus)
+	Use Default	Kasuta vaikeseadet
+	Use Legacy	Kasuta vana
+	Use Measurement Scale	Kasutage mõõteskaalat
+	Use the embedded profile (instead of the working space)	Kasutage manustatud profiili (tööruumi asemel)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	Muutujad seovad kihi nähtavuse, teksti või pikslid nimega andmepesaga
+	Vertical scale	Vertikaalne skaala
+	Vibrance	Paindlik värviküllastus
+	View Options	Kuva Valikud
+	Vignetting	Vinjettimine
+	Violet, Orange	Violetne, oranž
+	Visibility	Nähtavus
+	Visible	Nähtav
+	Warp:	Koolutamine:
+	Web Snap	Web Snap
+	Weight	Kaal
+	Weight:	Kaal:
+	White	Valge
+	White Balance: As Shot	Valge tasakaal: nagu pildistatud
+	Whites	Valged
+	Width	Laius
+	Width:	Laius:
+	Work Path	Töötee
+	Yellow	Kollane
+	Yellow  ·  Blue	Kollane · Sinine
+	Zoom	Suum
+	Zoom in	Suurenda Sisse
+	Zoom out	Suurenda Välja
+	command or shortcut	käsk või otsetee
+	current	praegune
+	image file path	pildifaili tee
+	modified	muudetud
+	name	Nimi
+	new	Uus
+	{name} options	{name} valikud
+	↑↓ navigate   {key} run   esc close	↑↓ navigate {key} run esc close
+	Version {version}	Versioon {version}
+	New Document	Uus dokument
+	Error	Viga
+	Command	Käsk
+	Adjustment layers have nothing to transform	Reguleerimiskihtidel pole midagi muuta
+	Altitude	Kõrgus merepinnast
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	Apple Watch 45mm
+	Aqua	Aqua
+	Art & Illustration	Kunst ja illustratsioon
+	Background Eraser Tool	Taustakummi tööriist
+	Bevel & Emboss	Kaldus ja reljeef
+	Blend Mode	Segamisrežiim
+	Blues	Blues
+	Blur Tool	Udutamise Tööriist
+	Bold	Paks
+	Brush	Pintsel
+	Brush Pose	Pintsli poos
+	Brush Tip Shape	Pintsli otsa kuju
+	Brush Tool	Pintsel
+	Build-up	Ehitamine
+	Burn Tool	Põletamise Tööriist
+	Centimeters	Sentimeeter
+	Choke	Lämbumine
+	Classic	Klassikaline
+	Click to add text	Klõpsake teksti lisamiseks
+	Click to fill similar colours	Klõpsake sarnaste värvide täitmiseks
+	Clone Stamp Tool	Kloonitempli tööriist
+	Color Burn	Värvi põlema
+	Color Dodge	Color Dodge
+	Color Dynamics	Värvi dünaamika
+	Color Overlay	Värvi ülekate
+	Comic Book	Koomiks
+	Conform	Vasta
+	Content-Aware Fill needs a selection on a pixel layer	Sisutundlik täitmine vajab pikslikihi valikut
+	Could not transform: the layer is empty	Ei saanud teisendada: kiht on tühi
+	Could not use Perspective Warp: the layer is empty	Perspective Warp'i ei saanud kasutada: kiht on tühi
+	Could not use Puppet Warp: no opaque pixels	Puppet Warpi ei saanud kasutada: läbipaistmatuid piksleid pole
+	Could not use Puppet Warp: the layer is empty	Puppet Warp'i ei saanud kasutada: kiht on tühi
+	Crop Tool	Kärpimistööriist
+	Crosswise	Risti
+	Current Tool	Praegune tööriist
+	Custom Shape Tool	Kohandatud kujundi tööriist
+	Cyans	Tsüaanid
+	Default Photoshop Size	Photoshopi vaikesuurus
+	Delete Workspace	Kustuta tööruum
+	Diamond	Teemant
+	Dimensions:	Mõõdud:
+	Direction	Suund
+	Distance	Vahemaa
+	Document Dimensions	Dokumendi mõõtmed
+	Document Profile	Dokumendi profiil
+	Document Sizes	Dokumendi suurused
+	Dodge Tool	Helestamise Tööriist
+	Down	Alla
+	Drag to draw a gradient	Gradiendi joonistamiseks lohistage
+	Drag to move the active layer	Lohistage aktiivse kihi liigutamiseks
+	Drag to pan  ·  hold Space with any tool	Lohistage panoraamimiseks · hoidke tühikut mis tahes tööriistaga
+	Drop Shadow	Vari
+	Dual Brush	Kahekordne pintsel
+	Edge	Serv
+	Efficiency	Tõhusus
+	Efficiency: 100%	Tõhusus: 100%
+	Ellipse Tool	Ellipsi tööriist
+	Elliptical Marquee Tool	Elliptiline markee tööriist
+	Emboss	Süvatrükk
+	Eraser	Kustutuskumm
+	Eraser Tool	Kustutaja
+	ExtraBold	EkstraBold
+	ExtraLight	Extralight
+	Eyedropper Tool	Pihusti tööriist
+	Fade	Tuhmuma
+	Fill Opacity	Täitke läbipaistmatus
+	Film & Video	Film & Video
+	From	Alates
+	General	Üldine
+	GitHub	GitHub
+	Gradient Overlay	Gradiendiga ülekate
+	Gradient Tool	Gradiendi tööriist
+	Greens	Rohelised
+	Hand Tool	Liigutamistööriist
+	Hard	Raske
+	Hard Mix	Kõva segu
+	Healing Brush Tool	Ravipintsel
+	Highlights from:	Esiletõstetud teemad:
+	History Brush Tool	Ajaloopintsli tööriist
+	Horizontal Type Tool	Horisontaalse tüübi tööriist
+	Image Size:	Pildi suurus:
+	Inches	Toll
+	Indexed	Indekseeritud
+	Initial Direction	Algne suund
+	Inner Bevel	Sissepoole tõstuserv
+	Inner Glow	Sisemine helendus
+	Inner Shadow	Sisemine vari
+	Lab	Lab
+	Landscape, 10 x 8	Rõhtpaigutus, 10 x 8
+	Landscape, 6 x 4	Maastik, 6 x 4
+	Landscape, 7 x 5	Maastik, 7 x 5
+	Lasso	Lasso
+	Lasso Tool	Lasso tööriist
+	Layer Count	Kihtide arv
+	Layer Knocks Out Drop Shadow	Kiht eemaldab varju
+	Legal	Juriidiline
+	Letter	Kiri
+	Light	Hele
+	Line Tool	Joone tööriist
+	Linear	Lineaarne
+	Linear Burn	Lineaarne põlema
+	Linear Height	Lineaarne kõrgus
+	Link with Layer	Link kihiga
+	Lorem Ipsum	Lorem Ipsum
+	Magentas	Magentas
+	Magic Eraser Tool	Magic Eraser Tool
+	Magic Wand Tool	Võlukepi tööriist
+	Marquee	Marquee
+	Mean:	Tähendab:
+	Measurement Scale	Mõõtmisskaala
+	Measurement Scale Marker	Mõõtmisskaala marker
+	Millimeters	Millimeeter
+	Mobile	Mobiil
+	Move Tool	Liigutamistööriist
+	Multiply	Korruta
+	My Brushes	Minu Pintslid
+	Neutrals	Neutraalsed
+	New Workspace	Uus tööruum
+	Note Tool	Märkuse tööriist
+	Object Selection Tool	Objekti valimise tööriist
+	Off	Väljas
+	Open	Ava
+	Orange	Oranz
+	Original Ratio	Algne suhe
+	Out Of Gamut	Väljaspool ulatust
+	Outer Bevel	Väljapoole tõstuserv
+	Outer Glow	Helendav serv
+	Overlay	Ülekate
+	Paint Bucket Tool	Värvitäite Tööriist
+	Paints from the document's opening state	Värvib dokumendi avamisolekust
+	Path Selection Tool	Tee valimise tööriist
+	Pattern Overlay	Mustriga ülekate
+	Pen Pressure	Pliiatsi surve
+	Pen Tilt	Pliiatsi kallutamine
+	Pen Tool	Pliiatsi tööriist
+	Photo	Foto
+	PhotoSuite website	PhotoSuitei veebisait
+	Picas	Picas
+	Pillow Emboss	Sisse vajutatud
+	Pixel Replacement	Pikslite vahetus
+	Pixels	Pikslid
+	Points	Punktid
+	Polygon Tool	Hulknurga tööriist
+	Polygonal Lasso Tool	Hulknurkne Lasso tööriist
+	Portrait, 4 x 6	Portree, 4 x 6
+	Portrait, 5 x 7	Portree, 5 x 7
+	PostScript (72 points/inch)	PostScript (72 punkti tolli kohta)
+	Postcard	Postkaart
+	Poster	Plakat
+	Pro (Dark)	Pro (tume)
+	Pro (Medium Gray)	Pro (keskmine hall)
+	Protect Texture	Kaitske tekstuuri
+	Purple	Lilla
+	Quick Mask	Kiire mask
+	Quick Selection Tool	Kiirvaliku tööriist
+	Radial	Radiaalne
+	Rasterize Layer	Rasteriseeri kiht
+	Ratio	Suhe
+	Recent	Hiljutised
+	Rectangle Tool	Ristküliku tööriist
+	Rectangular Marquee Tool	Ristkülikukujuline telgitööriist
+	Reds	Punased
+	Reflected	Peegeldatud
+	Sample: foreground colour	Näidis: esiplaani värv
+	Sampled Colors	Valitud värvid
+	Satin	Satiin
+	Save Pixel Aspect Ratio	Salvestage pikslite kuvasuhe
+	Scattering	Hajumine
+	Scratch Sizes	Kriimude suurused
+	Select Data Points	Valige Andmepunktid
+	Selection	Märgistus
+	SemiBold	Poolpaks
+	Shadows up to:	Varjud kuni:
+	Shape Dynamics	Kuju dünaamika
+	Sharpen Tool	Teravustamise Tööriist
+	Show Extras Options	Näita lisavalikuid
+	Slice Select Tool	Viiluvalikutööriist
+	Slice Tool	Viilutööriist
+	Smart Filters	Targad Filtrid
+	Smudge Tool	Hägustamise Tööriist
+	Soft	Pehme
+	Soften	Pehmenda
+	Source	Allikas
+	Source: set	Allikas: komplekt
+	Sponge Tool	Värvilahusti Tööriist
+	Spot Healing Brush Tool	Punkti Tervendamise Tööriist
+	Spread	Valguvus
+	Square, 12 x 12	Ruut, 12 x 12
+	Square, 5 x 5	Ruut, 5x5
+	Std Dev:	Std Dev:
+	Studio (Dark)	Stuudiokorter (tume)
+	Studio (Light)	Stuudiokorter (hele)
+	Stylus Wheel	Pliiatsi ratas
+	Subtract	Lahuta
+	Tabloid	Tabloid
+	Text Replacement	Teksti asendamine
+	Thin	Õhuke
+	Traditional (72.27 points/inch)	Traditsiooniline (72,27 punkti tolli kohta)
+	Transfer	Ülekanne
+	Triangle Tool	Kolmnurga tööriist
+	Unsaved changes	Salvestamata muudatused
+	Uses the foreground and background colours.	Kasutab esiplaani ja tausta värve
+	Web	Veeb
+	Web Large	Veeb suur
+	Web Minimum	Veebi miinimum
+	Web Most Common	Veeb kõige levinum
+	WebP (lossless)	WebP (kadudeta)
+	Wet Edges	Märjad servad
+	Yellows	Kollased
+	Zoom Tool	Suurendamise Tööriist
+	{name} Properties	{name} Atribuudid
+	Revert “{name}” to the last saved version? Your changes will be lost.	Kas taastada „{name}” viimati salvestatud versioon? Teie muudatused lähevad kaotsi
+	Do you want to save the changes you made to “{name}” before quitting?	Kas soovite salvestada muudatused, mille tegite jaotises „{name}” enne väljumist?
+	Do you want to save the changes you made to “{name}” before closing?	Kas soovite salvestada muudatused, mille tegite jaotises „{name}” enne sulgemist?
+	Doc: {flat}/{layered}	Dokument: {flat}/{layered}
+	Scratch: {size}	Kriimustus: {size}
+	Untagged {mode}	Märgistamata {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} pikslit x {h} pikslit ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	Eraldusvõime: {dpi} pikslit tolli kohta
+	Doc: {w} × {h} px	Dokument: {w} × {h} px
+	Frame {current} / {total}	Kaader {current} / {total}
+	Count: {n}	Arv: {n}
+	BLANK DOCUMENT PRESETS ({n})	TÜHJAD DOKUMENTI EELSEADED ({n})
+	Constraints ({n})	Piirangud ({n})
+	Align {what}	Joonda {what}
+@plural	{n} Layer|{n} Layers	{n} kiht|{n} kihti
+@plural	Group · {n} layer|Group · {n} layers	Rühm · {n} kiht|Rühm · {n} kihti
+	Additional plugins folder	Täiendavate pistikprogrammide kaust
+	Adobe	Adobe
+	Adobe rgb	Adobe rgb
+	Allow agent control	Luba agendi kontroll
+	Allow scripts to connect	Luba skriptidel ühenduda
+	Always	Alati
+	Always create smart objects when placing	Paigutamisel looge alati nutikaid objekte
+	Animated zoom	Animeeritud suum
+	Apply auto tone	Rakenda automaatne toon
+	Ask	Küsi
+	Ask before saving layered tiff	Küsi enne kihilise tiffi salvestamist
+	Auto collapse icon panels	Ahenda ikoonipaneelid automaatselt
+	Auto show hidden panels	Näita peidetud paneele automaatselt
+	Auto show home screen	Avakuva automaatne kuvamine
+	Autosave	Automaatne salvestamine
+	Autosave minutes	Minutite automaatne salvestamine
+	Beep when done	Piiks, kui see on tehtud
+	Bicubic automatic	Bicubic automaat
+	Bicubic sharper	Bikuubiline teravam
+	Bicubic smoother	Bicubic siledam
+	Bit depth	Biti sügavus
+	Brush preview color	Pintsli eelvaate värv
+	Cache levels	Vahemälu tasemed
+	Cache tile size	Vahemälu paani suurus
+	Camera Raw Defaults	Camera Raw vaikesätted
+	Canvas border	Lõuendi ääris
+	Canvas color	Lõuendi värv
+	Canvas custom color	Lõuendi kohandatud värv
+	Color picker	Värvi Korjaja
+	Color space	Värviruum
+	Column width	Veeru laius
+	Concise	Kokkuvõtlik
+	Control port	Juhtimisport
+	Convert to srgb	Teisenda srgb-ks
+	Cursors	Kursorid
+	Custom dark	Kohandatud tume
+	Custom light	Kohandatud valgus
+	Dark	Tume
+	Dark gray	Tumehall
+	Dashed lines	Kriipsjooned
+	Destination	Sihtpunkt
+	Detailed	Üksikasjalik
+	Disks	kettad
+	Display p3	Kuva p3
+	Double click layer mask launches select and mask	Topeltklõpsuga kihimask käivitab valiku ja maski
+	Drop shadow	Vari
+	Dynamic color sliders	Dünaamilised värviliugurid
+	East asian	Ida-Aasia
+	Effect cache mb	Efekti vahemälu mb
+	Enable flick panning	Luba nipsamisega panoraam
+	Enable floating document window docking	Ujuva dokumendiakna dokkimise lubamine
+	Enable narrow options bar	Luba kitsas valikuriba
+	Enabled	Lubatud
+	Enhanced Controls	Täiustatud juhtnupud
+	Export clipboard	Ekspordi lõikelaud
+	Extra large	Eriti suur
+	File Handling	Failide käsitlemine
+	File path	Faili tee
+	Fill new type layers with placeholder	Täitke uut tüüpi kihid kohahoidjaga
+	Font preview	Fondi eelvaade
+	Full size tip	Täissuuruses näpunäide
+	Gamut warning color	Värvigamma hoiatusvärv
+	Gamut warning opacity	Tootmisulatuse läbipaistmatuse hoiatus
+	Generator enabled	Generaator on lubatud
+	Gif	Gif
+	Glossy	Läikiv
+	Grid color	Võre värv
+	Grid colors	Võre värvid
+	Grid size	Võre suurus
+	Grid style	Võre stiil
+	Grid unit	Võrguüksus
+	Gridline every	Gridline iga
+	Guide color	Juhendvärv
+	Guide style	Juhendi stiil
+	Guides, Grid & Slices	Abijooned, võrk ja viilud
+	Gutter	Vihmaveerenn
+	History Log	Ajaloo logi
+	History states	Ajalugu väidab
+	Ignore exif profile tag	Ignoreeri exif profiilisilti
+	Image interpolation	Pildi interpolatsioon
+	Image previews	Piltide eelvaated
+	Integrations	Integratsioonid
+	Interface	Liides
+	Jpeg quality	Jpeg kvaliteet
+	Jpg	Jpg
+	Language	Keel
+	Large tabs	Suured vahelehed
+	Legacy compositing	Pärandkompositsioon
+	Light gray	Helehall
+	Line	Joon
+	Lines	Jooned
+	Lowercase extension	Väiketähtede laiend
+	Maximize psd compatibility	Maksimeerige psd-ühilduvus
+	Medium gray	Keskmine hall
+	Memory usage mb	Mälukasutus mb
+	Missing glyph protection	Glüüfikaitse puudub
+	Modern	Kaasaegne
+	Nearest neighbor	Lähim naaber
+	Never	Mitte kunagi
+	Normal tip	Tavaline näpunäide
+	Open as smart object	Ava nutika objektina
+	Open documents as tabs	Avage dokumendid vahekaartidena
+	Overscroll	Ülekerimine
+	Performance	Esitus
+	Png	Png
+	Point size	Punkti suurus
+	Precise	Täpne
+	Preserve details	Säilitage detailid
+	Print resolution	Prindi eraldusvõime
+	Pro	Pro
+	Pro medium	Pro keskmine
+	Pro photo	Pro foto
+	Quick export format	Kiire ekspordivorming
+	Quick export location	Kiire ekspordi asukoht
+	Recent file count	Hiljutine failide arv
+	Recent files	Viimased failid
+	Recent fonts	Viimased fondid
+	Recover on launch	Taastage käivitamisel
+	Remember workspace changes	Pidage meeles tööruumi muudatusi
+	Resize image during place	Muutke pildi suurust asukoha ajal
+	Rotate view with trackpad	Pöörake vaadet puuteplaadiga
+	Same folder	Sama kaust
+	Save in background	Salvestage taustal
+	Scratch Disks	Kraapimiskettad
+	Screen	Ekraan
+	Screen resolution	Ekraani eraldusvõime
+	Scrubby slider acceleration	Puhas liuguri kiirendus
+	Sessions only	Ainult seansid
+	Sharpen for	Teritamiseks
+	Show channels in color	Kuva kanalid värviliselt
+	Show crosshair in brush tip	Näidake pintsli otsas juukserist
+	Show extension panels	Kuva laienduspaneelid
+	Show font names in english	Näita fontide nimesid inglise keeles
+	Show menu colors	Kuva menüü värvid
+	Show only crosshair while painting	Näita maalimise ajal ainult juukseristi
+	Show slice numbers	Näita lõikude numbreid
+	Show tooltips	Näita vihjeid
+	Show transformation values	Näita teisendusväärtusi
+	Slice color	Viilu värv
+	Smart guide color	Nutikas juhendi värv
+	Smart quotes	Nutikad tsitaadid
+	Snap vector tools and transforms to pixel grid	Snap vektortööriistad ja teisendab pikslite ruudustikuks
+	Srgb	Srgb
+	Standard	Standardne
+	Studio	Stuudiokorter
+	Studio light	Stuudiovalgusti
+	Subdivisions	Alajaotused
+	System	Süsteem
+	Text engine	Teksti mootor
+	Text file	Tekstifail
+	Tiny	Pisikene
+	Touch gestures	Puutežestid
+	Transparency & Gamut	Läbipaistvus ja ulatus
+	Type units	Tüüpühikud
+	UI font size	Kasutajaliidese fondi suurus
+	UI scale	UI skaala
+	Units & Rulers	Ühikud ja joonlauad
+	Use additional plugins folder	Kasutage täiendavate pistikprogrammide kausta
+	Use esc to commit	Kasutage sidumiseks klahvi esc
+	Use gpu	Kasutage gpu-d
+	Use legacy free transform	Kasutage pärandvaba teisendust
+	Use shift key for tool switch	Kasutage tööriista vahetamiseks tõstuklahvi
+	Vary round brush hardness on hud	Muutke ümmarguse harja kõvadust hud
+	Webp	Webp
+	World ready	Maailm valmis
+	Zoom clicked point to center	Suumi klõpsuga punkt keskele
+	Zoom resizes windows	Suum muudab akende suurust
+	Zoom with scroll wheel	Suumimine hiirerattaga
+	Zoom with trackpad pinch	Suumige puuteplaadi kokkusurumisega
+	Pass Through	Segamise režiim ainult kaartuste jaoks
+	Dissolve	Lõhista
+	Darker Color	Tumedam värv
+	Linear Dodge (Add)	Lineaarne Dodge (lisa)
+	Lighter Color	Lighter Color
+	Soft Light	Pehme valgus
+	Hard Light	Kõva valgus
+	Vivid Light	Ere valgus
+	Linear Light	Lineaarne valgus
+	Pin Light	Punktvalgus
+	Exclusion	Välistus
+	Divide	Jaga
+	Luminosity	Värvi heledus
+@plural	{n} sample|{n} samples	{n} näidis|{n} näidist
+	{added}, {removed} subtracted	{added}, {removed} lahutatud
+	Adjustment Preview	Kohandamise eelvaade
+	Airbrush: keeps depositing paint while the pointer rests.	Airbrush: hoiab värvi ladestumist, kui kursor seisab
+	Angle:	Nurk:
+	Blend If	Segamise alammäär
+	Close Tab Group	Sule vahelehtede rühm
+	Collapse	Ahenda
+	Collapse All Groups	Ahenda kõik rühmad
+	Collapse Panel Group	Ahenda paneeligrupp
+	Collapse group  ({key}-click: all groups)	Ahenda grupp ({key}-klõps: kõik rühmad)
+	Create new brush from the current settings	Looge praegustest sätetest uus pintsel
+	Create new brush from these settings	Looge nende sätete põhjal uus pintsel
+	Delete brush	Kustuta pintsel
+	Drag the arrow to set the angle, the dots to set the roundness	Nurga määramiseks lohistage noolt, ümaruse määramiseks punkte
+	Expand	Laienda
+	Expand Panel Group	Laiendage paneelirühma
+	Expand group  ({key}-click: all groups)	Laienda rühma ({key}-klõps: kõik rühmad)
+	Fade steps	Fade sammud
+	Hide the layer's effects  ({key}-click: all layers)	Peida kihi efektid ({key}-klõps: kõik kihid)
+	Import Brushes… (.abr)	Impordi pintslid… (.abr)
+	Move Group Down	Liiguta grupp alla
+	Move Group Up	Liiguta grupp üles
+	Reset the brush to the defaults	Lähtestage harja vaikeseaded
+	Restore original size	Taasta algne suurus
+	Roundness:	Ümarus:
+	Search Brushes	Otsi Pintslid
+	Show the layer's effects  ({key}-click: all layers)	Näita kihi efekte ({key}-klõps: kõik kihid)
+	Brush picker	Pintslikorjaja
+	Erase	Kustuta
+	Right click with painting tools	Paremklõps maalimisvahenditega
+	System Info…	Süsteemi teave…
+	System Info	Süsteemi teave
+	More panels	Veel paneele
+	These settings aren't available in PhotoSuite yet.	Need seaded pole PhotoSuiteis veel saadaval
+	Graphics	Graafika
+	Reset GPU Backend	Lähtestage GPU taustaprogramm
+	Applies at next launch.	Kehtib järgmisel käivitamisel
+	Click to sample the foreground colour  ·  {key}-click for background	Klõpsake esiplaani värvi proovimiseks · {key}-klõpsake tausta nägemiseks
+	{key}-click to set the source	{key}-klõpsake allika määramiseks
+	{key} to subtract	{key} lahutamiseks
+	Clone source {n} ({key}-click with Clone Stamp to set)	Klooni allikas {n} (seadistamiseks klõpsake kloonitempliga {key})
+	Source: not set ({key}-click with Clone Stamp)	Allikas: pole määratud ({key}-klõps kloonitempliga)
+	Pixel Layer	Pikslikiht
+	Type Layer	Tippige kiht
+	Shape Layer	Kuju kiht
+	Group Layer	Grupikiht
+	Fill Layer	Täitekiht
+	Smart Object Layer	Nutikas objektikiht
+	Create Warped Text	Loo väändunud tekst
+	Rasterize Smart Object	Nutika objekti rasterdamine
+	Rasterize Fill Content	Täitke sisu rasterdamine
+	Unlock: picking a preset replaces these settings	Ava: eelseade valimine asendab need seaded
+	Lock: keep these settings when picking another preset	Lukk: säilita need sätted teise eelseadistuse valimisel
+	Diameter:	Läbimõõt:
+	Hardness:	Kõvadus:
+	No brush presets	Pintsli eelseadistusi pole
+	Toggle the Brush Settings panel  (F5)	Pintsli sätete paneeli sisse- ja väljalülitamine (F5)
+	Create new brush preset from the current settings	Looge praegustest sätetest uus pintsli eelseadistus
+	Brush Settings…  (F5): every option of this brush	Pintsli sätted… (F5): kõik selle harja valikud
+	Rename Brush…	Nimeta pintsel ümber…
+	Delete Brush	Kustuta pintsel
+	Group name	Grupi nimi
+	Brush name	Pintsli nimi
+	Grid view	Võrgustikvaade
+	List view	Loendivaade
+	Off: the speed of the pointer sets the spacing	Väljas: kursori kiirus määrab vahekauguse
+	Tilt Scale	Kallutamise skaala
+	Brush Projection	Pintsli projektsioon
+	Apply the pen's tilt and rotation to the tip shape	Kallutage ja pöörake pliiatsi otsa kuju
+	Mixer Brush	Mikseri pintsel
+	Wet	Märg
+	Mix	Sega
+	Wetness Jitter	Niiskuse värisemine
+	Mix Jitter	Sega närvilisus
+	Show the layer mask as an overlay	Näidake kihimaski ülekattena
+	Toggle visibility	Lülitage nähtavus sisse
+	Unlink the mask from the layer	Eemaldage mask kihist
+	Link the mask to the layer	Linkige mask kihiga
+	Gradient	Gradient
+	Gradient Options	Gradiendi valikud
+	Align with layer	Joonda Kihiga
+	Reset Alignment	Lähtesta joondus
+	Centre the gradient (offset 0, 0)	Tsentreeri gradient (nihe 0, 0)
+	The current gradient (pick one in Window › Gradients)	Praegune gradient (valige üks aknas › Gradiendid)
+	Select a type layer to edit its character and paragraph settings.	Valige tüübikiht, et muuta selle märgi- ja lõiguseadeid
+	Text color	Teksti värv
+	Type Options	Tippige Valikud
+	Anti-aliasing method	Antialiase meetod
+	Horizontal type	Horisontaalne tüüp
+	Vertical type	Vertikaalne tüüp
+	Fill path with foreground color	Täitke tee esiplaani värviga
+	Stroke path with brush	Pintsliga löögirada
+	Load path as a selection	Laadi tee valikuna
+	Make work path from selection	Tehke valikust töötee
+	Add vector mask	Lisa Vektormask
+	Create new path	Loo uus tee
+	Delete path	Kustuta tee
+	Delete vector mask	Kustuta Vektormask
+	CPU (no GPU acceleration)	CPU (ilma GPU kiirenduseta)
+	DirectX 12	DirectX 12
+	GPU backend	GPU taustaprogramm
+	Metal	Metallist
+	OpenGL	OpenGL
+	Use tablet pressure	Kasutage tableti survet
+	Vulkan	Vulkan

@@ -1,0 +1,32 @@
+# cargo-about configuration for THIRD-PARTY-CRATES.md (regenerate with packaging/notices/generate.sh).
+# Only crates linked into the shipped binaries count: dev and build dependencies are skipped.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "wasm32-unknown-unknown",
+]
+# Permissive licences only. A crate whose licence is not listed here fails the generation: check
+# it before adding it.
+accepted = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "CC0-1.0",
+    "Unlicense",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+    "IJG",
+]

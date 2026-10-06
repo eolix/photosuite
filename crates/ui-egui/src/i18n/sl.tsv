@@ -1,0 +1,1951 @@
+# Slovenščina (sl) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# Slovenščina translations for PhotoSuite UI.
+
+	File	Datoteka
+	Edit	Uredi
+	Image	Slika
+	Layer	Plast
+	Type	Tip
+	Select	Izberi
+	Filter	Filter
+	View	Ogled
+	Window	Okno
+	Help	Pomoč
+	(coming soon)	(kmalu)
+	New…	Novo…
+	Open…	Odpri…
+	Open As…	Odpri kot…
+	Open Recent	Odpri nedavne
+	Clear Recent Files	Počisti nedavne datoteke
+	Clear history	Počisti zgodovino
+	Close	Zapri
+	Close All	Zapri vse
+	Close Others	Zapri Drugo
+	Save	Shrani
+	Save As…	Shrani kot…
+	Save a Copy…	Shrani kopijo…
+	Revert	Povrni
+	Export	Izvozi
+	Quick Export as PNG	Hitri izvoz kot PNG
+	Export As…	Izvozi kot…
+	Export Preferences…	Nastavitve izvoza…
+	Save for Web (Legacy)…	Shrani za splet (podedovano)…
+	Artboards to Files…	Umetne plošče v datoteke…
+	Artboards to PDF…	Umetne plošče v PDF…
+	Layers to Files…	Sloji v datoteke…
+	Layer Comps to Files…	Kompenzacije plasti v datoteke…
+	Color Lookup Tables…	Barvne iskalne tabele…
+	Data Sets as Files…	Nabori podatkov kot datoteke…
+	Paths to Illustrator…	Poti do Illustratorja…
+	Render Video…	Upodobi video…
+	Generate	Ustvari
+	Image Assets	Slikovna sredstva
+	Place Embedded…	Mesto vdelano…
+	Place Linked…	Mesto povezano…
+	Package…	Paket…
+	Automate	Avtomatiziraj
+	Batch…	serija…
+	Create Droplet…	Ustvari kapljico…
+	Crop and Straighten Photos	Obrežite in poravnajte fotografije
+	Contact Sheet II…	Kontaktni list II…
+	Conditional Mode Change…	Sprememba pogojnega načina…
+	Fit Image…	Prilagodi sliko…
+	Lens Correction…	Popravek Leče…
+	Merge to HDR Pro…	Združi s HDR Pro…
+	Photomerge…	Photomerge…
+	Scripts	Skripte
+	Image Processor…	Procesor slike…
+	Delete All Empty Layers	Izbriši vse prazne plasti
+	Flatten All Layer Effects	Izravnaj vse učinke plasti
+	Flatten All Masks	Sploščite vse maske
+	Script Events Manager…	Skriptni upravitelj dogodkov…
+	Import	Uvozi
+	Browse…	Prebrskaj…
+	Reveal in Finder	Razkrij v Finderju
+	File Info…	Podatki o datoteki…
+	Print…	Print…
+	Print One Copy	Natisnite eno kopijo
+	Exit	Izhod
+	Undo	Razveljavi
+	Redo	Ponovi
+	Toggle Last State	Preklop zadnjega stanja
+	Fade…	Zbledi…
+	Cut	Izreži
+	Copy	Kopiraj
+	Copy Merged	Kopiraj vse
+	Paste	Prilepi
+	Paste Special	Posebno lepljenje
+	Paste in Place	Prilepi na mesto
+	Paste Into	Prilepi v
+	Paste Outside	Prilepi zunaj
+	Paste Lorem Ipsum	Prilepite Lorem Ipsum
+	Clear	Počisti
+	Search…	Iskanje…
+	Check Spelling…	Preveri črkovanje…
+	Find and Replace Text…	Najdi in zamenjaj besedilo…
+	Fill…	Zapolni…
+	Stroke…	Obrobi…
+	Content-Aware Fill…	Polnjenje glede na vsebino…
+	Content-Aware Scale	Merilo glede na vsebino
+	Puppet Warp	Lutkovna deformacija
+	Perspective Warp	Perspektivna deformacija
+	Free Transform	Prosta transformacija
+	Transform	Preoblikuj
+	Again	Ponovno
+	Scale	Merilo
+	Rotate	Zavrti
+	Skew	Poševno
+	Distort	Popači
+	Perspective	Perspektiva
+	Warp	Ukrivi
+	Flip Horizontal	Obrni vodoravno
+	Flip Vertical	Obrni navpično
+	Rotate 180°	Zasukaj za 180°
+	Rotate 90° Clockwise	Zavrtite za 90° v smeri urinega kazalca
+	Rotate 90° Counter Clockwise	Zavrtite za 90° v nasprotni smeri urinega kazalca
+	180°	180°
+	90° Clockwise	90° v smeri urinega kazalca
+	90° Counter Clockwise	90° v nasprotni smeri urinega kazalca
+	Arbitrary…	Poljubno…
+	Auto-Align Layers…	Samodejna poravnava plasti…
+	Auto-Blend Layers…	Samodejno mešanje plasti…
+	Define Brush Preset…	Določi prednastavitev čopiča…
+	Define Pattern…	Določite vzorec…
+	Define Custom Shape…	Določi obliko po meri…
+	Purge	Čiščenje
+	Clipboard	Odložišče
+	Histories	Zgodovine
+	Video Cache	Video predpomnilnik
+	All	Vse
+	Presets	Prednastavitve
+	Preset Manager…	Upravitelj prednastavitev…
+	Migrate Presets	Preseli prednastavitve
+	Export/Import Presets…	Izvoz/uvoz prednastavitev…
+	Color Settings…	Barvne nastavitve…
+	Assign Profile…	Dodeli profil…
+	Convert to Profile…	Pretvori v profil…
+	Keyboard Shortcuts…	Bljižnice tipkovnice…
+	Menus…	Meniji…
+	Toolbar…	orodna vrstica…
+	Preferences	Lastnosti
+	General…	Splošno…
+	Interface…	Vmesnik…
+	Workspace…	Delovni prostor…
+	Tools…	Orodja…
+	History Log…	Dnevnik zgodovine…
+	File Handling…	Ravnanje z datotekami…
+	Export…	Izvozi…
+	Performance…	Učinkovitost…
+	Scratch Disks…	Praskalni diski…
+	Cursors…	Kazalci…
+	Transparency & Gamut…	Transparency & Gamut…
+	Units & Rulers…	Enote & Ravnila…
+	Guides, Grid & Slices…	Vodila, Mreža & Rezine…
+	Plug-ins…	Vtičniki…
+	Type…	Tip…
+	Enhanced Controls…	Izboljšane kontrole…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	Neobdelane privzete nastavitve…
+	Integrations…	Integracije…
+	AI Integrations…	Integracije AI…
+	Install Plug-in…	Namesti vtičnik…
+	Language Options	Jezikovne možnosti
+	Settings…	nastavitve…
+	Mode	Način
+	Bitmap	Bitna slika
+	Grayscale	Grayscale
+	Duotone	Duotone
+	Indexed Color	Indeksirana barva
+	RGB Color	Barva RGB
+	CMYK Color	Barva CMYK
+	Lab Color	Laboratorijska barva
+	Multichannel	Večkanalni
+	8 Bits/Channel	8 bitov/kanal
+	16 Bits/Channel	16 bitov/kanal
+	32 Bits/Channel	32 bitov/kanal
+	Color Table…	Barvna tabela…
+	Bitmap…	bitna slika…
+	Duotone…	Duotone…
+	Indexed Color…	Indeksirana barva…
+	Adjustments	Prilagoditve
+	Brightness/Contrast…	Svetlost/Kontrast…
+	Levels…	Ravni…
+	Curves…	krivulje…
+	Exposure…	Osvetljenost…
+	Vibrance…	Živahnost…
+	Hue/Saturation…	Odtenek/Zasičenost…
+	Color Balance…	Uravnoteženost barv…
+	Black & White…	Črno & Belo…
+	Photo Filter…	Foto filter…
+	Channel Mixer…	Kanalski mešalnik…
+	Color Lookup…	Barvni pregled…
+	Invert	Invertiraj
+	Posterize…	Posteriziraj…
+	Threshold…	Prag…
+	Gradient Map…	Prelivanje…
+	Selective Color…	Izberi Barvo…
+	Shadows/Highlights…	Sence/posvetli…
+	HDR Toning…	Toniranje HDR…
+	Desaturate	Odstrani barve
+	Match Color…	Barva ujemanja…
+	Replace Color…	Nadomesti barvo…
+	Equalize	Izenačite
+	Auto Tone	Samodejni odtenek
+	Auto Contrast	Samodejni kontrast
+	Auto Color	Samodejna barva
+	Image Size…	Velikost slike…
+	Canvas Size…	Velikost platna…
+	Image Rotation	Vrtenje slike
+	Flip Canvas Horizontal	Obrnite platno vodoravno
+	Flip Canvas Vertical	Obrnite platno navpično
+	Crop	Izreži
+	Trim…	Odreži…
+	Reveal All	Pokaži vse
+	Duplicate…	Podvoji…
+	Apply Image…	Uporabi sliko…
+	Calculations…	Izračuni…
+	Variables	Spremenljivke
+	Define…	Določite…
+	Data Sets…	Nizi podatkov…
+	Apply Data Set…	Uporabi nabor podatkov…
+	Variable Data Sets…	Spremenljivi nizi podatkov…
+	Trap…	past…
+	Analysis	Analiza
+	Set Measurement Scale…	Nastavi merilno lestvico…
+	Select Data Points…	Izberite podatkovne točke…
+	Record Measurements	Zabeležite meritve
+	Ruler Tool	Orodje ravnilo
+	Count Tool	Orodje za štetje
+	Place Scale Marker…	Postavite oznako lestvice…
+	Custom…	Po meri…
+	New	Novo
+	Layer…	Plast…
+	Group…	Skupina…
+	Group from Layers…	Združi iz plasti…
+	Artboard…	Artboard…
+	Artboard from Group…	Artboard iz skupine…
+	Artboard from Layers…	Umetna plošča iz plasti…
+	Layer via Copy	Plast prek kopije
+	Layer via Cut	Plast prek izreza
+	Layer From Background…	Sloj iz ozadja…
+	Layer from Background…	Sloj iz ozadja…
+	New Shape Layer	Nova plast oblike
+	New Type Layer	Nov sloj vrste
+	New Fill Layer	Nova zapolnitvena plast
+	New Adjustment Layer	Nova nastavitvena plast
+	New Layer Based Slice	Nova rezina na podlagi plasti
+	New Smart Object via Copy	Nov pametni objekt prek kopiranja
+	New Blank Video Layer	Nova prazna video plast
+	New Video Layer from File…	Nov video sloj iz datoteke…
+	Duplicate Layer…	Podvoji plast…
+	Delete Layer	Zbriši plast
+	Delete	Izbriši
+	Rename Layer	Preimenuj plast
+	Create Layer	Ustvari plast
+	Layer Style	Stil Plasti
+	Blending Options…	Možnosti mešanja…
+	Bevel & Emboss…	Bevel & Emboss…
+	Inner Shadow…	Notranja Senca…
+	Inner Glow…	Notranji Sijaj…
+	Satin…	Saten…
+	Color Overlay…	Prelij z Barvo…
+	Gradient Overlay…	Prekrij z Prelivom…
+	Pattern Overlay…	Prekrij z Vzorcem…
+	Outer Glow…	Zunanji Sijaj…
+	Drop Shadow…	Senca…
+	Copy Layer Style	Kopiraj slog plasti
+	Paste Layer Style	Prilepi slog plasti
+	Clear Layer Style	Počisti slog plasti
+	Global Light…	Globalna svetloba…
+	Hide All Effects	Skrij vse učinke
+	Scale Effects…	Učinki lestvice…
+	Smart Filter	Pametni filter
+	Convert for Smart Filters	Pretvori za pametne filtre
+	Clear Smart Filters	Odstrani Pametne Filtre
+	Disable Smart Filters	Onemogoči Pametne Filtre
+	Delete Filter Mask	Zbriši Masko Filtra
+	Disable Filter Mask	Onemogoči Masko Filtra
+	Solid Color…	Enobarvna…
+	Gradient…	Preliv…
+	Pattern…	Vzorec…
+	Layer Mask	Layer Mask
+	Vector Mask	Vektorska Maska
+	Reveal Selection	Razkrij izbor
+	Hide Selection	Skrij izbor
+	Hide All	Skrij vse
+	From Transparency	Iz prosojnosti
+	Delete Vector Mask	Zbriši Vektorsko Masko
+	Enable Layer Mask	Omogoči masko plasti
+	Disable Layer Mask	Onemogoči masko plasti
+	Enable Vector Mask	Omogoči Vektorsko Masko
+	Link Layer Mask	Maska sloja povezave
+	Unlink Layer Mask	Prekini povezavo s slojno masko
+	Link Vector Mask	Poveži Vektorsko Masko
+	Add Vector Mask	Dodaj Vektorsko Masko
+	Vector Mask from Current Path	Vektorska maska iz trenutne poti
+	Create Clipping Mask	Ustvari izrezovalno masko
+	Release Clipping Mask	Sprostite Clipping Mask
+	Smart Objects	Pametni predmeti
+	Smart Object	Pametni predmet
+	Convert to Smart Object	Pretvori v Pametni Objekt
+	Convert to Embedded	Pretvori v vdelano
+	Convert to Linked…	Pretvori v povezano…
+	Edit Contents	Uredi vsebino
+	Replace Contents…	Zamenjaj vsebino…
+	Relink to File…	Ponovna povezava z datoteko…
+	Export Contents…	Izvozi vsebino…
+	Update Modified Content	Posodobi spremenjeno vsebino
+	Update All Modified Content	Posodobi vso spremenjeno vsebino
+	Stack Mode	Način zlaganja
+	Entropy	Entropija
+	Kurtosis	Kurtoza
+	Maximum	Maximum
+	Mean	Zlobno
+	Median	Mediana
+	Minimum	Minimum
+	Range	Razpon
+	Skewness	Zakrivljenost
+	Standard Deviation	Standardni odklon
+	Summation	Seštevanje
+	Variance	Varianca
+	Video Layers	Video plasti
+	Interpret Footage…	Interpretacija posnetkov…
+	Replace Footage…	Zamenjaj posnetek…
+	Reload Frame	Ponovno naloži okvir
+	Show Altered Video	Pokaži spremenjeni video
+	Restore Frame	Obnovi okvir
+	Restore All Frames	Obnovi vse okvirje
+	Insert Blank Frame	Vstavite prazen okvir
+	Delete Frame	Izbriši okvir
+	Duplicate Frame	Podvojeni okvir
+	Frame from Layers	Okvir iz plasti
+	Video Frames to Layers…	Video okvirji v plasti…
+	Rasterize	Rasteriziraj
+	Rasterize Type	Vrsta rastriranja
+	Rasterize Type Layer	Rasterizirajte tipsko plast
+	Rasterize Shape	Rasterizacija oblike
+	New Guide Layout…	Nova postavitev vodnika…
+	New Guides From Shape	Novi vodniki iz Shape
+	Lock Layers…	Zakleni plasti…
+	Link Layers	Poveži Plasti
+	Select Linked Layers	Izberite Povezane plasti
+	Merge Layers	Združi izbrane plasti
+	Merge Down	Združi plasti ▼
+	Merge Visible	Spoji vidne
+	Flatten Image	Združi plasti
+	Matting	Matiranje
+	Color Decontaminate…	Barvna dekontaminacija…
+	Remove Black Matte	Odstranite črno mat
+	Remove White Matte	Odstranite beli mat
+	Defringe…	Odstrani…
+	Group Layers	Združi plasti
+	Ungroup Layers	Razdruži sloje
+	Hide Layers	Skrij plasti
+	Arrange	Uredi
+	Bring to Front	V ospredje
+	Bring Forward	Naprej
+	Send Backward	Nazaj
+	Send to Back	Pošlji Nazaj
+	Reverse	Obrni
+	Combine Shapes	Združite oblike
+	Unite Shapes	Združite oblike
+	Subtract Front Shape	Odštejte sprednjo obliko
+	Intersect Shape Areas	Območja prereza oblike
+	Exclude Overlapping Shapes	Izključi prekrivajoče se oblike
+	Merge Shape Components	Spoji komponente oblike
+	Align	Poravnaj
+	Top Edges	Zgornji robovi
+	Vertical Centers	Navpična središča
+	Bottom Edges	Spodnji robovi
+	Left Edges	Levi robovi
+	Horizontal Centers	Horizontalna središča
+	Right Edges	Desni robovi
+	Distribute	Distribuiraj
+	Vertically	Navpično
+	Horizontally	Vodoravno
+	Layer Edges	Robovi plasti
+	Isolate Layers	Izolirajte plasti
+	Layer Content Options…	Možnosti vsebine plasti…
+	Fill Content	Izpolnite vsebino
+	Deselect Layers	Počistite izbiro slojev
+	Find Layers	Poiščite plasti
+	Layer Comps	Kompozicije plasti
+	Layers	Plasti
+	All Layers	Vse plasti
+	Hidden Layers	Skriti sloji
+	Mask All Objects	Zamaskiraj vse predmete
+	Subject	Predmet
+	Sky	Nebo
+	Panels	Plošče
+	Character Panel	Plošča znakov
+	Paragraph Panel	Plošča odstavkov
+	Character Styles Panel	Plošča s slogi znakov
+	Paragraph Styles Panel	Plošča s slogi odstavkov
+	Glyphs Panel	Plošča z glifi
+	Anti-Alias	Glajenje robov
+	Sharp	Ostra
+	Crisp	Hrustljavo
+	Strong	Močna
+	Smooth	Mehko
+	Windows LCD	Windows LCD
+	Windows	Windows
+	Orientation	Usmerjenost
+	Horizontal	Horizontalno
+	Vertical	Vertikalno
+	OpenType	OpenType
+	Standard Ligatures	Standardne ligature
+	Contextual Alternates	Kontekstualne alternative
+	Discretionary Ligatures	Diskrecijske ligature
+	Swash	Swash
+	Oldstyle	Oldstyle
+	Stylistic Alternates	Slogovne alternative
+	Titling Alternates	Nadomestni naslovi
+	Ornaments	Okraski
+	Ordinals	Ordinali
+	Fractions	Ulomki
+	Create Work Path	Ustvari delovno pot
+	Convert to Shape	Pretvori v obliko
+	Warp Text…	Zvijanje besedila…
+	Convert to Point Text	Pretvori v naslovni tekst
+	Convert to Paragraph Text	Pretvori v glavni tekst
+	Default Features	Privzete funkcije
+	East Asian Features	Vzhodnoazijske značilnosti
+	Middle Eastern Features	Značilnosti Bližnjega vzhoda
+	Middle Eastern & South Asian Composer	Bližnjevzhodni in južnoazijski skladatelj
+	Update All Text Layers	Posodobi vse plasti besedila
+	Replace All Missing Fonts	Zamenjaj vse manjkajoče pisave
+	Resolve Missing Fonts…	Razreši manjkajoče pisave…
+	Font Preview Size	Velikost predogleda pisave
+	None	Brez
+	Small	Majhno
+	Medium	Srednje
+	Large	Veliko
+	Extra Large	Zelo velik
+	Huge	Ogromen
+	Load Default Type Styles	Naloži privzete sloge vrste
+	Save Default Type Styles	Shranite privzete sloge tipov
+	Deselect	Odznači
+	Reselect	Ponovno izberite
+	Inverse	Obrni
+	Inverse Selection	Inverzna izbira
+	Similar	Podobno
+	Color Range…	Razpon Barv…
+	Focus Area…	Območje fokusa…
+	Select and Mask…	Izberi in maskiraj…
+	Modify	Uredi
+	Border…	Obroba…
+	Smooth…	Mehko…
+	Expand…	Razširi…
+	Contract…	Stisni…
+	Feather…	Širina Roba…
+	Grow	Rasti
+	Transform Selection	Transformiraj izbiro
+	Edit in Quick Mask Mode	Urejanje v načinu hitre maske
+	Load Selection…	Naloži izbor…
+	Save Selection…	Shrani izbor…
+	Match All	Ujemaj vse
+	Last Filter	Zadnji Filter
+	Filter Gallery…	Galerija Filtrov…
+	Adaptive Wide Angle…	Prilagodljivi širokokotni…
+	Camera Raw Filter…	Filter Camera Raw…
+	Liquify…	Utekočini…
+	Vanishing Point…	Vanishing Point…
+	Blur	Zameglitev
+	Blur Gallery	Galerija Blur
+	Field Blur…	Zameglitev polja…
+	Iris Blur…	Iris Blur…
+	Tilt-Shift…	Tilt-Shift…
+	Path Blur…	Zameglitev poti…
+	Spin Blur…	Spin Blur…
+	Blur More	Močna Zameglitev
+	Box Blur…	Kvadratna Zameglitev…
+	Gaussian Blur…	Nastavljiva Zameglitev…
+	Lens Blur…	Zameglitev Leče…
+	Motion Blur…	Smerna Zameglitev…
+	Radial Blur…	Krožna zameglitev…
+	Shape Blur…	Zameglitev oblike…
+	Smart Blur…	Pametna zameglitev…
+	Surface Blur…	Površinska Zameglitev…
+	Average	Povprečje
+	Displace…	Razporedi…
+	Pinch…	Napihni v sredini…
+	Polar Coordinates…	Polarne koordinate…
+	Ripple…	Valovito…
+	Shear…	Nagni…
+	Spherize…	Zaobli…
+	Twirl…	Zavrti Spiralno…
+	Wave…	Valovito…
+	ZigZag…	Cik-cak…
+	Noise	Šum
+	Add Noise…	Dodaj Šum…
+	Despeckle	Odstrani prah
+	Dust & Scratches…	Prah in Praske…
+	Median…	Mediana…
+	Reduce Noise…	Zmanjšaj Šum…
+	Pixelate	Pikčasto
+	Color Halftone…	Barvni raster…
+	Crystallize…	Kristaliziraj…
+	Facet	Faseta
+	Fragment	Razkoščkaj
+	Mezzotint…	Jedkanje…
+	Mosaic…	Mozaik…
+	Pointillize…	Pointilize…
+	Render	Upodobi
+	Clouds	Oblaki
+	Difference Clouds	Drugačni oblaki
+	Fibers…	Vlaknine…
+	Flame…	Plamen…
+	Lens Flare…	Odblesk objektiva…
+	Lighting Effects…	Svetlobni učinki…
+	Picture Frame…	Okvir za slike…
+	Tree…	Drevo…
+	Sharpen	Ostro
+	Sharpen Edges	Ostri Robovi
+	Sharpen More	Več Ostrine
+	Smart Sharpen…	Pametna Ostrina…
+	Unsharp Mask…	Maska Ostrine…
+	High Pass…	Prepusti visoke frekvence…
+	Stylize	Stiliziraj
+	Diffuse…	Razprši…
+	Emboss…	Izboči…
+	Extrude…	Iztisni…
+	Find Edges	Najdi Robove
+	Oil Paint…	Oljna slika…
+	Solarize	Solarizirajte se
+	Tiles…	Ploščice…
+	Trace Contour…	Trace Contour…
+	Wind…	Veter…
+	Video	Video
+	De-Interlace…	De-Interlace…
+	NTSC Colors	NTSC barve
+	Other	Drugo
+	Maximum…	Maximum…
+	Minimum…	Minimum…
+	Offset…	Odmakni…
+	Plug-ins	Vtičniki
+	Proof Setup	Nastavitev dokazila
+	Proof Colors	Proof Colors
+	Gamut Warning	Opozorilo o obsegu
+	Working CMYK	Delujoč CMYK
+	Working Cyan Plate	Delujoča cian plošča
+	Working Magenta Plate	Delovna škrlatna plošča
+	Working Yellow Plate	Delujoča rumena plošča
+	Working Black Plate	Delovna črna plošča
+	Working CMY Plate	Delovna plošča CMY
+	Legacy Macintosh RGB	Zapuščina Macintosh RGB
+	Internet Standard RGB	Internetni standard RGB
+	Monitor RGB	Monitor RGB
+	Color Blindness — Protanopia-type	Barvna slepota - tip protanopije
+	Color Blindness — Deuteranopia-type	Barvna slepota - tip deuteranopije
+	Zoom In	Približaj
+	Zoom Out	Oddalji
+	Fit on Screen	Prilagodi se zaslonu
+	Fit Layer(s) on Screen	Prilagodi sloj(e) zaslonu
+	Fit Artboard on Screen	Prilagodi delovno ploščo na zaslon
+	100%	100 %
+	200%	200%
+	Print Size	Velikost tiskanja
+	Pixel Aspect Ratio	Razmerje stranic slikovnih pik
+	Pixel Aspect Ratio Correction	Popravek razmerja stranic pikslov
+	Custom Pixel Aspect Ratio…	Razmerje slikovnih pik po meri…
+	Square	Kvadrat
+	D1/DV NTSC (0.91)	D1/DV NTSC (0,91)
+	D1/DV NTSC Widescreen (1.21)	D1/DV NTSC široki zaslon (1.21)
+	D1/DV PAL (1.09)	D1/DV PAL (1.09)
+	D1/DV PAL Widescreen (1.46)	D1/DV PAL široki zaslon (1,46)
+	Anamorphic 2:1 (2)	Anamorfno 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080/DVCPRO HD 720 (1,33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080/HDV 1080 (1,5)
+	32-bit Preview Options…	32-bitne možnosti predogleda…
+	Screen Mode	Način zaslona
+	Standard Screen Mode	Standardni način zaslona
+	Full Screen Mode With Menu Bar	Celozaslonski način z menijsko vrstico
+	Full Screen Mode	Celozaslonski način
+	Cycle Screen Mode	Preklopi zaslonski način
+	Show	Pokaži
+	Extras	Dodatki
+	Selection Edges	Izbirni robovi
+	Target Path	Ciljna pot
+	Current Path	Trenutna pot
+	Grid	Mreža
+	Guides	Vodila
+	Canvas Guides	Vodila po platnu
+	Artboard Guides	Vodila po umetniški plošči
+	Count	Število
+	Smart Guides	Pametni vodniki
+	Slices	Rezine
+	Notes	Opombe
+	Pixel Grid	Točkovna Mreža
+	Pixel Art	Pixel Art
+	Pixel Art Preview	Pixel Art Predogled
+	Pattern Preview	Predogled vzorca
+	Brush Preview	Predogled čopiča
+	Mesh	Mreža
+	Edit Pins	Uredi žebljičke
+	Document Bounds	Meje dokumenta
+	Show Extras Options…	Prikaži dodatne možnosti…
+	Rulers	Ravnila
+	Snap	Pripni
+	Snap To	Pripni na
+	Lock Guides	Vodila za ključavnice
+	Clear Guides	Počisti vodila
+	Clear Selected Artboard Guides	Počisti izbrana vodila montažne plošče
+	Clear Canvas Guides	Jasna vodila za platno
+	New Guide…	Nov vodnik…
+	Lock Slices	Lock Slices
+	Clear Slices	Počisti rezine
+	Match Zoom	Match Zoom
+	Match Location	Lokacija ujemanja
+	Match Rotation	Rotacija tekme
+	Cascade	Kaskada
+	Tile	Tlakuj
+	Tile All Horizontally	Položite vse vodoravno
+	Tile All Vertically	Postavite vse navpično
+	2-up Horizontal	2-up vodoravno
+	2-up Vertical	2-navpično
+	3-up Horizontal	3-up vodoravno
+	3-up Stacked	3-up zloženi
+	3-up Vertical	3-navpično
+	4-up	4-up
+	6-up	6-up
+	Consolidate All to Tabs	Združi vse v zavihke
+	Float in Window	Lebdi v oknu
+	Float All in Windows	Float All v sistemu Windows
+	New Window for Document	Novo okno za dokument
+	Workspace	Delovni prostor
+	Essentials	Essentials
+	Graphic and Web	Grafika in splet
+	Painting	Slikanje
+	Photography	fotografija
+	New Workspace…	Nov delovni prostor…
+	Delete Workspace…	Izbriši delovni prostor…
+	Reset Workspace	Ponastavi delovni prostor
+	Lock Workspace	Zakleni delovni prostor
+	Theme	Tema
+	Pro Theme	Pro Tema
+	Pro Medium Gray Theme	Pro srednje siva tema
+	Studio Theme	Studio Theme
+	Studio Light Theme	Studio Light Theme
+	Classic Theme	Klasična tema
+	Next Theme	Naslednja tema
+	Midnight	Polnoč
+	Anthracite	antracit
+	Slate	Skrilavec
+	Pearl	Pearl
+	Aubergine	Jajčevec
+	Ocean	Ocean
+	Actions	Akcije
+	Brush Settings	Nastavitve čopiča
+	Brushes	Krtače
+	Channels	Kanali
+	Character	Znak
+	Character Styles	Slogi znakov
+	Clone Source	Clone Source
+	Color	Barva
+	Glyphs	Glifi
+	Gradients	Gradienti
+	Histogram	Histogram
+	History	Zgodovina
+	Info	Informacije
+	Measurement Log	Dnevnik meritev
+	Modifier Keys	Modifikacijske tipke
+	Navigator	Navigator
+	Options	Možnosti
+	Paragraph	Odstavek
+	Paragraph Styles	Slogi odstavkov
+	Paths	Krivulje
+	Patterns	Vzorci
+	Properties	Možnosti
+	Shapes	Oblike
+	Styles	Slogi
+	Swatches	Barve
+	Timeline	Časovnica
+	Tool Presets	Konfiguracija orodja
+	Tools	Orodja
+	About PhotoSuite	O PhotoSuiteu
+	Website	Spletna stran
+	Report an Issue…	Prijavite težavo…
+	WIA Support…	Podpora WIA…
+	Apply	Uporabi
+	HSB/HSL	HSB/HSL
+	Invert…	Invertiraj…
+	Load Files into Stack…	Nalaganje datotek v sklad…
+	Motion	Gibanje
+	Notes…	Opombe…
+	Other…	Drugo…
+	Remove Warp Split	Odstranite Warp Split
+	Shape	Oblika
+	Split Warp Crosswise	Split Warp Crosswise
+	Split Warp Horizontally	Razdeli Warp vodoravno
+	Split Warp Vertically	Razdeli Warp navpično
+	Statistics…	Statistika…
+@plural	{n} item|{n} items	{n} element|{n} predmeta
+	Auto	Avto
+	(print to the printer)	(natisni na tiskalnik)
+	+ Add variable	+ Dodaj spremenljivko
+	30 frames @ 30 fps	30 sličic pri 30 sličicah na sekundo
+	3D LUT File	Datoteka 3D LUT
+	Absolute	Absolutno
+	Absolute Colorimetric	Absolutna kolorimetrija
+	Action	Akcija
+	Adaptive	Prilagodljiv
+	Adaptive Wide Angle isn't open	Prilagodljivi široki kot ni odprt
+	Add	Dodaj
+	Add Layer Mask	Dodajte masko plasti
+	Add Stop	Dodaj Stop
+	Add a layer style	Dodajte slog plasti
+	Add a mask  (from the selection; {key} inverts)	Dodajte masko (iz izbora; {key} obrne)
+	Add an adjustment	Dodajte prilagoditev
+	Add disk	Dodaj disk
+	Add space after paragraph	Dodajte presledek za odstavkom
+	Add space before paragraph	Dodajte presledek pred odstavkom
+	Add to Sample	Dodaj vzorcu
+	Add to selection  ({key})	Dodaj izboru ({key})
+	Adjust for Zoom	Prilagodite za povečavo
+	Adjustment visible	Vidna prilagoditev
+	Adobe RGB (1998) compatible	Združljiv z Adobe RGB (1998)
+	Align and Distribute	Poravnajte in porazdelite
+	Align and distribute	Poravnajte in porazdelite
+	Align horizontal centers	Poravnajte vodoravna središča
+	Align left edges	Poravnaj leve robove
+	Align right edges	Poravnaj desne robove
+	Aligned	Poravnano
+	All Caps	Vse velike črke
+	All Slices	Vse rezine
+	All User Slices	Vse uporabniške rezine
+	All shortcuts reset to Photoshop defaults.	Vse bližnjice so ponastavljene na privzete nastavitve Photoshopa
+	Alt	Alt
+	Always use pressure for opacity	Za motnost vedno uporabite pritisk
+	Always use pressure for size	Za velikost vedno uporabite pritisk
+	Amount	Gostota
+	Anchor:	Sidro:
+	Angle	Naklon
+	Angle Gradient	Kotni preliv
+	Angle Jitter	Naključnost kota
+	Answer the unsaved-changes prompt first	Najprej odgovorite na poziv za neshranjene spremembe
+	Anti-alias	Glajenje robov
+	Appearance	Videz
+	Appearance (Layer Style)	Videz (slog plasti)
+	Apply Layer Mask	Nanesite masko sloja
+	Apply Per Tip	Uporabi na nasvet
+	Apply next selected layer comp	Uporabite naslednjo izbrano plast komp
+	Apply previous selected layer comp	Uporabi predhodno izbrano kompenzacijo plasti
+	Artboard	Artboard
+	Artboard Background Color	Barva ozadja umetniške plošče
+	Assign working space	Dodelite delovni prostor
+	Author:	Avtor:
+	Auto Hide	Samodejno skrij
+	Auto-Select:	Samodejna izbira:
+	Automatically level near-horizontal line segments	Samodejno poravnajte skoraj vodoravne segmente črt
+	Automatically straighten and level	Samodejno poravnajte in poravnajte
+	Automatically straighten near-vertical line segments	Samodejno poravnajte skoraj navpične segmente črt
+	Background	Ozadje
+	Background Color	Barva ozadja
+	Background Contents	Vsebina ozadja
+	Balance	Ravnovesje
+	Baseline	Izhodišče
+	Baseline shift	Premik črkovne črte
+	Basic	Osnovno
+	Before (Y)	Pred (Y)
+	Begin recording	Začnite snemati
+	Bend:	Bend:
+	Bicubic	Bikubični
+	Bicubic (smooth gradients)	Bikubični (gladki prelivi)
+	Bilinear	Bilinearna
+	Black	Črna
+	Black & White	Črno & Belo
+	Black Point Compensation	Kompenzacija črne točke
+	Black, White	Črna, Bela
+	Blacks	Črnci
+	Blending	Mešanje
+	Blending Options	Možnosti mešanja
+	Blue	Modra
+	Blue, Red, Yellow	Modra, rdeča, rumena
+	Both	Oba
+	Both Axes	Obe osi
+	Bottom	Spodaj
+	Brightness	Svetlost
+	Brightness Jitter	Naključnost svetlosti
+	Brightness/Contrast	Svetlost/Kontrast
+	Bring the selected pin forward	Pomaknite izbrani žebljiček naprej
+	Brush Preset picker	Izbirnik prednastavitev čopiča
+	Brush Reconstruct Options	Možnosti rekonstrukcije čopiča
+	Brush Tool Options	Možnosti orodja za čopič
+	Cache Level:	Raven predpomnilnika:
+	Camera Raw isn't open	Camera Raw ni odprt
+	Cancel	Prekliči
+	Cancel (Esc)	Prekliči (Esc)
+	Cancel any current edits (Esc)	Prekliči vsa trenutna urejanja (Esc)
+	Cancel current crop operation  (Esc)	Prekliči trenutno operacijo obrezovanja (Esc)
+	Cancel transform (Esc)	Prekliči transformacijo (Esc)
+	Cancel warp (Esc)	Prekliči zvijanje (Esc)
+	Canvas	Platno
+	Canvas extension color:	Barva razširitve platna:
+	Capture	Zajemi
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	Zajemite vidnost, položaj in slog vsakega sloja z + spodaj, nato preklapljajte med različicami
+	Catch-up on Stroke End	Dohitevanje na Stroke End
+	Center	Centriraj
+	Center Crop Marks	Oznake obreza na sredini
+	Center text	Sredinsko besedilo
+	Change	spremeniti
+	Change All	Spremeni vse
+	Change Screen Mode  (F)	Spremeni način zaslona (F)
+	Change To:	Spremeni v:
+	Channel Mixer	Kanalski mešalnik
+	Channel:	Kanal:
+	Check All Layers	Označite vse plasti
+	Check Spelling	Preverite črkovanje
+	Clarity	Jasnost
+	Clear All	Počisti vse
+	Clear Override	Počisti preglasitev
+	Clear Samples	Počisti vzorce
+	Click sets foreground · right-click sets background	Klik nastavi ospredje · desni klik nastavi ozadje
+	Click the first point or press {key} to close · Esc cancels	Kliknite prvo točko ali pritisnite {key} za zapiranje · Esc prekliče
+	Click to add a point · drag off or {key}-click or Delete to remove	Kliknite za dodajanje točke · povlecite ali {key}-kliknite ali Izbriši za odstranitev
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	Kliknite za uporabo, {key}-kliknite za brisanje preglasitev, dvokliknite za Možnosti sloga
+	Click to edit the gradient	Kliknite za urejanje preliva
+	Click to restore the current colour	Kliknite za obnovitev trenutne barve
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	Kliknite za povečavo · {key}-kliknite za pomanjšanje · povlecite desno/levo za povečavo/pomanjšanje
+	Click with the Note tool to add a note.	Kliknite z orodjem Opomba, da dodate opombo
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	Klikni: vogal · Povleci: gladko · Klikni prvo točko: zapri · {key} končaj · Esc prekliči
+	Clip to layer below	Pripni na spodnji sloj
+	Clipped	Odrezano
+	Close Style Options	Zapri možnosti sloga
+	Cmd	Cmd
+	Coated CMYK	Premazan CMYK
+	Color & Swatches	Barve in vzorci
+	Color Balance	Uravnoteženost barv
+	Color Detail	Barvni detajl
+	Color Grading	Barvno razvrščanje
+	Color Lookup	Barvni pregled
+	Color Management	Upravljanje barv
+	Color Mixer	Mešalnik barv
+	Color Mode	Barvni način
+	Color Priority	Barvna prednost
+	Color Range preview	Predogled barvnega razpona
+	Color:	barva:
+	Colorize	Pobarvaj
+	Colors	Barve
+	Commit Perspective Warp ({key})	Upokojitev perspektive ({key})
+	Commit Puppet Warp ({key})	Zaveza lutkovne deformacije ({key})
+	Commit any current edits ({key})	Izvedite morebitna trenutna urejanja ({key})
+	Commit current crop operation  ({key})	Uveljavi trenutno operacijo obrezovanja ({key})
+	Commit transform ({key})	Potrdi pretvorbo ({key})
+	Commit warp ({key})	Izkrivljanje potrditve ({key})
+	Constant	Konstanta
+	Constrain proportions	Omejite razmerja
+	Contact Sheet II	Kontaktni list II
+	Content-Aware	Zavedanje vsebine
+	Contiguous	Sosednje
+	Contrast	Kontrast
+	Control:	Nadzor:
+	Convert document's colors to the working space	Pretvorite barve dokumenta v delovni prostor
+	Convert to sRGB	Pretvori v sRGB
+	Copies	Kopije
+	Copper	Baker
+	Copyright	Avtorske pravice
+	Copyright and Contact Info	Avtorske pravice in kontaktni podatki
+	Corner Crop Marks	Kotne oznake za obrezovanje
+	Corner radius	Polmer roba
+	Correction	Korekcija
+	Count Jitter	Naključnost števila
+	Create	Ustvari
+	Create Droplet	Ustvarite Droplet
+	Create Texture	Ustvari teksturo
+	Create Video Timeline	Ustvarite časovnico videoposnetka
+	Create a new count group	Ustvarite novo skupino štetja
+	Create a new document or open an existing file.	Ustvarite nov dokument ali odprite obstoječo datoteko
+	Create a new group	Ustvarite novo skupino
+	Create a new layer	Ustvari novo plast
+	Create new action	Ustvari novo dejanje
+	Create new channel	Ustvari nov kanal
+	Create new document from current state	Ustvari nov dokument iz trenutnega stanja
+	Create new fill or adjustment layer	Ustvarite novo polnilo ali prilagoditveni sloj
+	Create new gradient	Ustvari nov gradient
+	Create new group	Ustvari novo skupino
+	Create new layer comp	Ustvari novo komp. slojev
+	Create new pattern from the selection	Iz izbora ustvarite nov vzorec
+	Create new shape from the current path	Ustvari novo obliko iz trenutne poti
+	Create new snapshot	Ustvari nov posnetek
+	Create new style (from the selected type)	Ustvari nov slog (iz izbrane vrste)
+	Create new style from the selected layer	Ustvari nov slog iz izbrane plasti
+	Create new tool preset	Ustvari novo prednastavitev orodja
+	Crop Factor	Crop Factor
+	Ctrl	Ctrl
+	Current & Below	Trenutni in spodnji
+	Current Layer	Trenutna Plast
+	Current Size	Trenutna velikost
+	Current Tool Only	Samo trenutno orodje
+	Curve	Krivulja
+	Curves	krivulje
+	Custom	Po meri
+	Custom Shapes	Oblike po meri
+	Cyan	Cian
+	Cyan  ·  Red	Cyan · Rdeča
+	Darken	Potemni
+	Darks	Darks
+	Data Sets	Nabori podatkov
+	Default	Privzeto
+	Default colours (D)	Privzete barve (D)
+	Default printer	Privzeti tiskalnik
+	Default restored.	Privzeto je obnovljeno
+	Define	Določite
+	Define at least one variable first.	Najprej definirajte vsaj eno spremenljivko
+	Dehaze	Dehaze
+	Delete Cropped Pixels	Izbriši obrezane slikovne pike
+	Delete Group	Izbriši skupino
+	Delete Layer Mask	Izbriši masko plasti
+	Delete Layers	Izbriši plasti
+	Delete Shortcut	Izbriši bližnjico
+	Delete Timeline	Izbriši časovnico
+	Delete Tool Preset	Izbriši prednastavitev orodja
+	Delete count group	Izbriši skupino štetja
+	Delete current channel	Izbriši trenutni kanal
+	Delete current state	Izbriši trenutno stanje
+	Delete effect layer	Izbriši plast učinka
+	Delete layer	Zbriši plast
+	Delete layer comp	Izbriši komp
+	Delete note	Izbriši opombo
+	Delete selected measurements	Izbriši izbrane meritve
+	Delete style	Izbriši slog
+	Delete tool preset	Izbriši prednastavitev orodja
+	Density	Gostota
+	Density:	Gostota:
+	Depth	Globina
+	Depth Jitter	Globinsko tresenje
+	Description	Opis
+	Deselect All	Prekliči izbiro vseh
+	Detail	Podrobnost
+	Diamond Gradient	Diamantni preliv
+	Difference	Razlika
+	Diffusion	Difuzija
+	Discard the embedded profile (don't color manage)	Zavrzite vdelan profil (ne upravljajte barv)
+	Discontiguous	Nesosednji
+	Feedback	Povratne informacije
+	Dismiss	Odpusti
+	Display P3	Prikaz P3
+	Display Text	Prikaz besedila
+	Dither	Dither
+	Divide…	Deli…
+	Document	Dokument
+	Don't Save	Ne shranjuj
+	Done	Končano
+	Dots	Pike
+	Drag a rectangle around the object	Povlecite pravokotnik okoli predmeta
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	Povlecite po sliki, da dodate omejitev; Premik za vodoravno/navpično; z desnim klikom izbrišete
+	Drag to move the active shape's path or the Work Path	Povlecite, da premaknete pot aktivne oblike ali delovno pot
+	Draw with the Pen tool (P) or make a work path from a selection.	Rišite z orodjem Pen (P) ali naredite delovno pot iz izbora
+	Drop an image or PSD anywhere to open it.	Spustite sliko ali PSD kamor koli, da jo odprete
+	Duplicate Layers…	Podvojeni sloji…
+	Duplicate style	Podvojen slog
+	Edit Toolbar…	Uredi orodno vrstico…
+	Edit in Quick Mask Mode  (Q)	Urejanje v načinu hitre maske (Q)
+	Edit in Standard Mode  (Q)	Urejanje v standardnem načinu (Q)
+	Effects	Efekti
+	Embed Color Profile	Vdelaj barvni profil
+	Embedded Profile Mismatch	Neujemanje vdelanega profila
+	Enable airbrush-style build-up effects	Omogoči učinke gradnje v slogu zračnega čopiča
+	Enhance Edge	Izboljšajte rob
+	Entire Font	Celotna pisava
+	Exact	Točno
+	Expansion:	Razširitev:
+	Export Presets	Izvoz prednastavitev
+	Export selected measurements (CSV)	Izvoz izbranih meritev (CSV)
+	Exposure	Osvetljenost
+	Exposure and Gamma	Osvetlitev in gama
+	Exposure:	Osvetlitev:
+	Eyedropper	Kapalka
+	Factor:	Faktor:
+	Faux Bold	Umetno krepko
+	Faux Italic	Faux Italic
+	Feather	Širina Roba
+	Fewer Points	Manj točk
+	File Settings	Nastavitve datoteke
+	Fill	Zapolni
+	Fill:	Izpolnite:
+	Filter for adjustment layers	Filter za prilagoditvene plasti
+	Filter for pixel layers	Filter za sloje slikovnih pik
+	Filter for shape layers	Filter za plasti oblike
+	Filter for smart objects	Filter za pametne predmete
+	Filter for type layers	Filter za tipske sloje
+	Filter:	Filter:
+	Finger Painting	Slikanje s prsti
+	Fisheye	ribje oko
+	Fit	Fit
+	Fit Screen	Prilagodi zaslon
+	Fit in View	Fit in View
+	Fixed	Popravljeno
+	Fixed Ratio	Zaklenjeno Razmerje
+	Fixed Size	Zaklenjena Velikost
+	Flip	Flip
+	Flip X	Obrni X
+	Flip X Jitter	Flip X Jitter
+	Flip Y	Obrni Y
+	Flip Y Jitter	Flip Y tresenje
+	Flow	Tok
+	Flow Jitter	Tresenje pretoka
+	Focal Length	Goriščna razdalja
+	Font	Pisava
+	Font Size:	Velikost pisave:
+	Font size	Velikost pisave
+	Foreground	Ospredje
+	Foreground to Background	Od ospredja do ozadja
+	Foreground/Background Jitter	Naključnost ospredja/ozadja
+	Format	Oblika
+	Frame from Layers…	Okvir iz plasti…
+	Free	Brezplačno
+	Full Spherical	Popolna sferična
+	Fuzziness:	mehkost:
+	GPU	GPU
+	Gamma Correction	Gamma Nastavitve
+	Gamma:	Gama:
+	Global	Globalno
+	Glow Color	Glow Barva
+	Gradient Map	Prelivanje
+	Grain	Zrno
+	Gray	siva
+	Gray Gamma 2.2	Siva gama 2.2
+	Green	Zelena
+	Group	skupina
+	Hardness	Trdota
+	Heart	srce
+	Height	Višina
+	Height:	Višina:
+	Hide Auto Slices	Skrij samodejne rezine
+	Hide Properties	Skrij lastnosti
+	Highlight Compression	Označite Stiskanje
+	Highlight Priority	Označite prednost
+	Highlights	Svetli toni
+	Home	domov
+	Horizontal scale	Vodoravno merilo
+	Hue	Odtenek
+	Hue Jitter	Naključnost odtenka
+	Hue/Saturation	Odtenek/Zasičenost
+	Hyphenate	Vezaj
+	Ignore	Ignoriraj
+	Ignore All	Ignoriraj vse
+	Image Size	Velikost slike
+	Import Brushes…	Uvozi čopiče…
+	Import Photoshop brushes (.abr)	Uvoz čopičev Photoshop (.abr)
+	Import Presets	Uvoz prednastavitev
+	Imported	Uvoženo
+	Indent First	Prva alinea
+	Indent Left	Zamik levo
+	Indent Right	Zamik desno
+	Indent first line	Zamik prve vrstice
+	Indent left margin	Zamik levega roba
+	Indent right margin	Zamik desnega roba
+	Input:	Vnos:
+	Inside	Znotraj
+	Interlaced	Prepleteno
+	Interpolation:	Interpolacija:
+	Intersect with selection  ({key})	Presek z izborom ({key})
+	Invert All	Obrni vse
+	Invert has no settings.	Invert nima nastavitev
+	Italic	Ležeče
+	Justify all	Vse utemelji
+	Justify last centered	Poravnaj zadnje na sredini
+	Justify last left	Utemelji zadnje levo
+	Justify last right	Utemelji zadnje desno
+	Kerning	Kerning
+	Keyboard Shortcuts	Bljižnice tipkovnice
+	Keyboard Shortcuts and Menus	Bližnjice na tipkovnici in meniji
+	Kind	prijazna
+	Label Size	Velikost etikete
+	Labels	Etikete
+	Lanczos (sharp)	Lanczos (ostro)
+	Landscape	Ležeče
+	Last Document State	Stanje zadnjega dokumenta
+	Layout	Postavitev
+	Leading	Razmak vrstic
+	Leading (set to the font size × auto-leading when Auto)	Vodenje (nastavljeno na velikost pisave × samodejno vodilo, ko je samodejno)
+	Leave as is (don't color manage)	Pusti, kot je (ne urejaj barv)
+	Left	Levo
+	Left align text	Levo poravnajte besedilo
+	Length:	Dolžina:
+	Level	Raven
+	Levels	Ravni
+	Lighten	Posvetli
+	Lightness	Svetlost
+	Lights	Luči
+	Limits:	Omejitve:
+	Linear Gradient	Linearni gradient
+	Link layers	Poveži Plasti
+	Link width and height	Širina in višina povezave
+	Liquify is not open	Liquify ni odprt
+	Load	obremenitev
+	Load 3D LUT…	Naloži 3D LUT…
+	Load Photoshop brushes (.abr)	Naloži čopiče Photoshop (.abr)
+	Load channel as selection	Naloži kanal kot izbor
+	Load…	Naloži…
+	Localized Color Clusters	Lokalizirani barvni grozdi
+	Lock	Zakleni
+	Lock all	Zakleni vse
+	Lock image pixels	Zakleni slikovne pike
+	Lock layer	Sloj ključavnice
+	Lock position	Zakleni položaj
+	Lock transparent pixels	Zakleni prosojne slikovne pike
+	Lock:	Zaklepanje:
+	Logical Length:	Logična dolžina:
+	Logical Units:	Logične enote:
+	Luminance	Svetilnost
+	Luminance Detail	Podrobnosti svetilnosti
+	Magenta	Magenta
+	Magenta  ·  Green	Magenta · Zelena
+	Maintain aspect ratio	Ohranite razmerje stranic
+	Marker Size	Velikost markerja
+	Mask All	Maska Vse
+	Mask Options	Možnosti maske
+	Masking	Maskiranje
+	Master	Glavni
+	Matte	Mat
+	Median:	Mediana:
+	Menus	Meniji
+	Mesh Size	Velikost očesa
+	Metadata	Metapodatki
+	Metrics	Metrike
+	Midpoint	Središčna točka
+	Midtones	Srednji toni
+	Midtones from:	Srednji toni iz:
+	Midtones to:	Srednji toni za:
+	Minimum Depth	Najmanjša globina
+	Minimum Diameter	Najmanjši premer
+	Minimum Roundness	Minimalna okroglost
+	Mode:	način:
+	Monochrome	Enobarvno
+	More Points	Več točk
+	Move effect layer down	Premaknite plast učinka navzdol
+	Move effect layer up	Premaknite plast učinka navzgor
+	Move to	Premakni se na
+	Name	Ime
+	Name:	ime:
+	Nearest Neighbor	Najbližji sosed
+	Nearest Neighbor (hard edges)	Najbližji sosed (trdi robovi)
+	New Size	Nova velikost
+	New document…	Nov dokument…
+	New effect layer	Nova plast učinka
+	New selection	Nov izbor
+	Next frame	Naslednji okvir
+	Next note	Naslednja opomba
+	No Color	Brez barve
+	No Color Management	Brez upravljanja barv
+	No Dither	Brez Ditherja
+	No author	Brez avtorja
+	No character style	Brez sloga znakov
+	No document	Brez dokumenta
+	No matching commands	Ni ustreznih ukazov
+	No presets for the current tool.	Ni prednastavitev za trenutno orodje
+	No presets of this type.	Ni prednastavitev te vrste
+	No properties	Brez lastnosti
+	No tool presets.	Brez prednastavitev orodja
+	Noise Reduction	Zmanjšanje hrupa
+	Normal	Normalno
+	Not in Dictionary:	Ni v slovarju:
+	OK	OK
+	Offset	Odmakni
+	Only Web Colors	Samo spletne barve
+	Opacity	Gostota
+	Opacity Jitter	Tresenje motnosti
+	Opacity:	Motnost:
+	Open a document to define variables.	Odprite dokument, da definirate spremenljivke
+	Open a document to select a colour range.	Odprite dokument, da izberete barvni obseg
+	Open a document to use the timeline.	Če želite uporabiti časovnico, odprite dokument
+	Optical	Optični
+	Optimized	Optimizirano
+	Option-click to define a source point to clone from	Pritisnite tipko Option in kliknite, da določite izvorno točko za kloniranje
+	Original	Original
+	Output Channel:	Izhodni kanal:
+	Output Levels:	Izhodne ravni:
+	Output:	Izhod:
+	Outside	Zunanji Rob
+	Overlay Color	Prekrivna barva
+	Overlay Opacity	Motnost prekrivanja
+	Overlay: Rule of Thirds	Prekrivanje: pravilo tretjin
+	Override Pressure	Preglasi tlak
+	Override Rotation	Preglasi vrtenje
+	Override Tilt	Preglasi nagib
+	PRESET DETAILS	Podrobnosti prednastavitve
+	PSD	PSD
+	Paint Overlay	Paint Overlay
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	Lokacije plošč so shranjene v delovnem prostoru. Bližnjice na tipkovnici, meniji in orodna vrstica niso obvezni
+	Paper	Papir
+	Path	Pot
+	Pattern	Vzorec
+	Pattern Size	Velikost vzorca
+	Pause	Premor
+	Percent	Odstotkov
+	Perceptual	Zaznavno
+	Perspective Warp is not active	Perspective Warp ni aktiven
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Perspective Warp: narišite ravnine vzdolž perspektive slike, nato preklopite na Warp
+	Photo Filter	Foto filter
+	PhotoSuite	PhotoSuite
+	PhotoSuite Manages Colors	PhotoSuite upravlja z barvami
+	PhotoSuite — an open-source, native image editor written in Rust.	PhotoSuite — odprtokodni izvorni urejevalnik slik, napisan v Rustu
+	Pin Depth:	Globina zatiča:
+	Pixel Length:	Dolžina pikslov:
+	Pixels/Centimeter	Slikovnih pik/Centimeter
+	Pixels/Inch	Slikovne točke/palec
+	Pixels:	slikovne pike:
+	Play	Igraj
+	Play selection	Predvajaj izbor
+	Portrait	Pokončno
+	Position	Lokacija
+	Position and Size	Položaj in velikost
+	Posterize	Posteriziraj
+	Preserve Details	Ohranite podrobnosti
+	Preserve Luminosity	Ohrani svetlost
+	Preset	Prednastavitev
+	Preset Type	Prednastavljena vrsta
+	Preset:	Prednastavitev:
+	Presets:	Prednastavitve:
+	Press keys…	Pritisnite tipke…
+	Pressure	Pritisk
+	Pressure for Opacity	Pritisk za motnost
+	Pressure for Size	Pritisk za velikost
+	Prevent auto-nesting in and out of Artboards and Frames	Preprečite samodejno gnezdenje v in iz delovnih plošč in okvirjev
+	Preview	Predogled
+	Previous frame	Prejšnji okvir
+	Previous note	Prejšnja opomba
+	Print	Print
+	Printer	Tiskalnik
+	Printer Manages Colors	Tiskalnik upravlja barve
+	Printer Setup	Nastavitev tiskalnika
+	Printing Marks	Tiskarske oznake
+	Progressive	Progresivno
+	Promote	Spodbujati
+	Protect Detail	Zaščiti Podrobnosti
+	Protect Foreground Color	Zaščitite barvo ospredja
+	Protect Tones	Zaščitite tone
+	Proximity Match	Ujemanje bližine
+	Pulled String Mode	Način vlečene vrvice
+	Puppet Warp is not active	Puppet Warp ni aktiven
+	Purity	Čistost
+	Quality	Kvaliteta
+	Quick Actions	Hitra dejanja
+	Quick Export As PNG	Hitri izvoz kot PNG
+	Radial Gradient	Radialni gradient
+	Radius	Radij
+	Radius:	Radij:
+	Range:	Razpon:
+	Rate	Stopnja
+	Recently Used	Nedavno uporabljeno
+	Reconstruct	Povrni
+	Record ● a sequence of edits, then play ▶ it on any document.	Posnemite ● zaporedje urejanj, nato pa jih predvajajte ▶ na katerem koli dokumentu
+	Red	Rdeča
+	Redefine style by current selection	Ponovno definirajte slog s trenutno izbiro
+	Reflected Gradient	Odsevni preliv
+	Registration Marks	Registrske oznake
+	Regular	Običajno
+	Relative	Relativno
+	Relative Colorimetric	Relativna kolorimetrija
+	Remove	Odstrani
+	Remove All Pins	Odstrani vse zatiče
+	Remove Background	Odstrani ozadje
+	Remove Planes	Odstrani letala
+	Remove stop	Odstranite zaustavitev
+	Remove variable	Odstrani spremenljivko
+	Rename	Preimenuj
+	Rename Group…	Preimenuj skupino…
+	Rename Layer…	Preimenuj sloj…
+	Rename Tool Preset…	Preimenuj prednastavitev orodja…
+	Rename…	Preimenuj…
+	Resample	Ponovno vzorči
+	Reset All to Defaults	Ponastavi vse na privzete nastavitve
+	Reset Section	Ponastavi razdelek
+	Reset Transform	Ponastavi transformacijo
+	Reset to defaults	Ponastavi na privzete nastavitve
+	Resolution	Ločljivost
+	Resolution:	Resolucija:
+	Restore All	Obnovi vse
+	Restore Defaults	Obnovi privzete nastavitve
+	Restrictive (Web)	Omejevalno (splet)
+	Right	Desno
+	Right align text	Desno poravnajte besedilo
+	Rigid	Togo
+	Rotate:	Zasukaj:
+	Rotation	Vrtenje
+	Roughness	Hrapavost
+	Roundness	Zaobljenost robov
+	Roundness Jitter	Naključnost zaobljenosti
+	Rulers & Grids	Ravnila in mreže
+	Sample All Layers	Vzorec vseh plasti
+	Sample:	vzorec:
+	Sampling: Background Swatch	Vzorčenje: vzorec ozadja
+	Sampling: Continuous	Vzorčenje: neprekinjeno
+	Sampling: Once	Vzorčenje: Enkrat
+	Saturate	Nasiči
+	Saturation	Nasičenost
+	Saturation Jitter	Naključnost nasičenosti
+	Save HTML and Images	Shranite HTML in slike
+	Save as PDF	Shrani kot PDF
+	Save selection as channel	Shrani izbor kot kanal
+	Save…	Shrani…
+	Scale to Fit Media	Prilagodi mediju
+	Scatter	Raztresi
+	Scratch disks	Praskalni diski
+	Search	Iskanje
+	Search commands	Iskalni ukazi
+	Search commands, tools and panels…	Ukazi, orodja in plošče za iskanje…
+	Search fonts	Iskanje pisav
+	Select All	Izberite Vse
+	Select Subject	Izberite Zadeva
+	Select a type layer or click into text to insert glyphs	Izberite sloj tipa ali kliknite na besedilo, da vstavite glife
+	Select text to apply a character style	Izberite besedilo, da uporabite slog znakov
+	Select:	izberite:
+	Selections	Izbire
+	Selective	Selektivno
+	Selective Color	Izberi Barvo
+	Send the selected pin backward	Pošlji izbrani žebljiček nazaj
+	Set additional smoothing options	Nastavite dodatne možnosti glajenja
+	Set background color	Nastavite barvo ozadja
+	Set foreground color	Nastavite barvo ospredja
+	Set painting symmetry options	Nastavite možnosti simetrije slikanja
+	Set shape fill type	Nastavite vrsto polnila oblike
+	Set shape stroke type	Nastavite vrsto poteze oblike
+	Set the text color	Nastavite barvo besedila
+	Shadows	Sence
+	Shape:	Oblika:
+	Sharpening	Ostrenje
+	Shift	Shift
+	Shortcut removed.	Bližnjica odstranjena
+	Show All Menu Items	Pokaži vse elemente menija
+	Show Backdrop	Prikaži ozadje
+	Show Guides	Prikaži vodnike
+	Show Mask	Prikaži masko
+	Show Mesh	Prikaži mrežo
+	Show Overlay	Prikaži prekrivanje
+	Show Transform Controls	Pokaži kontrolnike preoblikovanja
+	Show or hide the Notes panel	Prikaži ali skrij podokno Notes
+	Show:	Prikaži:
+	Sides	Strani
+	Sides:	Strani:
+	Size	Velikost
+	Size Jitter	Naključnost velikosti
+	Size:	Velikost:
+	Slice Options…	Možnosti rezin…
+	Slices From Guides	Rezine iz vodnikov
+	Slices are locked (View › Lock Slices)	Rezine so zaklenjene (Pogled › Zakleni rezine)
+	Small Caps	Male črke
+	Smoothing	Glajenje
+	Space After	Prostor za
+	Space Before	Prostor pred
+	Spacing	Razmak
+	Spell check complete.	Preverjanje črkovanja končano
+	Split:	Razdeli:
+	Star ratio	Zvezdniško razmerje
+	Stop playing/recording	Ustavite predvajanje/snemanje
+	Straighten	Poravnaj
+	Straighten Layer	Poravnaj plast
+	Strength:	Moč:
+	Strikethrough	Prečrtano
+	Stroke	Obrobi
+	Stroke Catch-up	Stroke Catch-up
+	Stroke:	Hod:
+	Style	Stil
+	Style Options	Možnosti sloga
+	Style Options…	Možnosti sloga…
+	Style: Normal	Slog: Normalen
+	Subtract from Sample	Odstrani iz vzorca
+	Subtract from selection  ({key})	Odštej od izbora ({key})
+	Suggestions:	Predlogi:
+	Swap colours (X)	Zamenjaj barve (X)
+	Swaps height and width	Zamenja višino in širino
+	Switch between free transform and warp modes	Preklapljajte med načinoma proste transformacije in deformacije
+	Switch theme	Zamenjaj temo
+	Temperature	Temperatura
+	Tetrahedral	Tetraedrski
+	Text Position:	Položaj besedila:
+	Texture	Tekstura
+	Texture Each Tip	Tekstura vsake konice
+	Threshold	Prag
+	Threshold Level	Raven praga
+	Thumbnail size (smallest: list)	Velikost sličice (najmanjša: seznam)
+	Tilt X	Nagnite X
+	Tilt Y	Nagnite Y
+	Tint	Odtenek
+	Toggle count group visibility	Preklopi vidnost skupine štetja
+	Toggle text orientation	Preklop orientacije besedila
+	Tolerance	Toleranca
+	Tolerance:	Toleranca:
+	Tone:	Ton:
+	Toolbar	Orodna vrstica
+	Top	Zgoraj
+	Total:	Skupaj:
+	Tracking	Razpiranje
+	Tracking (1/1000 em)	Sledenje (1/1000 em)
+	Transparency	Prosojnost
+	Transparent	Prosojna
+	Trilinear	Trilinearno
+	Type Styles	Tipski slogi
+	Type:	Tip:
+	Underline	Podčrtaj
+	Untitled	Brez naslova
+	Untitled-1	Brez naslova-1
+	Update layer comp (visibility, position and appearance)	Posodobi komponacijo plasti (vidnost, položaj in videz)
+	Use Default	Uporabi privzeto
+	Use Legacy	Použiť kompatibilitu
+	Use Measurement Scale	Uporabite merilno lestvico
+	Use the embedded profile (instead of the working space)	Uporabite vdelan profil (namesto delovnega prostora)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	Spremenljivke vežejo vidnost plasti, besedilo ali slikovne pike na imenovano podatkovno režo
+	Vertical scale	Navpično merilo
+	Vibrance	Živahnost
+	View Options	Ogled možnosti
+	Vignetting	Vinjetiranje
+	Violet, Orange	Vijolična, oranžna
+	Visibility	Vidnost
+	Visible	Vidno
+	Warp:	Warp:
+	Web Snap	Web Snap
+	Weight	Teža
+	Weight:	Teža:
+	White	Bela
+	White Balance: As Shot	Ravnovesje beline: As Shot
+	Whites	belci
+	Width	Širina
+	Width:	širina:
+	Work Path	Delovna pot
+	Yellow	Rumena
+	Yellow  ·  Blue	Rumena · Modra
+	Zoom	Povečava
+	Zoom in	Približaj
+	Zoom out	Oddalji
+	command or shortcut	ukaz ali bližnjico
+	current	trenutna
+	image file path	pot slikovne datoteke
+	modified	spremenjeno
+	name	Ime
+	new	Novo
+	{name} options	možnosti {name}
+	↑↓ navigate   {key} run   esc close	↑↓ krmarjenje {key} zaženi esc zapri
+	Version {version}	Različica {version}
+	New Document	Nov dokument
+	Error	Napaka
+	Command	Ukaz
+	Adjustment layers have nothing to transform	Prilagoditveni sloji nimajo ničesar za transformacijo
+	Altitude	Nadmorska višina
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	Apple Watch 45mm
+	Aqua	Aqua
+	Art & Illustration	Umetnost in ilustracija
+	Background Eraser Tool	Orodje za brisanje ozadja
+	Bevel & Emboss	Bevel & Emboss
+	Blend Mode	Način mešanja
+	Blues	Blues
+	Blur Tool	Zameglitev
+	Bold	Krepko
+	Brush	Čopič
+	Brush Pose	Poza čopiča
+	Brush Tip Shape	Oblika konice čopiča
+	Brush Tool	Čopiči
+	Build-up	Nabiranje
+	Burn Tool	Potemnitev
+	Centimeters	Centimetrov
+	Choke	Dušenje
+	Classic	Klasična
+	Click to add text	Kliknite, če želite dodati besedilo
+	Click to fill similar colours	Kliknite za zapolnitev podobnih barv
+	Clone Stamp Tool	Orodje za kloniranje žiga
+	Color Burn	Vžgi barvo
+	Color Dodge	Izogni se barvam
+	Color Dynamics	Dinamika barve
+	Color Overlay	Prelij z Barvo
+	Comic Book	Strip
+	Conform	Skladnost
+	Content-Aware Fill needs a selection on a pixel layer	Zapolnjevanje glede na vsebino zahteva izbiro na sloju slikovnih pik
+	Could not transform: the layer is empty	Ni bilo mogoče preoblikovati: sloj je prazen
+	Could not use Perspective Warp: the layer is empty	Ni bilo mogoče uporabiti Perspective Warp: sloj je prazen
+	Could not use Puppet Warp: no opaque pixels	Puppet Warp ni bilo mogoče uporabiti: ni neprozornih slikovnih pik
+	Could not use Puppet Warp: the layer is empty	Ni bilo mogoče uporabiti Puppet Warp: sloj je prazen
+	Crop Tool	Izrezovanje
+	Crosswise	Prečno
+	Current Tool	Trenutno orodje
+	Custom Shape Tool	Orodje za obliko po meri
+	Cyans	Cyans
+	Default Photoshop Size	Privzeta velikost Photoshopa
+	Delete Workspace	Izbriši delovni prostor
+	Diamond	Diamant
+	Dimensions:	Dimenzije:
+	Direction	Smer
+	Distance	Razdalija
+	Document Dimensions	Dimenzije dokumenta
+	Document Profile	Profil dokumenta
+	Document Sizes	Velikosti dokumentov
+	Dodge Tool	Orodje osvetlitve
+	Down	Dol
+	Drag to draw a gradient	Povlecite, da narišete preliv
+	Drag to move the active layer	Povlecite, da premaknete aktivno plast
+	Drag to pan  ·  hold Space with any tool	Povlecite za premikanje · pridržite preslednico s katerim koli orodjem
+	Drop Shadow	Senca
+	Dual Brush	Dvojna krtača
+	Edge	Rob
+	Efficiency	Učinkovitost
+	Efficiency: 100%	Učinkovitost: 100%
+	Ellipse Tool	Orodje za elipso
+	Elliptical Marquee Tool	Orodje Elliptical Marquee Tool
+	Emboss	Izboči
+	Eraser	Radirka
+	Eraser Tool	Brisanje
+	ExtraBold	ExtraBold
+	ExtraLight	ExtraLight
+	Eyedropper Tool	Orodje za kapalko
+	Fade	Zbledi
+	Fill Opacity	Motnost polnila
+	Film & Video	Film in video
+	From	Od
+	General	Splošno
+	GitHub	GitHub
+	Gradient Overlay	Prekrij z Prelivom
+	Gradient Tool	Prelivanje
+	Greens	Zeleni
+	Hand Tool	Premik pogleda
+	Hard	težko
+	Hard Mix	Trda mešanica
+	Healing Brush Tool	Čopič za popravke
+	Highlights from:	Utrinki iz:
+	History Brush Tool	Orodje za čopič zgodovine
+	Horizontal Type Tool	Orodje za vodoravni tip
+	Image Size:	Velikost slike:
+	Inches	Inče
+	Indexed	Indeksirano
+	Initial Direction	Začetna smer
+	Inner Bevel	Zaobljenost znotraj
+	Inner Glow	Notranji Sijaj
+	Inner Shadow	Notranja Senca
+	Lab	Lab
+	Landscape, 10 x 8	Pokrajina, 10 x 8
+	Landscape, 6 x 4	Pokrajina, 6 x 4
+	Landscape, 7 x 5	Pokrajina, 7 x 5
+	Lasso	Laso
+	Lasso Tool	Orodje za laso
+	Layer Count	Število plasti
+	Layer Knocks Out Drop Shadow	Layer Knocks Out Drop Shadow
+	Legal	Pravno
+	Letter	Pismo
+	Light	Svetlo
+	Line Tool	Orodje za črte
+	Linear	Linearno
+	Linear Burn	Vžgi linearno
+	Linear Height	Linearna višina
+	Link with Layer	Povezava s plastjo
+	Lorem Ipsum	Lorem Ipsum
+	Magentas	Magente
+	Magic Eraser Tool	Orodje za čarobno radirko
+	Magic Wand Tool	Orodje za čarobno palico
+	Marquee	Marquee
+	Mean:	pomeni:
+	Measurement Scale	Merilna lestvica
+	Measurement Scale Marker	Oznaka merilne lestvice
+	Millimeters	Milimetrov
+	Mobile	Mobilna Naprava
+	Move Tool	Premikanje
+	Multiply	Zmnoži
+	My Brushes	Moji čopiči
+	Neutrals	Nevtralne
+	New Workspace	Nov delovni prostor
+	Note Tool	Orodje za opombe
+	Object Selection Tool	Orodje za izbiro predmeta
+	Off	Izključeno
+	Open	Odpri
+	Orange	Oranžna
+	Original Ratio	Prvotno razmerje
+	Out Of Gamut	Izven obsega
+	Outer Bevel	Zaobljenost zunaj
+	Outer Glow	Zunanji Sijaj
+	Overlay	Prekrij
+	Paint Bucket Tool	Barvanje
+	Paints from the document's opening state	Slika iz stanja odprtja dokumenta
+	Path Selection Tool	Orodje za izbiro poti
+	Pattern Overlay	Prekrij z Vzorcem
+	Pen Pressure	Pritisk peresa
+	Pen Tilt	Nagib peresa
+	Pen Tool	Orodje za pero
+	Photo	Fotografija
+	PhotoSuite website	Spletno mesto PhotoSuite
+	Picas	Picas
+	Pillow Emboss	Zaobljenost zamenjana
+	Pixel Replacement	Zamenjava slikovnih pik
+	Pixels	Pikice
+	Points	Točke
+	Polygon Tool	Orodje za mnogokotnik
+	Polygonal Lasso Tool	Orodje za poligonalni laso
+	Portrait, 4 x 6	Portret, 4 x 6
+	Portrait, 5 x 7	Portret, 5 x 7
+	PostScript (72 points/inch)	PostScript (72 točk/palec)
+	Postcard	Razglednica
+	Poster	Plakat
+	Pro (Dark)	Pro (temno)
+	Pro (Medium Gray)	Pro (srednje siva)
+	Protect Texture	Zaščitite teksturo
+	Purple	Vijolična
+	Quick Mask	Hitra maska
+	Quick Selection Tool	Orodje za hitro izbiro
+	Radial	Krožno
+	Rasterize Layer	Rasteriziraj plast
+	Ratio	Razmerje
+	Recent	Nedavno
+	Rectangle Tool	Orodje za pravokotnik
+	Rectangular Marquee Tool	Orodje Rectangular Marquee Tool
+	Reds	Rdeče
+	Reflected	Zrcaljeno
+	Sample: foreground colour	Vzorec: barva ospredja
+	Sampled Colors	Vzorčene barve
+	Satin	Saten
+	Save Pixel Aspect Ratio	Shrani slikovno razmerje
+	Scattering	Razpršenost
+	Scratch Sizes	Velikosti prask
+	Select Data Points	Izberite Podatkovne točke
+	Selection	Izbira
+	SemiBold	SemiBold
+	Shadows up to:	Sence do:
+	Shape Dynamics	Dinamika oblike
+	Sharpen Tool	Izostritev
+	Show Extras Options	Prikaži dodatne možnosti
+	Slice Select Tool	Orodje za izbor rezine
+	Slice Tool	Orodje za rezine
+	Smart Filters	Pametni Filtri
+	Smudge Tool	Razlivanje
+	Soft	Mehko
+	Soften	Zmehčaj
+	Source	Izvor
+	Source: set	Vir: set
+	Sponge Tool	Razbarvaj
+	Spot Healing Brush Tool	Čopič za popravljanje madežev
+	Spread	Razširi
+	Square, 12 x 12	Kvadrat, 12 x 12
+	Square, 5 x 5	Kvadrat, 5 x 5
+	Std Dev:	Std Dev:
+	Studio (Dark)	Studio (temno)
+	Studio (Light)	Garsonjera (svetla)
+	Stylus Wheel	Stylus Wheel
+	Subtract	Odštej
+	Tabloid	Tabloid
+	Text Replacement	Zamenjava besedila
+	Thin	Tanek
+	Traditional (72.27 points/inch)	Tradicionalno (72,27 točke/palec)
+	Transfer	Prenos
+	Triangle Tool	Orodje Trikotnik
+	Unsaved changes	Neshranjene spremembe
+	Uses the foreground and background colours.	Uporablja barve ospredja in ozadja
+	Web	Splet
+	Web Large	Web Large
+	Web Minimum	Spletni minimum
+	Web Most Common	Najpogostejši splet
+	WebP (lossless)	WebP (brez izgub)
+	Wet Edges	Mokri robovi
+	Yellows	Rumeni
+	Zoom Tool	Lupa
+	{name} Properties	Lastnosti {name}
+	Revert “{name}” to the last saved version? Your changes will be lost.	Želite povrniti »{name}« na zadnjo shranjeno različico? Vaše spremembe bodo izgubljene
+	Do you want to save the changes you made to “{name}” before quitting?	Ali želite shraniti spremembe, ki ste jih naredili v »{name}« pred odhodom?
+	Do you want to save the changes you made to “{name}” before closing?	Ali želite shraniti spremembe, ki ste jih naredili v »{name}« pred zaprtjem?
+	Doc: {flat}/{layered}	Dokument: {flat}/{layered}
+	Scratch: {size}	Praska: {size}
+	Untagged {mode}	Brez oznake {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} px x {h} px ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	Ločljivost: {dpi} slikovnih pik/palec
+	Doc: {w} × {h} px	Dokument: {w} × {h} slikovnih pik
+	Frame {current} / {total}	Okvir {current} / {total}
+	Count: {n}	Število: {n}
+	BLANK DOCUMENT PRESETS ({n})	PREDNASTAVITVE PRAZNEGA DOKUMENTA ({n})
+	Constraints ({n})	Omejitve ({n})
+	Align {what}	Poravnaj {what}
+@plural	{n} Layer|{n} Layers	{n} plast|{n} plasti
+@plural	Group · {n} layer|Group · {n} layers	Skupina · {n} plast|Skupina · {n} plasti
+	Additional plugins folder	Mapa z dodatnimi vtičniki
+	Adobe	Adobe
+	Adobe rgb	Adobe rgb
+	Allow agent control	Dovoli nadzor agenta
+	Allow scripts to connect	Dovoli povezovanje skriptov
+	Always	Vedno
+	Always create smart objects when placing	Pri postavljanju vedno ustvarite pametne predmete
+	Animated zoom	Animirani zoom
+	Apply auto tone	Uporabi samodejni ton
+	Ask	Vprašajte
+	Ask before saving layered tiff	Vprašajte, preden shranite večplastni tiff
+	Auto collapse icon panels	Samodejno strni plošče z ikonami
+	Auto show hidden panels	Samodejni prikaz skritih plošč
+	Auto show home screen	Samodejni prikaz začetnega zaslona
+	Autosave	Samodejno shranjevanje
+	Autosave minutes	Samodejno shranjevanje minut
+	Beep when done	Pisk, ko je končano
+	Bicubic automatic	Bikubična avtomatika
+	Bicubic sharper	Bikubično ostrejše
+	Bicubic smoother	Bikubični gladilec
+	Bit depth	Bitna globina
+	Brush preview color	Barva predogleda čopiča
+	Cache levels	Ravni predpomnilnika
+	Cache tile size	Velikost ploščice predpomnilnika
+	Camera Raw Defaults	Privzete nastavitve Camera Raw
+	Canvas border	Platnena obroba
+	Canvas color	Barva platna
+	Canvas custom color	Barva platna po meri
+	Color picker	Izberi barvo
+	Color space	Barvni prostor
+	Column width	Širina stolpca
+	Concise	Jedrnato
+	Control port	Nadzorna vrata
+	Convert to srgb	Pretvori v srgb
+	Cursors	Kazalci
+	Custom dark	Temno po meri
+	Custom light	Luč po meri
+	Dark	Temno
+	Dark gray	Temno siva
+	Dashed lines	Črtkane črte
+	Destination	Cilj
+	Detailed	Podrobno
+	Disks	Diski
+	Display p3	Prikaz p3
+	Double click layer mask launches select and mask	Dvokliknite masko sloja zažene Select in mask
+	Drop shadow	Senca
+	Dynamic color sliders	Dinamični barvni drsniki
+	East asian	vzhodnoazijski
+	Effect cache mb	Predpomnilnik učinkov mb
+	Enable flick panning	Omogoči premikanje z gibi
+	Enable floating document window docking	Omogoči sidranje plavajočega okna dokumenta
+	Enable narrow options bar	Omogoči ozko vrstico možnosti
+	Enabled	Omogočeno
+	Enhanced Controls	Izboljšane kontrole
+	Export clipboard	Izvozi odložišče
+	Extra large	Zelo velik
+	File Handling	Ravnanje z datotekami
+	File path	Pot datoteke
+	Fill new type layers with placeholder	Izpolnite nove tipske plasti z ogrado
+	Font preview	Predogled pisave
+	Full size tip	Namig v polni velikosti
+	Gamut warning color	Opozorilna barva lestvice
+	Gamut warning opacity	Neprosojnost opozorila o lestvici
+	Generator enabled	Generator omogočen
+	Gif	Gif
+	Glossy	Sijajni
+	Grid color	Barva mreže
+	Grid colors	Barve mreže
+	Grid size	Velikost mreže
+	Grid style	Mrežni slog
+	Grid unit	Mrežna enota
+	Gridline every	Mrežna črta vsak
+	Guide color	Vodilna barva
+	Guide style	Slog vodnika
+	Guides, Grid & Slices	Vodila, Mreža & Rezine
+	Gutter	Žleb
+	History Log	Dnevnik zgodovine
+	History states	Zgodovina navaja
+	Ignore exif profile tag	Ignorirajte oznako profila exif
+	Image interpolation	Interpolacija slike
+	Image previews	Predogledi slik
+	Integrations	Integracije
+	Interface	Vmesnik
+	Jpeg quality	Kakovost Jpeg
+	Jpg	Jpg
+	Language	Jezik
+	Large tabs	Veliki zavihki
+	Legacy compositing	Podedovano sestavljanje
+	Light gray	Svetlo siva
+	Line	Črta
+	Lines	Črte
+	Lowercase extension	Razširitev z malimi črkami
+	Maximize psd compatibility	Povečajte združljivost psd
+	Medium gray	Srednje siva
+	Memory usage mb	Poraba pomnilnika mb
+	Missing glyph protection	Manjka zaščita glifa
+	Modern	Moderno
+	Nearest neighbor	Najbližji sosed
+	Never	Nikoli
+	Normal tip	Normalna konica
+	Open as smart object	Odpri kot pametni predmet
+	Open documents as tabs	Odprite dokumente kot zavihke
+	Overscroll	Overscroll
+	Performance	Učinkovitost
+	Png	Png
+	Point size	Velikost točke
+	Precise	Natančno
+	Preserve details	Ohranite podrobnosti
+	Print resolution	Ločljivost tiskanja
+	Pro	Pro
+	Pro medium	Pro srednje
+	Pro photo	Profesionalna fotografija
+	Quick export format	Format hitrega izvoza
+	Quick export location	Lokacija hitrega izvoza
+	Recent file count	Število nedavnih datotek
+	Recent files	Nedavne datoteke
+	Recent fonts	Nedavne pisave
+	Recover on launch	Obnovi ob zagonu
+	Remember workspace changes	Ne pozabite na spremembe delovnega prostora
+	Resize image during place	Spremenite velikost slike med mestom
+	Rotate view with trackpad	Zasukaj pogled s sledilno ploščico
+	Same folder	Ista mapa
+	Save in background	Shrani v ozadju
+	Scratch Disks	Praskalni diski
+	Screen	Zaslon
+	Screen resolution	Ločljivost zaslona
+	Scrubby slider acceleration	Scrubby drsnik pospeška
+	Sessions only	Samo seje
+	Sharpen for	Ostri za
+	Show channels in color	Pokaži kanale v barvah
+	Show crosshair in brush tip	Pokažite križec na konici čopiča
+	Show extension panels	Pokaži razširitvene plošče
+	Show font names in english	Pokaži imena pisav v angleščini
+	Show menu colors	Prikaži barve menija
+	Show only crosshair while painting	Med slikanjem pokaži samo križec
+	Show slice numbers	Pokaži številke rezin
+	Show tooltips	Pokaži nasvete orodij
+	Show transformation values	Prikaži vrednosti transformacije
+	Slice color	Barva rezine
+	Smart guide color	Barva pametnega vodnika
+	Smart quotes	Pametni citati
+	Snap vector tools and transforms to pixel grid	Orodja za pripenjanje vektorjev in preoblikovanje v mrežo slikovnih pik
+	Srgb	Srgb
+	Standard	Standardno
+	Studio	Studio
+	Studio light	Studijska luč
+	Subdivisions	Podrazdelki
+	System	Sistem
+	Text engine	Besedilni motor
+	Text file	Besedilna datoteka
+	Tiny	Majhen
+	Touch gestures	Poteze na dotik
+	Transparency & Gamut	Transparency & Gamut
+	Type units	Vrsta enot
+	UI font size	Velikost pisave vmesnika
+	UI scale	Lestvica uporabniškega vmesnika
+	Units & Rulers	Enote & Ravnila
+	Use additional plugins folder	Uporabite mapo z dodatnimi vtičniki
+	Use esc to commit	Uporabite esc za potrditev
+	Use gpu	Uporabi gpu
+	Use legacy free transform	Uporabite starejše brezplačno preoblikovanje
+	Use shift key for tool switch	Za preklop orodja uporabite tipko shift
+	Vary round brush hardness on hud	Spremenite trdoto okrogle krtače na hud
+	Webp	Webp
+	World ready	Svet pripravljen
+	Zoom clicked point to center	Zoom je kliknil točko na sredino
+	Zoom resizes windows	Zoom spreminja velikost oken
+	Zoom with scroll wheel	Povečava s kolescem miške
+	Zoom with trackpad pinch	Povečava s stiskanjem sledilne ploščice
+	Pass Through	Spusti skozi
+	Dissolve	Raztopi
+	Darker Color	Temnejša barva
+	Linear Dodge (Add)	Linear Dodge (Dodaj)
+	Lighter Color	Svetlejša barva
+	Soft Light	Mehka svetloba
+	Hard Light	Trda svetloba
+	Vivid Light	Živa svetloba
+	Linear Light	Linearna svetloba
+	Pin Light	Točkasta svetloba
+	Exclusion	Izključitev
+	Divide	Deli
+	Luminosity	Svetlost
+@plural	{n} sample|{n} samples	{n} vzorec|{n} vzorca
+	{added}, {removed} subtracted	{added}, {removed} odšteto
+	Adjustment Preview	Predogled prilagoditve
+	Airbrush: keeps depositing paint while the pointer rests.	Airbrush: ohranja barvo, medtem ko kazalec miruje
+	Angle:	Kot:
+	Blend If	Mešajte, ko
+	Close Tab Group	Zapri skupino zavihkov
+	Collapse	Strni
+	Collapse All Groups	Strni vse skupine
+	Collapse Panel Group	Strni skupino plošč
+	Collapse group  ({key}-click: all groups)	Strni skupino ({key}-klik: vse skupine)
+	Create new brush from the current settings	Ustvari nov čopič iz trenutnih nastavitev
+	Create new brush from these settings	Iz teh nastavitev ustvarite nov čopič
+	Delete brush	Izbriši čopič
+	Drag the arrow to set the angle, the dots to set the roundness	Povlecite puščico, da nastavite kot, s pikami, da nastavite okroglost
+	Expand	Razširi
+	Expand Panel Group	Razširite skupino plošč
+	Expand group  ({key}-click: all groups)	Razširi skupino ({key}-klik: vse skupine)
+	Fade steps	Zbledi koraki
+	Hide the layer's effects  ({key}-click: all layers)	Skrij učinke plasti ({key}-klik: vse plasti)
+	Import Brushes… (.abr)	Uvozi čopiče… (.abr)
+	Move Group Down	Premakni skupino navzdol
+	Move Group Up	Premakni skupino navzgor
+	Reset the brush to the defaults	Ponastavite čopič na privzete vrednosti
+	Restore original size	Obnovi prvotno velikost
+	Roundness:	Okroglost:
+	Search Brushes	Krtače za iskanje
+	Show the layer's effects  ({key}-click: all layers)	Pokaži učinke plasti ({key}-klik: vse plasti)
+	Brush picker	Pobiralec čopičev
+	Erase	Izbriši
+	Right click with painting tools	Desni klik z orodji za slikanje
+	System Info…	Informacije o sistemu…
+	System Info	Informacije o sistemu
+	More panels	Več plošč
+	These settings aren't available in PhotoSuite yet.	Te nastavitve še niso na voljo v programu PhotoSuite
+	Graphics	Grafika
+	Reset GPU Backend	Ponastavi zaledje GPE
+	Applies at next launch.	Velja ob naslednjem zagonu
+	Click to sample the foreground colour  ·  {key}-click for background	Kliknite za vzorec barve ospredja · {key}-kliknite za ozadje
+	{key}-click to set the source	{key}-kliknite za nastavitev vira
+	{key} to subtract	{key} za odštevanje
+	Clone source {n} ({key}-click with Clone Stamp to set)	Kloniraj vir {n} ({key}-klikni z žigom klona za nastavitev)
+	Source: not set ({key}-click with Clone Stamp)	Vir: ni nastavljen ({key}-klik z žigom klona)
+	Pixel Layer	Sloj slikovnih pik
+	Type Layer	Vrsta sloja
+	Shape Layer	Sloj oblike
+	Group Layer	Skupinski sloj
+	Fill Layer	Fill Layer
+	Smart Object Layer	Sloj pametnih predmetov
+	Create Warped Text	Ustvari izkrivljeno besedilo
+	Rasterize Smart Object	Rasterizacija pametnega predmeta
+	Rasterize Fill Content	Rasteriziraj zapolnitev vsebine
+	Unlock: picking a preset replaces these settings	Odkleni: izbira prednastavitve nadomesti te nastavitve
+	Lock: keep these settings when picking another preset	Zaklepanje: ohranite te nastavitve, ko izberete drugo prednastavitev
+	Diameter:	Premer:
+	Hardness:	Trdota:
+	No brush presets	Brez prednastavitev čopičev
+	Toggle the Brush Settings panel  (F5)	Preklop plošče z nastavitvami čopiča (F5)
+	Create new brush preset from the current settings	Ustvari novo prednastavitev čopiča iz trenutnih nastavitev
+	Brush Settings…  (F5): every option of this brush	Nastavitve čopiča… (F5): vse možnosti tega čopiča
+	Rename Brush…	Preimenuj čopič…
+	Delete Brush	Izbriši čopič
+	Group name	Ime skupine
+	Brush name	Ime čopiča
+	Grid view	Mrežni pogled
+	List view	Pogled seznama
+	Off: the speed of the pointer sets the spacing	Izklopljeno: hitrost kazalca nastavi razmik
+	Tilt Scale	Nagibna lestvica
+	Brush Projection	Projekcija s čopičem
+	Apply the pen's tilt and rotation to the tip shape	Uporabite nagib in vrtenje peresa na obliko konice
+	Mixer Brush	Krtača za mešanje
+	Wet	Mokra
+	Mix	Zmešajte
+	Wetness Jitter	Vlažno tresenje
+	Mix Jitter	Mix Jitter
+	Show the layer mask as an overlay	Prikažite masko plasti kot prekrivanje
+	Toggle visibility	Preklopi vidnost
+	Unlink the mask from the layer	Odstranite povezavo maske s plastjo
+	Link the mask to the layer	Povežite masko s plastjo
+	Gradient	Preliv
+	Gradient Options	Možnosti gradienta
+	Align with layer	Poravnaj s Plastjo
+	Reset Alignment	Ponastavi poravnavo
+	Centre the gradient (offset 0, 0)	Centriraj gradient (odmik 0, 0)
+	The current gradient (pick one in Window › Gradients)	Trenutni gradient (izberite enega v oknu › Gradienti)
+	Select a type layer to edit its character and paragraph settings.	Izberite sloj tipa, da uredite njegove nastavitve znakov in odstavkov
+	Text color	Barva besedila
+	Type Options	Možnosti tipa
+	Anti-aliasing method	Anti-aliasing metoda
+	Horizontal type	Horizontalni tip
+	Vertical type	Vertikalni tip
+	Fill path with foreground color	Zapolni pot z barvo ospredja
+	Stroke path with brush	Potegnite pot s čopičem
+	Load path as a selection	Pot nalaganja kot izbor
+	Make work path from selection	Naredite delovno pot iz izbora
+	Add vector mask	Dodaj Vektorsko Masko
+	Create new path	Ustvari novo pot
+	Delete path	Izbriši pot
+	Delete vector mask	Zbriši Vektorsko Masko
+	CPU (no GPU acceleration)	CPE (brez GPU pospeška)
+	DirectX 12	DirectX 12
+	GPU backend	GPE backend
+	Metal	Kovina
+	OpenGL	OpenGL
+	Use tablet pressure	Uporabite pritisk tablete
+	Vulkan	Vulkan

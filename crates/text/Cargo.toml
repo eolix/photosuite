@@ -1,0 +1,22 @@
+[package]
+name = "photosuite-text"
+description = "Font database, text shaping/layout (parley) and text-layer rasterization"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+photosuite-raster = { workspace = true }
+photosuite-doc = { workspace = true }
+photosuite-psd = { workspace = true }
+# No `system` feature: fontique's system backend links fontconfig on Linux. We scan font
+# directories ourselves (native) and always register the bundled fonts (native + web).
+parley = { version = "0.11", default-features = false, features = ["std"] }
+skrifa = "0.44"
+flate2 = { workspace = true }

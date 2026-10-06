@@ -1,0 +1,27 @@
+[package]
+name = "photosuite-cli"
+description = "Headless PhotoSuite: convert, inspect, run commands, batch, MCP server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "photosuite_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "photosuite-cli"
+path = "src/main.rs"
+
+[dependencies]
+photosuite-automation = { path = "../../crates/automation" }
+photosuite-engine = { workspace = true }
+photosuite-io = { workspace = true }
+photosuite-format = { path = "../../crates/format" }
+photosuite-codecs = { workspace = true }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+

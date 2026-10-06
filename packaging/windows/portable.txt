@@ -1,0 +1,9 @@
+PhotoSuite portable mode
+
+While this file sits next to photosuite.exe, PhotoSuite keeps its preferences, brush presets,
+crash-recovery autosaves and startup state in the PhotoSuiteData folder beside it, and writes
+nothing to %APPDATA%. Copy the whole folder to move PhotoSuite with its settings.
+
+Delete this file to use the normal per-user settings folder (%APPDATA%\Photosuite) instead.
+If PhotoSuiteData can't be written (for example on a read-only drive), PhotoSuite says so and
+uses %APPDATA%\Photosuite instead.

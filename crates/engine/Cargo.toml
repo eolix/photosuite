@@ -1,0 +1,42 @@
+[package]
+name = "photosuite-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Real-file corpus tests (opt-in; `cargo xtask test-corpus`). Fail when the corpus is missing.
+corpus = []
+
+[dependencies]
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+photosuite-cms = { workspace = true }
+photosuite-raster = { workspace = true }
+photosuite-doc = { workspace = true }
+photosuite-ops = { workspace = true }
+photosuite-compose = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+rayon = { workspace = true }
+photosuite-paint = { workspace = true }
+photosuite-algo = { workspace = true }
+photosuite-text = { workspace = true }
+photosuite-vector = { workspace = true }
+photosuite-io = { workspace = true }
+photosuite-psd = { workspace = true }
+photosuite-format = { workspace = true }
+photosuite-plugins = { workspace = true }
+blake3 = { version = "1.8", default-features = false, features = ["pure"] }
+photosuite-codecs = { workspace = true }
+flate2 = { workspace = true }
+
+[dev-dependencies]
+# Synthetic camera raw files for the open tests.
+photosuite-raw = { workspace = true, features = ["testgen"] }
+# WebAssembly text -> binary for plug-in test modules (Apache-2.0 WITH LLVM-exception).
+wat = "1.228"

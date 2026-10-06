@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata (software centres, Flathub). Template: package.sh and the Flatpak
+     manifest substitute @VERSION@ and @DATE@ from Cargo.toml and the build date. -->
+<component type="desktop-application">
+  <id>app.photosuite</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <name>PhotoSuite</name>
+  <summary>Edit photos and layered Photoshop documents</summary>
+  <developer id="app.photosuite">
+    <name>The PhotoSuite authors</name>
+  </developer>
+  <description>
+    <p>
+      PhotoSuite is an open-source, native image editor that works the way Photoshop users
+      expect: familiar menus, shortcuts, panels and tools, with layers, masks, adjustment
+      layers, layer styles, type and brushes.
+    </p>
+    <ul>
+      <li>Open, edit and save layered PSD and PSB files</li>
+      <li>8-bit, 16-bit and 32-bit float documents in RGB, grayscale, CMYK and Lab</li>
+      <li>A GPU compositor with multithreaded filters</li>
+      <li>Every action is a command, scriptable from a CLI, a JSON control channel and an MCP server</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">app.photosuite.desktop</launchable>
+  <icon type="stock">app.photosuite</icon>
+  <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser.
+       The same addresses as Help › Website / GitHub / Report Issue (crates/ui-egui/src/links.rs). -->
+  <url type="homepage">https://photosuite.app</url>
+  <url type="bugtracker">https://github.com/eolix/photosuite/issues</url>
+  <url type="help">https://github.com/eolix/photosuite</url>
+  <categories>
+    <category>Graphics</category>
+    <category>RasterGraphics</category>
+    <category>Photography</category>
+  </categories>
+  <keywords>
+    <keyword>photo</keyword>
+    <keyword>image editor</keyword>
+    <keyword>psd</keyword>
+    <keyword>layers</keyword>
+  </keywords>
+  <branding>
+    <color type="primary" scheme_preference="light">#9fd0ff</color>
+    <color type="primary" scheme_preference="dark">#1f64ba</color>
+  </branding>
+  <requires>
+    <display_length compare="ge">760</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>tablet</control>
+  </supports>
+  <provides>
+    <binary>photosuite</binary>
+    <mediatype>application/x-photosuite</mediatype>
+    <mediatype>image/vnd.adobe.photoshop</mediatype>
+    <mediatype>image/x-psb</mediatype>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

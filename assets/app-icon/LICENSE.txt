@@ -1,0 +1,12 @@
+PhotoSuite app icon (photosuite.svg, photosuite-small.svg and every file derived from them in
+this directory: photosuite-1024.png, photosuite.icns, photosuite.ico, hicolor/).
+
+Original artwork made for PhotoSuite by the PhotoSuite authors: a vector image of the letters PS. 
+No third-party material. Licensed like the rest of PhotoSuite, under either of
+
+  * Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  * MIT license (https://opensource.org/licenses/MIT)
+
+at your option.
+
+Regenerate the derived files with packaging/icons.sh.

@@ -1,0 +1,31 @@
+PhotoSuite
+Copyright (c) 2026 the PhotoSuite authors.
+
+PhotoSuite is a modified version of PhotoCraft (https://github.com/storytold/photocraft,
+revision a96a621deea97d4b1ecd173b8b921587e33f3ca5), used under the same licenses. Files from
+PhotoCraft have been modified by the PhotoSuite authors (Apache License 2.0, section 4(b)).
+PhotoSuite is not affiliated with or endorsed by the ArtCraft Team or the PhotoCraft
+contributors. PhotoCraft's notice follows, unchanged.
+
+
+PhotoCraft
+Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option
+(LICENSE-MIT, LICENSE-APACHE).
+
+
+Third-party material
+
+This product bundles third-party material under its own licenses, listed below. The per-file
+list (author, source, license) is in THIRD-PARTY-NOTICES.md.
+
+Inter font (assets/fonts/Inter-*.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-Inter.txt.
+JetBrains Mono font (assets/fonts/JetBrainsMono-Regular.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-JetBrainsMono.txt.
+Tabler Icons (assets/ico/) — MIT, Copyright (c) 2020-2026 Paweł Kuna. See assets/ico/LICENSE.
+Lucide icons (assets/icons/*.svg, except slice-knife.svg) — ISC; icons derived from Feather also MIT. See assets/icons/LICENSE-lucide.txt.
+Lensfun lens database, adapted (resources/lensfun/lens-database.json) — CC BY-SA 3.0, the Lensfun contributors. See resources/lensfun/LICENSE-CC-BY-SA-3.0.txt.
+uiGradients gradient library (resources/gradients/uigradients.grd) — MIT, © 2017 Indrashish Ghosh. See resources/gradients/LICENSE-uigradients.txt.
+Font Awesome Free shapes, converted (resources/shapes/shapes.csh) — CC BY 4.0, Fonticons, Inc. See resources/shapes/LICENSE-fontawesome.txt.
+Subtle Patterns, adapted (resources/patterns/) — CC BY-SA 3.0, Toptal and the pattern designers. See resources/patterns/LICENSE-subtlepatterns.txt.
+Brusheezy brush packs, unmodified (resources/brushes/) — Markers.abr (brushchick) and Paintbrush_Set.abr (lovelace), CC BY-ND; Pencil_Scribbles.abr (stuffwemake), CC BY-SA. See resources/brushes/LICENSE-brusheezy-brushes.txt.
+SCOWL English word list (assets/dict/en_US-scowl-50.txt.gz) — SCOWL license. See assets/dict/LICENSE-SCOWL.txt.

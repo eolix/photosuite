@@ -1,0 +1,12 @@
+[package]
+name = "photosuite-color"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+photosuite-cms = { workspace = true }
+serde = { workspace = true }

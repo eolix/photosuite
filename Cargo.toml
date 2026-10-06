@@ -1,0 +1,136 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/*", "xtask"]
+default-members = ["crates/*", "apps/photosuite-cli", "xtask"]
+
+[workspace.package]
+version = "0.9.18"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.90"
+
+[workspace.dependencies]
+# internal
+photosuite-geom = { path = "crates/geom" }
+photosuite-color = { path = "crates/color" }
+photosuite-cms = { path = "crates/cms" }
+photosuite-raster = { path = "crates/raster" }
+photosuite-doc = { path = "crates/doc" }
+photosuite-ops = { path = "crates/ops" }
+photosuite-psd = { path = "crates/psd" }
+photosuite-codecs = { path = "crates/codecs" }
+photosuite-raw = { path = "crates/raw" }
+photosuite-compose = { path = "crates/compose" }
+photosuite-gpu = { path = "crates/gpu" }
+photosuite-paint = { path = "crates/paint" }
+photosuite-algo = { path = "crates/algo" }
+photosuite-io = { path = "crates/io" }
+photosuite-text = { path = "crates/text" }
+photosuite-vector = { path = "crates/vector" }
+photosuite-format = { path = "crates/format" }
+photosuite-automation = { path = "crates/automation" }
+photosuite-plugins = { path = "crates/plugins" }
+photosuite-engine = { path = "crates/engine" }
+photosuite-ui-egui = { path = "crates/ui-egui" }
+photosuite-testkit = { path = "crates/testkit" }
+photosuite-tablet = { path = "crates/tablet" }
+
+# external
+thiserror = "2"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+arc-swap = "1"
+bytemuck = { version = "1", features = ["derive"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+image = { version = "0.25", default-features = false }
+proptest = "1"
+eframe = { version = "0.36", default-features = false }
+egui = "0.36"
+egui_kittest = "0.36"
+rfd = "0.17"
+log = "0.4"
+rayon = "1"
+criterion = { version = "0.5", default-features = false }
+getrandom = "0.3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Interactive development profile (macOS quick loop: `cargo dev`, scripts/dev-macos.sh).
+#
+# `--release` links with thin LTO and one codegen unit, which is slow to rebuild, and it
+# compiles out `debug_assertions` — which is what gates the PHOTOSUITE_THEME_FILE live
+# design-token overrides in `crates/ui-egui/src/theme.rs`. This profile keeps the dev family's
+# debug assertions and incremental compilation, and buys back interactive speed by optimising
+# dependencies and the pixel crates instead of using LTO.
+[profile.devfast]
+inherits = "dev"
+opt-level = 2
+# Line tables only: enough for a usable backtrace, much faster to link than full debuginfo.
+debug = 1
+# Incremental codegen at opt-level 2 emits CGU-local `.llvm.*` symbols that the final link
+# cannot resolve across crates on macOS, so the binary fails to link. Full codegen units are
+# the cost of this profile being usable at all.
+incremental = false
+
+# Per-package overrides are per-profile and are not inherited, so they are repeated here.
+[profile.devfast.package."*"]
+opt-level = 2
+
+# The pixel path stays at opt-level 3, as in the wasm-release profile below.
+[profile.devfast.package.photosuite-raster]
+opt-level = 3
+[profile.devfast.package.photosuite-color]
+opt-level = 3
+[profile.devfast.package.photosuite-cms]
+opt-level = 3
+[profile.devfast.package.photosuite-compose]
+opt-level = 3
+[profile.devfast.package.photosuite-algo]
+opt-level = 3
+[profile.devfast.package.photosuite-paint]
+opt-level = 3
+
+# The browser build (apps/photosuite-web, `data-cargo-profile` in its index.html). Hosts cap the
+# size of a single file (Cloudflare Pages/Workers: 25 MiB), and the wasm is downloaded on every
+# visit, so this profile optimizes for size: fat LTO, and opt-level "s" for everything except the
+# pixel-processing crates, which keep opt-level 3 so filters and compositing stay fast. panic
+# stays the target default (wasm32-unknown-unknown aborts; AGENTS.md's `panic = "unwind"` is for
+# the native app shell). packaging/web/package.sh fails the build above 24 MiB. Issue #198:
+# this took the wasm from 26.3 MiB (release profile) to 18.8 MiB.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+
+[profile.wasm-release.package."*"]
+opt-level = "s"
+
+[profile.wasm-release.package.photosuite-raster]
+opt-level = 3
+[profile.wasm-release.package.photosuite-color]
+opt-level = 3
+[profile.wasm-release.package.photosuite-cms]
+opt-level = 3
+[profile.wasm-release.package.photosuite-compose]
+opt-level = 3
+[profile.wasm-release.package.photosuite-algo]
+opt-level = 3
+[profile.wasm-release.package.photosuite-paint]
+opt-level = 3

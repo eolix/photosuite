@@ -1,0 +1,43 @@
+[package]
+name = "photosuite-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Recent-file thumbnails are encoded and decoded here (already built, via photosuite-io).
+photosuite-codecs = { workspace = true }
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+photosuite-raster = { workspace = true }
+photosuite-doc = { workspace = true }
+photosuite-compose = { workspace = true }
+photosuite-gpu = { workspace = true }
+photosuite-engine = { workspace = true }
+photosuite-plugins = { workspace = true }
+photosuite-algo = { workspace = true }
+photosuite-text = { workspace = true }
+photosuite-vector = { workspace = true }
+egui = { workspace = true }
+egui_extras = { version = "0.36", default-features = false, features = ["svg"] }
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+base64 = "0.22"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = { workspace = true }
+
+[dev-dependencies]
+egui_kittest = { workspace = true, features = ["wgpu", "snapshot", "eframe"] }
+# Only for examples/snapshot.rs (offscreen UI renders of real files).
+photosuite-io = { workspace = true }
+# Only for examples/interactive_bench.rs (JPEG encode, .pcraft saves).
+photosuite-codecs = { workspace = true }
+photosuite-format = { workspace = true }
+# Benchmark helpers for the `--json` benches `cargo xtask perf` runs (in-process RSS, percentiles).
+photosuite-testkit = { workspace = true }

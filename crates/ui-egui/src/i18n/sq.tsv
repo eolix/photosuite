@@ -1,0 +1,1951 @@
+# Shqip (sq) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# Shqip translations for PhotoSuite UI.
+
+	File	Skedar
+	Edit	Redakto
+	Image	Foto
+	Layer	Shtresa
+	Type	Lloji
+	Select	Përzgjidh
+	Filter	Filtrues
+	View	Pamja
+	Window	Dritarja
+	Help	Ndihme
+	(coming soon)	(se shpejti)
+	New…	E Re…
+	Open…	Hape…
+	Open As…	Hap si…
+	Open Recent	Hap të fundit
+	Clear Recent Files	Pastro skedarët e fundit
+	Clear history	Pastro historikun
+	Close	Mbyll
+	Close All	Mbyll të gjitha
+	Close Others	Mbyll të tjerët
+	Save	Ruaje
+	Save As…	Ruaj si…
+	Save a Copy…	Ruaj një kopje…
+	Revert	Kthehu
+	Export	Eksporto
+	Quick Export as PNG	Eksporto i shpejtë si PNG
+	Export As…	Eksporto Si…
+	Export Preferences…	Eksporto Preferencat…
+	Save for Web (Legacy)…	Ruaj për ueb (të trashëguar)…
+	Artboards to Files…	Tabelat artistike te skedarët…
+	Artboards to PDF…	Tabelat artistike në PDF…
+	Layers to Files…	Shtresat në skedarë…
+	Layer Comps to Files…	Shtresa e komponimit te skedarët…
+	Color Lookup Tables…	Tabelat e kërkimit të ngjyrave…
+	Data Sets as Files…	Grupet e të dhënave si skedarë…
+	Paths to Illustrator…	Rrugët drejt Illustratorit…
+	Render Video…	Paraqit videon…
+	Generate	Gjeneroni
+	Image Assets	Asetet e imazhit
+	Place Embedded…	Vendi i ngulitur…
+	Place Linked…	Vendi i lidhur…
+	Package…	Paketa…
+	Automate	Automatizimi
+	Batch…	Grup…
+	Create Droplet…	Krijo Droplet…
+	Crop and Straighten Photos	Pritini dhe Drejtoni fotot
+	Contact Sheet II…	Fleta e Kontaktit II…
+	Conditional Mode Change…	Ndryshimi i modalitetit të kushtëzuar…
+	Fit Image…	Përshtat imazhin…
+	Lens Correction…	Korrigjo Lenten…
+	Merge to HDR Pro…	Bashkohu me HDR Pro…
+	Photomerge…	Fotobashkimi…
+	Scripts	Skriptet
+	Image Processor…	Përpunuesi i imazhit…
+	Delete All Empty Layers	Fshini të gjitha shtresat boshe
+	Flatten All Layer Effects	Rrafshoni të gjitha efektet e shtresave
+	Flatten All Masks	Rrafshoni të gjitha maskat
+	Script Events Manager…	Menaxheri i ngjarjeve të skriptit…
+	Import	Importi
+	Browse…	Shfleto…
+	Reveal in Finder	Reveal në Finder
+	File Info…	Informacion i skedarit…
+	Print…	Print…
+	Print One Copy	Printoni një kopje
+	Exit	Dil
+	Undo	Zhbër
+	Redo	Ribëje
+	Toggle Last State	Ndrysho gjendjen e fundit
+	Fade…	Zhduket…
+	Cut	Preje
+	Copy	Kopjo
+	Copy Merged	Kopjo së bashku
+	Paste	Hidhe
+	Paste Special	Paste Speciale
+	Paste in Place	Ngjit në vend
+	Paste Into	Ngjitni në
+	Paste Outside	Ngjit jashtë
+	Paste Lorem Ipsum	Paste Lorem Ipsum
+	Clear	Pastro
+	Search…	Kërko…
+	Check Spelling…	Kontrollo drejtshkrimin…
+	Find and Replace Text…	Gjeni dhe zëvendësoni tekstin…
+	Fill…	Mbush…
+	Stroke…	Ramja…
+	Content-Aware Fill…	Plotësimi i vetëdijshëm për përmbajtjen…
+	Content-Aware Scale	Shkallëzim i ndërgjegjshëm për përmbajtjen
+	Puppet Warp	Deformim kukulle
+	Perspective Warp	Perspektivë Warp
+	Free Transform	Transformimi Lirë
+	Transform	Transformo
+	Again	Përsëri
+	Scale	Shkalla
+	Rotate	Rrotullo
+	Skew	I anuar
+	Distort	Shtrembërim
+	Perspective	Perspektive
+	Warp	Deformo
+	Flip Horizontal	Rrokullisje horizontale
+	Flip Vertical	Ktheje vertikale
+	Rotate 180°	Rrotulloni 180°
+	Rotate 90° Clockwise	Rrotulloni 90° në drejtim të akrepave të orës
+	Rotate 90° Counter Clockwise	Rrotulloni 90° në drejtim të kundërt të akrepave të orës
+	180°	180°
+	90° Clockwise	90° në drejtim të akrepave të orës
+	90° Counter Clockwise	90° në drejtim të kundërt të akrepave të orës
+	Arbitrary…	Arbitrarë…
+	Auto-Align Layers…	Lidhja automatike e shtresave…
+	Auto-Blend Layers…	Përzierja automatike e shtresave…
+	Define Brush Preset…	Përcaktoni paracaktimin e furçës…
+	Define Pattern…	Përcaktoni modelin…
+	Define Custom Shape…	Përcaktoni formën e personalizuar…
+	Purge	Pastrimi
+	Clipboard	Clipboard
+	Histories	Historitë
+	Video Cache	Cache video
+	All	Të Gjitha
+	Presets	Paracaktimet
+	Preset Manager…	Menaxheri i paracaktuar…
+	Migrate Presets	Migrimi i paravendosjeve
+	Export/Import Presets…	Eksporto/Importo paracaktimet…
+	Color Settings…	Cilësimet e ngjyrave…
+	Assign Profile…	Cakto profilin…
+	Convert to Profile…	Konverto në profil…
+	Keyboard Shortcuts…	Kombinimet e Tastieres…
+	Menus…	Menytë…
+	Toolbar…	Shiriti i veglave…
+	Preferences	Parapëlqimet
+	General…	Të përgjithshme…
+	Interface…	Ndërfaqja…
+	Workspace…	Hapësira e punës…
+	Tools…	Veglat…
+	History Log…	Regjistri i historisë…
+	File Handling…	Trajtimi i skedarëve…
+	Export…	Eksporto…
+	Performance…	Performanca…
+	Scratch Disks…	Disqet gërvishtëse…
+	Cursors…	Kursorët…
+	Transparency & Gamut…	Transparenca dhe gamë…
+	Units & Rulers…	Njësitë & Rregullat…
+	Guides, Grid & Slices…	Udhëzuesit, Rrjeta & Fetat…
+	Plug-ins…	Shtojcat…
+	Type…	Lloji…
+	Enhanced Controls…	Kontrollet e përmirësuara…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	Parazgjedhjet e papërpunuara…
+	Integrations…	Integrimet…
+	AI Integrations…	Integrimet e AI…
+	Install Plug-in…	Instalo plug-in-in…
+	Language Options	Opsionet e gjuhës
+	Settings…	Cilësimet…
+	Mode	Mënyra
+	Bitmap	Bitmap
+	Grayscale	Grayscale
+	Duotone	Duoton
+	Indexed Color	Ngjyra e indeksuar
+	RGB Color	Ngjyra RGB
+	CMYK Color	Ngjyra CMYK
+	Lab Color	Ngjyra e laboratorit
+	Multichannel	Shumëkanalësh
+	8 Bits/Channel	8 Bit/Kanal
+	16 Bits/Channel	16 Bit/Kanal
+	32 Bits/Channel	32 Bit/Kanal
+	Color Table…	Tabela me ngjyra…
+	Bitmap…	Bitmap…
+	Duotone…	Duoton…
+	Indexed Color…	Ngjyra e indeksuar…
+	Adjustments	Përshtatjet
+	Brightness/Contrast…	Shkëlqimi/Kontrasti…
+	Levels…	Nivelet…
+	Curves…	Lakoret…
+	Exposure…	Ekspozimi…
+	Vibrance…	Dinamika…
+	Hue/Saturation…	Toni/Përzierja…
+	Color Balance…	Ekuilibri i Ngjyrave…
+	Black & White…	Bardh & Zi…
+	Photo Filter…	Foto Filtruesi…
+	Channel Mixer…	Përzierës Ngjyrash…
+	Color Lookup…	Kërkues Ngjyrash…
+	Invert	Anasjelltas
+	Posterize…	Posterizoni…
+	Threshold…	Pragu…
+	Gradient Map…	Harta Gradient…
+	Selective Color…	Ngjyrë e Përzgjedhur…
+	Shadows/Highlights…	Hijet/Pikat kryesore…
+	HDR Toning…	Tonifikimi HDR…
+	Desaturate	Zbrazje
+	Match Color…	Përputhni ngjyrën…
+	Replace Color…	Zevendeso Ngjyren…
+	Equalize	barazojnë
+	Auto Tone	Ton automatik
+	Auto Contrast	Auto Kontrast
+	Auto Color	Auto Ngjyre
+	Image Size…	Madhësia fotos…
+	Canvas Size…	Madhësia kanavacë…
+	Image Rotation	Rrotullimi i imazhit
+	Flip Canvas Horizontal	Kthejeni kanavacën horizontale
+	Flip Canvas Vertical	Kthejeni kanavacën vertikale
+	Crop	Preje
+	Trim…	Zvogëlim…
+	Reveal All	Zbulo të gjitha
+	Duplicate…	Dyfisho…
+	Apply Image…	Apliko imazhin…
+	Calculations…	Llogaritjet…
+	Variables	Variablat
+	Define…	Përcaktoni…
+	Data Sets…	Kompletet e të dhënave…
+	Apply Data Set…	Aplikoni grupin e të dhënave…
+	Variable Data Sets…	Komplete të dhënash të ndryshueshme…
+	Trap…	Kurth…
+	Analysis	Analiza
+	Set Measurement Scale…	Cakto shkallën e matjes…
+	Select Data Points…	Zgjidh pikat e të dhënave…
+	Record Measurements	Regjistroni Matjet
+	Ruler Tool	Vegla vizore
+	Count Tool	Mjeti i numërimit
+	Place Scale Marker…	Shënuesi i shkallës së vendit…
+	Custom…	Përzgjedhur…
+	New	E Re
+	Layer…	Shtresa…
+	Group…	Grupi…
+	Group from Layers…	Grupi nga Shtresat…
+	Artboard…	Tabela e artit…
+	Artboard from Group…	Artboard nga Grupi…
+	Artboard from Layers…	Tabela artistike nga shtresat…
+	Layer via Copy	Shtresë përmes Kopjimit
+	Layer via Cut	Shtresë përmes prerjes
+	Layer From Background…	Shtresa nga sfondi…
+	Layer from Background…	Shtresa nga sfondi…
+	New Shape Layer	Shtresa e re e formës
+	New Type Layer	Shtresa e tipit të ri
+	New Fill Layer	Shtresë e Re Mbushjeje
+	New Adjustment Layer	Shtresë e Re e Përshtatjes
+	New Layer Based Slice	Fetë e Re me bazë Shtrese
+	New Smart Object via Copy	Objekti i ri inteligjent përmes kopjimit
+	New Blank Video Layer	Shtresa e re e zbrazët e videos
+	New Video Layer from File…	Shtresa e re e videos nga skedari…
+	Duplicate Layer…	Dyfisho shtresën…
+	Delete Layer	Grise Shtresën
+	Delete	Grise
+	Rename Layer	Riemërtoni shtresën
+	Create Layer	Krijo një shtresë
+	Layer Style	Stili i Shtresës
+	Blending Options…	Mundësitë e Përzierjes…
+	Bevel & Emboss…	Bevel & Reliev…
+	Inner Shadow…	Hije e Brendshme…
+	Inner Glow…	Shkëlqimi Brendshëm…
+	Satin…	Saten…
+	Color Overlay…	Mbulimi Ngjyrës…
+	Gradient Overlay…	Mbulesa e Gradientit…
+	Pattern Overlay…	Mbulesa Mostrës…
+	Outer Glow…	Shkëlqimi Jashtëm…
+	Drop Shadow…	Shto Hije…
+	Copy Layer Style	Stili i shtresës së kopjimit
+	Paste Layer Style	Stili i shtresës së ngjitjes
+	Clear Layer Style	Stili i qartë i shtresës
+	Global Light…	Drita Globale…
+	Hide All Effects	Fshih të gjitha efektet
+	Scale Effects…	Efektet e shkallës…
+	Smart Filter	Filtri i zgjuar
+	Convert for Smart Filters	Konvertoni për filtra inteligjentë
+	Clear Smart Filters	Pastro Filtruesit e Mençur
+	Disable Smart Filters	Pamundëso Filtruesit e Mençur
+	Delete Filter Mask	Grise Maskën Filtruese
+	Disable Filter Mask	Pamundëso Maskë Filtrimi
+	Solid Color…	Ngjyra të forta…
+	Gradient…	Rrjedha Ngjyrës…
+	Pattern…	Mostra…
+	Layer Mask	Maska me shtresa
+	Vector Mask	Maska e Vektorit
+	Reveal Selection	Zbulo përzgjedhjen
+	Hide Selection	Fshih përzgjedhjen
+	Hide All	Fshih të gjitha
+	From Transparency	Nga transparenca
+	Delete Vector Mask	Grise Maskën Vektoriale
+	Enable Layer Mask	Aktivizo maskën e shtresës
+	Disable Layer Mask	Çaktivizo maskën e shtresës
+	Enable Vector Mask	Mundëso Maskën Vektoriale
+	Link Layer Mask	Maska e shtresës së lidhjes
+	Unlink Layer Mask	Shkëputni maskën e shtresës
+	Link Vector Mask	Lidhe Maskën Vektoriale
+	Add Vector Mask	Shto Maskë Vektoriale
+	Vector Mask from Current Path	Maska vektoriale nga rruga aktuale
+	Create Clipping Mask	Krijo maskë prerëse
+	Release Clipping Mask	Lëshimi i maskës së prerjes
+	Smart Objects	Objekte të zgjuara
+	Smart Object	Objekti i zgjuar
+	Convert to Smart Object	E konverto në Objekt të Mençur
+	Convert to Embedded	Konverto në Embedded
+	Convert to Linked…	Konverto në të lidhur…
+	Edit Contents	Ndrysho përmbajtjen
+	Replace Contents…	Zëvendësoni përmbajtjen…
+	Relink to File…	Rilidhni te skedari…
+	Export Contents…	Eksporto përmbajtjet…
+	Update Modified Content	Përditëso përmbajtjen e modifikuar
+	Update All Modified Content	Përditëso të gjithë përmbajtjen e modifikuar
+	Stack Mode	Mënyra e stivës
+	Entropy	Entropia
+	Kurtosis	Kurtoza
+	Maximum	Maksimumi
+	Mean	Mesatarja
+	Median	Mesatarja
+	Minimum	Minimumi
+	Range	Domeni
+	Skewness	Shtrirje
+	Standard Deviation	Devijimi standard
+	Summation	Përmbledhja
+	Variance	Varianca
+	Video Layers	Shtresat e videos
+	Interpret Footage…	Interpretoni pamjet…
+	Replace Footage…	Zëvendësoni pamjet…
+	Reload Frame	Rifresko kornizën
+	Show Altered Video	Shfaq videon e ndryshuar
+	Restore Frame	Rivendos kornizën
+	Restore All Frames	Rivendos të gjitha kornizat
+	Insert Blank Frame	Fut kornizën boshe
+	Delete Frame	Fshi Kornizën
+	Duplicate Frame	Kornizë e dyfishtë
+	Frame from Layers	Kornizë nga shtresat
+	Video Frames to Layers…	Kornizat e videos në shtresa…
+	Rasterize	Rasterize
+	Rasterize Type	Rasterize Lloji
+	Rasterize Type Layer	Rasterize Lloji Layer
+	Rasterize Shape	Rasterize Shape
+	New Guide Layout…	Struktura e re e udhëzuesit…
+	New Guides From Shape	Udhëzues të rinj nga forma
+	Lock Layers…	Mbyllni shtresat…
+	Link Layers	Lidh Shtresat
+	Select Linked Layers	Zgjidhni Shtresat e Lidhura
+	Merge Layers	Bashko Shtresat
+	Merge Down	Bashko Poshtë
+	Merge Visible	Bashko të dukshmet
+	Flatten Image	Rrafsho imazhin
+	Matting	Mating
+	Color Decontaminate…	Dekontaminimi i ngjyrave…
+	Remove Black Matte	Hiq Black Matte
+	Remove White Matte	Hiq White Matte
+	Defringe…	Shtyje…
+	Group Layers	Grupo Shtresat
+	Ungroup Layers	Zhgruponi shtresat
+	Hide Layers	Fshih shtresat
+	Arrange	Rendit
+	Bring to Front	Sill ne Fillim
+	Bring Forward	Sill Perpara
+	Send Backward	Co Mbrapa
+	Send to Back	Co ne Fund
+	Reverse	E Kundërta
+	Combine Shapes	Kombinoni forma
+	Unite Shapes	Bashkoni forma
+	Subtract Front Shape	Zbrisni formën e përparme
+	Intersect Shape Areas	Zonat e formës së kryqëzuar
+	Exclude Overlapping Shapes	Përjashtoni format e mbivendosura
+	Merge Shape Components	Bashkoni komponentët e formës
+	Align	Rreshtoni
+	Top Edges	Skajet e sipërme
+	Vertical Centers	Qendrat vertikale
+	Bottom Edges	Skajet e poshtme
+	Left Edges	Skajet e majta
+	Horizontal Centers	Qendrat horizontale
+	Right Edges	Skajet e djathta
+	Distribute	Shpërndani
+	Vertically	Vertikalisht
+	Horizontally	Horizontalisht
+	Layer Edges	Skajet e shtresave
+	Isolate Layers	Izoloni shtresat
+	Layer Content Options…	Opsionet e përmbajtjes së shtresës…
+	Fill Content	Plotësoni përmbajtjen
+	Deselect Layers	Çzgjidhni shtresat
+	Find Layers	Gjeni Shtresat
+	Layer Comps	Kompozime Shtresash
+	Layers	Shtresat
+	All Layers	Të gjitha shtresat
+	Hidden Layers	Shtresat e Fshehura
+	Mask All Objects	Maska të gjitha objektet
+	Subject	Subjekti
+	Sky	Qielli
+	Panels	Panele
+	Character Panel	Paneli i personazheve
+	Paragraph Panel	Paneli i paragrafit
+	Character Styles Panel	Paneli i stileve të personazheve
+	Paragraph Styles Panel	Paneli i stileve të paragrafit
+	Glyphs Panel	Paneli i glifeve
+	Anti-Alias	Zbutje skajesh
+	Sharp	I mprehtë
+	Crisp	E freskët
+	Strong	I forte
+	Smooth	Zbut
+	Windows LCD	Windows LCD
+	Windows	Dritaret
+	Orientation	Orientimi
+	Horizontal	Horizontale
+	Vertical	Vertikal
+	OpenType	OpenType
+	Standard Ligatures	Ligaturat standarde
+	Contextual Alternates	Alternativat kontekstuale
+	Discretionary Ligatures	Ligaturat diskrecionale
+	Swash	Swash
+	Oldstyle	Oldstyle
+	Stylistic Alternates	Alternativa stilistike
+	Titling Alternates	Alternativat e titullit
+	Ornaments	Ornamentet
+	Ordinals	Ordinalet
+	Fractions	Thyesat
+	Create Work Path	Krijo rrugën e punës
+	Convert to Shape	E konverto në Formë
+	Warp Text…	Deformoni tekstin…
+	Convert to Point Text	Kthe në tekst pike
+	Convert to Paragraph Text	Kthe në tekst paragrafi
+	Default Features	Karakteristikat e parazgjedhura
+	East Asian Features	Karakteristikat e Azisë Lindore
+	Middle Eastern Features	Karakteristikat e Lindjes së Mesme
+	Middle Eastern & South Asian Composer	Kompozitor i Lindjes së Mesme dhe Azisë Jugore
+	Update All Text Layers	Përditësoni të gjitha shtresat e tekstit
+	Replace All Missing Fonts	Zëvendësoni të gjitha fontet që mungojnë
+	Resolve Missing Fonts…	Zgjidhja e shkronjave që mungojnë…
+	Font Preview Size	Madhësia e pamjes paraprake të shkronjave
+	None	Asnjë
+	Small	E vogël
+	Medium	E mesme
+	Large	E madhe
+	Extra Large	Extra Large
+	Huge	I madh
+	Load Default Type Styles	Ngarko stilet e tipit të parazgjedhur
+	Save Default Type Styles	Ruani stilet e tipit të paracaktuar
+	Deselect	Ç'selekto
+	Reselect	Rizgjidh
+	Inverse	Anasjelltas
+	Inverse Selection	Zgjedhja e anasjelltë
+	Similar	Të ngjashme
+	Color Range…	Gama e Ngjyrave…
+	Focus Area…	Zona e fokusimit…
+	Select and Mask…	Zgjidh dhe masko…
+	Modify	Ndrysho
+	Border…	Kufiri…
+	Smooth…	Zbut…
+	Expand…	Zgjero…
+	Contract…	Zvogëlim…
+	Feather…	Pendë…
+	Grow	Rriten
+	Transform Selection	Transformo Selektimin
+	Edit in Quick Mask Mode	Modifiko në modalitetin e maskës së shpejtë
+	Load Selection…	Ngarko përzgjedhjen…
+	Save Selection…	Ruaj përzgjedhjen…
+	Match All	Përputhen me të gjitha
+	Last Filter	Filtri i Fundit
+	Filter Gallery…	Galeria Filtruese…
+	Adaptive Wide Angle…	Me kënd të gjerë përshtatës…
+	Camera Raw Filter…	Filtri i papërpunuar i kamerës…
+	Liquify…	Likuifiko…
+	Vanishing Point…	Pika e zhdukjes…
+	Blur	Turbull
+	Blur Gallery	Galeria Blur
+	Field Blur…	Turbullimi i fushës…
+	Iris Blur…	Iris Blur…
+	Tilt-Shift…	Tilt-Shift…
+	Path Blur…	Rruga e turbullt…
+	Spin Blur…	Turbullimi i turbullimit…
+	Blur More	Turbullo më shumë
+	Box Blur…	Turbullo kuti…
+	Gaussian Blur…	Mjegullim Gausian…
+	Lens Blur…	Mjegullim Objektivi…
+	Motion Blur…	Mjegullim Lëvizës…
+	Radial Blur…	Mjegullim Rrezor…
+	Shape Blur…	Turbullimi i formës…
+	Smart Blur…	Turbullimi inteligjent…
+	Surface Blur…	Mjegullimi Sipërfaqes…
+	Average	Mesatare
+	Displace…	Displanco…
+	Pinch…	Zmadho…
+	Polar Coordinates…	Koordinata Polare…
+	Ripple…	Valezo…
+	Shear…	Prit…
+	Spherize…	Sferizo…
+	Twirl…	Rrotulloje ne Spirale…
+	Wave…	Vale…
+	ZigZag…	ZigZag…
+	Noise	Zhurmimi
+	Add Noise…	Shto Zhurmë…
+	Despeckle	Largimi Pengimit
+	Dust & Scratches…	Pluhur & Gërvishtje…
+	Median…	Mesatarja…
+	Reduce Noise…	Zvogëlo Zhurmën…
+	Pixelate	Pikselim
+	Color Halftone…	Ngjyra Gjysmëton…
+	Crystallize…	Kristalizoni…
+	Facet	Aspekti
+	Fragment	Fragmento
+	Mezzotint…	Mezotint…
+	Mosaic…	Mozaik…
+	Pointillize…	Pointillize…
+	Render	Suvatim
+	Clouds	Retë
+	Difference Clouds	Diferenco Rete
+	Fibers…	Fibrat…
+	Flame…	Flaka…
+	Lens Flare…	Shkëlqim thjerrëze…
+	Lighting Effects…	Efektet e ndriçimit…
+	Picture Frame…	Korniza e fotografisë…
+	Tree…	Pema…
+	Sharpen	Theksimi
+	Sharpen Edges	Thekso Qoshet
+	Sharpen More	Thekso më shumë
+	Smart Sharpen…	Theksimi i Mençur…
+	Unsharp Mask…	Maska e patheksuar…
+	High Pass…	Lartësia…
+	Stylize	Stilizoni
+	Diffuse…	Shpërndaj…
+	Emboss…	Stampim…
+	Extrude…	Ekstrudoni…
+	Find Edges	Gjej Qoshet
+	Oil Paint…	Bojë vaji…
+	Solarize	Solarize
+	Tiles…	Pllakat…
+	Trace Contour…	Gjurma e konturit…
+	Wind…	Era…
+	Video	Video
+	De-Interlace…	De-gërshetoni…
+	NTSC Colors	Ngjyrat NTSC
+	Other	Tjera
+	Maximum…	Maksimumi…
+	Minimum…	Minimumi…
+	Offset…	Menjanimi…
+	Plug-ins	Plug-in
+	Proof Setup	Konfigurimi i provës
+	Proof Colors	Ngjyrat prova
+	Gamut Warning	Paralajmërim i gamës
+	Working CMYK	CMYK që punon
+	Working Cyan Plate	Pllakë Cyan Punuese
+	Working Magenta Plate	Pllakë e purpurt e punës
+	Working Yellow Plate	Pllakë e verdhë pune
+	Working Black Plate	Pllakë e zezë pune
+	Working CMY Plate	Pllakë pune CMY
+	Legacy Macintosh RGB	Macintosh RGB i trashëguar
+	Internet Standard RGB	Internet Standard RGB
+	Monitor RGB	Monitor RGB
+	Color Blindness — Protanopia-type	Verbëria e ngjyrave - e tipit Protanopia
+	Color Blindness — Deuteranopia-type	Verbëria e ngjyrave - tip Deuteranopia
+	Zoom In	Zmadho
+	Zoom Out	Zvoglo
+	Fit on Screen	Përshtatet në ekran
+	Fit Layer(s) on Screen	Përshtatni shtresat në ekran
+	Fit Artboard on Screen	Përshtatni tabelën artistike në ekran
+	100%	100%
+	200%	200%
+	Print Size	Madhësia e printimit
+	Pixel Aspect Ratio	Raporti i pamjes së pikselit
+	Pixel Aspect Ratio Correction	Korrigjimi i raportit të aspektit të pikselit
+	Custom Pixel Aspect Ratio…	Raporti i personalizuar i pamjes së pikselit…
+	Square	Katror
+	D1/DV NTSC (0.91)	D1/DV NTSC (0,91)
+	D1/DV NTSC Widescreen (1.21)	D1/DV NTSC Ekran i gjerë (1.21)
+	D1/DV PAL (1.09)	D1/DV PAL (1.09)
+	D1/DV PAL Widescreen (1.46)	D1/DV PAL Ekran i gjerë (1.46)
+	Anamorphic 2:1 (2)	Anamorfik 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080/DVCPRO HD 720 (1.33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080/HDV 1080 (1.5)
+	32-bit Preview Options…	Opsionet e pamjes paraprake 32-bit…
+	Screen Mode	Modaliteti i ekranit
+	Standard Screen Mode	Modaliteti standard i ekranit
+	Full Screen Mode With Menu Bar	Modaliteti i ekranit të plotë me shiritin e menysë
+	Full Screen Mode	Modaliteti i ekranit të plotë
+	Cycle Screen Mode	Modaliteti i ekranit të ciklit
+	Show	Shfaq
+	Extras	Shtesa
+	Selection Edges	Skajet e përzgjedhjes
+	Target Path	Rruga e synuar
+	Current Path	Rruga aktuale
+	Grid	Rrjeta
+	Guides	Udhëzuesi
+	Canvas Guides	Udhëzues për kanavacë
+	Artboard Guides	Udhëzues Artboard
+	Count	Numrimi
+	Smart Guides	Udhëzues inteligjentë
+	Slices	Feta
+	Notes	Shënime
+	Pixel Grid	Rrjeti i Pikselëve
+	Pixel Art	Pixel Art
+	Pixel Art Preview	Pamja paraprake e Pixel Art
+	Pattern Preview	Pamja paraprake e modelit
+	Brush Preview	Pamja paraprake e furçës
+	Mesh	Rrjetë
+	Edit Pins	Redakto kunjat
+	Document Bounds	Kufizimet e dokumenteve
+	Show Extras Options…	Shfaq opsionet shtesë…
+	Rulers	Rregullat
+	Snap	Kapje
+	Snap To	Kapja Tek
+	Lock Guides	Udhëzuesit e kyçjes
+	Clear Guides	Pastro udhëzuesit
+	Clear Selected Artboard Guides	Pastro udhëzuesit e zgjedhur të tabelës artistike
+	Clear Canvas Guides	Pastro udhëzuesit e kanavacës
+	New Guide…	Udhëzues i ri…
+	Lock Slices	Lock Feta
+	Clear Slices	Feta të qarta
+	Match Zoom	Match Zoom
+	Match Location	Vendndodhja e ndeshjes
+	Match Rotation	Rrotullimi i ndeshjes
+	Cascade	Kaskada
+	Tile	Pllakë
+	Tile All Horizontally	Pllakë të gjitha horizontalisht
+	Tile All Vertically	Pllakë të gjitha vertikalisht
+	2-up Horizontal	2-lart Horizontal
+	2-up Vertical	2-lart Vertikale
+	3-up Horizontal	3-lart Horizontal
+	3-up Stacked	3-up Stacked
+	3-up Vertical	3-lart Vertikale
+	4-up	4-lart
+	6-up	6-lart
+	Consolidate All to Tabs	Konsolidoni të gjitha në skeda
+	Float in Window	Float në dritare
+	Float All in Windows	Float të gjitha në Windows
+	New Window for Document	Dritare e re për dokument
+	Workspace	Hapësira e punës
+	Essentials	Esencialet
+	Graphic and Web	Grafike dhe Web
+	Painting	Pikturë
+	Photography	Fotografia
+	New Workspace…	Hapësirë e re pune…
+	Delete Workspace…	Fshi hapësirën e punës…
+	Reset Workspace	Rivendos hapësirën e punës
+	Lock Workspace	Blloko hapësirën e punës
+	Theme	Motivi
+	Pro Theme	Tema Pro
+	Pro Medium Gray Theme	Tema Pro Mesatare Gri
+	Studio Theme	Tema e Studios
+	Studio Light Theme	Tema e dritës në studio
+	Classic Theme	Tema klasike
+	Next Theme	Tema tjetër
+	Midnight	Mesnata
+	Anthracite	Antraciti
+	Slate	Slate
+	Pearl	Perla
+	Aubergine	Patëllxhani
+	Ocean	Oqeani
+	Actions	Veprime
+	Brush Settings	Cilësimet e furçës
+	Brushes	Furçat
+	Channels	Kanalet
+	Character	arabic
+	Character Styles	Stilet e personazheve
+	Clone Source	Burimi i klonit
+	Color	Ngjyra
+	Glyphs	Glife
+	Gradients	Gradientët
+	Histogram	Histogram
+	History	Historia
+	Info	Informacion
+	Measurement Log	Regjistri i matjeve
+	Modifier Keys	Çelësat e modifikuesve
+	Navigator	Navigator
+	Options	Opsionet
+	Paragraph	Paragrafi
+	Paragraph Styles	Stilet e paragrafit
+	Paths	Rrugët
+	Patterns	Modelet
+	Properties	Vetitë
+	Shapes	Format
+	Styles	Stilet
+	Swatches	Galeria e Ngjyrave
+	Timeline	Afati kohor
+	Tool Presets	Paracaktimet e mjeteve
+	Tools	Veglat
+	About PhotoSuite	Rreth PhotoSuite
+	Website	Faqja e internetit
+	Report an Issue…	Raportoni një problem…
+	WIA Support…	Mbështetja WIA…
+	Apply	Vendos
+	HSB/HSL	HSB/HSL
+	Invert…	Anasjelltas…
+	Load Files into Stack…	Ngarko skedarët në Stack…
+	Motion	Lëvizja
+	Notes…	Shënime…
+	Other…	Tjera…
+	Remove Warp Split	Hiq Warp Split
+	Shape	Forma
+	Split Warp Crosswise	Split Warp në mënyrë të kryqëzuar
+	Split Warp Horizontally	Ndarja e shtrembërimit horizontalisht
+	Split Warp Vertically	Ndarja e shtrembërimit vertikalisht
+	Statistics…	Statistikat…
+@plural	{n} item|{n} items	{n} artikull|{n} artikuj
+	Auto	Auto
+	(print to the printer)	(printoni në printer)
+	+ Add variable	+ Shto variabël
+	30 frames @ 30 fps	30 korniza @ 30 fps
+	3D LUT File	Skedari 3D LUT
+	Absolute	Absolut
+	Absolute Colorimetric	Kolorimetrike absolute
+	Action	Veprimi
+	Adaptive	Përshtatshëm
+	Adaptive Wide Angle isn't open	Këndi i gjerë adaptiv nuk është i hapur
+	Add	Shtoni
+	Add Layer Mask	Shtoni maskën e shtresave
+	Add Stop	Shto Stop
+	Add a layer style	Shtoni një stil shtresash
+	Add a mask  (from the selection; {key} inverts)	Shto një maskë (nga përzgjedhja; {key} përmbys)
+	Add an adjustment	Shto një rregullim
+	Add disk	Shto disk
+	Add space after paragraph	Shtoni hapësirë pas paragrafit
+	Add space before paragraph	Shtoni hapësirë para paragrafit
+	Add to Sample	Shto te mostra
+	Add to selection  ({key})	Shto në përzgjedhje ({key})
+	Adjust for Zoom	Rregullo për zmadhimin
+	Adjustment visible	Rregullimi i dukshëm
+	Adobe RGB (1998) compatible	E përputhshme me Adobe RGB (1998)
+	Align and Distribute	Rreshtoni dhe shpërndani
+	Align and distribute	Rreshtoni dhe shpërndani
+	Align horizontal centers	Rreshtoni qendrat horizontale
+	Align left edges	Ofro Këndet Majtas
+	Align right edges	Ofro Këndet Djathtas
+	Aligned	Rradhitur
+	All Caps	Të gjitha Kapelet
+	All Slices	Të gjitha fetat
+	All User Slices	Të gjitha pjesët e përdoruesve
+	All shortcuts reset to Photoshop defaults.	Të gjitha shkurtoret rivendosen në standardet e Photoshop-it
+	Alt	Alt
+	Always use pressure for opacity	Përdorni gjithmonë presionin për errësirë
+	Always use pressure for size	Përdorni gjithmonë presionin për madhësinë
+	Amount	Sasia
+	Anchor:	Spiranca:
+	Angle	Këndi
+	Angle Gradient	Gradient këndor
+	Angle Jitter	Luhatja Këndit
+	Answer the unsaved-changes prompt first	Përgjigjuni fillimisht kërkesës së ndryshimeve të paruajtura
+	Anti-alias	Zbutje skajesh
+	Appearance	Pamja e jashtme
+	Appearance (Layer Style)	Pamja (Stili i shtresës)
+	Apply Layer Mask	Aplikoni maskën me shtresa
+	Apply Per Tip	Aplikoni sipas këshillës
+	Apply next selected layer comp	Aplikoni përpilimin e shtresës tjetër të zgjedhur
+	Apply previous selected layer comp	Aplikoni përpilimin e shtresës së mëparshme të zgjedhur
+	Artboard	Tabela e artit
+	Artboard Background Color	Ngjyra e sfondit të tabelës artistike
+	Assign working space	Caktoni hapësirën e punës
+	Author:	Autori:
+	Auto Hide	Fshih automatikisht
+	Auto-Select:	Zgjedhja automatike:
+	Automatically level near-horizontal line segments	Niveloni automatikisht segmentet e vijës afër horizontale
+	Automatically straighten and level	Drejtoni dhe niveloni automatikisht
+	Automatically straighten near-vertical line segments	Drejtoni automatikisht segmentet e vijës afër vertikale
+	Background	Prapavija
+	Background Color	Ngjyra e sfondit
+	Background Contents	Përmbajtja e sfondit
+	Balance	Bilanci
+	Baseline	Baza bazë
+	Baseline shift	Ndryshimi Bazës
+	Basic	bazë
+	Before (Y)	Përpara (Y)
+	Begin recording	Filloni regjistrimin
+	Bend:	Përkulje:
+	Bicubic	Bikubik
+	Bicubic (smooth gradients)	Bikubik (gradientë të qetë)
+	Bilinear	Bilinear
+	Black	E Zeze
+	Black & White	Bardh & Zi
+	Black Point Compensation	Kompensimi i pikës së zezë
+	Black, White	E zezë, e bardhë
+	Blacks	Zezakët
+	Blending	Përzierja
+	Blending Options	Mundësitë e Përzierjes
+	Blue	E Kaltër
+	Blue, Red, Yellow	Blu, e kuqe, e verdhë
+	Both	te dyja
+	Both Axes	Të dy Akset
+	Bottom	Poshtë
+	Brightness	Ndriçimi
+	Brightness Jitter	Luhatja e ndriçimit
+	Brightness/Contrast	Shkëlqimi/Kontrasti
+	Bring the selected pin forward	Sillni kunjin e zgjedhur përpara
+	Brush Preset picker	Zgjedhësi i paracaktuar i furçës
+	Brush Reconstruct Options	Opsionet e rindërtimit të furçës
+	Brush Tool Options	Opsionet e veglave të furçës
+	Cache Level:	Niveli i memories:
+	Camera Raw isn't open	Camera Raw nuk është i hapur
+	Cancel	Anulo
+	Cancel (Esc)	Anulo (Esc)
+	Cancel any current edits (Esc)	Anulo çdo modifikim aktual (Esc)
+	Cancel current crop operation  (Esc)	Anulo funksionimin aktual të prerjes (Esc)
+	Cancel transform (Esc)	Anulo transformimin (Esc)
+	Cancel warp (Esc)	Anulo deformimin (Esc)
+	Canvas	Kanavacë
+	Canvas extension color:	Ngjyra e zgjatjes së kanavacës:
+	Capture	Kapni
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	Regjistroni dukshmërinë, pozicionin dhe stilin e çdo shtrese me + më poshtë, më pas kaloni midis versioneve
+	Catch-up on Stroke End	Catch-up në Stroke Fund
+	Center	Në Mes
+	Center Crop Marks	Shenjat e prerjes në qendër
+	Center text	Teksti në qendër
+	Change	Ndryshimi
+	Change All	Ndrysho të gjitha
+	Change Screen Mode  (F)	Ndrysho modalitetin e ekranit (F)
+	Change To:	Ndrysho në:
+	Channel Mixer	Përzierës Ngjyrash
+	Channel:	Kanali:
+	Check All Layers	Kontrolloni të gjitha shtresat
+	Check Spelling	Kontrollo drejtshkrimin
+	Clarity	Qartësia
+	Clear All	Pastro të gjitha
+	Clear Override	Pastro anashkalimin
+	Clear Samples	Mostrat e pastra
+	Click sets foreground · right-click sets background	Klikoni vendos në plan të parë · kliko me të djathtën vendos sfondin
+	Click the first point or press {key} to close · Esc cancels	Klikoni pikën e parë ose shtypni {key} për ta mbyllur · Esc anulon
+	Click to add a point · drag off or {key}-click or Delete to remove	Klikoni për të shtuar një pikë · zvarriteni ose {key}-kliko ose Fshi për ta hequr
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	Kliko për të aplikuar, {key}-kliko për të pastruar anulimet, kliko dy herë për Opsionet e stilit
+	Click to edit the gradient	Klikoni për të modifikuar gradientin
+	Click to restore the current colour	Klikoni për të rivendosur ngjyrën aktuale
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	Kliko për të zmadhuar · {key}-kliko për të zmadhuar · zvarrit djathtas/majtas për zmadhimin/zvogëlimin
+	Click with the Note tool to add a note.	Klikoni me mjetin Shënim për të shtuar një shënim
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	Kliko: këndi · Zvarrit: i qetë · Klikoni në pikën e parë: mbyllni · {key} përfundoni · Esc anuloni
+	Clip to layer below	Kapeni në shtresë më poshtë
+	Clipped	E prerë
+	Close Style Options	Mbyllni opsionet e stilit
+	Cmd	Cmd
+	Coated CMYK	CMYK e veshur
+	Color & Swatches	Ngjyra dhe swatch
+	Color Balance	Ekuilibri i Ngjyrave
+	Color Detail	Detaje me ngjyra
+	Color Grading	Klasifikimi i ngjyrave
+	Color Lookup	Kërkues Ngjyrash
+	Color Management	Menaxhimi i ngjyrave
+	Color Mixer	Mikser ngjyrash
+	Color Mode	Modaliteti i ngjyrave
+	Color Priority	Prioriteti i ngjyrave
+	Color Range preview	Pamja paraprake e gamës së ngjyrave
+	Color:	Ngjyra:
+	Colorize	Ngjyros
+	Colors	Ngjyrat
+	Commit Perspective Warp ({key})	Kryeni shtrembërimin e perspektivës ({key})
+	Commit Puppet Warp ({key})	Kryeni shtrembërimin e kukullave ({key})
+	Commit any current edits ({key})	Kryeni çdo modifikim aktual ({key})
+	Commit current crop operation  ({key})	Kryeni operacionin aktual të prerjes ({key})
+	Commit transform ({key})	Kryerja e transformimit ({key})
+	Commit warp ({key})	Kryeni deformimin ({key})
+	Constant	Konstante
+	Constrain proportions	Kufizoni përmasat
+	Contact Sheet II	Fleta e Kontaktit II
+	Content-Aware	I vetëdijshëm për përmbajtjen
+	Contiguous	Vazhdues
+	Contrast	Kontrast
+	Control:	Kontrolli:
+	Convert document's colors to the working space	Konvertoni ngjyrat e dokumentit në hapësirën e punës
+	Convert to sRGB	Konverto në sRGB
+	Copies	Kopjet
+	Copper	Bakri
+	Copyright	E drejta e autorit
+	Copyright and Contact Info	E drejta e autorit dhe informacioni i kontaktit
+	Corner Crop Marks	Shenjat e prerjes së këndit
+	Corner radius	Rrezja e qoshes
+	Correction	Korrigjim
+	Count Jitter	Numri Luhatjeve
+	Create	Krijo
+	Create Droplet	Krijo Droplet
+	Create Texture	Krijo teksturë
+	Create Video Timeline	Krijo kronologjinë e videos
+	Create a new count group	Krijo një grup të ri numërimi
+	Create a new document or open an existing file.	Krijoni një dokument të ri ose hapni një skedar ekzistues
+	Create a new group	Krijo një grup të ri
+	Create a new layer	Krijo një shtresë të re
+	Create new action	Krijo veprim të ri
+	Create new channel	Krijo kanal të ri
+	Create new document from current state	Krijo dokument të ri nga gjendja aktuale
+	Create new fill or adjustment layer	Krijoni një shtresë të re mbushjeje ose rregullimi
+	Create new gradient	Krijo gradient të ri
+	Create new group	Krijo grup të ri
+	Create new layer comp	Krijo komplikacion të një shtrese të re
+	Create new pattern from the selection	Krijo model të ri nga përzgjedhja
+	Create new shape from the current path	Krijo një formë të re nga rruga aktuale
+	Create new snapshot	Krijo një fotografi të re
+	Create new style (from the selected type)	Krijo stil të ri (nga lloji i zgjedhur)
+	Create new style from the selected layer	Krijo stil të ri nga shtresa e zgjedhur
+	Create new tool preset	Krijo një paracaktim të ri të mjetit
+	Crop Factor	Faktori i korrjes
+	Ctrl	Ctrl
+	Current & Below	Kete & Me Poshte
+	Current Layer	Fleta Momentale
+	Current Size	Madhësia aktuale
+	Current Tool Only	Vetëm mjeti aktual
+	Curve	Kurbë
+	Curves	Lakoret
+	Custom	Përzgjedhur
+	Custom Shapes	Forma të personalizuara
+	Cyan	Cyan
+	Cyan  ·  Red	Cyan · E kuqe
+	Darken	Errëso
+	Darks	Errësira
+	Data Sets	Kompletet e të dhënave
+	Default	E paracaktuar
+	Default colours (D)	Ngjyrat e parazgjedhura (D)
+	Default printer	Printeri i parazgjedhur
+	Default restored.	Parazgjedhja u rivendos
+	Define	Përcaktoni
+	Define at least one variable first.	Përcaktoni së pari të paktën një variabël
+	Dehaze	Dehaze
+	Delete Cropped Pixels	Fshi pikselët e prerë
+	Delete Group	Fshi grupin
+	Delete Layer Mask	Fshi maskën e shtresës
+	Delete Layers	Fshi shtresat
+	Delete Shortcut	Fshi shkurtoren
+	Delete Timeline	Fshije kronologjinë
+	Delete Tool Preset	Fshi paracaktimin e veglave
+	Delete count group	Fshi grupin e numërimit
+	Delete current channel	Fshi kanalin aktual
+	Delete current state	Fshi gjendjen aktuale
+	Delete effect layer	Fshi shtresën e efektit
+	Delete layer	Grise Shtresën
+	Delete layer comp	Fshi shtresën komp
+	Delete note	Fshi shënimin
+	Delete selected measurements	Fshi matjet e zgjedhura
+	Delete style	Fshi stilin
+	Delete tool preset	Fshi paracaktimin e mjetit
+	Density	Dendësia
+	Density:	Dendësia:
+	Depth	Thellësia
+	Depth Jitter	Depth Jitter
+	Description	Përshkrimi
+	Deselect All	Çzgjidh të gjitha
+	Detail	Detaji
+	Diamond Gradient	Gradient diamanti
+	Difference	Diferencë
+	Diffusion	Difuzioni
+	Discard the embedded profile (don't color manage)	Hiq profilin e integruar (mos menaxho ngjyrat)
+	Discontiguous	I shkëputur
+	Feedback	Feedback
+	Dismiss	Largoje
+	Display P3	Ekrani P3
+	Display Text	Ekrani Teksti
+	Dither	Dither
+	Divide…	Pjesëto…
+	Document	Dokumenti
+	Don't Save	Mos Ruaj
+	Done	U krye
+	Dots	Pika
+	Drag a rectangle around the object	Tërhiqni një drejtkëndësh rreth objektit
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	Zvarritni imazhin për të shtuar një kufizim; Zhvendosja për horizontale/vertikale; kliko me të djathtën për të fshirë
+	Drag to move the active shape's path or the Work Path	Zvarriteni për të lëvizur shtegun e formës aktive ose shtegun e punës
+	Draw with the Pen tool (P) or make a work path from a selection.	Vizatoni me mjetin Pen (P) ose bëni një shteg pune nga një përzgjedhje
+	Drop an image or PSD anywhere to open it.	Hidhni një imazh ose PSD kudo për ta hapur
+	Duplicate Layers…	Shtresat e dyfishta…
+	Duplicate style	Stili i kopjuar
+	Edit Toolbar…	Redakto shiritin e veglave…
+	Edit in Quick Mask Mode  (Q)	Modifiko në modalitetin e maskës së shpejtë (Q)
+	Edit in Standard Mode  (Q)	Modifiko në modalitetin standard (Q)
+	Effects	Efektet
+	Embed Color Profile	Vendosni profilin e ngjyrave
+	Embedded Profile Mismatch	Mospërputhja e profilit të ngulitur
+	Enable airbrush-style build-up effects	Aktivizo efektet e ndërtimit të stilit të furçave ajrore
+	Enhance Edge	Përmirëso Edge
+	Entire Font	I gjithë fonti
+	Exact	E saktë
+	Expansion:	Zgjerimi:
+	Export Presets	Eksporto paracaktime
+	Export selected measurements (CSV)	Eksporto matjet e zgjedhura (CSV)
+	Exposure	Ekspozimi
+	Exposure and Gamma	Ekspozimi dhe gama
+	Exposure:	Ekspozimi:
+	Eyedropper	Përzgjedhje ngjyrash
+	Factor:	Faktori:
+	Faux Bold	Faux Bold
+	Faux Italic	Faux Italic
+	Feather	Pendë
+	Fewer Points	Më pak Pika
+	File Settings	Cilësimet e skedarit
+	Fill	Mbush
+	Fill:	Plotësoni:
+	Filter for adjustment layers	Filtri për shtresat e rregullimit
+	Filter for pixel layers	Filtri për shtresat e pikselave
+	Filter for shape layers	Filtro për shtresat e formës
+	Filter for smart objects	Filtër për objekte inteligjente
+	Filter for type layers	Filtro për shtresat e tipit
+	Filter:	Filtri:
+	Finger Painting	Pikturë me gishta
+	Fisheye	Syri i peshkut
+	Fit	Përshtatet
+	Fit Screen	Ekrani i përshtatur
+	Fit in View	Përshtatet në pamje
+	Fixed	E rregulluar
+	Fixed Ratio	Raport Fiks
+	Fixed Size	Permase Fikse
+	Flip	Rrokullisje
+	Flip X	Flip X
+	Flip X Jitter	Flip X Jitter
+	Flip Y	Flip Y
+	Flip Y Jitter	Flip Y Jitter
+	Flow	Rrjedha
+	Flow Jitter	Flow Jitter
+	Focal Length	Gjatësia Fokale
+	Font	Shkronjat
+	Font Size:	Madhësia e shkronjave:
+	Font size	Madhësia e shkronjave
+	Foreground	Paravija
+	Foreground to Background	Sfondi i parë në sfond
+	Foreground/Background Jitter	Luhatja në Paravijë/Prapavijë
+	Format	Formati
+	Frame from Layers…	Korniza nga shtresat…
+	Free	Liro
+	Full Spherical	Sferike e plotë
+	Fuzziness:	Paqartësia:
+	GPU	GPU
+	Gamma Correction	Gama Korrigjim
+	Gamma:	Gama:
+	Global	globale
+	Glow Color	Ngjyra e shkëlqimit
+	Gradient Map	Harta Gradient
+	Grain	Kokrrizë
+	Gray	Gri
+	Gray Gamma 2.2	Gama gri 2.2
+	Green	E Gjelbër
+	Group	Grupi
+	Hardness	Fortësia
+	Heart	Zemra
+	Height	Lartësia
+	Height:	Lartësia:
+	Hide Auto Slices	Fshih pjesët automatike
+	Hide Properties	Fshih Vetitë
+	Highlight Compression	Theksoni kompresimin
+	Highlight Priority	Thekso Prioritetin
+	Highlights	Pikat kryesore
+	Home	Shtëpi
+	Horizontal scale	Shkalla horizontale
+	Hue	Nuanca
+	Hue Jitter	Luhatja Tonit të Ngjyrës
+	Hue/Saturation	Toni/Përzierja
+	Hyphenate	Vizë lidhëse
+	Ignore	Injoro
+	Ignore All	Injoro të gjitha
+	Image Size	Madhësia fotos
+	Import Brushes…	Importoni furça…
+	Import Photoshop brushes (.abr)	Importo brushat e Photoshop (.abr)
+	Import Presets	Paracaktimet e importit
+	Imported	I importuar
+	Indent First	Indenti i parë
+	Indent Left	Indenti majtas
+	Indent Right	Indent Right
+	Indent first line	Indent rreshtin e parë
+	Indent left margin	Margjina e majtë e dhëmbëzuar
+	Indent right margin	Margjina e djathtë e dhëmbëzimit
+	Input:	Hyrja:
+	Inside	Brenda
+	Interlaced	E ndërthurur
+	Interpolation:	Interpolimi:
+	Intersect with selection  ({key})	Ndërprehet me përzgjedhjen ({key})
+	Invert All	Inverto të gjitha
+	Invert has no settings.	Invert nuk ka cilësime
+	Italic	Kursivë
+	Justify all	Justifikoni të gjitha
+	Justify last centered	Arsyetoni në qendër të fundit
+	Justify last left	Arsyetoni të majtën e fundit
+	Justify last right	Arsyetoni të drejtën e fundit
+	Kerning	Kerning
+	Keyboard Shortcuts	Kombinimet e Tastieres
+	Keyboard Shortcuts and Menus	Shkurtoret dhe menutë e tastierës
+	Kind	E sjellshme
+	Label Size	Madhësia e etiketës
+	Labels	Etiketat
+	Lanczos (sharp)	Lanczos (i mprehtë)
+	Landscape	Peizazh
+	Last Document State	Gjendja e dokumentit të fundit
+	Layout	Faqosja
+	Leading	Udhëheqja
+	Leading (set to the font size × auto-leading when Auto)	Kryesor (caktohet në madhësinë e shkronjave × që drejtohet automatikisht kur automatikisht)
+	Leave as is (don't color manage)	Lëreni siç është (mos menaxhoni ngjyrat)
+	Left	Majtas
+	Left align text	Rreshtoni tekstin majtas
+	Length:	Gjatësia:
+	Level	Niveli
+	Levels	Nivelet
+	Lighten	Ndriço
+	Lightness	Ndriçimi
+	Lights	Dritat
+	Limits:	Kufijtë:
+	Linear Gradient	Gradient linear
+	Link layers	Lidh Shtresat
+	Link width and height	Gjerësia dhe lartësia e lidhjes
+	Liquify is not open	Liquify nuk është i hapur
+	Load	Ngarkoni
+	Load 3D LUT…	Ngarko LUT 3D…
+	Load Photoshop brushes (.abr)	Ngarko brushat e Photoshop (.abr)
+	Load channel as selection	Ngarko kanalin si përzgjedhje
+	Load…	Ngarko…
+	Localized Color Clusters	Grupe ngjyrash të lokalizuara
+	Lock	Kyç
+	Lock all	Blloko të gjitha
+	Lock image pixels	Blloko pikselët e imazhit
+	Lock layer	Shtresa e bllokimit
+	Lock position	Pozicioni i bllokimit
+	Lock transparent pixels	Bllokoni piksele transparente
+	Lock:	Bllokimi:
+	Logical Length:	Gjatësia logjike:
+	Logical Units:	Njësitë logjike:
+	Luminance	Ndriçimi
+	Luminance Detail	Detaje ndriçimi
+	Magenta	Magenta
+	Magenta  ·  Green	Magenta · E gjelbër
+	Maintain aspect ratio	Ruani raportin e pamjes
+	Marker Size	Madhësia e shënuesit
+	Mask All	Maskë të gjithë
+	Mask Options	Opsionet e maskave
+	Masking	Maskimi
+	Master	Kryesor
+	Matte	Mat
+	Median:	Mesatarja:
+	Menus	Menytë
+	Mesh Size	Madhësia e rrjetës
+	Metadata	Metadatat
+	Metrics	Metrikë
+	Midpoint	Pika e mesme
+	Midtones	Mesi
+	Midtones from:	Tonet e mesme nga:
+	Midtones to:	Tonet e mesme për:
+	Minimum Depth	Thellësia minimale
+	Minimum Diameter	Diametri minimal
+	Minimum Roundness	Rrumbullakësia minimale
+	Mode:	Modaliteti:
+	Monochrome	Njëngjyrëshe
+	More Points	Më shumë pikë
+	Move effect layer down	Zhvendosni shtresën e efektit poshtë
+	Move effect layer up	Zhvendosni shtresën e efektit lart
+	Move to	Lëvizni në
+	Name	Emri
+	Name:	Emri:
+	Nearest Neighbor	Fqinji më i afërt
+	Nearest Neighbor (hard edges)	Fqinji më i afërt (skajet e forta)
+	New Size	Madhësia e Re
+	New document…	Dokument i ri…
+	New effect layer	Shtresa e re e efektit
+	New selection	Zgjedhje e re
+	Next frame	Korniza tjetër
+	Next note	Shënimi tjetër
+	No Color	Pa Ngjyrë
+	No Color Management	Nuk ka menaxhim të ngjyrave
+	No Dither	Jo Dither
+	No author	Asnjë autor
+	No character style	Asnjë stil karakteri
+	No document	Asnjë dokument
+	No matching commands	Nuk ka komanda që përputhen
+	No presets for the current tool.	Nuk ka paracaktime për mjetin aktual
+	No presets of this type.	Nuk ka paracaktime të këtij lloji
+	No properties	Nuk ka prona
+	No tool presets.	Nuk ka paracaktime të veglave
+	Noise Reduction	Reduktimi i zhurmës
+	Normal	Normale
+	Not in Dictionary:	Jo në fjalor:
+	OK	OK
+	Offset	Menjanimi
+	Only Web Colors	Vetëm ngjyrat e uebit
+	Opacity	Mbushja
+	Opacity Jitter	Zhurma e errësirës
+	Opacity:	Opaciteti:
+	Open a document to define variables.	Hapni një dokument për të përcaktuar variablat
+	Open a document to select a colour range.	Hapni një dokument për të zgjedhur një gamë ngjyrash
+	Open a document to use the timeline.	Hapni një dokument për të përdorur afatin kohor
+	Optical	Optike
+	Optimized	Optimizuar
+	Option-click to define a source point to clone from	Opsioni-klikoni për të përcaktuar një pikë burimi për të klonuar
+	Original	Origjinale
+	Output Channel:	Kanali i daljes:
+	Output Levels:	Nivelet e daljes:
+	Output:	Prodhimi:
+	Outside	Jashtë
+	Overlay Color	Ngjyra e mbivendosjes
+	Overlay Opacity	Opaciteti i mbivendosjes
+	Overlay: Rule of Thirds	Mbivendosje: Rregulli i të tretave
+	Override Pressure	Mbështetja e presionit
+	Override Rotation	Mbështetja e rrotullimit
+	Override Tilt	Shfuqizimi i animit
+	PRESET DETAILS	Detajet e paracaktimit
+	PSD	PSD
+	Paint Overlay	Mbivendosja e bojës
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	Vendndodhjet e paneleve ruhen në hapësirën e punës. Shkurtoret e tastierës, menytë dhe shiriti i veglave janë opsionale
+	Paper	Letra
+	Path	Rruga
+	Pattern	Mostra
+	Pattern Size	Madhësia e modelit
+	Pause	Ndalo
+	Percent	Përqind
+	Perceptual	Perceptues
+	Perspective Warp is not active	Perspective Warp nuk është aktiv
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Deformimi i perspektivës: vizatoni rrafshet përgjatë perspektivës së imazhit, më pas kaloni në Warp
+	Photo Filter	Foto Filtruesi
+	PhotoSuite	PhotoSuite
+	PhotoSuite Manages Colors	PhotoSuite menaxhon ngjyrat
+	PhotoSuite — an open-source, native image editor written in Rust.	PhotoSuite - një redaktues imazhi me burim të hapur, i shkruar në Rust
+	Pin Depth:	Thellësia e pinit:
+	Pixel Length:	Gjatësia e pikselit:
+	Pixels/Centimeter	Piksele/Centimetër
+	Pixels/Inch	Pikselë/inç
+	Pixels:	Piksele:
+	Play	Luaj
+	Play selection	Luaj përzgjedhjen
+	Portrait	Portret
+	Position	Pozita
+	Position and Size	Pozicioni dhe Madhësia
+	Posterize	Posterize
+	Preserve Details	Ruaj Detajet
+	Preserve Luminosity	Ruaj luminositetin
+	Preset	Paracaktuar
+	Preset Type	Lloji i paracaktuar
+	Preset:	Paracaktuar:
+	Presets:	Paracaktimet:
+	Press keys…	Shtypni tastet…
+	Pressure	Presioni
+	Pressure for Opacity	Presioni për Opacity
+	Pressure for Size	Presioni për madhësinë
+	Prevent auto-nesting in and out of Artboards and Frames	Parandaloni vendosjen automatike brenda dhe jashtë Artboards dhe Frames
+	Preview	Shiko
+	Previous frame	Korniza e mëparshme
+	Previous note	Shënim i mëparshëm
+	Print	Print
+	Printer	Printeri
+	Printer Manages Colors	Printeri menaxhon ngjyrat
+	Printer Setup	Konfigurimi i printerit
+	Printing Marks	Shenjat e shtypjes
+	Progressive	Progresive
+	Promote	Promovoni
+	Protect Detail	Mbrojtje e Detajuar
+	Protect Foreground Color	Mbroni ngjyrën e planit të parë
+	Protect Tones	Mbroni Tonet
+	Proximity Match	Ndeshja e afërsisë
+	Pulled String Mode	Modaliteti i vargut të tërhequr
+	Puppet Warp is not active	Puppet Warp nuk është aktiv
+	Purity	Pastërti
+	Quality	Kualiteti
+	Quick Actions	Veprimet e shpejta
+	Quick Export As PNG	Eksportim i shpejtë si PNG
+	Radial Gradient	Gradient radial
+	Radius	Rreze
+	Radius:	Rrezja:
+	Range:	Gama:
+	Rate	Sasia
+	Recently Used	Kohët e fundit të përdorura
+	Reconstruct	Rikonsktrukto
+	Record ● a sequence of edits, then play ▶ it on any document.	Regjistroni ● një sekuencë modifikimesh, më pas luani ▶ në çdo dokument
+	Red	E Kuqe
+	Redefine style by current selection	Ripërcaktoni stilin sipas përzgjedhjes aktuale
+	Reflected Gradient	Gradient i reflektuar
+	Registration Marks	Shenjat e Regjistrimit
+	Regular	E rregullt
+	Relative	Relativ
+	Relative Colorimetric	Kolorimetrike relative
+	Remove	Hiq
+	Remove All Pins	Hiq të gjitha kunjat
+	Remove Background	Hiq sfondin
+	Remove Planes	Hiq aeroplanët
+	Remove stop	Hiq ndalesën
+	Remove variable	Hiq variablin
+	Rename	Riemërto
+	Rename Group…	Riemërto grupin…
+	Rename Layer…	Riemërto shtresën…
+	Rename Tool Preset…	Riemërto paracaktimin e mjetit…
+	Rename…	Riemërto…
+	Resample	Riprovëzo
+	Reset All to Defaults	Rivendos të gjitha në parazgjedhje
+	Reset Section	Rivendos seksionin
+	Reset Transform	Rivendos transformimin
+	Reset to defaults	Rivendos në standardet
+	Resolution	Rezolucioni
+	Resolution:	Rezolucioni:
+	Restore All	Rivendos të gjitha
+	Restore Defaults	Rivendosja e parazgjedhjeve
+	Restrictive (Web)	Kufizuese (Ueb)
+	Right	Djathtas
+	Right align text	Rreshtoni tekstin djathtas
+	Rigid	I ngurtë
+	Rotate:	Rrotulloje:
+	Rotation	Rrotullimi
+	Roughness	Vrazhdësi
+	Roundness	Rrumbullak
+	Roundness Jitter	Luhatja Rrethit
+	Rulers & Grids	Sundimtarë & Rrjete
+	Sample All Layers	Mostra e të gjitha shtresave
+	Sample:	Shembull:
+	Sampling: Background Swatch	Marrja e mostrave: Swatch e sfondit
+	Sampling: Continuous	Marrja e mostrave: E vazhdueshme
+	Sampling: Once	Marrja e mostrave: Një herë
+	Saturate	Mbushje
+	Saturation	Ngopja
+	Saturation Jitter	Luhatja Ngopjes
+	Save HTML and Images	Ruani HTML dhe imazhe
+	Save as PDF	Ruaje si PDF
+	Save selection as channel	Ruaje përzgjedhjen si kanal
+	Save…	Ruaje…
+	Scale to Fit Media	Shkalla për të përshtatur median
+	Scatter	Copëzimi
+	Scratch disks	Disqet gërvishtëse
+	Search	Kërko
+	Search commands	Komandat e kërkimit
+	Search commands, tools and panels…	Kërko komandat, mjetet dhe panelet…
+	Search fonts	Kërkoni fontet
+	Select All	Zgjidhni Të gjitha
+	Select Subject	Zgjidhni Subjekt
+	Select a type layer or click into text to insert glyphs	Zgjidhni një shtresë tipi ose klikoni në tekst për të futur glyphs
+	Select text to apply a character style	Zgjidhni tekstin për të aplikuar një stil karakteri
+	Select:	Zgjidh:
+	Selections	Zgjedhjet
+	Selective	Selektive
+	Selective Color	Ngjyrë e Përzgjedhur
+	Send the selected pin backward	Dërgo pinin e zgjedhur prapa
+	Set additional smoothing options	Vendosni opsione shtesë të zbutjes
+	Set background color	Vendosni ngjyrën e sfondit
+	Set foreground color	Vendosni ngjyrën e planit të parë
+	Set painting symmetry options	Vendosni opsionet e simetrisë së pikturës
+	Set shape fill type	Cakto llojin e mbushjes së formës
+	Set shape stroke type	Përcaktoni llojin e goditjes së formës
+	Set the text color	Vendosni ngjyrën e tekstit
+	Shadows	Hijet
+	Shape:	Forma:
+	Sharpening	Mprehje
+	Shift	Shift
+	Shortcut removed.	Shkurtorja u hoq
+	Show All Menu Items	Shfaq të gjithë artikujt e menysë
+	Show Backdrop	Shfaq sfondin
+	Show Guides	Shfaq udhëzuesit
+	Show Mask	Trego maskën
+	Show Mesh	Shfaq rrjetë
+	Show Overlay	Shfaq mbivendosjen
+	Show Transform Controls	Shfaq kontrollet e transformimit
+	Show or hide the Notes panel	Shfaq ose fshih panelin e Shënimeve
+	Show:	Shfaq:
+	Sides	Anët
+	Sides:	Anët:
+	Size	Madhësia
+	Size Jitter	Luhatja Rastit
+	Size:	Madhësia:
+	Slice Options…	Opsionet e fetave…
+	Slices From Guides	Fetë nga udhëzuesit
+	Slices are locked (View › Lock Slices)	Fetat janë të kyçura (Shiko › Fetat e kyçjes)
+	Small Caps	Kapele të vogla
+	Smoothing	Zbutja
+	Space After	Hapësirë Pas
+	Space Before	Hapësira përpara
+	Spacing	Hapësira
+	Spell check complete.	Kontrolli drejtshkrimor përfundoi
+	Split:	Ndarje:
+	Star ratio	Raporti i yjeve
+	Stop playing/recording	Ndalo luajtjen/regjistrimin
+	Straighten	Drejto
+	Straighten Layer	Drejto shtresën
+	Strength:	Forca:
+	Strikethrough	Strikethrough
+	Stroke	Ramja
+	Stroke Catch-up	Kapja e goditjes
+	Stroke:	Goditja në tru:
+	Style	Stili
+	Style Options	Opsionet e stilit
+	Style Options…	Opsionet e stilit…
+	Style: Normal	Stili: Normal
+	Subtract from Sample	Hiq nga mostra
+	Subtract from selection  ({key})	Zbrit nga përzgjedhja ({key})
+	Suggestions:	Sugjerime:
+	Swap colours (X)	Ndërroni ngjyrat (X)
+	Swaps height and width	Ndërron lartësinë dhe gjerësinë
+	Switch between free transform and warp modes	Kalo midis modaliteteve të transformimit të lirë dhe deformimit
+	Switch theme	Ndërro temën
+	Temperature	Temperatura
+	Tetrahedral	Tetrahedral
+	Text Position:	Pozicioni i tekstit:
+	Texture	Teksturë
+	Texture Each Tip	Struktura e çdo maje
+	Threshold	Pragu
+	Threshold Level	Niveli i Pragut
+	Thumbnail size (smallest: list)	Madhësia e miniaturës (më e vogla: lista)
+	Tilt X	Animi X
+	Tilt Y	Anim Y
+	Tint	Nuanca
+	Toggle count group visibility	Ndrysho dukshmërinë e grupit të numërimit
+	Toggle text orientation	Ndrysho orientimin e tekstit
+	Tolerance	Toleranca
+	Tolerance:	Toleranca:
+	Tone:	Toni:
+	Toolbar	Shiriti i veglave
+	Top	Lart
+	Total:	Gjithsej:
+	Tracking	Ndjekja
+	Tracking (1/1000 em)	Ndjekja (1/1000 em)
+	Transparency	Tejdukshmëria
+	Transparent	E Tejdukshme
+	Trilinear	Trilineare
+	Type Styles	Lloji Stilet
+	Type:	Lloji:
+	Underline	Nënvizoni
+	Untitled	Pa titull
+	Untitled-1	Pa titull-1
+	Update layer comp (visibility, position and appearance)	Përditëso komponimin e shtresës (dukshmëria, pozicioni dhe pamja)
+	Use Default	Përdorni Default
+	Use Legacy	Përdor të vjetrën
+	Use Measurement Scale	Përdorni shkallën e matjes
+	Use the embedded profile (instead of the working space)	Përdorni profilin e ngulitur (në vend të hapësirës së punës)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	Variablat lidhin dukshmërinë, tekstin ose pikselat e një shtrese me një vend të caktuar të dhënash
+	Vertical scale	Shkalla vertikale
+	Vibrance	Dinamika
+	View Options	Shikoni opsionet
+	Vignetting	Vigneting
+	Violet, Orange	Vjollcë, Portokalli
+	Visibility	Dukshmëria
+	Visible	E dukshme
+	Warp:	Deformoj:
+	Web Snap	Web Snap
+	Weight	Pesha
+	Weight:	Pesha:
+	White	E Bardhë
+	White Balance: As Shot	Bilanci i bardhë: si gjuajtje
+	Whites	Të bardhët
+	Width	Gjerësia
+	Width:	Gjerësia:
+	Work Path	Rruga e punës
+	Yellow	E Verdhë
+	Yellow  ·  Blue	E verdhë · Blu
+	Zoom	Zmadhimi
+	Zoom in	Zmadho
+	Zoom out	Zvoglo
+	command or shortcut	komandë ose shkurtore
+	current	aktuale
+	image file path	shtegu i skedarit të imazhit
+	modified	modifikuar
+	name	Emri
+	new	E Re
+	{name} options	Opsionet e {name}
+	↑↓ navigate   {key} run   esc close	↑↓ navigoni {key} run esc close
+	Version {version}	Versioni {version}
+	New Document	Dokument i ri
+	Error	Gabim
+	Command	Komanda
+	Adjustment layers have nothing to transform	Shtresat e rregullimit nuk kanë asgjë për të transformuar
+	Altitude	Lartësia mbidetare
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	Apple Watch 45 mm
+	Aqua	Aqua
+	Art & Illustration	Art & Ilustrim
+	Background Eraser Tool	Vegla e fshirës së sfondit
+	Bevel & Emboss	Bevel & Emboss
+	Blend Mode	Mënyra Përzierjes
+	Blues	Blues
+	Blur Tool	Paqartësuesi
+	Bold	E guximshme
+	Brush	Brusha
+	Brush Pose	Poza e furçës
+	Brush Tip Shape	Forma e majës së furçës
+	Brush Tool	Brusha
+	Build-up	Ndërtimi
+	Burn Tool	Djegësi
+	Centimeters	Centimetri
+	Choke	Mbytje
+	Classic	Klasike
+	Click to add text	Klikoni për të shtuar tekst
+	Click to fill similar colours	Klikoni për të mbushur ngjyra të ngjashme
+	Clone Stamp Tool	Mjeti i vulës së klonit
+	Color Burn	Djegie ngjyre
+	Color Dodge	Color Dodge
+	Color Dynamics	Dinamika Ngjyrës
+	Color Overlay	Mbulimi Ngjyrës
+	Comic Book	Libër komik
+	Conform	Konform
+	Content-Aware Fill needs a selection on a pixel layer	Content-Aware Fill ka nevojë për një përzgjedhje në një shtresë pixel
+	Could not transform: the layer is empty	Nuk mund të transformohej: shtresa është bosh
+	Could not use Perspective Warp: the layer is empty	Nuk mund të përdoret Perspective Warp: shtresa është bosh
+	Could not use Puppet Warp: no opaque pixels	Nuk mund të përdorej "Puppet Warp": pa pikselë të errët
+	Could not use Puppet Warp: the layer is empty	Nuk mund të përdorej Puppet Warp: shtresa është bosh
+	Crop Tool	Prerësi
+	Crosswise	Në mënyrë të kryqëzuar
+	Current Tool	Mjeti aktual
+	Custom Shape Tool	Mjet i personalizuar i formës
+	Cyans	Cyans
+	Default Photoshop Size	Madhësia e parazgjedhur e Photoshop-it
+	Delete Workspace	Fshi hapësirën e punës
+	Diamond	Diamant
+	Dimensions:	Dimensionet:
+	Direction	Drejtimi
+	Distance	Largësia
+	Document Dimensions	Dimensionet e dokumentit
+	Document Profile	Profili i Dokumentit
+	Document Sizes	Madhësitë e dokumenteve
+	Dodge Tool	Terruesi
+	Down	Poshtë
+	Drag to draw a gradient	Zvarrit për të vizatuar një gradient
+	Drag to move the active layer	Zvarriteni për të lëvizur shtresën aktive
+	Drag to pan  ·  hold Space with any tool	Zvarritni për të lëvizur · mbajeni Space me çdo mjet
+	Drop Shadow	Shto Hije
+	Dual Brush	Furçë e dyfishtë
+	Edge	Qoshja
+	Efficiency	Efikasiteti
+	Efficiency: 100%	Efikasiteti: 100%
+	Ellipse Tool	Mjeti Ellipse
+	Elliptical Marquee Tool	Vegël eliptike e marquee
+	Emboss	Stampim
+	Eraser	Gomë
+	Eraser Tool	Grisësi
+	ExtraBold	ExtraBold
+	ExtraLight	ExtraLight
+	Eyedropper Tool	Mjet për pikakë sysh
+	Fade	Zhduket
+	Fill Opacity	Plotësoni Opacitetin
+	Film & Video	Film & Video
+	From	Nga
+	General	Të përgjithshme
+	GitHub	GitHub
+	Gradient Overlay	Mbulesa e Gradientit
+	Gradient Tool	Mjeti Kursimit
+	Greens	Gjelbrit
+	Hand Tool	Dora
+	Hard	E vështirë
+	Hard Mix	Përzierje e fortë
+	Healing Brush Tool	Furçe Riparuese
+	Highlights from:	Pikat kryesore nga:
+	History Brush Tool	Vegla e brushës së historisë
+	Horizontal Type Tool	Mjeti i tipit horizontal
+	Image Size:	Madhësia e imazhit:
+	Inches	Inçi
+	Indexed	Të indeksuar
+	Initial Direction	Drejtimi fillestar
+	Inner Bevel	Koni Brendshëm
+	Inner Glow	Shkëlqimi Brendshëm
+	Inner Shadow	Hije e Brendshme
+	Lab	Lab
+	Landscape, 10 x 8	Peizazh, 10 x 8
+	Landscape, 6 x 4	Peizazh, 6 x 4
+	Landscape, 7 x 5	Peizazh, 7 x 5
+	Lasso	Lasso
+	Lasso Tool	Mjet Lasso
+	Layer Count	Numërimi i shtresave
+	Layer Knocks Out Drop Shadow	Shtresa Knocks Out Drop Shadow
+	Legal	Ligjore
+	Letter	Letër
+	Light	I lehtë
+	Line Tool	Vegla e linjës
+	Linear	Lineare
+	Linear Burn	Djegie lineare
+	Linear Height	Lartësia Lineare
+	Link with Layer	Lidhja me Shtresën
+	Lorem Ipsum	Lorem Ipsum
+	Magentas	Magentas
+	Magic Eraser Tool	Mjeti Magjik i gomës
+	Magic Wand Tool	Mjeti i Shkopit Magjik
+	Marquee	Marquee
+	Mean:	Mesatarja:
+	Measurement Scale	Shkalla e matjes
+	Measurement Scale Marker	Shënues i shkallës së matjes
+	Millimeters	Milimetri
+	Mobile	Celular
+	Move Tool	Lëvizësi
+	Multiply	Shumëzo
+	My Brushes	Furçat e mia
+	Neutrals	Neutralet
+	New Workspace	Hapësirë e re pune
+	Note Tool	Mjeti i shënimeve
+	Object Selection Tool	Mjeti i përzgjedhjes së objekteve
+	Off	Joaktiv
+	Open	Hape
+	Orange	Portokalli
+	Original Ratio	Raporti origjinal
+	Out Of Gamut	Jashtë Gamut
+	Outer Bevel	Koni Jashtëm
+	Outer Glow	Shkëlqimi Jashtëm
+	Overlay	Mbivendosje
+	Paint Bucket Tool	Kova e Ngjyrave
+	Paints from the document's opening state	Bojra nga gjendja e hapjes së dokumentit
+	Path Selection Tool	Mjeti i përzgjedhjes së rrugës
+	Pattern Overlay	Mbulesa Mostrës
+	Pen Pressure	Presioni i stilolapsit
+	Pen Tilt	Animi i stilolapsit
+	Pen Tool	Mjeti i stilolapsit
+	Photo	Foto
+	PhotoSuite website	Faqja e internetit PhotoSuite
+	Picas	Pika
+	Pillow Emboss	Jastëk Stampim
+	Pixel Replacement	Zëvendësimi i pikselit
+	Pixels	Piksel
+	Points	Pikat
+	Polygon Tool	Mjeti i shumëkëndëshit
+	Polygonal Lasso Tool	Mjet poligonal Lasso
+	Portrait, 4 x 6	Portret, 4 x 6
+	Portrait, 5 x 7	Portret, 5 x 7
+	PostScript (72 points/inch)	PostScript (72 pikë/inç)
+	Postcard	Kartolinë
+	Poster	Poster
+	Pro (Dark)	Pro (E errët)
+	Pro (Medium Gray)	Pro (Gri mesatare)
+	Protect Texture	Mbroni teksturën
+	Purple	Vjollcë
+	Quick Mask	Maskë e shpejtë
+	Quick Selection Tool	Mjeti i përzgjedhjes së shpejtë
+	Radial	Rrezor
+	Rasterize Layer	Rasterizimi i shtresës
+	Ratio	Raporti
+	Recent	Të fundit
+	Rectangle Tool	Mjeti drejtkëndësh
+	Rectangular Marquee Tool	Mjeti drejtkëndor i shtrimit
+	Reds	Të kuqtë
+	Reflected	Reflektuar
+	Sample: foreground colour	Shembull: ngjyra e planit të parë
+	Sampled Colors	Ngjyrat e kampionuara
+	Satin	Saten
+	Save Pixel Aspect Ratio	Ruaj raportin e pamjes së pikselit
+	Scattering	Shpërndarje
+	Scratch Sizes	Madhësitë e gërvishtjeve
+	Select Data Points	Zgjidhni pikat e të dhënave
+	Selection	Përzgjedhja
+	SemiBold	Gjysmë e trashë
+	Shadows up to:	Hijet deri në:
+	Shape Dynamics	Dinamika e formës
+	Sharpen Tool	Theksuesi
+	Show Extras Options	Shfaq opsionet shtesë
+	Slice Select Tool	Mjeti i përzgjedhjes së feta
+	Slice Tool	Mjeti i fetave
+	Smart Filters	Filtruesit e Mençur
+	Smudge Tool	Ndotësi
+	Soft	E butë
+	Soften	Zbute
+	Source	Burimi
+	Source: set	Burimi: set
+	Sponge Tool	Sfungjeri
+	Spot Healing Brush Tool	Furçe riparuese në formë pike
+	Spread	Përhap
+	Square, 12 x 12	Sheshi, 12 x 12
+	Square, 5 x 5	Sheshi, 5 x 5
+	Std Dev:	Std Dev:
+	Studio (Dark)	Studio (e errët)
+	Studio (Light)	Studio (Drita)
+	Stylus Wheel	Rrota majë shkruese
+	Subtract	Zbrit
+	Tabloid	Tabloid
+	Text Replacement	Zëvendësimi i tekstit
+	Thin	I hollë
+	Traditional (72.27 points/inch)	Tradicionale (72,27 pikë/inç)
+	Transfer	Transferimi
+	Triangle Tool	Mjet trekëndësh
+	Unsaved changes	Ndryshime të paruajtura
+	Uses the foreground and background colours.	Përdor ngjyrat e planit të parë dhe të sfondit
+	Web	Web
+	Web Large	Ueb i madh
+	Web Minimum	Minimumi në ueb
+	Web Most Common	Web Më e zakonshme
+	WebP (lossless)	WebP (pa humbje)
+	Wet Edges	Skajet e lagura
+	Yellows	Verdha
+	Zoom Tool	Zmadhuesi
+	{name} Properties	Vetitë {name}
+	Revert “{name}” to the last saved version? Your changes will be lost.	Të kthehet "{name}" në versionin e fundit të ruajtur? Ndryshimet tuaja do të humbasin
+	Do you want to save the changes you made to “{name}” before quitting?	Dëshironi të ruani ndryshimet që keni bërë në "{name}" përpara se të largoheni?
+	Do you want to save the changes you made to “{name}” before closing?	Dëshironi të ruani ndryshimet që keni bërë në "{name}" përpara mbylljes?
+	Doc: {flat}/{layered}	Dokumenti: {flat}/{layered}
+	Scratch: {size}	Gërvishtje: {size}
+	Untagged {mode}	I pa etiketuar {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} px x {h} px ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	Rezolucioni: {dpi} piksel/inç
+	Doc: {w} × {h} px	Doc: {w} × {h} px
+	Frame {current} / {total}	Korniza {current} / {total}
+	Count: {n}	Numri: {n}
+	BLANK DOCUMENT PRESETS ({n})	PARAPRAKURIMET E DOKUMENTIT BASHK ({n})
+	Constraints ({n})	Kufizimet ({n})
+	Align {what}	Rreshtoni {what}
+@plural	{n} Layer|{n} Layers	{n} shtresë|{n} shtresa
+@plural	Group · {n} layer|Group · {n} layers	Grupi · {n} shtresë|Grupi · {n} shtresa
+	Additional plugins folder	Dosja shtesë e shtojcave
+	Adobe	Adobe
+	Adobe rgb	Adobe rgb
+	Allow agent control	Lejo kontrollin e agjentit
+	Allow scripts to connect	Lejo që skriptet të lidhen
+	Always	Gjithmonë
+	Always create smart objects when placing	Krijoni gjithmonë objekte inteligjente kur vendosni
+	Animated zoom	Zmadhimi i animuar
+	Apply auto tone	Aplikoni tonin automatik
+	Ask	Pyetni
+	Ask before saving layered tiff	Pyet përpara se të ruash tiff me shtresa
+	Auto collapse icon panels	Kolapsi automatik i paneleve të ikonave
+	Auto show hidden panels	Shfaq automatikisht panelet e fshehura
+	Auto show home screen	Shfaq automatikisht ekranin bazë
+	Autosave	Ruaj automatikisht
+	Autosave minutes	Ruaj automatikisht minutat
+	Beep when done	Bip kur të përfundojë
+	Bicubic automatic	Automatik bikubik
+	Bicubic sharper	Bikubike më e mprehtë
+	Bicubic smoother	Zbutës bikubik
+	Bit depth	Bit thellësi
+	Brush preview color	Ngjyra paraprake e furçës
+	Cache levels	Nivelet e cache
+	Cache tile size	Madhësia e pllakës së cache
+	Camera Raw Defaults	Parazgjedhjet e Kamera Raw
+	Canvas border	Kufiri i kanavacës
+	Canvas color	Ngjyra e kanavacës
+	Canvas custom color	Ngjyra me porosi të kanavacës
+	Color picker	Përzgjedhës Ngjyrash
+	Color space	Hapësira me ngjyra
+	Column width	Gjerësia e kolonës
+	Concise	Koncize
+	Control port	Porta e kontrollit
+	Convert to srgb	Konverto në srgb
+	Cursors	Kursorët
+	Custom dark	Errësirë me porosi
+	Custom light	Dritë me porosi
+	Dark	E errët
+	Dark gray	Gri e errët
+	Dashed lines	Vija me viza
+	Destination	Destinacioni
+	Detailed	I detajuar
+	Disks	Disqet
+	Display p3	Ekrani p3
+	Double click layer mask launches select and mask	Klikoni dy herë maska e shtresës nis zgjidhni dhe maskoni
+	Drop shadow	Shto Hije
+	Dynamic color sliders	Rrëshqitës dinamik me ngjyra
+	East asian	Azia Lindore
+	Effect cache mb	Efekt cache mb
+	Enable flick panning	Aktivizo lëvizjen e lëvizjes
+	Enable floating document window docking	Aktivizo lidhjen e dritares së dokumentit lundrues
+	Enable narrow options bar	Aktivizo shiritin e ngushtë të opsioneve
+	Enabled	Aktivizuar
+	Enhanced Controls	Kontrollet e zgjeruara
+	Export clipboard	Eksporto kujtesën e fragmenteve
+	Extra large	Tepër i madh
+	File Handling	Trajtimi i dosjeve
+	File path	Rruga e skedarit
+	Fill new type layers with placeholder	Plotësoni shtresat e tipit të ri me mbajtës vendi
+	Font preview	Pamja paraprake e shkronjave
+	Full size tip	Këshillë me madhësi të plotë
+	Gamut warning color	Ngjyra paralajmëruese e gamës
+	Gamut warning opacity	Paqartësia e paralajmërimit të gamës
+	Generator enabled	Gjeneratori është aktivizuar
+	Gif	Gif
+	Glossy	Me shkëlqim
+	Grid color	Ngjyra e rrjetës
+	Grid colors	Ngjyrat e rrjetës
+	Grid size	Madhësia e rrjetës
+	Grid style	Stili i rrjetës
+	Grid unit	Njësia e rrjetit
+	Gridline every	Rrjeti i rrjetit çdo
+	Guide color	Ngjyra udhëzuese
+	Guide style	Stili i udhëzuesit
+	Guides, Grid & Slices	Udhëzuesit, Rrjeta & Fetat
+	Gutter	Ullukë
+	History Log	Regjistri i historisë
+	History states	Historia thotë
+	Ignore exif profile tag	Injoro etiketën e profilit exif
+	Image interpolation	Interpolimi i imazhit
+	Image previews	Pamje paraprake të imazhit
+	Integrations	Integrimet
+	Interface	Ndërfaqja
+	Jpeg quality	Cilësi Jpeg
+	Jpg	Jpg
+	Language	Gjuha
+	Large tabs	Skeda të mëdha
+	Legacy compositing	Përbërja e trashëgimisë
+	Light gray	Gri e hapur
+	Line	Vijë
+	Lines	Vija
+	Lowercase extension	Zgjatje me shkronja të vogla
+	Maximize psd compatibility	Maksimizoni përputhshmërinë psd
+	Medium gray	Gri mesatare
+	Memory usage mb	Përdorimi i memories mb
+	Missing glyph protection	Mungon mbrojtja e glifeve
+	Modern	Moderne
+	Nearest neighbor	Fqinji më i afërt
+	Never	kurrë
+	Normal tip	Këshillë normale
+	Open as smart object	Hapur si objekt inteligjent
+	Open documents as tabs	Hapni dokumentet si skeda
+	Overscroll	Overscroll
+	Performance	Performanca
+	Png	Png
+	Point size	Madhësia e pikës
+	Precise	Preciz
+	Preserve details	Ruaj detajet
+	Print resolution	Rezolucioni i printimit
+	Pro	Pro
+	Pro medium	Pro të mesme
+	Pro photo	Foto pro
+	Quick export format	Format i shpejtë i eksportit
+	Quick export location	Vendndodhja e shpejtë e eksportit
+	Recent file count	Numri i skedarëve të fundit
+	Recent files	Skedarët e fundit
+	Recent fonts	Fontet e fundit
+	Recover on launch	Rikuperoni në nisje
+	Remember workspace changes	Mos harroni ndryshimet e hapësirës së punës
+	Resize image during place	Ndryshimi i madhësisë së imazhit gjatë vendit
+	Rotate view with trackpad	Rrotulloni pamjen me tastierë
+	Same folder	E njëjta dosje
+	Save in background	Ruaj në sfond
+	Scratch Disks	Disqet gërvishtëse
+	Screen	Ekrani
+	Screen resolution	Rezolucioni i ekranit
+	Scrubby slider acceleration	Përshpejtimi i rrëshqitësit i pastër
+	Sessions only	Vetëm seancat
+	Sharpen for	Mprehni për
+	Show channels in color	Shfaq kanalet me ngjyra
+	Show crosshair in brush tip	Paraqitni vijën e tërthortë në majën e furçës
+	Show extension panels	Shfaq panelet shtesë
+	Show font names in english	Trego emrat e shkronjave në anglisht
+	Show menu colors	Shfaq ngjyrat e menysë
+	Show only crosshair while painting	Trego vetëm tërthore gjatë pikturës
+	Show slice numbers	Trego numrat e pjesëve
+	Show tooltips	Shfaq këshillat e veglave
+	Show transformation values	Trego vlerat e transformimit
+	Slice color	Ngjyra e fetës
+	Smart guide color	Ngjyra udhëzuese e zgjuar
+	Smart quotes	Citate të zgjuara
+	Snap vector tools and transforms to pixel grid	Snap mjetet vektoriale dhe transformohet në rrjetë pixel
+	Srgb	Srgb
+	Standard	Standard
+	Studio	Studio
+	Studio light	Drita e studios
+	Subdivisions	Nënndarje
+	System	Sistemi
+	Text engine	Motori i tekstit
+	Text file	Skedar teksti
+	Tiny	I vogel
+	Touch gestures	Gjestet e prekjes
+	Transparency & Gamut	Transparenca & Gamut
+	Type units	Njësitë e tipit
+	UI font size	Madhësia e shkrimit të ndërfaqes
+	UI scale	Shkalla e ndërfaqes së përdoruesit
+	Units & Rulers	Njësitë & Rregullat
+	Use additional plugins folder	Përdorni dosje shtesë të shtojcave
+	Use esc to commit	Përdorni esc për t'u angazhuar
+	Use gpu	Përdor gpu
+	Use legacy free transform	Përdor transformimin pa trashëgimi
+	Use shift key for tool switch	Përdorni butonin shift për çelësin e veglave
+	Vary round brush hardness on hud	Ndryshoni fortësinë e furçës së rrumbullakët në hud
+	Webp	Webp
+	World ready	Bota gati
+	Zoom clicked point to center	Zmadhimi klikoi pikë në qendër
+	Zoom resizes windows	Zoom ndryshon përmasat e dritareve
+	Zoom with scroll wheel	Zmadhimi me rrotën e lëvizjes
+	Zoom with trackpad pinch	Zmadhoni me kapjen e tastierës
+	Pass Through	Kalim
+	Dissolve	Tretje
+	Darker Color	Ngjyrë më e errët
+	Linear Dodge (Add)	Linear Dodge (Shto)
+	Lighter Color	Lighter Color
+	Soft Light	Dritë e butë
+	Hard Light	Dritë e fortë
+	Vivid Light	Dritë e gjallë
+	Linear Light	Dritë lineare
+	Pin Light	Dritë pike
+	Exclusion	Përjashtim
+	Divide	Pjesëto
+	Luminosity	Ndriçim
+@plural	{n} sample|{n} samples	{n} mostër|{n} mostra
+	{added}, {removed} subtracted	{added}, {removed} zbritur
+	Adjustment Preview	Parashikimi i rregullimit
+	Airbrush: keeps depositing paint while the pointer rests.	Airbrush: vazhdon të depozitojë bojë ndërsa treguesi qëndron
+	Angle:	Këndi:
+	Blend If	Përzie nëse
+	Close Tab Group	Mbyll grupin e skedave
+	Collapse	Palos
+	Collapse All Groups	Palos të gjitha grupet
+	Collapse Panel Group	Palos grupin e panelit
+	Collapse group  ({key}-click: all groups)	Palos grupin ({key}-kliko: të gjitha grupet)
+	Create new brush from the current settings	Krijo furçë të re nga cilësimet aktuale
+	Create new brush from these settings	Krijo furçë të re nga këto cilësime
+	Delete brush	Fshije furçën
+	Drag the arrow to set the angle, the dots to set the roundness	Zvarritni shigjetën për të vendosur këndin, pikat për të vendosur rrumbullakësinë
+	Expand	Zgjero
+	Expand Panel Group	Zgjero grupin e panelit
+	Expand group  ({key}-click: all groups)	Zgjero grupin ({key}-kliko: të gjitha grupet)
+	Fade steps	Zbehni hapat
+	Hide the layer's effects  ({key}-click: all layers)	Fshih efektet e shtresës ({key}-kliko: të gjitha shtresat)
+	Import Brushes… (.abr)	Furçat e importit… (.abr)
+	Move Group Down	Zhvendos grupin poshtë
+	Move Group Up	Zhvendos grupin lart
+	Reset the brush to the defaults	Rivendosni furçën në standardet
+	Restore original size	Rivendos madhësinë origjinale
+	Roundness:	Rrumbullakësia:
+	Search Brushes	Kërko Brushes
+	Show the layer's effects  ({key}-click: all layers)	Shfaq efektet e shtresës ({key}-kliko: të gjitha shtresat)
+	Brush picker	Zgjedhës furçash
+	Erase	Fshije
+	Right click with painting tools	Klikoni me të djathtën me mjetet e pikturës
+	System Info…	Informacioni i sistemit…
+	System Info	Informacioni i Sistemit
+	More panels	Më shumë panele
+	These settings aren't available in PhotoSuite yet.	Këto cilësime nuk ofrohen ende në PhotoSuite
+	Graphics	Grafika
+	Reset GPU Backend	Rivendos GPU Backend
+	Applies at next launch.	Zbatohet në fillimin e ardhshëm
+	Click to sample the foreground colour  ·  {key}-click for background	Kliko për të mostruar ngjyrën e planit të parë · {key}-kliko për sfond
+	{key}-click to set the source	{key}-kliko për të vendosur burimin
+	{key} to subtract	{key} për të zbritur
+	Clone source {n} ({key}-click with Clone Stamp to set)	Burimi i klonimit {n} ({key}-kliko me vulën e klonit për ta vendosur)
+	Source: not set ({key}-click with Clone Stamp)	Burimi: i pacaktuar ({key}-kliko me vulën e klonit)
+	Pixel Layer	Shtresa e pikselit
+	Type Layer	Lloji Layer
+	Shape Layer	Shtresa e formës
+	Group Layer	Shtresa e grupit
+	Fill Layer	Mbushni Shtresën
+	Smart Object Layer	Shtresa e objekteve inteligjente
+	Create Warped Text	Krijo tekst të shtrembëruar
+	Rasterize Smart Object	Rasterize Object Smart
+	Rasterize Fill Content	Rasterize Plotësoni përmbajtjen
+	Unlock: picking a preset replaces these settings	Zhblloko: zgjedhja e një paravendosjeje zëvendëson këto cilësime
+	Lock: keep these settings when picking another preset	Bllokimi: mbani këto cilësime kur zgjidhni një paravendosje tjetër
+	Diameter:	Diametri:
+	Hardness:	Fortësia:
+	No brush presets	Nuk ka paravendosje të furçave
+	Toggle the Brush Settings panel  (F5)	Ndrysho panelin e cilësimeve të furçës (F5)
+	Create new brush preset from the current settings	Krijo një paracaktim të ri të furçës nga cilësimet aktuale
+	Brush Settings…  (F5): every option of this brush	Cilësimet e furçës… (F5): çdo opsion i kësaj furçeje
+	Rename Brush…	Riemërto furçën…
+	Delete Brush	Fshi furçën
+	Group name	Emri i grupit
+	Brush name	Emri i furçës
+	Grid view	Pamje në rrjet
+	List view	Pamja e listës
+	Off: the speed of the pointer sets the spacing	Joaktiv: shpejtësia e treguesit përcakton hapësirën
+	Tilt Scale	Shkalla e animit
+	Brush Projection	Projeksion me furçë
+	Apply the pen's tilt and rotation to the tip shape	Aplikoni animin dhe rrotullimin e stilolapsit në formën e majës
+	Mixer Brush	Furçë mikser
+	Wet	I lagur
+	Mix	Përziejini
+	Wetness Jitter	Zhurma e lagështirës
+	Mix Jitter	Përzieni Jitter
+	Show the layer mask as an overlay	Trego maskën e shtresës si një mbivendosje
+	Toggle visibility	Ndrysho dukshmërinë
+	Unlink the mask from the layer	Shkëputni maskën nga shtresa
+	Link the mask to the layer	Lidhni maskën me shtresën
+	Gradient	Rrjedha Ngjyrës
+	Gradient Options	Opsionet e gradientit
+	Align with layer	E nivelo me fletën
+	Reset Alignment	Rivendos shtrirjen
+	Centre the gradient (offset 0, 0)	Përqendroni gradientin (offset 0, 0)
+	The current gradient (pick one in Window › Gradients)	Gradienti aktual (zgjidh një në dritare › Gradientet)
+	Select a type layer to edit its character and paragraph settings.	Zgjidhni një shtresë tipi për të modifikuar cilësimet e karakterit dhe paragrafit të saj
+	Text color	Ngjyra e tekstit
+	Type Options	Lloji Options
+	Anti-aliasing method	Metoda anti-aliasing
+	Horizontal type	Lloji horizontal
+	Vertical type	Lloji vertikal
+	Fill path with foreground color	Plotësoni rrugën me ngjyrën e planit të parë
+	Stroke path with brush	Rruga e goditjes me furçë
+	Load path as a selection	Ngarko shtegun si përzgjedhje
+	Make work path from selection	Bëni rrugën e punës nga përzgjedhja
+	Add vector mask	Shto Maskë Vektoriale
+	Create new path	Krijo një rrugë të re
+	Delete path	Fshi shtegun
+	Delete vector mask	Grise Maskën Vektoriale
+	CPU (no GPU acceleration)	CPU (pa përshpejtim GPU)
+	DirectX 12	DirectX 12
+	GPU backend	Mbështetja e GPU-së
+	Metal	Metal
+	OpenGL	OpenGL
+	Use tablet pressure	Përdorni presionin e tabletës
+	Vulkan	Vulkan

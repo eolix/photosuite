@@ -1,0 +1,12 @@
+{
+  "_comment": "Copy to tokens.json and edit while the app runs (devfast or dev profile only). Keys are theme::Tokens field names in crates/ui-egui/src/theme.rs; values are \"#rrggbb\", \"#rrggbbaa\" or numbers.",
+  "chrome": "#323232",
+  "dock": "#2b2b2b",
+  "card": "#323232",
+  "field": "#1e1e1e",
+  "tab_strip": "#262626",
+  "text": "#f0f0f0",
+  "text_dim": "#a0a0a0",
+  "accent": "#378ef0",
+  "radius": 4
+}

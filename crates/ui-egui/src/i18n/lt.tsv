@@ -1,0 +1,1942 @@
+# Lietuvių (lt) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+# Lietuvių translations for PhotoSuite UI.
+
+	File	Failas
+	Edit	Redaguoti
+	Image	Vaizdas
+	Layer	Sluoksniai
+	Type	Tipas
+	Select	Žymėjimas
+	Filter	Filtrai
+	View	Rodymas
+	Window	Langai
+	Help	Žinynas
+	(coming soon)	(netrukus)
+	New…	Naujas…
+	Open…	Atverti…
+	Open As…	Atidaryti kaip…
+	Open Recent	Atverti naujausius
+	Clear Recent Files	Išvalyti naujausius failus
+	Clear history	Išvalyti istoriją
+	Close	Užverti
+	Close All	Uždaryti viską
+	Close Others	Uždaryti Kitus
+	Save	Įrašyti
+	Save As…	Įrašyti kaip…
+	Save a Copy…	Išsaugoti kopiją…
+	Revert	Grįžti
+	Export	Eksportuoti
+	Quick Export as PNG	Greitas eksportavimas kaip PNG
+	Export As…	Eksportuoti kaip…
+	Export Preferences…	Eksportuoti nuostatas…
+	Save for Web (Legacy)…	Išsaugoti žiniatinklyje (pasenęs)…
+	Artboards to Files…	Meniu lentos į failus…
+	Artboards to PDF…	Dailinės lentos į PDF…
+	Layers to Files…	Failų sluoksniai…
+	Layer Comps to Files…	Sluoksnio komponavimas į failus…
+	Color Lookup Tables…	Spalvų paieškos lentelės…
+	Data Sets as Files…	Duomenų rinkiniai kaip failai…
+	Paths to Illustrator…	Kelias į „Illustrator“…
+	Render Video…	Pateikti vaizdo įrašą…
+	Generate	Generuoti
+	Image Assets	Vaizdo turtas
+	Place Embedded…	Vieta įterpta…
+	Place Linked…	Vieta susieta…
+	Package…	Paketas…
+	Automate	Automatizuoti
+	Batch…	Paketas…
+	Create Droplet…	Sukurti lašelį…
+	Crop and Straighten Photos	Apkarpykite ir ištiesinkite nuotraukas
+	Contact Sheet II…	Kontaktinis lapas II…
+	Conditional Mode Change…	Sąlyginio režimo keitimas…
+	Fit Image…	Talpinti vaizdą…
+	Lens Correction…	Objektyvo iškraipymų korekcija…
+	Merge to HDR Pro…	Sujungti su HDR Pro…
+	Photomerge…	Nuotraukų sujungimas…
+	Scripts	Scenarijai
+	Image Processor…	Vaizdo procesorius…
+	Delete All Empty Layers	Ištrinkite visus tuščius sluoksnius
+	Flatten All Layer Effects	Išlyginti visus sluoksnių efektus
+	Flatten All Masks	Išlyginkite visas kaukes
+	Script Events Manager…	Scenarijaus įvykių tvarkyklė…
+	Import	Importuoti
+	Browse…	Naršyti…
+	Reveal in Finder	Atskleiskite „Finder“
+	File Info…	Failo informacija…
+	Print…	Print…
+	Print One Copy	Spausdinti vieną kopiją
+	Exit	Išeiti
+	Undo	Anuliuoti
+	Redo	Perdaryti
+	Toggle Last State	Perjungti Paskutinę būseną
+	Fade…	Išnykimas…
+	Cut	Iškirpti
+	Copy	Kopijuoti
+	Copy Merged	Kopijuoti apjungiant visus sluoksnius
+	Paste	Įdėti
+	Paste Special	Specialus įklijavimas
+	Paste in Place	Įklijuokite į vietą
+	Paste Into	Įklijuoti į
+	Paste Outside	Įklijuoti išorėje
+	Paste Lorem Ipsum	Įklijuokite Lorem Ipsum
+	Clear	Išvalyti
+	Search…	Ieškoti…
+	Check Spelling…	Tikrinti rašybą…
+	Find and Replace Text…	Rasti ir pakeisti tekstą…
+	Fill…	Užpildyti…
+	Stroke…	Apvadas…
+	Content-Aware Fill…	Užpildymas pagal turinį…
+	Content-Aware Scale	Išmanusis mastelio keitimas
+	Puppet Warp	Lėlės lankstymas
+	Perspective Warp	Perspektyvinis metimas
+	Free Transform	Transformuoti laisvai
+	Transform	Transformuoti
+	Again	Kartoti
+	Scale	Mastelis
+	Rotate	Pasukti
+	Skew	Iškreiptas
+	Distort	Iškraipymai
+	Perspective	Perspektyva
+	Warp	Lankstyti
+	Flip Horizontal	Apverskite horizontaliai
+	Flip Vertical	Apversti vertikaliai
+	Rotate 180°	Pasukite 180°
+	Rotate 90° Clockwise	Pasukite 90° pagal laikrodžio rodyklę
+	Rotate 90° Counter Clockwise	Pasukite 90° prieš laikrodžio rodyklę
+	180°	180°
+	90° Clockwise	90° pagal laikrodžio rodyklę
+	90° Counter Clockwise	90° prieš laikrodžio rodyklę
+	Arbitrary…	Savavališkas…
+	Auto-Align Layers…	Automatiškai sulygiuoti sluoksnius…
+	Auto-Blend Layers…	Automatiškai sumaišyti sluoksnius…
+	Define Brush Preset…	Apibrėžkite šepetėlio išankstinį nustatymą…
+	Define Pattern…	Apibrėžti šabloną…
+	Define Custom Shape…	Apibrėžkite tinkintą formą…
+	Purge	Valymas
+	Clipboard	Iškarpinė
+	Histories	Istorijos
+	Video Cache	Vaizdo įrašų talpykla
+	All	Pažymėti viską
+	Presets	Išankstiniai nustatymai
+	Preset Manager…	Iš anksto nustatyta tvarkyklė…
+	Migrate Presets	Perkelti išankstinius nustatymus
+	Export/Import Presets…	Eksportuoti / importuoti išankstinius nustatymus…
+	Color Settings…	Spalvų nustatymai…
+	Assign Profile…	Priskirti profilį…
+	Convert to Profile…	Konvertuoti į profilį…
+	Keyboard Shortcuts…	Spartieji klavišai…
+	Menus…	Meniu…
+	Toolbar…	Įrankių juosta…
+	Preferences	Savybės
+	General…	Bendra…
+	Interface…	Sąsaja…
+	Workspace…	Darbo sritis…
+	Tools…	Įrankiai…
+	History Log…	Istorijos žurnalas…
+	File Handling…	Failų tvarkymas…
+	Export…	Eksportuoti…
+	Performance…	Spektaklis…
+	Scratch Disks…	Įbrėžiami diskai…
+	Cursors…	Žymekliai…
+	Transparency & Gamut…	Skaidrumas ir gama…
+	Units & Rulers…	Vienetai ir liniuotės…
+	Guides, Grid & Slices…	Gairės, tinklelis ir pjūviai…
+	Plug-ins…	Papildiniai…
+	Type…	Tipas…
+	Enhanced Controls…	Patobulinti valdikliai…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	Neapdoroti numatytieji…
+	Integrations…	Integracijos…
+	AI Integrations…	AI integracijos…
+	Install Plug-in…	Įdiegti papildinį…
+	Language Options	Kalbos parinktys
+	Settings…	Nustatymai…
+	Mode	Būdas
+	Bitmap	Bitmap
+	Grayscale	Grayscale
+	Duotone	Duotone
+	Indexed Color	Indeksuota spalva
+	RGB Color	RGB spalva
+	CMYK Color	CMYK spalva
+	Lab Color	Laboratorijos spalva
+	Multichannel	Daugiakanalis
+	8 Bits/Channel	8 bitai / kanalas
+	16 Bits/Channel	16 bitų / kanalas
+	32 Bits/Channel	32 bitai / kanalas
+	Color Table…	Spalvų lentelė…
+	Bitmap…	Bitmap…
+	Duotone…	Duotone…
+	Indexed Color…	Indeksuota spalva…
+	Adjustments	Pakeitimai
+	Brightness/Contrast…	Šviesumas/Kontrastas…
+	Levels…	Šviesumo lygiai…
+	Curves…	Kreivės…
+	Exposure…	Ekspozicija…
+	Vibrance…	Spalvingumas…
+	Hue/Saturation…	Atspalvis/Grynis…
+	Color Balance…	Spalvinis balansas…
+	Black & White…	Nespalvota…
+	Photo Filter…	Foto filtras…
+	Channel Mixer…	Kanalų maišiklis…
+	Color Lookup…	Spalvinė ieška…
+	Invert	Inversija
+	Posterize…	Plakatas…
+	Threshold…	Slenkstis…
+	Gradient Map…	Gradiento planas…
+	Selective Color…	Spalvų atranka…
+	Shadows/Highlights…	Šešėliai / akcentai…
+	HDR Toning…	HDR tonizavimas…
+	Desaturate	Išblukinimas
+	Match Color…	Suderinti spalvą…
+	Replace Color…	Pakeisti spalvą…
+	Equalize	Išlyginti
+	Auto Tone	Atspalvio korekcija
+	Auto Contrast	Automatinis kontrasto koregavimas
+	Auto Color	Automatinis spalvų koregavimas
+	Image Size…	Paveikslo dydis…
+	Canvas Size…	Paveikslo drobės dydis…
+	Image Rotation	Vaizdo pasukimas
+	Flip Canvas Horizontal	Apverskite drobę horizontaliai
+	Flip Canvas Vertical	Apverskite drobę vertikaliai
+	Crop	Apkirpti
+	Trim…	Apkirpti…
+	Reveal All	Išskleisti (viską)
+	Duplicate…	Dubliuoti…
+	Apply Image…	Pritaikyti paveikslą…
+	Calculations…	Skaičiavimai…
+	Variables	Kintamieji
+	Define…	Apibrėžkite…
+	Data Sets…	Duomenų rinkiniai…
+	Apply Data Set…	Taikyti duomenų rinkinį…
+	Variable Data Sets…	Kintamųjų duomenų rinkiniai…
+	Trap…	Spąstai…
+	Analysis	Analizė
+	Set Measurement Scale…	Nustatyti matavimo skalę…
+	Select Data Points…	Pasirinkite duomenų taškus…
+	Record Measurements	Įrašyti išmatavimus
+	Ruler Tool	Liniuotės įrankis
+	Count Tool	Skaičiavimo įrankis
+	Place Scale Marker…	Vietos mastelio žymeklis…
+	Custom…	Pasirinktinis…
+	New	Naujas
+	Layer…	Sluoksniai…
+	Group…	Grupė…
+	Group from Layers…	Grupė iš sluoksnių…
+	Artboard…	Dailinė lenta…
+	Artboard from Group…	Dailinė lenta iš grupės…
+	Artboard from Layers…	Dailinė lenta iš sluoksnių…
+	Layer via Copy	Kopijuoti sluoksnį
+	Layer via Cut	Sluoksnis perkirpus
+	Layer From Background…	Sluoksnis iš fono…
+	Layer from Background…	Sluoksnis iš fono…
+	New Shape Layer	Naujas formos sluoksnis
+	New Type Layer	Naujo tipo sluoksnis
+	New Fill Layer	Naujas užliejimo sluoksnis
+	New Adjustment Layer	Naujas koregavimo sluoksnis
+	New Layer Based Slice	Naujas sluoksnio pagrindas
+	New Smart Object via Copy	Naujas išmanusis objektas naudojant kopijavimą
+	New Blank Video Layer	Naujas tuščias vaizdo sluoksnis
+	New Video Layer from File…	Naujas vaizdo įrašo sluoksnis iš failo…
+	Duplicate Layer…	Dubliuoti sluoksnį…
+	Delete Layer	Pašalinti sluoksnį
+	Delete	Pašalinti
+	Rename Layer	Pervardyti sluoksnį
+	Create Layer	Sukurti sluoksnį
+	Layer Style	Sluoksnio stilius
+	Blending Options…	Užklojimo parinktys…
+	Bevel & Emboss…	Nuožulnus ir įspaustas…
+	Inner Shadow…	Vidinis šešėlis…
+	Inner Glow…	Vidinis švytėjimas…
+	Satin…	Satininis…
+	Color Overlay…	Spalvos užklojimas…
+	Gradient Overlay…	Gradiento užklojimas…
+	Pattern Overlay…	Rašto užklojimas…
+	Outer Glow…	Išorinis švytėjimas…
+	Drop Shadow…	Šešėlis…
+	Copy Layer Style	Kopijuoti sluoksnio stilių
+	Paste Layer Style	Įklijavimo sluoksnio stilius
+	Clear Layer Style	Išvalyti sluoksnio stilių
+	Global Light…	Pasaulinė šviesa…
+	Hide All Effects	Slėpti visus efektus
+	Scale Effects…	Mastelio efektai…
+	Smart Filter	Išmanusis filtras
+	Convert for Smart Filters	Konvertuoti į išmaniuosius filtrus
+	Clear Smart Filters	Išvalyti išmaniuosius filtrus
+	Disable Smart Filters	Išjungti išmaniųjus filtrus
+	Delete Filter Mask	Pašalinti filtro kaukę
+	Disable Filter Mask	Išjungti filtro kaukę
+	Solid Color…	Vienspalvė…
+	Gradient…	Gradientas…
+	Pattern…	Raštas…
+	Layer Mask	Sluoksnio kaukė
+	Vector Mask	Vektorinė kaukė
+	Reveal Selection	Atskleisti žymėjimą
+	Hide Selection	Paslėpti žymėjimą
+	Hide All	Slėpti viską
+	From Transparency	Nuo skaidrumo
+	Delete Vector Mask	Pašalinti vektorinę kaukę
+	Enable Layer Mask	Įgalinti sluoksnio kaukę
+	Disable Layer Mask	Išjungti sluoksnio kaukę
+	Enable Vector Mask	Įjungti vektorinę kaukę
+	Link Layer Mask	Nuorodų sluoksnio kaukė
+	Unlink Layer Mask	Atsieti sluoksnio kaukę
+	Link Vector Mask	Susieti vektorinę kaukę
+	Add Vector Mask	Pridėti vektorinę kaukę
+	Vector Mask from Current Path	Vektorinė kaukė iš dabartinio kelio
+	Create Clipping Mask	Sukurkite kirpimo kaukę
+	Release Clipping Mask	Atleiskite kirpimo kaukę
+	Smart Objects	Išmanieji objektai
+	Smart Object	Išmanusis objektas
+	Convert to Smart Object	Konvertuoti į „Smart Object“
+	Convert to Embedded	Konvertuoti į įterptąjį
+	Convert to Linked…	Konvertuoti į susietą…
+	Edit Contents	Redaguoti turinį
+	Replace Contents…	Pakeisti turinį…
+	Relink to File…	Iš naujo susieti į failą…
+	Export Contents…	Eksportuoti turinį…
+	Update Modified Content	Atnaujinkite pakeistą turinį
+	Update All Modified Content	Atnaujinkite visą pakeistą turinį
+	Stack Mode	Dėklas
+	Entropy	Entropija
+	Kurtosis	Kurtozė
+	Maximum	Maksimumas
+	Mean	Vidutiniškai
+	Median	Mediana
+	Minimum	Minimumas
+	Range	Rėžis
+	Skewness	Iškrypimas
+	Standard Deviation	Standartinis nuokrypis
+	Summation	Sumavimas
+	Variance	Dispersija
+	Video Layers	Vaizdo įrašų sluoksniai
+	Interpret Footage…	Interpretuoti filmuotą medžiagą…
+	Replace Footage…	Pakeisti filmuotą medžiagą…
+	Reload Frame	Iš naujo įkelti rėmelį
+	Show Altered Video	Rodyti pakeistą vaizdo įrašą
+	Restore Frame	Atkurti rėmelį
+	Restore All Frames	Atkurti visus rėmelius
+	Insert Blank Frame	Įdėkite tuščią rėmelį
+	Delete Frame	Ištrinti rėmelį
+	Duplicate Frame	Pasikartojantis rėmelis
+	Frame from Layers	Rėmas iš sluoksnių
+	Video Frames to Layers…	Vaizdo įrašų kadrai į sluoksnius…
+	Rasterize	Rasterizuoti
+	Rasterize Type	Rastravimo tipas
+	Rasterize Type Layer	Rasterizuoti tipo sluoksnį
+	Rasterize Shape	Rasterizuoti formą
+	New Guide Layout…	Naujas vadovo išdėstymas…
+	New Guides From Shape	Nauji formos vadovai
+	Lock Layers…	Užrakinti sluoksnius…
+	Link Layers	Susieti sluoksnius
+	Select Linked Layers	Pasirinkite Susieti sluoksniai
+	Merge Layers	Apjungti sluoksnius
+	Merge Down	Apjungti su žemesniu
+	Merge Visible	Sujungti matomus
+	Flatten Image	Suploti sluoksnius
+	Matting	Matavimas
+	Color Decontaminate…	Spalva nukenksminti…
+	Remove Black Matte	Pašalinkite Black Matte
+	Remove White Matte	Pašalinkite White Matte
+	Defringe…	Apriboti…
+	Group Layers	Grupuoti sluoksnius
+	Ungroup Layers	Išgrupuokite sluoksnius
+	Hide Layers	Slėpti sluoksnius
+	Arrange	Rikiuoti
+	Bring to Front	Iškelti į priekį
+	Bring Forward	Nukelti pirmyn
+	Send Backward	Nukelti žemyn
+	Send to Back	Nukelti į dugną
+	Reverse	Apgręžti
+	Combine Shapes	Sujunkite formas
+	Unite Shapes	Suvienyti formas
+	Subtract Front Shape	Atimti priekinę formą
+	Intersect Shape Areas	Susikerta formos sritys
+	Exclude Overlapping Shapes	Išskirkite persidengiančias formas
+	Merge Shape Components	Sujungti formos komponentus
+	Align	Lygiuoti
+	Top Edges	Viršutiniai kraštai
+	Vertical Centers	Vertikalūs centrai
+	Bottom Edges	Apatiniai kraštai
+	Left Edges	Kairieji kraštai
+	Horizontal Centers	Horizontalūs centrai
+	Right Edges	Dešinieji kraštai
+	Distribute	Paskirstyti
+	Vertically	Vertikalus
+	Horizontally	Horizontalus
+	Layer Edges	Sluoksnio kraštai
+	Isolate Layers	Izoliuoti sluoksnius
+	Layer Content Options…	Sluoksnio turinio parinktys…
+	Fill Content	Užpildykite turinį
+	Deselect Layers	Panaikinkite Sluoksnių pasirinkimą
+	Find Layers	Raskite sluoksnius
+	Layer Comps	Sluoksnių kompozicija
+	Layers	Sluoksniai
+	All Layers	Visi sluoksniai
+	Hidden Layers	Paslėpti sluoksniai
+	Mask All Objects	Užmaskuoti visus objektus
+	Subject	Tema
+	Sky	Dangus
+	Panels	Plokštės
+	Character Panel	Simbolių skydelis
+	Paragraph Panel	Pastraipų skydelis
+	Character Styles Panel	Simbolių stilių skydelis
+	Paragraph Styles Panel	Pastraipų stilių skydelis
+	Glyphs Panel	Glifų skydelis
+	Anti-Alias	Kraščių glodinimas
+	Sharp	Aštrus
+	Crisp	Traškus
+	Strong	Stiprus
+	Smooth	Švelniai
+	Windows LCD	Windows LCD
+	Windows	Windows
+	Orientation	Orientacija
+	Horizontal	Horizontaliai
+	Vertical	Vertikaliai
+	OpenType	OpenType
+	Standard Ligatures	Standartinės ligatūros
+	Contextual Alternates	Kontekstinės alternatyvos
+	Discretionary Ligatures	Diskrecinės ligatūros
+	Swash	Swash
+	Oldstyle	Senas stilius
+	Stylistic Alternates	Stilistiniai pakaitalai
+	Titling Alternates	Pavadinimo alternatyvos
+	Ornaments	Papuošalai
+	Ordinals	Ordinalai
+	Fractions	Trupmenos
+	Create Work Path	Sukurkite darbo kelią
+	Convert to Shape	Konvertuoti į figūrą
+	Warp Text…	Iškreiptas tekstas…
+	Convert to Point Text	Konvertuoti į tekstą taškučiais
+	Convert to Paragraph Text	Konvertavimas į tekstą pastraipoje
+	Default Features	Numatytosios funkcijos
+	East Asian Features	Rytų Azijos ypatybės
+	Middle Eastern Features	Artimųjų Rytų ypatybės
+	Middle Eastern & South Asian Composer	Artimųjų Rytų ir Pietų Azijos kompozitorius
+	Update All Text Layers	Atnaujinkite visus teksto sluoksnius
+	Replace All Missing Fonts	Pakeiskite visus trūkstamus šriftus
+	Resolve Missing Fonts…	Išspręskite trūkstamus šriftus…
+	Font Preview Size	Šrifto peržiūros dydis
+	None	Spalva neparinkta
+	Small	Mažas
+	Medium	Vidutinis
+	Large	Didelis
+	Extra Large	Itin didelis
+	Huge	Didžiulis
+	Load Default Type Styles	Įkelti numatytuosius tipo stilius
+	Save Default Type Styles	Išsaugoti numatytuosius tipo stilius
+	Deselect	Naikinti žymėjimą
+	Reselect	Pasirinkti iš naujo
+	Inverse	Inversija
+	Inverse Selection	Atvirkštinis pasirinkimas
+	Similar	Panašus
+	Color Range…	Žymėti spalva…
+	Focus Area…	Fokusavimo sritis…
+	Select and Mask…	Pasirinkite ir užmaskuokite…
+	Modify	Keisti
+	Border…	Rėmeliu…
+	Smooth…	Švelniai…
+	Expand…	Išplėsti…
+	Contract…	Sutraukti…
+	Feather…	Neryškūs žymėjimo kraštai…
+	Grow	Augti
+	Transform Selection	Transformuoti žymėjimą
+	Edit in Quick Mask Mode	Redaguoti greitosios kaukės režimu
+	Load Selection…	Įkelti pasirinkimą…
+	Save Selection…	Išsaugoti pasirinkimą…
+	Match All	Suderinti visus
+	Last Filter	Paskiausias filtras
+	Filter Gallery…	Filtrų galerija…
+	Adaptive Wide Angle…	Adaptyvus platus kampas…
+	Camera Raw Filter…	Camera Raw filtras…
+	Liquify…	Suskystinimas…
+	Vanishing Point…	Išnykimo taškas…
+	Blur	Liejimas
+	Blur Gallery	Blur galerija
+	Field Blur…	Lauko suliejimas…
+	Iris Blur…	Iris Blur…
+	Tilt-Shift…	Tilt-Shift…
+	Path Blur…	Kelio suliejimas…
+	Spin Blur…	Sukimo suliejimas…
+	Blur More	Dar lieti
+	Box Blur…	Lieti dėžute…
+	Gaussian Blur…	Gauso liejimas…
+	Lens Blur…	Optinis liejimas…
+	Motion Blur…	Judesio liejimas…
+	Radial Blur…	Radialinis liejimas…
+	Shape Blur…	Formos suliejimas…
+	Smart Blur…	Išmanusis suliejimas…
+	Surface Blur…	Paviršinis liejimas…
+	Average	Vidurkinimas
+	Displace…	Sudėti pagal kitą…
+	Pinch…	Gnybti…
+	Polar Coordinates…	Poliarinės koordinatės…
+	Ripple…	Raibuliavimas…
+	Shear…	Žirklės…
+	Spherize…	Sfera…
+	Twirl…	Sukti…
+	Wave…	Banga…
+	ZigZag…	ZigZag…
+	Noise	Triukšmas
+	Add Noise…	Pridėti triukšmo…
+	Despeckle	Dėmių valymas
+	Dust & Scratches…	Dulkės ir įbrėžimai…
+	Median…	Mediana…
+	Reduce Noise…	Triukšmų šalinimas…
+	Pixelate	Pikseliuoti
+	Color Halftone…	Pustonis…
+	Crystallize…	Kristalizuokite…
+	Facet	Aspektas
+	Fragment	Fragmentas
+	Mezzotint…	Pusiau tapyta (mezzo-tinto)…
+	Mosaic…	Mozaika…
+	Pointillize…	Nukreipti…
+	Render	Vaizduoti
+	Clouds	Debesys
+	Difference Clouds	Debesų įvairovė
+	Fibers…	Skaidulos…
+	Flame…	Liepsna…
+	Lens Flare…	Objektyvo atspindžiai…
+	Lighting Effects…	Apšvietimo efektai…
+	Picture Frame…	Paveikslų rėmelis…
+	Tree…	Medis…
+	Sharpen	Aštrinti
+	Sharpen Edges	Aštrinti kraštus
+	Sharpen More	Aštrinti stipriau
+	Smart Sharpen…	Aštrinti selektyviai…
+	Unsharp Mask…	Neryškumų maskavimas…
+	High Pass…	Aukštieji dažniai…
+	Stylize	Stilizuokite
+	Diffuse…	Difuzija…
+	Emboss…	Išgaubimas…
+	Extrude…	Išspausti…
+	Find Edges	Kraštų aptikimas
+	Oil Paint…	Tapyba aliejumi…
+	Solarize	Pasideginti
+	Tiles…	Plytelės…
+	Trace Contour…	Sekti kontūrą…
+	Wind…	Vėjas…
+	Video	Vaizdo įrašas
+	De-Interlace…	De-interlace…
+	NTSC Colors	NTSC spalvos
+	Other	Kita
+	Maximum…	Maksimumas…
+	Minimum…	Minimumas…
+	Offset…	Poslinkis…
+	Plug-ins	Papildiniai
+	Proof Setup	Tikrinimo sąranka
+	Proof Colors	Įrodančios spalvos
+	Gamut Warning	Įspėjimas apie gamą
+	Working CMYK	Veikiantis CMYK
+	Working Cyan Plate	Veikianti žalsvai mėlyna plokštė
+	Working Magenta Plate	Veikianti purpurinė plokštelė
+	Working Yellow Plate	Veikianti geltona plokštelė
+	Working Black Plate	Veikianti juoda plokšte
+	Working CMY Plate	Veikianti CMY plokštė
+	Legacy Macintosh RGB	Pasenęs Macintosh RGB
+	Internet Standard RGB	Interneto standartinis RGB
+	Monitor RGB	Monitorius RGB
+	Color Blindness — Protanopia-type	Daltonizmas - Protanopijos tipo
+	Color Blindness — Deuteranopia-type	Daltonizmas - Deuteranopijos tipo
+	Zoom In	Artinti
+	Zoom Out	Tolinti
+	Fit on Screen	Talpinti ekrane
+	Fit Layer(s) on Screen	Pritaikyti sluoksnį (-ius) ekrane
+	Fit Artboard on Screen	Pritaikyti „Artboard“ ekrane
+	100%	100 %
+	200%	200 %
+	Print Size	Spausdinimo dydis
+	Pixel Aspect Ratio	Pikselių kraštinių santykis
+	Pixel Aspect Ratio Correction	Pikselių formato koregavimas
+	Custom Pixel Aspect Ratio…	Tinkintas pikselių kraštinių santykis…
+	Square	Kvadratas
+	D1/DV NTSC (0.91)	D1 / DV NTSC (0,91)
+	D1/DV NTSC Widescreen (1.21)	D1 / DV NTSC plačiaekranis (1.21)
+	D1/DV PAL (1.09)	D1 / DV PAL (1,09)
+	D1/DV PAL Widescreen (1.46)	D1 / DV PAL plačiaekranis (1,46)
+	Anamorphic 2:1 (2)	Anamorfinis 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080 / DVCPRO HD 720 (1,33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080 / HDV 1080 (1.5)
+	32-bit Preview Options…	32 bitų peržiūros parinktys…
+	Screen Mode	Ekrano režimas
+	Standard Screen Mode	Standartinis ekrano režimas
+	Full Screen Mode With Menu Bar	Viso ekrano režimas su meniu juosta
+	Full Screen Mode	Viso ekrano režimas
+	Cycle Screen Mode	Perjungti ekrano režimą
+	Show	Rodyti
+	Extras	Priedai
+	Selection Edges	Pasirinkimo kraštai
+	Target Path	Tikslinis kelias
+	Current Path	Dabartinis kelias
+	Grid	Tinklelis
+	Guides	Gairės
+	Canvas Guides	Drobės vadovai
+	Artboard Guides	Meno lentos vadovai
+	Count	Antgalių skaičius
+	Smart Guides	Išmanieji vadovai
+	Slices	Pjūviai
+	Notes	Pastabos
+	Pixel Grid	Pikselių tinklelis
+	Pixel Art	Pixel Art
+	Pixel Art Preview	„Pixel Art“ peržiūra
+	Pattern Preview	Šablono peržiūra
+	Brush Preview	Teptuko peržiūra
+	Mesh	Tinklelis
+	Edit Pins	Redaguoti smeigtukus
+	Document Bounds	Dokumento ribos
+	Show Extras Options…	Rodyti priedų parinktis…
+	Rulers	Liniuotės
+	Snap	Pritraukti
+	Snap To	Pritraukti prie
+	Lock Guides	Užrakto kreiptuvai
+	Clear Guides	Panaikinti gaires
+	Clear Selected Artboard Guides	Išvalykite pasirinktus piešinių vadovus
+	Clear Canvas Guides	Išvalyti drobės vadovai
+	New Guide…	Naujas vadovas…
+	Lock Slices	Užrakinti skiltis
+	Clear Slices	Išvalyti griežinėlius
+	Match Zoom	Matyti priartinimą
+	Match Location	Rungtynių vieta
+	Match Rotation	Rungtynių sukimas
+	Cascade	Kaskados
+	Tile	Iškloti plytelėmis
+	Tile All Horizontally	Plytelės visos horizontaliai
+	Tile All Vertically	Plytelės visos vertikaliai
+	2-up Horizontal	2 aukštai horizontaliai
+	2-up Vertical	2 aukštų vertikaliai
+	3-up Horizontal	3 aukštų horizontaliai
+	3-up Stacked	3-up sukrauti
+	3-up Vertical	3 aukštų vertikaliai
+	4-up	4 aukštyn
+	6-up	6 aukštyn
+	Consolidate All to Tabs	Sujungti viską į skirtukus
+	Float in Window	Plūduriuoti lange
+	Float All in Windows	Float All Windows
+	New Window for Document	Naujas dokumento langas
+	Workspace	Darbo sritis
+	Essentials	Esminiai dalykai
+	Graphic and Web	Grafika ir žiniatinklis
+	Painting	Tapyba
+	Photography	Fotografija
+	New Workspace…	Nauja darbo sritis…
+	Delete Workspace…	Ištrinti darbo sritį…
+	Reset Workspace	Iš naujo nustatyti darbo sritį
+	Lock Workspace	Užrakinti darbo sritį
+	Theme	Apipavidalinimas
+	Pro Theme	Pro tema
+	Pro Medium Gray Theme	Pro vidutinė pilka tema
+	Studio Theme	Studijos tema
+	Studio Light Theme	Studijos šviesos tema
+	Classic Theme	Klasikinė tema
+	Next Theme	Kita tema
+	Midnight	Vidurnaktis
+	Anthracite	Antracitas
+	Slate	Šiferis
+	Pearl	Perlas
+	Aubergine	Baklažanai
+	Ocean	Vandenynas
+	Actions	Operacijos
+	Brush Settings	Šepečio nustatymai
+	Brushes	Šepečiai
+	Channels	Kanalai
+	Character	Tekstas
+	Character Styles	Charakterių stiliai
+	Clone Source	Klono šaltinis
+	Color	Spalva
+	Glyphs	Glifas
+	Gradients	Gradientai
+	Histogram	Histograma
+	History	Istorija
+	Info	Informacija
+	Measurement Log	Matavimo žurnalas
+	Modifier Keys	Modifikatoriaus klavišai
+	Navigator	Navigatorius
+	Options	Parinktys
+	Paragraph	Pastraipa
+	Paragraph Styles	Pastraipų stiliai
+	Paths	Kontūrai
+	Patterns	Raštai
+	Properties	Savybės
+	Shapes	Figūros
+	Styles	Stiliai
+	Swatches	Paletė
+	Timeline	Laiko juosta
+	Tool Presets	Įrankių nustatymai
+	Tools	Įrankiai
+	About PhotoSuite	Apie PhotoSuite
+	Website	Svetainė
+	Report an Issue…	Pranešti apie problemą…
+	WIA Support…	WIA palaikymas…
+	Apply	Taikyti
+	HSB/HSL	HSB/HSL
+	Invert…	Inversija…
+	Load Files into Stack…	Įkelti failus į krūvą…
+	Motion	Judėjimas
+	Notes…	Pastabos…
+	Other…	Kita…
+	Remove Warp Split	Pašalinkite Warp Split
+	Shape	Figūra
+	Split Warp Crosswise	Padalinti metmenis skersai
+	Split Warp Horizontally	Padalinkite metmenis horizontaliai
+	Split Warp Vertically	Padalinti metimą vertikaliai
+	Statistics…	Statistika…
+@plural	{n} item|{n} items	{n} prekė|{n} elementai
+	Auto	Auto
+	(print to the printer)	(spausdinti į spausdintuvą)
+	+ Add variable	+ Pridėti kintamąjį
+	30 frames @ 30 fps	30 kadrų @ 30 kadrų per sekundę
+	3D LUT File	3D LUT failas
+	Absolute	Absoliutus
+	Absolute Colorimetric	Absoliutus kolorimetrinis
+	Action	Veiksmas
+	Adaptive	Prisitaikantis
+	Adaptive Wide Angle isn't open	Adaptyvusis platus kampas neatidarytas
+	Add	Pridėti
+	Add Layer Mask	Pridėti sluoksnio kaukę
+	Add Stop	Pridėti stotelę
+	Add a layer style	Pridėkite sluoksnio stilių
+	Add a mask  (from the selection; {key} inverts)	Pridėti kaukę (iš pasirinkimo; {key} apverčia)
+	Add an adjustment	Pridėkite koregavimą
+	Add disk	Pridėti diską
+	Add space after paragraph	Po pastraipos pridėkite tarpą
+	Add space before paragraph	Pridėkite tarpą prieš pastraipą
+	Add to Sample	Pridėti prie mėginio
+	Add to selection  ({key})	Pridėti prie pasirinkimo ({key})
+	Adjust for Zoom	Sureguliuokite priartinimą
+	Adjustment visible	Matomas reguliavimas
+	Adobe RGB (1998) compatible	Suderinamas su Adobe RGB (1998)
+	Align and Distribute	Lygiuoti ir paskirstyti
+	Align and distribute	Sulygiuokite ir paskirstykite
+	Align horizontal centers	Sulygiuokite horizontalius centrus
+	Align left edges	Lygiuoti kairėn
+	Align right edges	Lygiuoti dešinėn
+	Aligned	Lygiuota
+	All Caps	Visos didžiosios raidės
+	All Slices	Visos skiltelės
+	All User Slices	Visos vartotojo dalys
+	All shortcuts reset to Photoshop defaults.	Visi spartieji klavišai atkuriami į numatytuosius „Photoshop“ nustatymus
+	Alt	Alt
+	Always use pressure for opacity	Visada naudokite slėgį neskaidrumui užtikrinti
+	Always use pressure for size	Visada naudokite slėgį pagal dydį
+	Amount	Dydis
+	Anchor:	Inkaras:
+	Angle	Kampas
+	Angle Gradient	Kampo gradientas
+	Angle Jitter	Barstymo kampas
+	Answer the unsaved-changes prompt first	Pirmiausia atsakykite į neišsaugotų pakeitimų raginimą
+	Anti-alias	Kraščių glodinimas
+	Appearance	Išvaizda
+	Appearance (Layer Style)	Išvaizda (sluoksnio stilius)
+	Apply Layer Mask	Užtepkite sluoksnio kaukę
+	Apply Per Tip	Taikyti pagal patarimą
+	Apply next selected layer comp	Taikyti kitą pasirinktą sluoksnio komp
+	Apply previous selected layer comp	Taikyti ankstesnį pasirinktą sluoksnio komp
+	Artboard	Meno lenta
+	Artboard Background Color	Dailinės lentos fono spalva
+	Assign working space	Priskirkite darbo vietą
+	Author:	Autorius:
+	Auto Hide	Automatinis slėpimas
+	Auto-Select:	Automatinis pasirinkimas:
+	Automatically level near-horizontal line segments	Automatiškai išlyginkite beveik horizontalias linijų atkarpas
+	Automatically straighten and level	Automatiškai ištiesinkite ir išlyginkite
+	Automatically straighten near-vertical line segments	Automatiškai ištiesinkite beveik vertikalius linijos segmentus
+	Background	Fono sluoksnis
+	Background Color	Fono spalva
+	Background Contents	Fono turinys
+	Balance	Balansas
+	Baseline	Bazinė linija
+	Baseline shift	Bazinės linijos poslinkis
+	Basic	Pagrindinis
+	Before (Y)	Prieš (Y)
+	Begin recording	Pradėkite įrašymą
+	Bend:	Lenkimas:
+	Bicubic	Bikubinis
+	Bicubic (smooth gradients)	Bikubinis (tolygūs nuolydžiai)
+	Bilinear	Bilinear
+	Black	Juoda
+	Black & White	Nespalvota
+	Black Point Compensation	Juodojo taško kompensacija
+	Black, White	Juoda, Balta
+	Blacks	Juodaodžiai
+	Blending	Maišymas
+	Blending Options	Užklojimo parinktys
+	Blue	Mėlyna
+	Blue, Red, Yellow	Mėlyna, Raudona, Geltona
+	Both	Abu
+	Both Axes	Abu ašiai
+	Bottom	Apačia
+	Brightness	Šviesumas
+	Brightness Jitter	Barstymo šviesumas
+	Brightness/Contrast	Šviesumas/Kontrastas
+	Bring the selected pin forward	Perkelkite pasirinktą kaištį į priekį
+	Brush Preset picker	Iš anksto nustatytas šepečio rinkiklis
+	Brush Reconstruct Options	Teptuko rekonstrukcijos parinktys
+	Brush Tool Options	Šepečio įrankio parinktys
+	Cache Level:	Talpyklos lygis:
+	Camera Raw isn't open	„Camera Raw“ neatidaryta
+	Cancel	Atšaukti
+	Cancel (Esc)	Atšaukti (Esc)
+	Cancel any current edits (Esc)	Atšaukti bet kokius dabartinius pakeitimus (Esc)
+	Cancel current crop operation  (Esc)	Atšaukti dabartinę apkarpymo operaciją (Esc)
+	Cancel transform (Esc)	Atšaukti transformaciją (Esc)
+	Cancel warp (Esc)	Atšaukti deformaciją (Esc)
+	Canvas	Drobė
+	Canvas extension color:	Drobės plėtinio spalva:
+	Capture	Užfiksuoti
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	Užfiksuokite kiekvieno sluoksnio matomumą, padėtį ir stilių naudodami + apačioje, tada perjunkite versijas
+	Catch-up on Stroke End	Pasivijimas smūgio pabaigoje
+	Center	Centras
+	Center Crop Marks	Centrinės apkarpymo žymės
+	Center text	Centrinis tekstas
+	Change	Keisti
+	Change All	Keisti viską
+	Change Screen Mode  (F)	Keisti ekrano režimą (F)
+	Change To:	Keisti į:
+	Channel Mixer	Kanalų maišiklis
+	Channel:	Kanalas:
+	Check All Layers	Patikrinkite visus sluoksnius
+	Check Spelling	Patikrinkite rašybą
+	Clarity	Aiškumas
+	Clear All	Išvalyti viską
+	Clear Override	Išvalyti nepaisymą
+	Clear Samples	Išvalyti pavyzdžius
+	Click sets foreground · right-click sets background	Spustelėjimas nustato priekinį planą · Dešiniuoju pelės mygtuku spustelėkite foną
+	Click the first point or press {key} to close · Esc cancels	Spustelėkite pirmąjį tašką arba paspauskite {key}, kad uždarytumėte · Esc atšaukia
+	Click to add a point · drag off or {key}-click or Delete to remove	Spustelėkite, kad pridėtumėte tašką · vilkite arba {key} spustelėkite arba Ištrinti, kad pašalintumėte
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	Spustelėkite, kad pritaikytumėte, {key} spustelėkite, kad išvalytumėte nepaisymus, dukart spustelėkite, kad pamatytumėte stiliaus parinktis
+	Click to edit the gradient	Spustelėkite norėdami redaguoti gradientą
+	Click to restore the current colour	Spustelėkite, kad atkurtumėte dabartinę spalvą
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	Spustelėkite, kad priartintumėte · {key} - spustelėkite, kad sumažintumėte · vilkite dešinėn / kairėn, kad padidintumėte / sumažintumėte
+	Click with the Note tool to add a note.	Spustelėkite pastabų įrankį, kad pridėtumėte pastabą
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	Spustelėkite: kampe · Vilkite: sklandžiai · Spustelėkite pirmąjį tašką: uždarykite · {key} užbaigti · Esc atšaukti
+	Clip to layer below	Iškirpkite į žemiau esantį sluoksnį
+	Clipped	Nukirpta
+	Close Style Options	Uždarykite stiliaus parinktis
+	Cmd	Cmd
+	Coated CMYK	Dengtas CMYK
+	Color & Swatches	Spalvos ir pavyzdžiai
+	Color Balance	Spalvinis balansas
+	Color Detail	Spalvos detalė
+	Color Grading	Spalvų klasifikavimas
+	Color Lookup	Spalvinė ieška
+	Color Management	Spalvų valdymas
+	Color Mixer	Spalvų maišytuvas
+	Color Mode	Spalvų režimas
+	Color Priority	Spalvų prioritetas
+	Color Range preview	Spalvų diapazono peržiūra
+	Color:	Spalva:
+	Colorize	Nuspalvinti
+	Colors	Spalvos
+	Commit Perspective Warp ({key})	Įvykdyti perspektyvos deformaciją ({key})
+	Commit Puppet Warp ({key})	Įvykdyti lėlių deformaciją ({key})
+	Commit any current edits ({key})	Atlikti visus dabartinius pakeitimus ({key})
+	Commit current crop operation  ({key})	Atlikti dabartinę apkarpymo operaciją ({key})
+	Commit transform ({key})	Įvykdyti transformaciją ({key})
+	Commit warp ({key})	Įvesti deformaciją ({key})
+	Constant	Pastovus
+	Constrain proportions	Apriboti proporcijas
+	Contact Sheet II	Kontaktinis lapas II
+	Content-Aware	Suvokiamas turinys
+	Contiguous	Ištisai
+	Contrast	Kontrastas
+	Control:	Valdymas:
+	Convert document's colors to the working space	Konvertuokite dokumento spalvas į darbo erdvę
+	Convert to sRGB	Konvertuoti į sRGB
+	Copies	Kopijos
+	Copper	Varis
+	Copyright	Autorių teisės
+	Copyright and Contact Info	Autorių teisės ir kontaktinė informacija
+	Corner Crop Marks	Kampinės apkarpymo žymės
+	Corner radius	Kampo spindulys
+	Correction	Korekcija
+	Count Jitter	Barstymų skaičius
+	Create	Sukurti
+	Create Droplet	Sukurkite lašelį
+	Create Texture	Sukurti tekstūrą
+	Create Video Timeline	Sukurkite vaizdo įrašo laiko juostą
+	Create a new count group	Sukurkite naują skaičiavimo grupę
+	Create a new document or open an existing file.	Sukurkite naują dokumentą arba atidarykite esamą failą
+	Create a new group	Sukurti naują grupę
+	Create a new layer	Sukurkite naują sluoksnį
+	Create new action	Sukurti naują veiksmą
+	Create new channel	Sukurti naują kanalą
+	Create new document from current state	Sukurti naują dokumentą iš esamos būsenos
+	Create new fill or adjustment layer	Sukurkite naują užpildymo arba reguliavimo sluoksnį
+	Create new gradient	Sukurti naują gradientą
+	Create new group	Sukurti naują grupę
+	Create new layer comp	Sukurti naują sluoksnių kompl
+	Create new pattern from the selection	Sukurkite naują modelį iš pasirinkimo
+	Create new shape from the current path	Sukurkite naują formą iš dabartinio kelio
+	Create new snapshot	Sukurkite naują momentinę nuotrauką
+	Create new style (from the selected type)	Sukurti naują stilių (iš pasirinkto tipo)
+	Create new style from the selected layer	Sukurkite naują stilių iš pasirinkto sluoksnio
+	Create new tool preset	Sukurkite naują įrankio nustatymą
+	Crop Factor	Pasėlių faktorius
+	Ctrl	Ctrl
+	Current & Below	Darbinis ir žemyn
+	Current Layer	Darbinis sluoksnis
+	Current Size	Dabartinis dydis
+	Current Tool Only	Tik dabartinis įrankis
+	Curve	Kreivė
+	Curves	Kreivės
+	Custom	Pasirinktinis
+	Custom Shapes	Individualizuotos formos
+	Cyan	Ciano
+	Cyan  ·  Red	Žydra · Raudona
+	Darken	Tamsinti
+	Darks	Tamsos
+	Data Sets	Duomenų rinkiniai
+	Default	Numatytoji
+	Default colours (D)	Numatytosios spalvos (D)
+	Default printer	Numatytasis spausdintuvas
+	Default restored.	Numatytasis atkurtas
+	Define	Apibrėžkite
+	Define at least one variable first.	Pirmiausia apibrėžkite bent vieną kintamąjį
+	Dehaze	Dehaze
+	Delete Cropped Pixels	Ištrinkite apkarpytus pikselius
+	Delete Group	Ištrinti grupę
+	Delete Layer Mask	Ištrinkite sluoksnio kaukę
+	Delete Layers	Ištrinti sluoksnius
+	Delete Shortcut	Ištrinti nuorodą
+	Delete Timeline	Ištrinti laiko juostą
+	Delete Tool Preset	Ištrinti įrankio išankstinį nustatymą
+	Delete count group	Ištrinti skaičiavimo grupę
+	Delete current channel	Ištrinti esamą kanalą
+	Delete current state	Ištrinti dabartinę būseną
+	Delete effect layer	Ištrinkite efekto sluoksnį
+	Delete layer	Pašalinti sluoksnį
+	Delete layer comp	Ištrinti sluoksnio komp
+	Delete note	Ištrinti pastabą
+	Delete selected measurements	Ištrinti pasirinktus matavimus
+	Delete style	Ištrinti stilių
+	Delete tool preset	Ištrinti išankstinį įrankio nustatymą
+	Density	Tankumas
+	Density:	Tankis:
+	Depth	Gylis
+	Depth Jitter	Gylio virpėjimas
+	Description	Aprašas
+	Deselect All	Panaikinkite visų pasirinkimą
+	Detail	Detalė
+	Diamond Gradient	Deimantinis gradientas
+	Difference	Skirtumų ryškinimas
+	Diffusion	Difuzija
+	Discard the embedded profile (don't color manage)	Atmesti įdėtą profilį (netvarkyti spalvų)
+	Discontiguous	Neatskiriamas
+	Feedback	Atsiliepimai
+	Dismiss	Atsisakyti
+	Display P3	Ekranas P3
+	Display Text	Rodyti tekstą
+	Dither	Dither
+	Divide…	Dalyba (Divide)…
+	Document	dokumentas
+	Don't Save	Neišsaugokite
+	Done	Atlikta
+	Dots	Taškai
+	Drag a rectangle around the object	Vilkite stačiakampį aplink objektą
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	Vilkite paveikslėlį, kad pridėtumėte apribojimą; Poslinkis horizontaliai/vertikaliai; dešiniuoju pelės mygtuku spustelėkite, kad ištrintumėte
+	Drag to move the active shape's path or the Work Path	Vilkite, kad perkeltumėte aktyvios formos kelią arba darbo kelią
+	Draw with the Pen tool (P) or make a work path from a selection.	Pieškite naudodami rašiklio įrankį (P) arba pasirinkite darbo kelią
+	Drop an image or PSD anywhere to open it.	Numeskite vaizdą arba PSD bet kur, kad jį atidarytumėte
+	Duplicate Layers…	Pasikartojantys sluoksniai…
+	Duplicate style	Pasikartojantis stilius
+	Edit Toolbar…	Redaguoti įrankių juostą…
+	Edit in Quick Mask Mode  (Q)	Redaguoti greitosios kaukės režimu (Q)
+	Edit in Standard Mode  (Q)	Redaguoti standartiniu režimu (Q)
+	Effects	Efektai
+	Embed Color Profile	Įterpti spalvų profilį
+	Embedded Profile Mismatch	Įterptojo profilio neatitikimas
+	Enable airbrush-style build-up effects	Įgalinkite aerografo stiliaus kaupimo efektus
+	Enhance Edge	Padidinkite kraštą
+	Entire Font	Visas šriftas
+	Exact	Tiksliai
+	Expansion:	Išplėtimas:
+	Export Presets	Eksportuoti išankstinius nustatymus
+	Export selected measurements (CSV)	Eksportuoti pasirinktus matavimus (CSV)
+	Exposure	Ekspozicija
+	Exposure and Gamma	Ekspozicija ir gama
+	Exposure:	Ekspozicija:
+	Eyedropper	Pipetė spalvai parinkti
+	Factor:	Veiksnys:
+	Faux Bold	Faux Bold
+	Faux Italic	Dirbtinis kursyvas
+	Feather	Neryškūs žymėjimo kraštai
+	Fewer Points	Mažiau taškų
+	File Settings	Failų nustatymai
+	Fill	Užpildyti
+	Fill:	Užpildykite:
+	Filter for adjustment layers	Filtras reguliavimo sluoksniams
+	Filter for pixel layers	Pikselių sluoksnių filtras
+	Filter for shape layers	Filtras formos sluoksniams
+	Filter for smart objects	Išmaniųjų objektų filtras
+	Filter for type layers	Filtras tipo sluoksniams
+	Filter:	Filtras:
+	Finger Painting	Pirštų tapyba
+	Fisheye	Žuvies akis
+	Fit	Tinka
+	Fit Screen	Fit Screen
+	Fit in View	Talpinti rodinyje
+	Fixed	Pataisyta
+	Fixed Ratio	Fiksuotas santykis
+	Fixed Size	Fiksuotas dydis
+	Flip	Apversti
+	Flip X	Apverskite X
+	Flip X Jitter	Flip X Jitter
+	Flip Y	Apverskite Y
+	Flip Y Jitter	Apverskite Y Jitter
+	Flow	Liejimas
+	Flow Jitter	Srauto virpėjimas
+	Focal Length	Židinio nuotolis
+	Font	Šriftas
+	Font Size:	Šrifto dydis:
+	Font size	Šrifto dydis
+	Foreground	Priekinis planas
+	Foreground to Background	Pirmas planas į foną
+	Foreground/Background Jitter	Barstymas priekinio plano/fono
+	Format	Formatas
+	Frame from Layers…	Rėmas iš sluoksnių…
+	Free	Laisvai
+	Full Spherical	Pilnas sferinis
+	Fuzziness:	Neryškumas:
+	GPU	GPU
+	Gamma Correction	Gama korekcija
+	Gamma:	Gama:
+	Global	Pasaulinis
+	Glow Color	Švytėjimo spalva
+	Gradient Map	Gradiento planas
+	Grain	Grūdeliai
+	Gray	Pilka
+	Gray Gamma 2.2	Pilka gama 2.2
+	Green	Žalia
+	Group	Grupė
+	Hardness	Kietumas
+	Heart	Širdis
+	Height	Aukštis
+	Height:	Aukštis:
+	Hide Auto Slices	Slėpti automatines dalis
+	Hide Properties	Slėpti ypatybes
+	Highlight Compression	Pažymėkite Compression
+	Highlight Priority	Pažymėkite prioritetą
+	Highlights	Šviesumos
+	Home	Pradžia
+	Horizontal scale	Horizontalus mastelis
+	Hue	Atspalvis
+	Hue Jitter	Barstymo atspalvis
+	Hue/Saturation	Atspalvis/Grynis
+	Hyphenate	Brūkšnelis
+	Ignore	Ignoruoti
+	Ignore All	Ignoruoti visus
+	Image Size	Paveikslo dydis
+	Import Brushes…	Importuoti šepečius…
+	Import Photoshop brushes (.abr)	Importuoti Photoshop teptukus (.abr)
+	Import Presets	Importuoti išankstinius nustatymus
+	Imported	Importuota
+	Indent First	Pirma įtrauka
+	Indent Left	Įtrauka į kairę
+	Indent Right	Įtrauka dešinėje
+	Indent first line	Pirmos eilutės įtrauka
+	Indent left margin	Įtrauka kairioji paraštė
+	Indent right margin	Įtrauka dešinėje paraštėje
+	Input:	Įvestis:
+	Inside	Vidus
+	Interlaced	Susipynęs
+	Interpolation:	Interpoliacija:
+	Intersect with selection  ({key})	Susikerta su pasirinkimu ({key})
+	Invert All	Apversti viską
+	Invert has no settings.	Invert neturi nustatymų
+	Italic	Kursyvas
+	Justify all	Viską pateisinkite
+	Justify last centered	Lygiuoti paskutinį kartą centre
+	Justify last left	Pagrįskite paskutinę kairę
+	Justify last right	Pagrįskite paskutinę teisę
+	Kerning	Kerningas
+	Keyboard Shortcuts	Spartieji klavišai
+	Keyboard Shortcuts and Menus	Spartieji klavišai ir meniu
+	Kind	Malonus
+	Label Size	Etiketės dydis
+	Labels	Etiketės
+	Lanczos (sharp)	Lanczos (aštrus)
+	Landscape	Gulsčias
+	Last Document State	Paskutinio dokumento būsena
+	Layout	Išdėstymas
+	Leading	Priekinis tarpas
+	Leading (set to the font size × auto-leading when Auto)	Pirmaujantis (nustatytas šrifto dydis × automatinis pirmavimas, kai yra automatinis)
+	Leave as is (don't color manage)	Palikite kaip yra (netvarkykite spalvų)
+	Left	Kairė
+	Left align text	Lygiuoti tekstą kairėje
+	Length:	Ilgis:
+	Level	Lygis
+	Levels	Šviesumo lygiai
+	Lighten	Šviesinti
+	Lightness	Šviesumas
+	Lights	Šviesos
+	Limits:	Apribojimai:
+	Linear Gradient	Linijinis gradientas
+	Link layers	Susieti sluoksnius
+	Link width and height	Nuorodos plotis ir aukštis
+	Liquify is not open	Liquify neatidarytas
+	Load	Įkelti
+	Load 3D LUT…	Įkelti 3D LUT…
+	Load Photoshop brushes (.abr)	Įkelti „Photoshop“ šepečius (.abr)
+	Load channel as selection	Įkelti kanalą kaip pasirinkimą
+	Load…	Įkelti…
+	Localized Color Clusters	Lokalizuotos spalvų grupės
+	Lock	Užrakinti
+	Lock all	Užrakinti viską
+	Lock image pixels	Užrakinti vaizdo pikselius
+	Lock layer	Užrakto sluoksnis
+	Lock position	Užrakto padėtis
+	Lock transparent pixels	Užrakinti skaidrius pikselius
+	Lock:	Užraktas:
+	Logical Length:	Loginis ilgis:
+	Logical Units:	Loginiai vienetai:
+	Luminance	Šviesumas
+	Luminance Detail	Šviesumo detalė
+	Magenta	Purpurinė
+	Magenta  ·  Green	Purpurinė · Žalia
+	Maintain aspect ratio	Išlaikyti kraštinių santykį
+	Marker Size	Žymeklio dydis
+	Mask All	Viską kaukė
+	Mask Options	Kaukės parinktys
+	Masking	Maskavimas
+	Master	Pagrindinis
+	Matte	Matinis
+	Median:	Mediana:
+	Menus	Meniu
+	Mesh Size	Tinklo dydis
+	Metadata	Metaduomenys
+	Metrics	Metrika
+	Midpoint	Vidurio taškas
+	Midtones	Vidutiniai tonai
+	Midtones from:	Vidurio tonai iš:
+	Midtones to:	Viduriniai tonai iki:
+	Minimum Depth	Minimalus gylis
+	Minimum Diameter	Minimalus skersmuo
+	Minimum Roundness	Minimalus apvalumas
+	Mode:	Režimas:
+	Monochrome	Vienspalvis
+	More Points	Daugiau taškų
+	Move effect layer down	Perkelkite efekto sluoksnį žemyn
+	Move effect layer up	Perkelti efekto sluoksnį aukštyn
+	Move to	Perkelti į
+	Name	Pavadinimas
+	Name:	Vardas:
+	Nearest Neighbor	Artimiausias Kaimynas
+	Nearest Neighbor (hard edges)	Artimiausias kaimynas (kieti kraštai)
+	New Size	Naujas dydis
+	New document…	Naujas dokumentas…
+	New effect layer	Naujas efekto sluoksnis
+	New selection	Naujas pasirinkimas
+	Next frame	Kitas kadras
+	Next note	Kitas užrašas
+	No Color	Nėra spalvos
+	No Color Management	Nėra spalvų valdymo
+	No Dither	Ne Dither
+	No author	Nėra autoriaus
+	No character style	Jokio charakterio stiliaus
+	No document	Jokio dokumento
+	No matching commands	Nėra atitinkamų komandų
+	No presets for the current tool.	Nėra išankstinių dabartinio įrankio nustatymų
+	No presets of this type.	Nėra šio tipo išankstinių nustatymų
+	No properties	Nėra savybių
+	No tool presets.	Nėra išankstinių įrankių nustatymų
+	Noise Reduction	Triukšmo mažinimas
+	Normal	Normalus
+	Not in Dictionary:	Nėra žodyne:
+	OK	OK
+	Offset	Poslinkis
+	Only Web Colors	Tik žiniatinklio spalvos
+	Opacity	Nepermatomumas
+	Opacity Jitter	Neskaidrumas Jitter
+	Opacity:	Neskaidrumas:
+	Open a document to define variables.	Norėdami apibrėžti kintamuosius, atidarykite dokumentą
+	Open a document to select a colour range.	Atidarykite dokumentą, kad pasirinktumėte spalvų diapazoną
+	Open a document to use the timeline.	Atidarykite dokumentą, kad galėtumėte naudoti laiko juostą
+	Optical	Optinis
+	Optimized	Optimizuotas
+	Option-click to define a source point to clone from	Spustelėkite parinktį, norėdami apibrėžti šaltinio tašką, iš kurio norite klonuoti
+	Original	Originalus
+	Output Channel:	Išvesties kanalas:
+	Output Levels:	Išvesties lygiai:
+	Output:	Išvestis:
+	Outside	Išorėn
+	Overlay Color	Perdangos spalva
+	Overlay Opacity	Perdangos neskaidrumas
+	Overlay: Rule of Thirds	Perdanga: trečdalių taisyklė
+	Override Pressure	Nepaisyti slėgio
+	Override Rotation	Nepaisyti sukimosi
+	Override Tilt	Nepaisyti pakreipimo
+	PRESET DETAILS	Išankstinės nuostatos detalės
+	PSD	PSD
+	Paint Overlay	Dažų perdanga
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	Skydelių vietos išsaugomos darbo srityje. Spartieji klavišai, meniu ir įrankių juosta yra neprivalomi
+	Paper	Popierius
+	Path	Kontūras
+	Pattern	Raštas
+	Pattern Size	Šablono dydis
+	Pause	Pauzė
+	Percent	Procentas
+	Perceptual	Suvokiamasis
+	Perspective Warp is not active	„Perspective Warp“ neaktyvus
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Perspektyvinis deformavimas: pieškite plokštumas išilgai vaizdo perspektyvos, tada perjunkite į deformaciją
+	Photo Filter	Foto filtras
+	PhotoSuite	PhotoSuite
+	PhotoSuite Manages Colors	„PhotoSuite“ valdo spalvas
+	PhotoSuite — an open-source, native image editor written in Rust.	„PhotoSuite“ – atvirojo kodo vaizdų rengyklė, parašyta „Rust“
+	Pin Depth:	Smeigtuko gylis:
+	Pixel Length:	Pikselio ilgis:
+	Pixels/Centimeter	Pikseliai / centimetras
+	Pixels/Inch	Pikseliai/colis
+	Pixels:	Pikseliai:
+	Play	Žaisti
+	Play selection	Groti pasirinkimas
+	Portrait	Stačias
+	Position	Padėtis
+	Position and Size	Padėtis ir dydis
+	Posterize	Plakatas
+	Preserve Details	Išsaugoti detales
+	Preserve Luminosity	Išlaikyti spalvos šviesumą
+	Preset	Iš anksto nustatytas
+	Preset Type	Iš anksto nustatytas tipas
+	Preset:	Iš anksto nustatytas:
+	Presets:	Išankstiniai nustatymai:
+	Press keys…	Paspauskite klavišus…
+	Pressure	Slėgis
+	Pressure for Opacity	Spaudimas neskaidrumui
+	Pressure for Size	Spaudimas dydžiui
+	Prevent auto-nesting in and out of Artboards and Frames	Užkirsti kelią automatiniam įdėjimui į piešinių lentas ir rėmelius ir iš jų
+	Preview	Peržiūra
+	Previous frame	Ankstesnis kadras
+	Previous note	Ankstesnė pastaba
+	Print	Print
+	Printer	Spausdintuvas
+	Printer Manages Colors	Spausdintuvas valdo spalvas
+	Printer Setup	Spausdintuvo sąranka
+	Printing Marks	Spausdinimo ženklai
+	Progressive	Progresyvus
+	Promote	Reklamuoti
+	Protect Detail	Išsaugoti detalumą
+	Protect Foreground Color	Apsaugokite priekinio plano spalvą
+	Protect Tones	Apsaugokite tonus
+	Proximity Match	Artumo rungtynės
+	Pulled String Mode	Ištrauktų stygų režimas
+	Puppet Warp is not active	Puppet Warp neaktyvus
+	Purity	Grynumas
+	Quality	Kokybė
+	Quick Actions	Greiti veiksmai
+	Quick Export As PNG	Greitas eksportavimas kaip PNG
+	Radial Gradient	Radialinis gradientas
+	Radius	Spindulys
+	Radius:	Spindulys:
+	Range:	Diapazonas:
+	Rate	Pakeitimų laipsnis
+	Recently Used	Neseniai naudotas
+	Reconstruct	Rekonstruoti
+	Record ● a sequence of edits, then play ▶ it on any document.	Įrašykite ● redagavimo seką, tada paleiskite ▶ bet kuriame dokumente
+	Red	Raudona
+	Redefine style by current selection	Iš naujo apibrėžti stilių pagal dabartinį pasirinkimą
+	Reflected Gradient	Atspindėtas gradientas
+	Registration Marks	Registracijos ženklai
+	Regular	Įprastas
+	Relative	Reliatyvus
+	Relative Colorimetric	Santykinis kolorimetrinis
+	Remove	Pašalinti
+	Remove All Pins	Pašalinti visus smeigtukus
+	Remove Background	Pašalinti foną
+	Remove Planes	Pašalinti lėktuvus
+	Remove stop	Pašalinti stotelę
+	Remove variable	Pašalinti kintamąjį
+	Rename	Pervardyti
+	Rename Group…	Pervardyti grupę…
+	Rename Layer…	Pervardyti sluoksnį…
+	Rename Tool Preset…	Pervardyti įrankio išankstinį nustatymą…
+	Rename…	Pervardyti…
+	Resample	Perskaičiuoti
+	Reset All to Defaults	Iš naujo nustatyti viską į numatytuosius nustatymus
+	Reset Section	Iš naujo nustatyti skyrių
+	Reset Transform	Iš naujo nustatyti transformaciją
+	Reset to defaults	Atstatyti į numatytuosius nustatymus
+	Resolution	Raiška
+	Resolution:	Rezoliucija:
+	Restore All	Atkurti viską
+	Restore Defaults	Atkurti numatytuosius nustatymus
+	Restrictive (Web)	Ribojantis (žiniatinklis)
+	Right	Dešinė
+	Right align text	Lygiuoti tekstą dešinėje
+	Rigid	Kietas
+	Rotate:	Pasukti:
+	Rotation	Rotacija
+	Roughness	Šiurkštumas
+	Roundness	Apvalumas
+	Roundness Jitter	Barstymo apvalumas
+	Rulers & Grids	Liniuotės ir tinkleliai
+	Sample All Layers	Visų sluoksnių pavyzdys
+	Sample:	Pavyzdys:
+	Sampling: Background Swatch	Mėginių ėmimas: Background Swatch
+	Sampling: Continuous	Mėginių ėmimas: nuolatinis
+	Sampling: Once	Mėginių ėmimas: vieną kartą
+	Saturate	Gryninti
+	Saturation	Grynis
+	Saturation Jitter	Barstymo grynis
+	Save HTML and Images	Išsaugokite HTML ir vaizdus
+	Save as PDF	Išsaugoti kaip PDF
+	Save selection as channel	Išsaugoti pasirinkimą kaip kanalą
+	Save…	Įrašyti…
+	Scale to Fit Media	Mastelį, kad tilptų medija
+	Scatter	Išsklaidymas
+	Scratch disks	Įbrėžimų diskai
+	Search	Ieškoti
+	Search commands	Paieškos komandos
+	Search commands, tools and panels…	Ieškoti komandų, įrankių ir skydelių…
+	Search fonts	Ieškoti šriftų
+	Select All	Pasirinkite Viskas
+	Select Subject	Pasirinkite Tema
+	Select a type layer or click into text to insert glyphs	Pasirinkite tipo sluoksnį arba spustelėkite tekstą, kad įterptumėte glifus
+	Select text to apply a character style	Pasirinkite tekstą, kad pritaikytumėte simbolių stilių
+	Select:	Pasirinkite:
+	Selections	Pasirinkimai
+	Selective	Atrankinis
+	Selective Color	Spalvų atranka
+	Send the selected pin backward	Siųsti pasirinktą smeigtuką atgal
+	Set additional smoothing options	Nustatykite papildomas išlyginimo parinktis
+	Set background color	Nustatyti fono spalvą
+	Set foreground color	Nustatykite priekinio plano spalvą
+	Set painting symmetry options	Nustatykite tapybos simetrijos parinktis
+	Set shape fill type	Nustatykite formos užpildymo tipą
+	Set shape stroke type	Nustatykite formos potėpio tipą
+	Set the text color	Nustatykite teksto spalvą
+	Shadows	Šešėliai
+	Shape:	Forma:
+	Sharpening	Galandimas
+	Shift	Shift
+	Shortcut removed.	Spartusis klavišas pašalintas
+	Show All Menu Items	Rodyti visus meniu elementus
+	Show Backdrop	Rodyti foną
+	Show Guides	Rodyti vadovus
+	Show Mask	Rodyti kaukę
+	Show Mesh	Rodyti tinklelį
+	Show Overlay	Rodyti perdangą
+	Show Transform Controls	Rodyti transformavimo valdiklius
+	Show or hide the Notes panel	Rodyti arba slėpti pastabų skydelį
+	Show:	Rodyti:
+	Sides	Pusės
+	Sides:	Šonai:
+	Size	Dydis
+	Size Jitter	Išbarstymo zona
+	Size:	Dydis:
+	Slice Options…	Pjūviai…
+	Slices From Guides	Gabalai iš vadovų
+	Slices are locked (View › Lock Slices)	Pjūviai užrakinti (žiūrėti › Užrakinti skilteles)
+	Small Caps	Mažos raidės
+	Smoothing	Išlyginimas
+	Space After	Erdvė po
+	Space Before	Erdvė Prieš
+	Spacing	Intervalai
+	Spell check complete.	Rašybos tikrinimas baigtas
+	Split:	Padalijimas:
+	Star ratio	Žvaigždžių santykis
+	Stop playing/recording	Sustabdykite grojimą / įrašymą
+	Straighten	Ištiesinti
+	Straighten Layer	Tiesinti
+	Strength:	Stiprumas:
+	Strikethrough	Perbraukta
+	Stroke	Apvadas
+	Stroke Catch-up	Insulto pasivijimas
+	Stroke:	Insultas:
+	Style	Stilius
+	Style Options	Stiliaus parinktys
+	Style Options…	Stiliaus parinktys…
+	Style: Normal	Stilius: Normalus
+	Subtract from Sample	Atimti iš mėginio
+	Subtract from selection  ({key})	Atimti iš pasirinkimo ({key})
+	Suggestions:	Pasiūlymai:
+	Swap colours (X)	Sukeisti spalvas (X)
+	Swaps height and width	Keičiasi aukštis ir plotis
+	Switch between free transform and warp modes	Perjunkite laisvos transformacijos ir deformacijos režimus
+	Switch theme	Perjungti temą
+	Temperature	Temperatūra
+	Tetrahedral	Tetraedras
+	Text Position:	Teksto padėtis:
+	Texture	Tekstūra
+	Texture Each Tip	Tekstūra Kiekvienas patarimas
+	Threshold	Slenkstis
+	Threshold Level	Slenksčio lygis
+	Thumbnail size (smallest: list)	Miniatiūros dydis (mažiausias: sąrašas)
+	Tilt X	Pakreipti X
+	Tilt Y	Pakreipkite Y
+	Tint	Atspalvis
+	Toggle count group visibility	Perjungti skaičiavimo grupės matomumą
+	Toggle text orientation	Perjungti teksto orientaciją
+	Tolerance	Tolerancija
+	Tolerance:	Tolerancija:
+	Tone:	Tonas:
+	Toolbar	Įrankių juosta
+	Top	Viršus
+	Total:	Iš viso:
+	Tracking	Tarpai tarp raidžių
+	Tracking (1/1000 em)	Stebėjimas (1/1000 em)
+	Transparency	Permatomumas
+	Transparent	Skaidri
+	Trilinear	Trilinear
+	Type Styles	Tipas Stiliai
+	Type:	Tipas:
+	Underline	Pabraukite
+	Untitled	Be pavadinimo
+	Untitled-1	Be pavadinimo-1
+	Update layer comp (visibility, position and appearance)	Atnaujinti sluoksnio kompl. (matomumas, padėtis ir išvaizda)
+	Use Default	Naudoti numatytąjį
+	Use Legacy	Naudoti senuoju būdu
+	Use Measurement Scale	Naudokite matavimo skalę
+	Use the embedded profile (instead of the working space)	Naudokite įterptąjį profilį (vietoj darbo vietos)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	Kintamieji susieja sluoksnio matomumą, tekstą ar pikselius su pavadinta duomenų vieta
+	Vertical scale	Vertikalus mastelis
+	Vibrance	Spalvingumas
+	View Options	Peržiūrėti parinktis
+	Vignetting	Vinjetavimas
+	Violet, Orange	Violetinė, oranžinė
+	Visibility	Matomumas
+	Visible	Matoma
+	Warp:	Iškrypimas:
+	Web Snap	Web Snap
+	Weight	Svoris
+	Weight:	Svoris:
+	White	Balta
+	White Balance: As Shot	Baltos spalvos balansas: kaip kadras
+	Whites	Baltieji
+	Width	Plotis
+	Width:	Plotis:
+	Work Path	Darbo kelias
+	Yellow	Geltona
+	Yellow  ·  Blue	Geltona · Mėlyna
+	Zoom	Mastelis
+	Zoom in	Artinti
+	Zoom out	Tolinti
+	command or shortcut	komandą arba nuorodą
+	current	esama
+	image file path	vaizdo failo kelias
+	modified	modifikuotas
+	name	Pavadinimas
+	new	Naujas
+	{name} options	{name} parinktys
+	↑↓ navigate   {key} run   esc close	↑↓ naršyti {key} paleisti esc uždaryti
+	Version {version}	Versija {version}
+	New Document	Naujas dokumentas
+	Error	Klaida
+	Command	komandą
+	Adjustment layers have nothing to transform	Reguliavimo sluoksniai neturi ką transformuoti
+	Altitude	Aukštis virš jūros lygio
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	Apple Watch 45mm
+	Aqua	Aqua
+	Art & Illustration	Menas ir iliustracija
+	Background Eraser Tool	Fono trintuko įrankis
+	Bevel & Emboss	Nuožulnus ir įspaudas
+	Blend Mode	Sluoksnių suliejimo būdas
+	Blues	Bliuzas
+	Blur Tool	Liejimo įrankis
+	Bold	Paryškintas
+	Brush	Teptukas
+	Brush Pose	Teptuko poza
+	Brush Tip Shape	Šepetėlio antgalio forma
+	Brush Tool	Teptukas
+	Build-up	Užstatymas
+	Burn Tool	Tamsinimas
+	Centimeters	Centimetras
+	Choke	Užspringti
+	Classic	Klasika
+	Click to add text	Spustelėkite norėdami pridėti tekstą
+	Click to fill similar colours	Spustelėkite, kad užpildytumėte panašias spalvas
+	Clone Stamp Tool	Klonavimo antspaudo įrankis
+	Color Burn	Spalvos ryškinimas
+	Color Dodge	Spalvos šviesinimas
+	Color Dynamics	Spalvų dinamika
+	Color Overlay	Spalvos užklojimas
+	Comic Book	Komiksų knyga
+	Conform	Atitinka
+	Content-Aware Fill needs a selection on a pixel layer	Užpildymas pagal turinį turi būti pasirinktas pikselių sluoksnyje
+	Could not transform: the layer is empty	Nepavyko transformuoti: sluoksnis tuščias
+	Could not use Perspective Warp: the layer is empty	Nepavyko naudoti perspektyvinio deformavimo: sluoksnis tuščias
+	Could not use Puppet Warp: no opaque pixels	Nepavyko naudoti lėlių metmenų: nėra nepermatomų pikselių
+	Could not use Puppet Warp: the layer is empty	Nepavyko naudoti lėlių metmenų: sluoksnis tuščias
+	Crop Tool	Apkirpimo įrankis
+	Crosswise	Skersai
+	Current Tool	Dabartinis įrankis
+	Custom Shape Tool	Pasirinktinės formos įrankis
+	Cyans	Žydros spalvos
+	Default Photoshop Size	Numatytasis „Photoshop“ dydis
+	Delete Workspace	Ištrinti darbo sritį
+	Diamond	Deimantas
+	Dimensions:	Matmenys:
+	Direction	Kryptis
+	Distance	Nuotolis
+	Document Dimensions	Dokumento matmenys
+	Document Profile	Dokumento profilis
+	Document Sizes	Dokumentų dydžiai
+	Dodge Tool	Šviesinimas
+	Down	Žemyn
+	Drag to draw a gradient	Vilkite, kad nubrėžtumėte gradientą
+	Drag to move the active layer	Vilkite, kad perkeltumėte aktyvųjį sluoksnį
+	Drag to pan  ·  hold Space with any tool	Vilkite, kad pastumtumėte · laikykite tarpą naudodami bet kurį įrankį
+	Drop Shadow	Šešėlis
+	Dual Brush	Dvigubas šepetys
+	Edge	Kraštas
+	Efficiency	Efektyvumas
+	Efficiency: 100%	Efektyvumas: 100 %
+	Ellipse Tool	Elipsės įrankis
+	Elliptical Marquee Tool	Elipsinės palapinės įrankis
+	Emboss	Išgaubimas
+	Eraser	Trintukas
+	Eraser Tool	Trintukas
+	ExtraBold	ExtraBold
+	ExtraLight	ExtraLight
+	Eyedropper Tool	Eyedropper įrankis
+	Fade	Išnykimas
+	Fill Opacity	Užpildykite neskaidrumą
+	Film & Video	Filmas ir vaizdo įrašas
+	From	Iš
+	General	Bendra
+	GitHub	GitHub
+	Gradient Overlay	Gradiento užklojimas
+	Gradient Tool	Gradientas
+	Greens	Žalieji
+	Hand Tool	Ranka
+	Hard	Sunku
+	Hard Mix	Maišymas (Hard Mix)
+	Healing Brush Tool	Pleistras
+	Highlights from:	Akcentai iš:
+	History Brush Tool	Istorijos teptuko įrankis
+	Horizontal Type Tool	Horizontalaus tipo įrankis
+	Image Size:	Vaizdo dydis:
+	Inches	Colis
+	Indexed	Indeksuota
+	Initial Direction	Pradinė kryptis
+	Inner Bevel	Kantas į vidų
+	Inner Glow	Vidinis švytėjimas
+	Inner Shadow	Vidinis šešėlis
+	Lab	Lab
+	Landscape, 10 x 8	Kraštovaizdis, 10 x 8
+	Landscape, 6 x 4	Kraštovaizdis, 6 x 4
+	Landscape, 7 x 5	Kraštovaizdis, 7 x 5
+	Lasso	Lasso
+	Lasso Tool	Lasso įrankis
+	Layer Count	Sluoksnių skaičius
+	Layer Knocks Out Drop Shadow	Layer Knocks Out Drop Shadow
+	Legal	Teisinė
+	Letter	Laiškas
+	Light	Šviesus
+	Line Tool	Linijos įrankis
+	Linear	Linijinis
+	Linear Burn	Tiesinis ryškinimas
+	Linear Height	Linijinis aukštis
+	Link with Layer	Susieti su sluoksniu
+	Lorem Ipsum	Lorem Ipsum
+	Magentas	Magentas
+	Magic Eraser Tool	„Magic Eraser Tool“
+	Magic Wand Tool	Stebuklingos lazdelės įrankis
+	Marquee	Marquee
+	Mean:	Reiškia:
+	Measurement Scale	Matavimo skalė
+	Measurement Scale Marker	Matavimo skalės žymeklis
+	Millimeters	Milimetras
+	Mobile	Mobilus įrenginys
+	Move Tool	Nešimo įrankis
+	Multiply	Dauginti
+	My Brushes	Mano šepečiai
+	Neutrals	Neutraliai
+	New Workspace	Nauja darbo sritis
+	Note Tool	Pastabų įrankis
+	Object Selection Tool	Objektų pasirinkimo įrankis
+	Off	Išjungta
+	Open	Atverti
+	Orange	Oranžinė
+	Original Ratio	Originalus santykis
+	Out Of Gamut	Out Of Gamut
+	Outer Bevel	Kantas į išorę
+	Outer Glow	Išorinis švytėjimas
+	Overlay	Perdengti
+	Paint Bucket Tool	Dažų kibirėlis
+	Paints from the document's opening state	Dažai iš dokumento atidarymo būsenos
+	Path Selection Tool	Kelio pasirinkimo įrankis
+	Pattern Overlay	Rašto užklojimas
+	Pen Pressure	Rašiklio spaudimas
+	Pen Tilt	Rašiklio pakreipimas
+	Pen Tool	Rašiklio įrankis
+	Photo	Nuotrauka
+	PhotoSuite website	PhotoSuite svetainė
+	Picas	Picas
+	Pillow Emboss	Išgaubimas pagalvėle
+	Pixel Replacement	Pikselių pakeitimas
+	Pixels	Pikselių
+	Points	Taškai
+	Polygon Tool	Daugiakampio įrankis
+	Polygonal Lasso Tool	Daugiakampis Lasso įrankis
+	Portrait, 4 x 6	Portretas, 4x6
+	Portrait, 5 x 7	Portretas, 5x7
+	PostScript (72 points/inch)	PostScript (72 taškai / colyje)
+	Postcard	Atvirukas
+	Poster	Plakatas
+	Pro (Dark)	Pro (tamsiai)
+	Pro (Medium Gray)	Pro (vidutiniškai pilka)
+	Protect Texture	Apsaugokite tekstūrą
+	Purple	Violetinė
+	Quick Mask	Greita kaukė
+	Quick Selection Tool	Greito pasirinkimo įrankis
+	Radial	Radialinis
+	Rasterize Layer	Rasterizuoti sluoksnį
+	Ratio	Santykis
+	Recent	Naujausi
+	Rectangle Tool	Stačiakampio įrankis
+	Rectangular Marquee Tool	Stačiakampio palapinės įrankis
+	Reds	Raudonieji
+	Reflected	Atspindėtas
+	Sample: foreground colour	Pavyzdys: priekinio plano spalva
+	Sampled Colors	Atrinktos spalvos
+	Satin	Satininis
+	Save Pixel Aspect Ratio	Išsaugokite pikselių formato santykį
+	Scattering	Išsibarstymas
+	Scratch Sizes	Įbrėžimų dydžiai
+	Select Data Points	Pasirinkite duomenų taškai
+	Selection	Žymėjimas
+	SemiBold	Pusiau paryškintas
+	Shadows up to:	Šešėliai iki:
+	Shape Dynamics	Formos dinamika
+	Sharpen Tool	Aštrinimo įrankis
+	Show Extras Options	Rodyti priedų parinktis
+	Slice Select Tool	Žymėjimo skiltimis įrankis
+	Slice Tool	Pjūvių Įrankis
+	Smart Filters	Išmanieji filtrai
+	Smudge Tool	Glodinimo įrankis
+	Soft	Minkštas
+	Soften	Švelninti
+	Source	Šaltinis
+	Source: set	Šaltinis: rinkinys
+	Sponge Tool	Kempinė
+	Spot Healing Brush Tool	Pleistras spuogams
+	Spread	Paplitimas
+	Square, 12 x 12	Kvadratas, 12x12
+	Square, 5 x 5	Kvadratas, 5x5
+	Std Dev:	Std Dev:
+	Studio (Dark)	Studija (tamsi)
+	Studio (Light)	Studija (šviesi)
+	Stylus Wheel	Plunksnos ratas
+	Subtract	Atimti
+	Tabloid	Bulvarinis leidinys
+	Text Replacement	Teksto keitimas
+	Thin	Plonas
+	Traditional (72.27 points/inch)	Tradicinis (72,27 taško / colyje)
+	Transfer	Perdavimas
+	Triangle Tool	Trikampio įrankis
+	Unsaved changes	Neišsaugoti pakeitimai
+	Uses the foreground and background colours.	Naudoja priekinio plano ir fono spalvas
+	Web	Žiniatinklis
+	Web Large	Internetas didelis
+	Web Minimum	Interneto minimumas
+	Web Most Common	Internetas Dažniausias
+	WebP (lossless)	WebP (be nuostolių)
+	Wet Edges	Drėgni kraštai
+	Yellows	Geltonos
+	Zoom Tool	Lęšis
+	{name} Properties	{name} ypatybės
+	Revert “{name}” to the last saved version? Your changes will be lost.	Grąžinti „{name}“ į paskutinę išsaugotą versiją? Jūsų pakeitimai bus prarasti
+	Do you want to save the changes you made to “{name}” before quitting?	Ar norite išsaugoti „{name}“ pakeitimus, kuriuos atlikote prieš išeidami?
+	Do you want to save the changes you made to “{name}” before closing?	Ar norite išsaugoti „{name}“ pakeitimus, kuriuos atlikote prieš uždarydami?
+	Doc: {flat}/{layered}	Dokumentas: {flat}/{layered}
+	Scratch: {size}	Įbrėžimas: {size}
+	Untagged {mode}	Nepažymėta {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} tšk. x {h} piks. ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	Skiriamoji geba: {dpi} pikselių colyje
+	Doc: {w} × {h} px	Dokumentas: {w} × {h} px
+	Frame {current} / {total}	Kadras {current} / {total}
+	Count: {n}	Skaičius: {n}
+	BLANK DOCUMENT PRESETS ({n})	TUŠČIŲ DOKUMENTŲ NUSTATYMAI ({n})
+	Constraints ({n})	Apribojimai ({n})
+	Align {what}	Sulygiuoti {what}
+@plural	{n} Layer|{n} Layers	{n} sluoksnis|{n} sluoksniai
+@plural	Group · {n} layer|Group · {n} layers	Grupė · {n} sluoksnis|Grupė · {n} sluoksniai
+	Additional plugins folder	Papildomų įskiepių aplankas
+	Adobe	Adobe
+	Adobe rgb	Adobe rgb
+	Allow agent control	Leisti agento kontrolę
+	Allow scripts to connect	Leisti skriptams prisijungti
+	Always	Visada
+	Always create smart objects when placing	Dėdami visada kurkite išmaniuosius objektus
+	Animated zoom	Animuotas priartinimas
+	Apply auto tone	Taikyti automatinį toną
+	Ask	Paklausk
+	Ask before saving layered tiff	Paklauskite prieš išsaugodami sluoksniuotą tiff
+	Auto collapse icon panels	Automatiškai sutraukti piktogramų skydelius
+	Auto show hidden panels	Automatiškai rodyti paslėptas plokštes
+	Auto show home screen	Automatiškai rodyti pagrindinį ekraną
+	Autosave	Automatinis išsaugojimas
+	Autosave minutes	Automatiškai išsaugokite minutes
+	Beep when done	Pasibaigus pypsi
+	Bicubic automatic	Bikubinis automatas
+	Bicubic sharper	Bikubinis aštresnis
+	Bicubic smoother	Bikubinis lygiklis
+	Bit depth	Bitelio gylis
+	Brush preview color	Teptuko peržiūros spalva
+	Cache levels	Talpyklos lygiai
+	Cache tile size	Talpyklos plytelės dydis
+	Camera Raw Defaults	Camera Raw numatytieji nustatymai
+	Canvas border	Drobės kraštinė
+	Canvas color	Drobės spalva
+	Canvas custom color	Drobės tinkinta spalva
+	Color picker	Spalvos parinkimas
+	Color space	Spalvų erdvė
+	Column width	Stulpelio plotis
+	Concise	Glaustai
+	Control port	Valdymo prievadas
+	Convert to srgb	Konvertuoti į srgb
+	Cursors	Kursoriai
+	Custom dark	Individualus tamsus
+	Custom light	Individualizuota šviesa
+	Dark	Tamsus
+	Dark gray	Tamsiai pilka
+	Dashed lines	Brūkšninės linijos
+	Destination	Paskirties vieta
+	Detailed	Išsamus
+	Disks	Diskai
+	Display p3	Rodyti p3
+	Double click layer mask launches select and mask	Dukart spustelėkite sluoksnio kaukę, paleidžiamas pasirinkimas ir užmaskavimas
+	Drop shadow	Šešėlis
+	Dynamic color sliders	Dinaminiai spalvų slankikliai
+	East asian	Rytų Azijos
+	Effect cache mb	Efektų talpykla mb
+	Enable flick panning	Įgalinti brūkštelėjimą
+	Enable floating document window docking	Įgalinti slankiojo dokumento lango prijungimą
+	Enable narrow options bar	Įgalinti siaurą parinkčių juostą
+	Enabled	Įjungta
+	Enhanced Controls	Patobulinti valdikliai
+	Export clipboard	Eksportuoti iškarpinę
+	Extra large	Itin didelis
+	File Handling	Failų tvarkymas
+	File path	Failo kelias
+	Fill new type layers with placeholder	Užpildykite naujo tipo sluoksnius vietos rezervavimo ženklu
+	Font preview	Šrifto peržiūra
+	Full size tip	Viso dydžio antgalis
+	Gamut warning color	Įspėjamoji gama
+	Gamut warning opacity	Gamtos įspėjimas apie neskaidrumą
+	Generator enabled	Generatorius įjungtas
+	Gif	Gif
+	Glossy	Blizgus
+	Grid color	Tinklelio spalva
+	Grid colors	Tinklelio spalvos
+	Grid size	Tinklelio dydis
+	Grid style	Tinklelio stilius
+	Grid unit	Tinklelio vienetas
+	Gridline every	Tinklelis kas
+	Guide color	Vadovo spalva
+	Guide style	Vadovo stilius
+	Guides, Grid & Slices	Gairės, tinklelis ir pjūviai
+	Gutter	Latakas
+	History Log	Istorijos žurnalas
+	History states	Istorija teigia
+	Ignore exif profile tag	Ignoruoti exif profilio žymą
+	Image interpolation	Vaizdo interpoliacija
+	Image previews	Vaizdų peržiūros
+	Integrations	Integracijos
+	Interface	Sąsaja
+	Jpeg quality	Jpeg kokybė
+	Jpg	Jpg
+	Language	Kalba
+	Large tabs	Dideli skirtukai
+	Legacy compositing	Senasis komponavimas
+	Light gray	Šviesiai pilka
+	Line	Linija
+	Lines	Linijos
+	Lowercase extension	Mažųjų raidžių plėtinys
+	Maximize psd compatibility	Maksimaliai padidinkite psd suderinamumą
+	Medium gray	Vidutiniškai pilka
+	Memory usage mb	Atminties naudojimas mb
+	Missing glyph protection	Trūksta glifo apsaugos
+	Modern	Modernus
+	Nearest neighbor	Artimiausias kaimynas
+	Never	Niekada
+	Normal tip	Normalus patarimas
+	Open as smart object	Atidaryti kaip išmanųjį objektą
+	Open documents as tabs	Atidarykite dokumentus kaip skirtukus
+	Overscroll	Perslinkti
+	Performance	Spektaklis
+	Png	Png
+	Point size	Taško dydis
+	Precise	Tikslumas
+	Preserve details	Išsaugokite detales
+	Print resolution	Spausdinimo raiška
+	Pro	Pro
+	Pro medium	Pro medium
+	Pro photo	Pro nuotrauka
+	Quick export format	Greitas eksporto formatas
+	Quick export location	Greita eksporto vieta
+	Recent file count	Paskutinis failų skaičius
+	Recent files	Naujausi failai
+	Recent fonts	Naujausi šriftai
+	Recover on launch	Atkurti paleidus
+	Remember workspace changes	Prisiminkite darbo srities pakeitimus
+	Resize image during place	Pakeiskite vaizdo dydį vietoje
+	Rotate view with trackpad	Sukite vaizdą naudodami valdymo bloką
+	Same folder	Tas pats aplankas
+	Save in background	Išsaugoti fone
+	Scratch Disks	Įbrėžiami diskai
+	Screen	Ekranas
+	Screen resolution	Ekrano raiška
+	Scrubby slider acceleration	Šlykštus slankiklio pagreitis
+	Sessions only	Tik seansai
+	Sharpen for	Pagaląsti už
+	Show channels in color	Rodyti kanalus spalvotai
+	Show crosshair in brush tip	Rodyti kryželį šepečio antgalyje
+	Show extension panels	Rodyti plėtinių skydelius
+	Show font names in english	Rodyti šriftų pavadinimus anglų kalba
+	Show menu colors	Rodyti meniu spalvas
+	Show only crosshair while painting	Tapydami rodyti tik kryželį
+	Show slice numbers	Rodyti pjūvių numerius
+	Show tooltips	Rodyti patarimus
+	Show transformation values	Rodyti transformacijos reikšmes
+	Slice color	Pjaustymo spalva
+	Smart guide color	Išmanioji vadovo spalva
+	Smart quotes	Protingos citatos
+	Snap vector tools and transforms to pixel grid	Pritvirtinti vektorinius įrankius ir transformuoti į pikselių tinklelį
+	Srgb	Srgb
+	Standard	Standartinis
+	Studio	Studija
+	Studio light	Studijos šviesa
+	Subdivisions	Padalos
+	System	Sistema
+	Text engine	Teksto variklis
+	Text file	Tekstinis failas
+	Tiny	Mažytis
+	Touch gestures	Lietimo gestai
+	Transparency & Gamut	Skaidrumas ir gama
+	Type units	Tipo vienetai
+	UI font size	Sąsajos šrifto dydis
+	UI scale	UI mastelis
+	Units & Rulers	Vienetai ir liniuotės
+	Use additional plugins folder	Naudokite papildomų įskiepių aplanką
+	Use esc to commit	Naudokite esc, kad įsipareigotumėte
+	Use gpu	Naudokite gpu
+	Use legacy free transform	Naudokite seną nemokamą transformaciją
+	Use shift key for tool switch	Įrankiui perjungti naudokite „Shift“ klavišą
+	Vary round brush hardness on hud	Keiskite apvalaus šepečio kietumą ant Hud
+	Webp	Webp
+	World ready	Pasaulis paruoštas
+	Zoom clicked point to center	Spustelėjo mastelio keitimo tašką į centrą
+	Zoom resizes windows	Priartinimas keičia langų dydį
+	Zoom with scroll wheel	Mastelio keitimas slinkties ratuku
+	Zoom with trackpad pinch	Mastelio keitimas suspaudus jutiklinį kilimėlį
+	Pass Through	Perkloti (Pass Through)
+	Dissolve	Ištirpinti
+	Darker Color	Tamsinti spalvas
+	Linear Dodge (Add)	„Linear Dodge“ (pridėti)
+	Lighter Color	Spalvos šviesinimas
+	Soft Light	Išsklaidyta šviesa
+	Hard Light	Kontrastinga šviesa
+	Vivid Light	Ryški šviesa
+	Linear Light	Linijinė šviesa
+	Pin Light	Šviesa iš taško
+	Exclusion	Išimtys (Exclusion)
+	Divide	Dalyba (Divide)
+	Luminosity	Spalvos ryškumas
+@plural	{n} sample|{n} samples	{n} pavyzdys|{n} pavyzdžiai
+	{added}, {removed} subtracted	{added}, {removed} atimta
+	Adjustment Preview	Koregavimo peržiūra
+	Airbrush: keeps depositing paint while the pointer rests.	Airbrush: nusėda dažai, kol žymeklis stovi
+	Angle:	Kampas:
+	Blend If	Sąlyginis suliejimas
+	Close Tab Group	Uždaryti skirtukų grupę
+	Collapse	Suskleisti
+	Collapse All Groups	Sutraukti visas grupes
+	Collapse Panel Group	Sutraukti skydų grupę
+	Collapse group  ({key}-click: all groups)	Sutraukti grupę ({key}-spustelėkite: visos grupės)
+	Create new brush from the current settings	Sukurkite naują teptuką iš dabartinių nustatymų
+	Create new brush from these settings	Sukurkite naują šepetį naudodami šiuos nustatymus
+	Delete brush	Ištrinti teptuką
+	Drag the arrow to set the angle, the dots to set the roundness	Vilkite rodyklę, kad nustatytumėte kampą, taškus, kad nustatytumėte apvalumą
+	Expand	Išplėsti
+	Expand Panel Group	Išplėskite skydų grupę
+	Expand group  ({key}-click: all groups)	Išskleisti grupę ({key}-spustelėkite: visos grupės)
+	Fade steps	Išblukę žingsniai
+	Hide the layer's effects  ({key}-click: all layers)	Slėpti sluoksnio efektus ({key}-spustelėkite: visi sluoksniai)
+	Import Brushes… (.abr)	Importuoti šepečius… (.abr)
+	Move Group Down	Perkelti grupę žemyn
+	Move Group Up	Perkelti grupę aukštyn
+	Reset the brush to the defaults	Iš naujo nustatykite šepetį į numatytuosius nustatymus
+	Restore original size	Atkurti pradinį dydį
+	Roundness:	Apvalumas:
+	Search Brushes	Paieškos šepečiai
+	Show the layer's effects  ({key}-click: all layers)	Rodyti sluoksnio efektus ({key}-spustelėkite: visi sluoksniai)
+	Brush picker	Šepečių rinktuvas
+	Erase	Ištrinti
+	Right click with painting tools	Dešiniuoju pelės mygtuku spustelėkite dažymo įrankius
+	System Info…	Sistemos informacija…
+	System Info	Sistemos informacija
+	More panels	Daugiau plokščių
+	These settings aren't available in PhotoSuite yet.	Šie nustatymai dar nepasiekiami „PhotoSuite“
+	Graphics	Grafika
+	Reset GPU Backend	Iš naujo nustatykite GPU užpakalinę programą
+	Applies at next launch.	Taikoma kito paleidimo metu
+	Click to sample the foreground colour  ·  {key}-click for background	Spustelėkite, kad paimtumėte priekinio plano spalvą · {key} ir spustelėkite, kad pamatytumėte foną
+	{key}-click to set the source	{key} - spustelėkite, kad nustatytumėte šaltinį
+	{key} to subtract	{key} atimti
+	Clone source {n} ({key}-click with Clone Stamp to set)	Klonuoti šaltinį {n} (spustelėkite {key} su klonavimo antspaudu, kad nustatytumėte)
+	Source: not set ({key}-click with Clone Stamp)	Šaltinis: nenustatyta ({key} spustelėjimas su klonavimo antspaudu)
+	Pixel Layer	Pikselių sluoksnis
+	Type Layer	Įveskite sluoksnį
+	Shape Layer	Formos sluoksnis
+	Group Layer	Grupinis sluoksnis
+	Fill Layer	Užpildykite sluoksnį
+	Smart Object Layer	Išmanusis objektų sluoksnis
+	Create Warped Text	Sukurkite iškreiptą tekstą
+	Rasterize Smart Object	Rasterizuoti išmanųjį objektą
+	Rasterize Fill Content	Rasterizuoti Užpildykite turinį
+	Unlock: picking a preset replaces these settings	Atrakinti: pasirinkus išankstinį nustatymą, šie nustatymai pakeičiami
+	Lock: keep these settings when picking another preset	Užraktas: išsaugokite šiuos nustatymus, kai pasirenkate kitą išankstinį nustatymą
+	Diameter:	Skersmuo:
+	Hardness:	Kietumas:
+	No brush presets	Jokių išankstinių šepetėlių nustatymų
+	Toggle the Brush Settings panel  (F5)	Perjungti šepetėlio nustatymų skydelį (F5)
+	Create new brush preset from the current settings	Iš dabartinių nustatymų sukurkite naują šepetėlio nustatymą
+	Brush Settings…  (F5): every option of this brush	Šepečio nustatymai… (F5): kiekviena šio šepečio parinktis
+	Rename Brush…	Pervardyti teptuką…
+	Delete Brush	Ištrinti teptuką
+	Group name	Grupės pavadinimas
+	Brush name	Šepetėlio pavadinimas
+	Grid view	Tinklelio vaizdas
+	List view	Sąrašo vaizdas
+	Off: the speed of the pointer sets the spacing	Išjungta: žymeklio greitis nustato atstumą
+	Tilt Scale	Pakreipimo skalė
+	Brush Projection	Teptuko projekcija
+	Apply the pen's tilt and rotation to the tip shape	Pakreipkite ir pasukite rašiklį pagal galiuko formą
+	Mixer Brush	Maišytuvo šepetys
+	Wet	Šlapias
+	Mix	Sumaišykite
+	Wetness Jitter	Drėgmės virpėjimas
+	Mix Jitter	Sumaišykite Jitter
+	Show the layer mask as an overlay	Rodyti sluoksnio kaukę kaip perdangą
+	Toggle visibility	Perjungti matomumą
+	Unlink the mask from the layer	Atsiekite kaukę nuo sluoksnio
+	Link the mask to the layer	Susieti kaukę su sluoksniu
+	Gradient	Gradientas
+	Gradient Options	Gradiento parinktys
+	Align with layer	Lygiavimas į sluoksnį
+	Reset Alignment	Iš naujo nustatyti lygiavimą
+	Centre the gradient (offset 0, 0)	Centruoti gradientą (pokrypis 0, 0)
+	The current gradient (pick one in Window › Gradients)	Dabartinis gradientas (pasirinkite vieną langelyje › Gradientai)
+	Select a type layer to edit its character and paragraph settings.	Pasirinkite tipo sluoksnį, kad galėtumėte redaguoti jo simbolių ir pastraipų nustatymus
+	Text color	Teksto spalva
+	Type Options	Įveskite Parinktys
+	Anti-aliasing method	Anti-aliasing metodas
+	Horizontal type	Horizontalus tipas
+	Vertical type	Vertikalus tipas
+	Fill path with foreground color	Užpildykite kelią priekinio plano spalva
+	Stroke path with brush	Glostymo takas su teptuku
+	Load path as a selection	Įkelti kelią kaip pasirinkimą
+	Make work path from selection	Padarykite darbo kelią iš pasirinkimo
+	Add vector mask	Pridėti vektorinę kaukę
+	Create new path	Sukurti naują kelią
+	Delete path	Ištrinti kelią
+	Delete vector mask	Pašalinti vektorinę kaukę
+	CPU (no GPU acceleration)	CPU (be GPU pagreičio)
+	DirectX 12	„DirectX 12“
+	GPU backend	GPU backend
+	Metal	Metalas
+	OpenGL	OpenGL
+	Use tablet pressure	Naudokite tabletės spaudimą
+	Vulkan	Vulkanas

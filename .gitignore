@@ -1,0 +1,39 @@
+# ---- Build output --------------------------------------------------------------------------
+# Cargo, per-agent target dirs (target/agent-*), packaging output and the web build.
+/target/
+target/
+/dist/
+
+# ---- Local working files (never published) -------------------------------------------------
+# Notes, plans, logs and private tooling kept beside the checkout.
+/temp/
+/plan/
+/todo.md
+
+# ---- Test corpora --------------------------------------------------------------------------
+# Real-file corpora fetched by `cargo xtask corpus --all` at pinned commits (never committed).
+/corpus/
+
+# ---- Generated reports ---------------------------------------------------------------------
+# `cargo xtask scorecard` writes this; regenerate it rather than committing it.
+/docs/scorecard.md
+
+# ---- Developer tools -----------------------------------------------------------------------
+# Live design-token overrides (copy tokens.example.json to tokens.json).
+/tokens.json
+# Python bytecode from the scripts in scripts/.
+__pycache__/
+*.pyc
+
+# ---- Secrets -------------------------------------------------------------------------------
+.env
+*.p12
+*.p8
+*.pfx
+
+# ---- Editors and operating systems ---------------------------------------------------------
+*~
+*.swp
+.DS_Store
+.vscode/
+.claude/

@@ -1,0 +1,15 @@
+Font Awesome Free
+https://github.com/FortAwesome/Font-Awesome
+
+shapes.csh is a custom-shape library generated from the Font Awesome Free `solid` and `regular`
+icon outlines, converted to Photoshop's .csh format. The `brands` icons are excluded: they depict
+third-party trademarks and are not covered by this grant.
+
+Icons: Copyright (c) Fonticons, Inc. (https://fontawesome.com)
+Licensed under the Creative Commons Attribution 4.0 International licence (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+Full Font Awesome Free terms: https://fontawesome.com/license/free
+
+Changes: icon outlines converted from SVG paths to .csh custom-shape records.
+
+The licensor makes no warranties. See section 5 of the licence for the disclaimer.

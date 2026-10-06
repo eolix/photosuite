@@ -1,0 +1,16 @@
+[package]
+name = "photosuite-raster"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+photosuite-geom = { workspace = true }
+photosuite-color = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

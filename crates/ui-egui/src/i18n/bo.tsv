@@ -1,0 +1,1951 @@
+# བོད་ཡིག (bo) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# བོད་ཡིག translations for PhotoSuite UI.
+
+	File	བཀྲིས་བདེ་ལེགས།
+	Edit	བཟོ་སྒྲིག
+	Image	དཔར།
+	Layer	ངོས།
+	Type	བཏགས།
+	Select	འདེམས།
+	Filter	ཚགས།
+	View	ལྟ་སྣང་།
+	Window	སྒེའུ་ཁུང་།
+	Help	རོགས་རམ།
+	(coming soon)	(མགྱོགས་པོ་ཡོང་རྒྱུ་རེད།)
+	New…	གསར་པ།…
+	Open…	ཁ་འབྱེད།…
+	Open As…	ཁ་ཕྱེ།…
+	Open Recent	ཉེ་ཆར་ཁ་ཕྱེ།
+	Clear Recent Files	ཉེ་ཆར་གྱི་ཡིག་ཆ་བསུབ་པ།
+	Clear history	ལོ་རྒྱུས་གཙང་སེལ།
+	Close	ཁ་རྒྱབས།
+	Close All	ཚང་མ་ཁ་རྒྱབ།
+	Close Others	གཞན་གྱི་སྒོ་བསྡམས།
+	Save	ཉར་ཚགས།
+	Save As…	མིང་གསར་སྤྱད་ནས་ཉར།…
+	Save a Copy…	འདྲ་བཤུས་ཉར་ཚགས་བྱས།…
+	Revert	ཕྱིར་ལོག་པ།
+	Export	ཕྱིར་འདྲེན།
+	Quick Export as PNG	PNG ལྟར་མྱུར་དུ་ཕྱིར་འདྲེན་བྱེད་པ།
+	Export As…	ཕབས་སྟངས་གཞན།…
+	Export Preferences…	ཕྱིར་གཏོང་དགའ་མོས།…
+	Save for Web (Legacy)…	དྲ་རྒྱའི་ཆེད་དུ་ཉར་ཚགས་བྱས།…
+	Artboards to Files…	ཡིག་ཆར་སྒྱུ་རྩལ་གྱི་ཤོག་བུ།…
+	Artboards to PDF…	སྒྱུ་རྩལ་གྱི་ཤོག་བུ་ནས་PDF…
+	Layers to Files…	ཡིག་ཆའི་བང་རིམ།…
+	Layer Comps to Files…	ཡིག་ཆ་ལ་བང་རིམ་བསྡུ་རུབ།…
+	Color Lookup Tables…	ཚོས་གཞི་ལྟ་ཞིབ་རེའུ་མིག་…
+	Data Sets as Files…	གཞི་གྲངས་ཆ་ཚན་ཡིག་ཆ།…
+	Paths to Illustrator…	པར་རིས་འབྲི་མཁན་གྱི་ལམ།…
+	Render Video…	བརྙན་འཕྲིན།…
+	Generate	བསྐྲུན་པ།
+	Image Assets	པར་རིས་རྒྱུ་ནོར།
+	Place Embedded…	བཙུགས་པའི་ས་ཆ།…
+	Place Linked…	ས་གནས་འབྲེལ་ཡོད།…
+	Package…	ཐུམ་སྒྲིལ།…
+	Automate	རང་འགུལ་ཅན།
+	Batch…	སྡེ་ཚན།…
+	Create Droplet…	ཐིགས་པ་གསར་བཟོ།…
+	Crop and Straighten Photos	པར་རིས་གཅོད་པ་དང་ཐད་ཀར་བཟོས།
+	Contact Sheet II…	འབྲེལ་གཏུག་ཤོག་བྱང་༢པ།…
+	Conditional Mode Change…	ཆ་རྐྱེན་ལྡན་པའི་ཐབས་ལམ་བསྒྱུར་བཅོས།…
+	Fit Image…	པར་རིས་འཚམ་པོ།…
+	Lens Correction…	དྭངས་ཤེལ་སྒྲིག…
+	Merge to HDR Pro…	HDR Pro ལ་མཉམ་བསྲེས།…
+	Photomerge…	པར་རིས་མཉམ་བསྲེས།…
+	Scripts	འཁྲབ་གཞུང་།
+	Image Processor…	པར་རིས་ལས་སྣོན་འཕྲུལ་ཆས།…
+	Delete All Empty Layers	བང་རིམ་སྟོང་པ་ཚང་མ་བསུབ་དགོས།
+	Flatten All Layer Effects	བང་རིམ་གྱི་ནུས་པ་ཚང་མ་ལེབ་ལེབ་བཟོས།
+	Flatten All Masks	ཁ་རས་ཚང་མ་ལེབ་ལེབ།
+	Script Events Manager…	ཡིག་ཆའི་བྱེད་སྒོའི་འགན་འཛིན།…
+	Import	ནང་འདྲེན།
+	Browse…	དྲ་བཤེར་བྱེད་པ།…
+	Reveal in Finder	འཚོལ་ཞིབ་ནང་གསལ་སྟོན་བྱས།
+	File Info…	ཡིག་ཆའི་གནས་ཚུལ…
+	Print…	Print…
+	Print One Copy	འདྲ་བཤུས་གཅིག་དཔར་བསྐྲུན།
+	Exit	ཕྱིར་ཐོན།
+	Undo	ཕྱིར་འཐེན་བྱེད་པ།
+	Redo	ཡང་བསྐྱར་བྱེད་པ།
+	Toggle Last State	མཐའ་མའི་གནས་སྟངས་བསྒྱུར།
+	Fade…	ཡལ།…
+	Cut	གཏུབ།
+	Copy	བཤུ།
+	Copy Merged	ཟླ་སྒྲིལ་བྱས་པ་དེ་བཤུས།
+	Paste	སྦྱར།
+	Paste Special	དམིགས་བསལ་སྦྱར་བ།
+	Paste in Place	གནས་སུ་སྦྱར།
+	Paste Into	ནང་དུ་སྦྱར།
+	Paste Outside	ཕྱི་ལ་སྦྱར་བ།
+	Paste Lorem Ipsum	ལོ་རེམ་ཨིཔ་སམ་སྦྱར།
+	Clear	སུབ།
+	Search…	འཚོལ་ཞིབ།…
+	Check Spelling…	ཡིག་སྡེབ་ཞིབ་བཤེར་བྱོས།…
+	Find and Replace Text…	ཡི་གེ་འཚོལ་བ་དང་ཚབ་བཙུགས།…
+	Fill…	འགེང།…
+	Stroke…	ཐིག་རིས།…
+	Content-Aware Fill…	ནང་དོན་ཤེས་རྟོགས་ཡོད་པའི་བཀངས།…
+	Content-Aware Scale	དངོས་རྟོགས་ཆེ་ཆུང་།
+	Puppet Warp	ཉེད་ཉེད།
+	Perspective Warp	མཐོང་ཚུལ་འཁྱོག་འགྱུར།
+	Free Transform	རང་མོས་གཟུགས་འགྱུར།
+	Transform	གཟུགས་འགྱུར།
+	Again	ཡང་བསྐྱར་བྱེད།
+	Scale	ཆེ་ཆུང་།
+	Rotate	བསྐོར།
+	Skew	སྒྱུར།
+	Distort	སྣར།
+	Perspective	སྣང་ཚོད།
+	Warp	གཅུ་སྒྲིམ།
+	Flip Horizontal	འཕྲེད་ལ་བསྒྱུར།
+	Flip Vertical	ལངས་པར་སྒྱུར།
+	Rotate 180°	180°བསྐོར་བ།
+	Rotate 90° Clockwise	ཆུ་ཚོད་ཀྱི་གཡས་ཕྱོགས་སུ་90°བསྐོར་བ།
+	Rotate 90° Counter Clockwise	ཆུ་ཚོད་ཀྱི་གཡས་གཡོན་ལ་90°བསྐོར་བ།
+	180°	༡༨༠°།
+	90° Clockwise	ཆུ་ཚོད་ཀྱི་གཡས་གཡོན་90°།
+	90° Counter Clockwise	ཆུ་ཚོད་འཁོར་ལོའི་གཡས་གཡོན་ལ་90°
+	Arbitrary…	རང་འདོད་ཅན།…
+	Auto-Align Layers…	རང་འགུལ་གྱིས་བང་རིམ་ཕྲེང་བ།…
+	Auto-Blend Layers…	རང་འགུལ་བསྲེས་སྦྱོར་གྱི་བང་རིམ།…
+	Define Brush Preset…	སྤུ་སྨྱུག་སྔོན་སྒྲིག་གསལ་བཤད་བྱོས།…
+	Define Pattern…	བཀོད་རིས་གསལ་བཤད་བྱོས།…
+	Define Custom Shape…	རང་མོས་བཟོ་ལྟ་གསལ་བཤད་བྱོས།…
+	Purge	གཙང་བཟོ།
+	Clipboard	བཤུད་པང་།
+	Histories	ལོ་རྒྱུས།
+	Video Cache	བརྙན་འཕྲིན་མཛོད་ཁང་།
+	All	ཆ་ཚང་།
+	Presets	སྔོན་སྒྲིག
+	Preset Manager…	སྔོན་སྒྲིག་འགན་འཛིན།…
+	Migrate Presets	སྔོན་སྒྲིག་གནས་སྤོ།
+	Export/Import Presets…	ཕྱིར་གཏོང་/ནང་འདྲེན་སྔོན་སྒྲིག…
+	Color Settings…	ཚོས་གཞིའི་སྒྲིག་སྟངས།…
+	Assign Profile…	གསལ་སྡུད་འགན་སྤྲོད།…
+	Convert to Profile…	གསལ་སྡུད་ལ་སྒྱུར།…
+	Keyboard Shortcuts…	མྱུར་མཐེབ།…
+	Menus…	དཀར་ཆག…
+	Toolbar…	ལག་ཆའི་ཕྲ་རིང་།…
+	Preferences	འདམ་ང་།
+	General…	སྤྱིར་བཏང་།…
+	Interface…	འབྲེལ་མཐུད་ངོས།…
+	Workspace…	ལས་ཀའི་ས་ཆ།…
+	Tools…	ལག་ཆ།…
+	History Log…	ལོ་རྒྱུས་དྲན་ཐོ།…
+	File Handling…	ཡིག་ཆ་འཛིན་སྐྱོང་།…
+	Export…	ཕྱིར་འདྲེན།…
+	Performance…	འཁྲབ་སྟོན།…
+	Scratch Disks…	རྡེབ་སྒྲིག…
+	Cursors…	འོད་རྟགས་…
+	Transparency & Gamut…	དྭངས་གསལ་དང་ཁྱབ་ཚད།…
+	Units & Rulers…	ཚད་གཞི་དང་ཐིག་ཤིང་།…
+	Guides, Grid & Slices…	སྣོན་ཐིག སྒྲོམ་ཐིག དང་གཏུབ་ཆ།…
+	Plug-ins…	པ་ལག་ཨིན་…
+	Type…	བཏགས།…
+	Enhanced Controls…	མཐོར་འདེགས་ཚོད་འཛིན།…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	སྔོན་སྒྲིག་རྙིང་པ།…
+	Integrations…	མཉམ་བསྲེས།…
+	AI Integrations…	མིས་བཟོས་རིག་ནུས་མཉམ་བསྲེས།…
+	Install Plug-in…	པ་ལག་ཨིན་སྒྲིག་འཇུག་བྱས།…
+	Language Options	སྐད་ཡིག་གདམ་ག།
+	Settings…	སྒྲིག་སྟངས།…
+	Mode	རྣམ་པ།
+	Bitmap	བིཊ་མེཔ།
+	Grayscale	Grayscale
+	Duotone	སྒྲ་གཉིས།
+	Indexed Color	ཟུར་ཐོའི་ཚོས་གཞི།
+	RGB Color	RGB ཚོས་གཞི།
+	CMYK Color	CMYK ཚོས་གཞི།
+	Lab Color	ཚོད་ལྟ་ཁང་གི་ཁ་དོག
+	Multichannel	བརྒྱུད་ལམ་སྣ་ཚོགས།
+	8 Bits/Channel	8 བིཊ།/རྒྱུ་ལམ།
+	16 Bits/Channel	16 བིཊ།/རྒྱུ་ལམ།
+	32 Bits/Channel	32 བིཊ།/རྒྱུ་ལམ།
+	Color Table…	ཚོས་གཞིའི་རེའུ་མིག་…
+	Bitmap…	བིཊ་མེཔ་…
+	Duotone…	སྒྲ་གདངས་གཉིས།…
+	Indexed Color…	ཟུར་ཐོའི་ཚོས་གཞི།…
+	Adjustments	སྙོམ་སྒྲིག
+	Brightness/Contrast…	བཀྲག་མདངས། / ལྡོག་ཆོས།…
+	Levels…	ཆ་སྙོམ།…
+	Curves…	གུག་ཐིག…
+	Exposure…	འཚེར་ཤུགས།…
+	Vibrance…	ཚོན་ཤུགས།…
+	Hue/Saturation…	ཚོན། / ཧར་ལོད།…
+	Color Balance…	ཚོན་དོ་སྙོམ།…
+	Black & White…	དཀར་པོ་དང་ནག་པོ།…
+	Photo Filter…	དཔར་ཚགས།…
+	Channel Mixer…	ཁ་དོག་སྲེ་སྦྱོར།…
+	Color Lookup…	ཁ་དོག་དཔྱད་བསྡུར།…
+	Invert	ཕྱི་ནང་སློག་པ།
+	Posterize…	སྦྱར་ཡིག…
+	Threshold…	ཡས་ཆོད།…
+	Gradient Map…	སྟེགས་རིས་ས་ཁྲ།…
+	Selective Color…	གདམ་ག་ཅན་གྱི་ཁ་དོག…
+	Shadows/Highlights…	གྲིབ་ནག/འོད་མདངས།…
+	HDR Toning…	HDR ཊོ་ནིང་…
+	Desaturate	ཚོན་སླ་པོ།
+	Match Color…	མཐུན་པའི་ཚོས་གཞི།…
+	Replace Color…	ཚོས་བརྗེ།…
+	Equalize	འདྲ་མཉམ་བཟོ་བ།
+	Auto Tone	ཚོན་མདངས་རང་སྒྲིག
+	Auto Contrast	ལྡོག་ཆོས་རང་སྒྲིག
+	Auto Color	ཁ་དོག་རང་སྒྲིག
+	Image Size…	དཔར་ཆེ་ཆུང་།…
+	Canvas Size…	རས་གཞི།…
+	Image Rotation	པར་རིས་འཁོར་སྐྱོད།
+	Flip Canvas Horizontal	འཕྲེད་ལ་གཡོས།
+	Flip Canvas Vertical	རས་རས་ལངས་པར་བསྒྱུར།
+	Crop	བྲེག
+	Trim…	གཏུབས།…
+	Reveal All	ཆ་ཚང་མངོན།
+	Duplicate…	འདྲ་བཤུས།…
+	Apply Image…	པར་རིས་སྤྱོད…
+	Calculations…	རྩིས་རྒྱག…
+	Variables	འགྱུར་ལྡན།
+	Define…	ངེས་ཚིག…
+	Data Sets…	གཞི་གྲངས་ཆ་ཚན།…
+	Apply Data Set…	གཞི་གྲངས་ཆ་ཚན་འཇུག་སྤྱོད་བྱེད།…
+	Variable Data Sets…	འགྱུར་ལྡོག་ཅན་གྱི་གྲངས་ཐོའི་ཆ་ཚན།…
+	Trap…	ལྕགས་ཐག་…
+	Analysis	དབྱེ་ཞིབ།
+	Set Measurement Scale…	ཚད་འཇལ་གྱི་ཚད་གཞི་སྒྲིག་དགོས།…
+	Select Data Points…	གཞི་གྲངས་ས་ཚིགས་འདེམས།…
+	Record Measurements	ཚད་འཇལ་ཐོ་འགོད།
+	Ruler Tool	ཐིག་ཤིང་ལག་ཆ།
+	Count Tool	རྩིས་རྒྱག་ལག་ཆ།
+	Place Scale Marker…	འཇལ་ཚད་རྟགས་བཀོད།…
+	Custom…	རང་སྒྲིག…
+	New	གསར་པ།
+	Layer…	ངོས།…
+	Group…	སྡེ་ཚན།…
+	Group from Layers…	བང་རིམ་ནས་སྡེ་ཚན།…
+	Artboard…	སྒྱུ་རྩལ་གྱི་ཤོག་བུ།…
+	Artboard from Group…	སྡེ་ཚན་གྱི་སྒྱུ་རྩལ་ཤོག་བུ།…
+	Artboard from Layers…	བང་རིམ་ནས་སྒྱུ་རྩལ་གྱི་ཤོག་བུ།…
+	Layer via Copy	ཤུལ་ནས་ངོས་སུ།
+	Layer via Cut	བཅད་ནས་རིམ་པ་གསར་བཟོ།
+	Layer From Background…	རྒྱབ་ལྗོངས་ནས་བང་རིམ།…
+	Layer from Background…	རྒྱབ་ལྗོངས་ནས་བང་རིམ།…
+	New Shape Layer	དབྱིབས་བང་རིམ་གསར་བ།
+	New Type Layer	རིགས་གསར་པའི་བང་རིམ།
+	New Fill Layer	འགེང་ངོས་གསར་པ།
+	New Adjustment Layer	སྒྲིག་ངོས་གསར་པ།
+	New Layer Based Slice	བང་རིམ་གསར་པའི་གཞི་བཅོལ་བའི་དུམ་བུ།
+	New Smart Object via Copy	འདྲ་བཤུས་བརྒྱུད་ནས་དངོས་པོ་གསར་པ།
+	New Blank Video Layer	བརྙན་འཕྲིན་བང་རིམ་གསར་པ།
+	New Video Layer from File…	ཡིག་ཆ་ནས་བརྙན་འཕྲིན་བང་རིམ་གསར་པ།…
+	Duplicate Layer…	ངོས་འདྲ་བཤུས།…
+	Delete Layer	ངོས་དོར།
+	Delete	དོར།
+	Rename Layer	བང་རིམ་ལ་མིང་བསྒྱུར།
+	Create Layer	བང་རིམ་གསར་བཟོ།
+	Layer Style	ངོས་ཀྱི་བཀོད་སྒྲིག
+	Blending Options…	སྡེབ་སྦྱོར་བཀོད་སྒྲིག…
+	Bevel & Emboss…	གཞུ་དབྱིབས་དང་བརྐོས་རིས་…
+	Inner Shadow…	གྲིབ་གཟུགས་ནང་མ།…
+	Inner Glow…	འོད་གཟུགས་ནང་མ།…
+	Satin…	འཇམ་འོད།…
+	Color Overlay…	སྒང་ལ་ཚོན་འདེབས།…
+	Gradient Overlay…	སྒང་ལ་སྟེགས་ཚོན་འདེབས།…
+	Pattern Overlay…	སྒང་ལ་བཀོད་རིས་འདེབས།…
+	Outer Glow…	འོད་གཟུགས་ཕྱི་མ།…
+	Drop Shadow…	གྲིབ་གཟུགས།…
+	Copy Layer Style	བང་རིམ་བཟོ་ལྟ་འདྲ་བཤུས།
+	Paste Layer Style	བང་རིམ་གྱི་བཟོ་ལྟ།
+	Clear Layer Style	བང་རིམ་གྱི་བཟོ་ལྟ་གསལ་བ།
+	Global Light…	གོ་ལ་ཧྲིལ་པོའི་འོད།…
+	Hide All Effects	གནོད་པ་ཡོད་ཚད་སྦས།
+	Scale Effects…	ཚད་གཞིའི་ནུས་པ།…
+	Smart Filter	རིག་ལྡན་ཚགས་རླུང་།
+	Convert for Smart Filters	རིག་ལྡན་ཚགས་རླངས་ལ་བསྒྱུར།
+	Clear Smart Filters	བསྡུ་ཚགས་སུབ།
+	Disable Smart Filters	བསྡུ་ཚགས་ནུས་མེད་བཟོ།
+	Delete Filter Mask	འབག་ཚགས་དོར།
+	Disable Filter Mask	འབག་ཚགས་ནུས་མེད་བཟོ།
+	Solid Color…	ཚོན་མདོག་གཅིག་པོ།…
+	Gradient…	སྟེགས་ཚོན།…
+	Pattern…	བཀོད་རིས།…
+	Layer Mask	བང་རིམ་གདོང་ཁེབས།
+	Vector Mask	སྲ་འབག
+	Reveal Selection	འདེམ་གཞི་མངོན་པ་བཟོ།
+	Hide Selection	འདེམ་གཞི་མི་མངོན་པ་བཟོ།
+	Hide All	ཚང་མ་སྦ་བ།
+	From Transparency	དྭངས་མ་ནས།
+	Delete Vector Mask	སྲ་འབག་དོར།
+	Enable Layer Mask	བང་རིམ་གདོང་འབག་ལྕོགས་ཅན་བཟོས།
+	Disable Layer Mask	བང་རིམ་གྱི་ཁ་རས་ལྕོགས་མིན་བཟོས།
+	Enable Vector Mask	སྲ་འབག་ནུས་ཡོད་བཟོ།
+	Link Layer Mask	སྦྲེལ་མཐུད་བང་རིམ་གདོང་ཁེབས།
+	Unlink Layer Mask	བང་རིམ་ཁ་རས་སྦྲེལ་མཐུད་མེད་པར་བཟོས།
+	Link Vector Mask	སྲ་འབག་མཐུད།
+	Add Vector Mask	སྲ་འབག་སྣོན།
+	Vector Mask from Current Path	ད་ལྟའི་འགྲོ་ལམ་ནས་བེག་ཊོར་ཁ་རས་
+	Create Clipping Mask	གཤག་བཅོས་ཁ་རས་བཟོས།
+	Release Clipping Mask	གཅོད་པའི་ཁ་རས་གློད་པ།
+	Smart Objects	དངོས་པོ།
+	Smart Object	དངོས་པོ་རིག་པ།
+	Convert to Smart Object	བསྡུ་རིས་ལ་བཟོ།
+	Convert to Embedded	བཙུགས་པར་བསྒྱུར་བ།
+	Convert to Linked…	འབྲེལ་ཡོད་ལ་སྒྱུར་བ།…
+	Edit Contents	ནང་དོན་རྩོམ་སྒྲིག
+	Replace Contents…	ནང་དོན་བརྗེ་སྒྱུར།…
+	Relink to File…	ཡིག་ཆ་ལ་ཡང་བསྐྱར་འབྲེལ་མཐུད་བྱེད་པ།…
+	Export Contents…	ཕྱིར་གཏོང་ནང་དོན།…
+	Update Modified Content	བསྒྱུར་བཅོས་བྱས་པའི་ནང་དོན་གསར་སྒྱུར་བྱེད་པ།
+	Update All Modified Content	བསྒྱུར་བཅོས་བྱས་པའི་ནང་དོན་ཚང་མ་གསར་བཅོས་བྱེད་པ།
+	Stack Mode	བརྩེགས་རིམ།
+	Entropy	ཨེན་ཊོཔི།
+	Kurtosis	ཀུར་ཏོ་སིས།
+	Maximum	མཐོ་ཤོས།
+	Mean	ཆ་སྙོམས།
+	Median	གུང་ཐིག
+	Minimum	ཉུང་ཤོས།
+	Range	ཁྱབ་ཚད།
+	Skewness	གཡོ་སྒྱུར།
+	Standard Deviation	ཚད་ལྡན་གྱི་ལྡོག་ཕྱོགས།
+	Summation	བསྡོམས་རྩིས་བྱེད་པ།
+	Variance	འགྱུར་ལྡོག
+	Video Layers	བརྙན་འཕྲིན་བང་རིམ།
+	Interpret Footage…	པར་རིས་དོན་འགྲེལ།…
+	Replace Footage…	པར་རིས་བརྗེ་སྒྱུར།…
+	Reload Frame	གཞི་སྒྲོམ་བསྐྱར་དུ་མངོན་པ།
+	Show Altered Video	བསྒྱུར་བཅོས་བྱས་པའི་བརྙན་རིས་སྟོན།
+	Restore Frame	གཞི་སྒྲོམ་སླར་གསོ་བྱེད་པ།
+	Restore All Frames	གཞི་གྲངས་ཚང་མ་སླར་གསོ་བྱེད་པ།
+	Insert Blank Frame	སྒྲོམ་གཞི་སྟོང་པ་བཙུགས།
+	Delete Frame	གཞི་སྒྲོམ་སུབ་པ།
+	Duplicate Frame	གཞི་སྒྲོམ་འདྲ་བཤུས།
+	Frame from Layers	བང་རིམ་ནས་སྒྲོམ་གཞི།
+	Video Frames to Layers…	བརྙན་འཕྲིན་གྱི་སྒྲོམ་གཞི་ནས་བང་རིམ།…
+	Rasterize	རྡུལ་ཕྲན་བཟོ་བ།
+	Rasterize Type	རྡུལ་ཕྲན་རིགས།
+	Rasterize Type Layer	རས་ཊར་རིགས་བང་རིམ་བཟོས།
+	Rasterize Shape	རྡུལ་ཕྲན་དབྱིབས་བཟོས།
+	New Guide Layout…	ལམ་སྟོན་བཀོད་སྒྲིག་གསར་པ།…
+	New Guides From Shape	དབྱིབས་ནས་ལམ་སྟོན་གསར་བ།
+	Lock Layers…	བང་རིམ་ལྡེ་མིག…
+	Link Layers	ངོས་དང་མཐུད།
+	Select Linked Layers	འབྲེལ་མཐུད་བང་རིམ་འདེམས།
+	Merge Layers	ངོས་རྣམས་ཟླ་སྒྲིལ་གཏོང་།
+	Merge Down	འོག་ཏུ་ཟླ་སྒྲིལ།
+	Merge Visible	མཐོང་ཆོས་མཉམ་སྡེབ།
+	Flatten Image	ངོས་གཅིག་ལ་བསྒྲིལ།
+	Matting	མེ་ཊིང་།
+	Color Decontaminate…	ཚོན་མདོག་བཙོག་པ་སེལ་བ།…
+	Remove Black Matte	མེ་ཊི་ནག་པོ་མེད་པར་བཟོས།
+	Remove White Matte	མེ་ཊི་དཀར་པོ་མེད་པར་བཟོས།
+	Defringe…	ཕྱིར་འཐེན།…
+	Group Layers	ངོས་སྡེ་ཚན་དུ་བཟོ།
+	Ungroup Layers	བང་རིམ་རྣམས་སྡེ་ཚན་མེད་པར་བཟོས།
+	Hide Layers	བང་རིམ་སྦས།
+	Arrange	གོ་རིམ་སྒྲིག
+	Bring to Front	མདུན་མདུན་དུ་འཇོག
+	Bring Forward	མདུན་ལ་གཏོང་།
+	Send Backward	རྒྱབ་ལ་གཏོང་།
+	Send to Back	རྒྱབ་་རྒྱབ་ལ་འཇོག
+	Reverse	ཕྱིན་ཅི་ལོག
+	Combine Shapes	དབྱིབས་མཉམ་བསྲེས།
+	Unite Shapes	དབྱིབས་གཅིག་སྒྲིལ།
+	Subtract Front Shape	མདུན་གྱི་དབྱིབས་ཕབ།
+	Intersect Shape Areas	དབྱིབས་ཀྱི་ས་ཁོངས་བརྒལ་བ།
+	Exclude Overlapping Shapes	ཕན་ཚུན་གཅིག་ལ་གཅིག་བརྟེན་གྱི་དབྱིབས་ཕུད།
+	Merge Shape Components	དབྱིབས་གྲུབ་ཆ་མཉམ་བསྲེས།
+	Align	ཕྲེང་བསྒྲིགས།
+	Top Edges	མཐོ་སྒང་།
+	Vertical Centers	ལངས་པའི་ལྟེ་བ།
+	Bottom Edges	འོག་གི་མཐའ་མཚམས།
+	Left Edges	གཡོན་ཕྱོགས་ཀྱི་མཐའ་མཚམས།
+	Horizontal Centers	འཕྲེད་དབུས་ལྟེ་བ།
+	Right Edges	གཡས་ཀྱི་མཐའ་མཚམས།
+	Distribute	བཀྲམ་པ།
+	Vertically	གྱེན་ལ།
+	Horizontally	འཕྲེད་ལ།
+	Layer Edges	བང་རིམ་མཐའ་མཚམས།
+	Isolate Layers	བང་རིམ་སོ་སོར་བཀོད།
+	Layer Content Options…	བང་རིམ་ནང་དོན་གདམ་ག…
+	Fill Content	ནང་དོན་སྐོངས།
+	Deselect Layers	བང་རིམ་འདེམས་སྒྲུག་མེད་པར་བཟོས།
+	Find Layers	བང་རིམ་འཚོལ་བ།
+	Layer Comps	ངོས་ཀྱི་གྲུབ་ཆ།
+	Layers	ངོས།
+	All Layers	རིམ་པ་ཚང་མ།
+	Hidden Layers	སྦས་པའི་བང་རིམ།
+	Mask All Objects	དངོས་པོ་ཐམས་ཅད་གདོང་ཁེབས།
+	Subject	བརྗོད་བྱ།
+	Sky	ནམ་མཁའ།
+	Panels	ཤོག་བུ།
+	Character Panel	ཡིག་འབྲུའི་པང་ལེབ།
+	Paragraph Panel	དོན་ཚན་ཕྲེང་བ།
+	Character Styles Panel	ཡིག་འབྲུའི་བཟོ་ལྟའི་པང་ལེབ།
+	Paragraph Styles Panel	དོན་མཚམས་བཟོ་ལྟའི་པང་ལེབ།
+	Glyphs Panel	གྷི་ལི་ཕིས་པང་ལེབ།
+	Anti-Alias	མཐའ་འཇམ།
+	Sharp	རྣོ་བ།
+	Crisp	ཀྲིསི་པི།
+	Strong	ཤུགས་ཆེ་བ།
+	Smooth	འཇམ་ཤ
+	Windows LCD	ཝིན་ཌོ་ཨེལ་སི་ཌི།
+	Windows	སྒེའུ་ཁུང་།
+	Orientation	ཁ་ཕྱོགས།
+	Horizontal	འཕྲེད་ལ།
+	Vertical	གྱེན་ལ།
+	OpenType	OpenType
+	Standard Ligatures	ཚད་ལྡན་གྱི་སྦྲེལ་མཐུད།
+	Contextual Alternates	སྐབས་དོན་གྱི་ཚབ་བྱེད།
+	Discretionary Ligatures	ཐ་དད་ཀྱི་སྦྲེལ་མཐུད།
+	Swash	སྭ་ཤ།
+	Oldstyle	ལུགས་རྙིང་།
+	Stylistic Alternates	བཟོ་ལྟའི་ཚབ་བྱེད།
+	Titling Alternates	མིང་གཞན་བཏགས་པ།
+	Ornaments	རྒྱན་ཆ།
+	Ordinals	རྒྱུན་ལམ།
+	Fractions	ཆ་ཤས།
+	Create Work Path	ལས་ཀའི་ལམ་བུ་གཏོད་པ།
+	Convert to Shape	དབྱིབས་ལ་འགྱུར།
+	Warp Text…	ཡིག་འབྲུ།…
+	Convert to Point Text	ནག་ཐིག་ཅན་གྱི་ཡི་གེར་སྒྱུར།
+	Convert to Paragraph Text	ཡི་གེའི་དུམ་མཚམས་ལ་སྒྱུར།
+	Default Features	སྔོན་སྒྲིག་ཁྱད་ཆོས།
+	East Asian Features	ཤར་ཨེ་ཤ་ཡའི་ཁྱད་ཆོས།
+	Middle Eastern Features	དབུས་ཤར་གྱི་ཁྱད་ཆོས།
+	Middle Eastern & South Asian Composer	ཤར་དཀྱིལ་དང་ལྷོ་ཨེ་ཤ་ཡའི་གླུ་གཞས་རྩོམ་མཁན།
+	Update All Text Layers	ཡི་གེའི་བང་རིམ་ཚང་མ་གསར་བཅོས་བྱེད་པ།
+	Replace All Missing Fonts	བརླག་སོང་བའི་ཡིག་གཟུགས་ཚང་མ་བརྗེ་དགོས།
+	Resolve Missing Fonts…	ཡིག་གཟུགས་བརླག་པ་སེལ་དགོས།…
+	Font Preview Size	ཡིག་གཟུགས་སྔོན་ལྟ་ཆེ་ཆུང་།
+	None	གང་ཡང་མེད།
+	Small	ཆུང་བ།
+	Medium	འབྲིང་བ།
+	Large	ཆེ་བ།
+	Extra Large	ཆེ་དྲགས་པ།
+	Huge	ཆེ་བ།
+	Load Default Type Styles	སྔོན་སྒྲིག་རིགས་ཀྱི་བཟོ་རྣམ་མངོན་པ།
+	Save Default Type Styles	སྔོན་སྒྲིག་རིགས་ཀྱི་བཟོ་རྣམ་ཉར་ཚགས་བྱེད།
+	Deselect	སློད།
+	Reselect	ཡང་བསྐྱར་འདེམས།
+	Inverse	ཕྱི་ནང་སློག་པ།
+	Inverse Selection	ལྡོག་ཕྱོགས་ཀྱི་འདེམས་སྒྲུག།
+	Similar	འདྲ་བ།
+	Color Range…	ཚོན་མདོག་རིགས།…
+	Focus Area…	དམིགས་སའི་ས་ཁུལ།…
+	Select and Mask…	འདེམས་སྒྲུག་དང་ཁ་རས།…
+	Modify	བཟོ་བཅོས་གཏོང་།
+	Border…	མཚམས་ཐིག…
+	Smooth…	འཇམ་ཤ…
+	Expand…	རྒྱ་སྐྱེད།…
+	Contract…	འདུས་པ།…
+	Feather…	བྱ་སྒྲོ།…
+	Grow	འཕེལ་བ།
+	Transform Selection	འདེམ་བྱ་གཟུགས་འགྱུར།
+	Edit in Quick Mask Mode	མགྱོགས་མྱུར་གདོང་འབག་ཐབས་ལམ་ནང་རྩོམ་སྒྲིག་བྱེད་པ།
+	Load Selection…	འདེམས་སྒྲུག་མངོན་པ།…
+	Save Selection…	འདེམས་སྒྲུག་ཉར་ཚགས་བྱས།…
+	Match All	ཚང་མ་མཐུན་སྒྲིལ།
+	Last Filter	ཚགས་མཐའ་མ།
+	Filter Gallery…	ཚགས་སྡེ།…
+	Adaptive Wide Angle…	གོམས་འདྲིས་ཅན་གྱི་ཟུར་ཁུག་རྒྱ་ཆེ་བ།…
+	Camera Raw Filter…	པར་ཆས་ཚགས་རླངས།…
+	Liquify…	གཤེར་ཁུ།…
+	Vanishing Point…	ཡལ་འགྲོ་བའི་ས་ཚིགས།…
+	Blur	རབ་རིབ།
+	Blur Gallery	རབ་རིབ་འགྲེམས་སྟོན།
+	Field Blur…	ས་ཁོངས་མུན་འཐིབ།…
+	Iris Blur…	མིག་ཤེལ་མུན་ནག་…
+	Tilt-Shift…	གཡོ་སྒྱུར།…
+	Path Blur…	ལམ་མུན་འཐིབ།…
+	Spin Blur…	སྤིན་མུན་ནག་…
+	Blur More	རབ་རིབ་མང་ཙམ།
+	Box Blur…	ས་ཕག་རབ་རིབ།…
+	Gaussian Blur…	ག་ཤན་རབ་རིབ།…
+	Lens Blur…	དྭངས་ཤེལ་རབ་རིབ།…
+	Motion Blur…	གཡོ་འགུལ་རབ་རིབ།…
+	Radial Blur…	འཁོར་མོ་རབ་རིབ།…
+	Shape Blur…	དབྱིབས་མུན་ནག་…
+	Smart Blur…	མུན་ནག་རིག་པ།…
+	Surface Blur…	ཕྱི་ངོས་རབ་རིག…
+	Average	ཆ་སྙོམ།
+	Displace…	གནས་སྤོ།…
+	Pinch…	ཕྲན་ཙམ།…
+	Polar Coordinates…	གཞུང་ཐིག་འབྲེལ་གནས།…
+	Ripple…	རླབས་ཕྲན།…
+	Shear…	གཏུབ་པ།…
+	Spherize…	ཟླུམ་གཟུགས།…
+	Twirl…	སྦྲུལ་འཁྱིལ།…
+	Wave…	རླབས།…
+	ZigZag…	ཟིག་ཟག…
+	Noise	ལྷད།
+	Add Noise…	ལྷད་སྣོན།…
+	Despeckle	ཟེགས་རྡུལ་འཇོམས།
+	Dust & Scratches…	ཐལ་བ་དང་བྲད་ཤུལ།…
+	Median…	གུང་ཐིག…
+	Reduce Noise…	ལྷད་སེལ།…
+	Pixelate	པིག་ཟེལ་བཟོ་བ།
+	Color Halftone…	ཚོན་མདངས་ཕྱེད།…
+	Crystallize…	ཕྲ་རྡུལ་དུ་གྱུར།…
+	Facet	ཕྱོགས་ཕྱོགས།
+	Fragment	དུམ་བུ།
+	Mezzotint…	མེ་ཛོ་ཊིན།…
+	Mosaic…	རྡོ་ཧྲུག…
+	Pointillize…	མཚམས་ཐིག་བཟོས།…
+	Render	སྒྲིག་སྦྱང་།
+	Clouds	སྤྲིན།
+	Difference Clouds	བར་ཁྱད་ཅན་གྱི་སྤྲིན་པ།
+	Fibers…	སྐུད་པ་…
+	Flame…	མེ་ལྕེ།…
+	Lens Flare…	དྭངས་ཤེལ་འོད་འཚེར།…
+	Lighting Effects…	འོད་ཀྱི་ནུས་པ།…
+	Picture Frame…	པར་རིས་སྒྲོམ་གཞི།…
+	Tree…	ཤིང་།…
+	Sharpen	གསལ་ཆ།
+	Sharpen Edges	མཐའ་ཟུར་དྭངས་གསལ།
+	Sharpen More	དྭང་གསལ་མང་ཙམ།
+	Smart Sharpen…	བསྡུ་དྭང་གསལ།…
+	Unsharp Mask…	འབག་དྭངས་གསལ་མེད་པ།…
+	High Pass…	ལ་མཐོ་བ།…
+	Stylize	བཟོ་ལྟ་བཟོ་བ།
+	Diffuse…	གྲམ་པ།…
+	Emboss…	འབུར་འབུར།…
+	Extrude…	ཕྱིར་འཐེན་བྱེད་པ།…
+	Find Edges	མཐའ་ཟུར་བཙལ།
+	Oil Paint…	སྣུམ་ཚོན་རི་མོ།…
+	Solarize	ཉི་འགྱུར།
+	Tiles…	རྡོ་གཡར།…
+	Trace Contour…	ངོས་ཐིག་རྗེས་འདེད།…
+	Wind…	རླུང་།…
+	Video	བརྙན་འཕྲིན།
+	De-Interlace…	འབྲེལ་མཐུད་མེད་པར་བཟོ་བ།…
+	NTSC Colors	NTSC ཚོས་གཞི།
+	Other	གཞན།
+	Maximum…	མཐོ་ཤོས།…
+	Minimum…	ཉུང་ཤོས།…
+	Offset…	ཟུར་འཇོག…
+	Plug-ins	ཁ་སྣོད།
+	Proof Setup	བདེན་དཔང་སྒྲིག་བཀོད།
+	Proof Colors	བདེན་དཔང་ཚོས་གཞི།
+	Gamut Warning	གྷ་མུཊ་ཉེན་བརྡ།
+	Working CMYK	ལས་ཀ་བྱེད་བཞིན་པའི་CMYK
+	Working Cyan Plate	ལས་ཀ་བྱེད་བཞིན་པའི་སི་ཡན་སྡེར་མ།
+	Working Magenta Plate	ལས་ཀ་བྱེད་བཞིན་པའི་མེ་ཇེན་ཊ་སྡེར་མ།
+	Working Yellow Plate	ལས་ཀ་བྱེད་བཞིན་པའི་སྡེར་མ་སེར་པོ།
+	Working Black Plate	ལས་ཀ་བྱེད་བཞིན་པའི་སྡེར་མ་ནག་པོ།
+	Working CMY Plate	ལས་ཀ་བྱེད་བཞིན་པའི་CMYསྡེར་མ།
+	Legacy Macintosh RGB	རྙིང་མའི་མའེ་ཁིན་ཊོ་ཤི་ཨར་ཇི་བྷི།
+	Internet Standard RGB	དྲ་རྒྱའི་ཚད་ལྡན་RGB
+	Monitor RGB	ལྟ་རྟོག RGB
+	Color Blindness — Protanopia-type	ཁ་དོག་མིག་རྒྱབ་ནད། པྲོ་ཊ་ནོ་པི་ཡ་རིགས།
+	Color Blindness — Deuteranopia-type	ཚོས་མདོག་མིག་རྒྱབ་ནད། ཌིའུ་ཊེ་ར་ནོ་པི་ཡ་རིགས།
+	Zoom In	ཆེ་རུ་མངོན།
+	Zoom Out	ཆུང་དུ་མངོན།
+	Fit on Screen	བརྙན་ཤེལ་སྟེང་དུ་འཚམས།
+	Fit Layer(s) on Screen	བརྙན་ཤེལ་སྟེང་དུ་བང་རིམ་སྒྲིག་དགོས།
+	Fit Artboard on Screen	གློག་བརྙན་གྱི་སྟེང་དུ་སྒྱུ་རྩལ་གྱི་ཤོག་བུ་སྒྲིག་དགོས།
+	100%	100%།
+	200%	200%།
+	Print Size	པར་གཞི་ཆེ་ཆུང་།
+	Pixel Aspect Ratio	པིག་སེལ་གྱི་ཆ་སྙོམས།
+	Pixel Aspect Ratio Correction	པིག་སེལ་གྱི་ཆ་སྙོམས་ནོར་བཅོས།
+	Custom Pixel Aspect Ratio…	རང་མོས་པིག་སེལ་གྱི་ཆ་སྙོམས།…
+	Square	གྲུ་བཞི།
+	D1/DV NTSC (0.91)	ཌི་༡/ཌི་ཝི་ཨེན་ཊི་ཨེས་སི་(༠.༩༡)
+	D1/DV NTSC Widescreen (1.21)	D1/DV NTSC བརྙན་ཤེལ་རྒྱ་ཆེ་བ། (1.21)
+	D1/DV PAL (1.09)	ཌི་༡/ཌི་ཝི་པི་ཨེལ་(༡.༠༩)
+	D1/DV PAL Widescreen (1.46)	D1/DV PAL གློག་བརྙན་རྒྱ་ཆེ་བ། (1.46)
+	Anamorphic 2:1 (2)	ཨ་ན་མོར་ཕིག་ ༢:༡ (༢)
+	HDV 1080/DVCPRO HD 720 (1.33)	ཨེཆ་ཌི་ཝི་༡༠༨༠/ཌི་ཝི་སི་པི་ཨར་ཨོ་ཨེཆ་ཌི་༧༢༠ (༡.༣༣)
+	DVCPRO HD 1080/HDV 1080 (1.5)	ཌི་ཝི་སི་པི་ཨར་ཨོ་ཨེཆ་ཌི་༡༠༨༠/ཨེཆ་ཌི་ཝི་༡༠༨༠ (༡.༥)
+	32-bit Preview Options…	32-bit སྔོན་ལྟའི་གདམ་ཁ།…
+	Screen Mode	གསལ་གཞིའི་ཐབས་ལམ།
+	Standard Screen Mode	ཚད་ལྡན་གྱི་བརྙན་ཤེལ་གྱི་ཐབས་ལམ།
+	Full Screen Mode With Menu Bar	དཀར་ཆག་ཕྲ་རིང་ཡོད་པའི་གསལ་གཞི་ཆ་ཚང་གི་ཐབས་ལམ།
+	Full Screen Mode	གསལ་གཞི་ཆ་ཚང་གི་ཐབས་ལམ།
+	Cycle Screen Mode	འཁོར་སྐྱོད་གློག་བརྙན་གྱི་ཐབས་ལམ།
+	Show	སྟོན།
+	Extras	ཁ་སྣོན།
+	Selection Edges	འདེམས་སྒྲུག་མཐའ་མཚམས།
+	Target Path	དམིགས་འབེན་ལམ་བུ།
+	Current Path	ད་ལྟའི་འགྲོ་ལམ།
+	Grid	སྒྲོམ་ཐིག
+	Guides	སྣོན་ཐིག
+	Canvas Guides	རས་རས་ལམ་སྟོན།
+	Artboard Guides	སྒྱུ་རྩལ་གྱི་ལམ་སྟོན།
+	Count	གྲངས་བརྩིས།
+	Smart Guides	ལམ་སྟོན་མཁས་པ།
+	Slices	གཏུབ།
+	Notes	མཆན།
+	Pixel Grid	པིག་ཟེལ་སྒྲོམ་ཐིག
+	Pixel Art	པིག་སེལ་སྒྱུ་རྩལ།
+	Pixel Art Preview	པིག་སེལ་སྒྱུ་རྩལ་སྔོན་ལྟ།
+	Pattern Preview	བཀོད་རིས་སྔོན་ལྟ།
+	Brush Preview	སྤུ་སྨྱུག་སྔོན་ལྟ།
+	Mesh	མེ་ཤ།
+	Edit Pins	རྩོམ་སྒྲིག་སྦྲེལ་མཐུད།
+	Document Bounds	ཤོག་མཚམས།
+	Show Extras Options…	གདམ་ག་ཁ་སྣོན་སྟོན།…
+	Rulers	ཐིག་ཤིང་།
+	Snap	གནན་པ།
+	Snap To	དེར་གནན་པ།
+	Lock Guides	ལྡེ་མིག་ལམ་སྟོན།
+	Clear Guides	ཐིག་མཚམས་གསུབ།
+	Clear Selected Artboard Guides	འདེམས་སྒྲུག་བྱས་པའི་སྒྱུ་རྩལ་སྒྲོམ་གྱི་ལམ་སྟོན་གསལ་པོ་བཟོས།
+	Clear Canvas Guides	རས་རས་ལམ་སྟོན་གསལ་པོ།
+	New Guide…	ལམ་སྟོན་གསར་པ།…
+	Lock Slices	ལྡེ་མིག་བསྡམས།
+	Clear Slices	དུམ་བུ་གཙང་བཟོ།
+	Match Zoom	མཐུན་སྒྲིལ་ཆེ་རུ་གཏོང་བ།
+	Match Location	མཐུན་པའི་ས་གནས།
+	Match Rotation	མཐུན་སྒྲིལ་འཁོར་སྐྱོད།
+	Cascade	ཆུ་བོ།
+	Tile	མོ་སེཀ།
+	Tile All Horizontally	རྡོ་གཡམ་ཚང་མ་འཕྲེད་ལ་བཟོས།
+	Tile All Vertically	རྡོ་གཡམ་ཚང་མ་ལངས་པ།
+	2-up Horizontal	2-up འཕྲེད་ལུགས།
+	2-up Vertical	2-ཡར་ལངས་པ།
+	3-up Horizontal	3-up འཕྲེད་ལུགས།
+	3-up Stacked	3-up བརྩེགས་བརྩེགས།
+	3-up Vertical	3-ཡར་ལངས་པ།
+	4-up	4-ཡར་འཕར།
+	6-up	6-ཡར་འཕར།
+	Consolidate All to Tabs	ཚང་མ་མཆོང་ལྡེ་ལ་གཅིག་སྒྲིལ་བྱེད།
+	Float in Window	སྒེའུ་ཁུང་ནང་འཕྱོ།
+	Float All in Windows	སྒེའུ་ཁུང་ནང་དུ་ཡོད་ཚད་འཕྱོ་བ།
+	New Window for Document	ཡིག་ཆའི་སྒེའུ་ཁུང་གསར་པ།
+	Workspace	ལས་ཀའི་ས་ཁུལ།
+	Essentials	ཉེར་མཁོའི་དངོས་པོ།
+	Graphic and Web	རི་མོ་དང་དྲ་བ།
+	Painting	རི་མོ།
+	Photography	པར་ལེན།
+	New Workspace…	ལས་ཀའི་ས་ཆ་གསར་པ།…
+	Delete Workspace…	ལས་ཀའི་ས་ཁོངས་སུབ་པ།…
+	Reset Workspace	ལས་ཀའི་ས་ཁོངས་སླར་སྒྲིག་བྱེད་པ།
+	Lock Workspace	ལས་ཀའི་ས་ཁོངས་བཀག་པ།
+	Theme	དཔེ་དཔང་།
+	Pro Theme	བརྗོད་གཞི།
+	Pro Medium Gray Theme	འབྲིང་རིམ་སྐྱ་བོའི་བརྗོད་གཞི།
+	Studio Theme	གློག་བརྙན་ཁང་གི་བརྗོད་གཞི།
+	Studio Light Theme	གློག་བརྙན་ཁང་གི་འོད་ཀྱི་བརྗོད་གཞི།
+	Classic Theme	གནའ་བོའི་བརྗོད་གཞི།
+	Next Theme	བརྗོད་གཞི་རྗེས་མ།
+	Midnight	མཚན་གུང་།
+	Anthracite	ཨན་ཐྲ་སིཊ།
+	Slate	ཤོག་བུ།
+	Pearl	མུ་ཏིག།
+	Aubergine	ཨོ་བྷར་ཇིན།
+	Ocean	རྒྱ་མཚོ།
+	Actions	ལས་འགུལ།
+	Brush Settings	སྤུ་སྨྱུག་སྒྲིག་སྟངས།
+	Brushes	སྤུ་སྨྱུག།
+	Channels	རྒྱུ་ལམ།
+	Character	ཡིག་འབྲུ།
+	Character Styles	ཡིག་འབྲུའི་རྣམ་པ།
+	Clone Source	རིགས་མཚུངས་འབྱུང་ཁུངས།
+	Color	ཚོན་ཁྲ།
+	Glyphs	ཡིག་རྟགས
+	Gradients	གྱེན་ཐུར།
+	Histogram	སྐྱེད་རིས།
+	History	བྱུང་རིམ།
+	Info	གནས་ཚུལ།
+	Measurement Log	ཚད་འཇལ་ཟིན་ཐོ།
+	Modifier Keys	བཟོ་བཅོས་ལྡེ་མིག
+	Navigator	ཟུར་ལྟ།
+	Options	གདམ་ག།
+	Paragraph	དུམ་མཚམས།
+	Paragraph Styles	དོན་ཚན་གྱི་བཟོ་ལྟ།
+	Paths	ལམ།
+	Patterns	དཔེ་རིས།
+	Properties	ཁྱད་ཆོས།
+	Shapes	དབྱིབས།
+	Styles	བཟོ་ལྟ།
+	Swatches	ཚོན་སྟར།
+	Timeline	དུས་ཚོད།
+	Tool Presets	ཡོ་ཆས་སྔོན་སྒྲིག
+	Tools	ལག་ཆ།
+	About PhotoSuite	པར་རིས་བཟོ་རྩལ་གྱི་སྐོར།
+	Website	དྲ་ཚིགས།
+	Report an Issue…	གནད་དོན་སྙན་སེང་ཞུས།…
+	WIA Support…	WIA རྒྱབ་སྐྱོར།…
+	Apply	སྤྱད།
+	HSB/HSL	ཨེཆ་ཨེས་བི་/ཨེཆ་ཨེས་ཨེལ།
+	Invert…	ཕྱི་ནང་སློག་པ།…
+	Load Files into Stack…	ཡིག་ཆ་རྣམས་བང་རིམ་ནང་དུ་བླུགས།…
+	Motion	གཡོ་འགུལ།
+	Notes…	མཆན…
+	Other…	གཞན།…
+	Remove Warp Split	ཝརཔ་སི་པི་ལིཊ་མེད་པར་བཟོས།
+	Shape	དབྱིབས།
+	Split Warp Crosswise	གཞུ་དབྱིབས་གུག་གུག
+	Split Warp Horizontally	འཕྲེད་ལ་གྱེས་པ།
+	Split Warp Vertically	ལངས་པའི་སྒོ་ནས་གུག་གུག
+	Statistics…	རྩིས་དཔྱད།…
+@plural	{n} item|{n} items	{n} རྣམ་གྲངས།|{n} རྣམ་གྲངས།
+	Auto	རང་འགུལ་ཅན།
+	(print to the printer)	(པར་འཕྲུལ་ལ་པར་ཤོག)
+	+ Add variable	+ འགྱུར་ཅན་ཁ་སྣོན་བྱེད།
+	30 frames @ 30 fps	གཞི་གྲངས་30 @ fps 30
+	3D LUT File	3D LUTཡིག་ཆ།
+	Absolute	ཚད་རྩོད་མེད།
+	Absolute Colorimetric	ཆ་ཚང་ཚོས་མདོག་ཚད་འཇལ་ཆས།
+	Action	བྱ་སྤྱོད།
+	Adaptive	གོམས་འདྲིས་ཅན།
+	Adaptive Wide Angle isn't open	གོམས་འདྲིས་ཆེ་བའི་ཟུར་ཁུག་ཁ་ཕྱེ་མེད།
+	Add	ཁ་སྣོན།
+	Add Layer Mask	བང་རིམ་ཁ་རས་ཁ་སྣོན་བྱེད་པ།
+	Add Stop	མཚམས་འཇོག་ཁ་སྣོན།
+	Add a layer style	བང་རིམ་གྱི་བཟོ་ལྟ་ཁ་སྣོན་བྱེད་པ།
+	Add a mask  (from the selection; {key} inverts)	ཁ་རས་ཁ་སྣོན་བྱེད་པ། (འདེམས་སྒྲུག་ལས་; {key} ཕྱིར་ལོག་བྱེད།)
+	Add an adjustment	ལེགས་སྒྲིག་ཁ་སྣོན་བྱེད་པ།
+	Add disk	སྲབ་སྡེར་ཁ་སྣོན།
+	Add space after paragraph	དོན་ཚན་གྱི་རྗེས་སུ་བར་སྟོང་ཁ་སྣོན་བྱེད།
+	Add space before paragraph	དོན་ཚན་གྱི་སྔོན་དུ་བར་སྟོང་ཁ་སྣོན་བྱེད།
+	Add to Sample	དཔེ་ལ་ཁ་སྣོན།
+	Add to selection  ({key})	འདེམས་གཞི་ལ་ཁ་སྣོན་ ({key})
+	Adjust for Zoom	ཆེ་རུ་གཏོང་བར་སྙོམ་སྒྲིག་བྱེད་པ།
+	Adjustment visible	སྙོམ་སྒྲིག་མཐོང་ཐུབ།
+	Adobe RGB (1998) compatible	Adobe RGB (1998) དང་མཐུན་པ།
+	Align and Distribute	ཕྲེང་བསྒྲིགས་དང་བགོ་འགྲེམས།
+	Align and distribute	ཕྲེང་སྒྲིག་དང་བགོ་འགྲེམས།
+	Align horizontal centers	འཕྲེད་ཐིག་དཀྱིལ་འཁོར་ཕྲེང་བསྒྲིགས།
+	Align left edges	གཡོན་ཟུར་སྟར་སྒྲིག
+	Align right edges	གཡས་ཟུར་སྟར་སྒྲིག
+	Aligned	རུ་སྒྲིག
+	All Caps	མགོ་རྒྱན་ཚང་མ།
+	All Slices	ཆ་ཤས་ཚང་མ།
+	All User Slices	སྤྱོད་མཁན་གྱི་ཆ་ཤས་ཚང་མ།
+	All shortcuts reset to Photoshop defaults.	མགྱོགས་ཐབས་ཚང་མ་ཕོ་ཊོ་ཤོབ་ཀྱི་སྔོན་སྒྲིག་ལ་སླར་གསོ་བྱེད།
+	Alt	Alt
+	Always use pressure for opacity	ག་དུས་ཡིན་ཡང་དྭངས་གསལ་གྱི་ཆེད་དུ་གནོན་ཤུགས་བེད་སྤྱོད་བྱེད་དགོས།
+	Always use pressure for size	ག་དུས་ཡིན་ཡང་ཆེ་ཆུང་ལ་གནོན་ཤུགས་སྤྱོད་དགོས།
+	Amount	ཇི་ཙམ།
+	Anchor:	གཏིང་ཟབ་པ།
+	Angle	གྲུ་ཟུར།
+	Angle Gradient	ཟུར་གྱི་གྱེན་ཐུར།
+	Angle Jitter	གྲུ་ཟུར་སག་སག
+	Answer the unsaved-changes prompt first	དང་པོ་ཉར་ཚགས་མ་བྱས་པའི་བསྒྱུར་བཅོས་བརྡ་ལན་སྤྲོད་དགོས།
+	Anti-alias	མཐའ་འཇམ།
+	Appearance	སྣང་བརྙན།
+	Appearance (Layer Style)	མཐོང་སྣང་། (བང་རིམ་བཟོ་ལྟ།)
+	Apply Layer Mask	བང་རིམ་གྱི་ཁ་རས་བཀོལ་བ།
+	Apply Per Tip	བསླབ་བྱ་རེར་ཞུ་གཏུག།
+	Apply next selected layer comp	བདམས་པའི་བང་རིམ་རྗེས་མའི་སྒྲིག་སྦྱོར་འཇུག་སྤྱོད་བྱེད།
+	Apply previous selected layer comp	སྔོན་ལ་འདེམས་པའི་བང་རིམ་མཉམ་སྤྱོད་བྱེད།
+	Artboard	སྒྱུ་རྩལ་པང་ལེབ།
+	Artboard Background Color	རི་མོའི་རྒྱབ་ལྗོངས་ཀྱི་ཚོས་གཞི།
+	Assign working space	ལས་ཀའི་ས་ཆ་བཀོད་སྒྲིག་བྱེད་པ།
+	Author:	རྩོམ་པ་པོ།
+	Auto Hide	རང་འགུལ་སྦས།
+	Auto-Select:	རང་འགུལ་འདེམས།
+	Automatically level near-horizontal line segments	རང་འགུལ་གྱིས་འཕྲེད་ཐིག་ཉེ་འགྲམ་གྱི་ཐིག་དུམ་དུམ་བུར་སྙོམས་སྒྲིག་བྱེད།
+	Automatically straighten and level	རང་འགུལ་གྱིས་དྲང་སྙོམས་དང་སྙོམས་པ།
+	Automatically straighten near-vertical line segments	རང་འགུལ་གྱིས་ཉེ་འགྲམ་གྱི་ཐིག་དུམ་དྲང་བ།
+	Background	རྒྱབ་ངོས།
+	Background Color	རྒྱབ་ལྗོངས་ཀྱི་ཁ་དོག།
+	Background Contents	རྒྱབ་ལྗོངས་ནང་དོན།
+	Balance	དོ་སྙོམ།
+	Baseline	གཞི་རིམ།
+	Baseline shift	མ་ཐིག་སྤར།
+	Basic	གཞི་རྩ།
+	Before (Y)	(Y) ཡི་སྔོན་དུ།
+	Begin recording	སྒྲ་ཕབ་འགོ་བཙུགས།
+	Bend:	གུག་པ།
+	Bicubic	བི་ཁུ་བིག་།
+	Bicubic (smooth gradients)	བི་ཁུ་བིག་(འཇམ་པོའི་གཤམ་འོག་)
+	Bilinear	གཉིས་ཐིག
+	Black	ནག་པོ།
+	Black & White	དཀར་པོ་དང་ནག་པོ།
+	Black Point Compensation	ནག་ཐིག་ཁ་གསབ།
+	Black, White	ནག་པོ་དཀར་པོ།
+	Blacks	མི་ནག་པོ།
+	Blending	བསྲེས་སྦྱོར་བྱེད་པ།
+	Blending Options	སྡེབ་སྦྱོར་བཀོད་སྒྲིག
+	Blue	སྔོན་པོ།
+	Blue, Red, Yellow	སྔོན་པོ་དམར་པོ་སེར་པོ།
+	Both	གཉིས་ཀ།
+	Both Axes	ཚངས་ཐིག་གཉིས་ཀ།
+	Bottom	འོག
+	Brightness	བཀྲག་མདངས།
+	Brightness Jitter	བཀྲག་མདངས་སག་སག
+	Brightness/Contrast	བཀྲག་མདངས། / ལྡོག་ཆོས།
+	Bring the selected pin forward	བདམས་པའི་སྦྲེལ་མཐུད་མདུན་དུ་འཁྱེར་ཤོག
+	Brush Preset picker	སྤུ་སྨྱུག་སྔོན་སྒྲིག་འདེམས་མཁན།
+	Brush Reconstruct Options	སྤུ་སྨྱུག་བསྐྱར་བཟོའི་གདམ་ག།
+	Brush Tool Options	སྤུ་སྨྱུག་ལག་ཆའི་གདམ་ཁ།
+	Cache Level:	མཛོད་གནས་རིམ།
+	Camera Raw isn't open	པར་ཆས་རྭ་ཁ་ཕྱེ་མེད།
+	Cancel	འགག་
+	Cancel (Esc)	ཆ་མེད་གཏོང་ (Esc)
+	Cancel any current edits (Esc)	ད་ལྟའི་རྩོམ་སྒྲིག་གང་རུང་མེད་པར་བཟོས། (Esc)
+	Cancel current crop operation  (Esc)	མིག་སྔའི་སྟོན་ཐོག་བཀོལ་སྤྱོད་ཆ་མེད་གཏོང་བ།(Esc)
+	Cancel transform (Esc)	སྒྱུར་བཅོས་ཆ་མེད་གཏོང་(Esc)
+	Cancel warp (Esc)	གཡོ་འགུལ་མེད་པར་བཟོས། (Esc)
+	Canvas	རས་གཞི།
+	Canvas extension color:	བརྐོས་རིས་རྒྱ་བསྐྱེད་ཚོས་གཞི།
+	Capture	འཛིན་བཟུང་།
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	གཤམ་གྱི་+ དང་མཉམ་དུ་བང་རིམ་རེ་རེའི་མཐོང་ཐུབ་ཚད་དང་། གནས་ཚུལ། བཟོ་ལྟ་བཅས་བཟུང་ནས་ཐོན་རིམ་བར་ལ་བརྗེ་སྒྱུར་བྱེད།
+	Catch-up on Stroke End	གློ་བུར་གྱི་རྨས་སྐྱོན་མཇུག་སྒྲིལ་བ།
+	Center	དཀྱིལ་ལ།
+	Center Crop Marks	ལྟེ་བའི་ལོ་ཏོག་རྟགས།
+	Center text	དཀྱིལ་གྱི་ཡི་གེ།
+	Change	འགྱུར་བ།
+	Change All	ཚང་མ་བསྒྱུར།
+	Change Screen Mode  (F)	བརྙན་ཤེལ་གྱི་ཐབས་ལམ་བསྒྱུར། (F)
+	Change To:	བརྗེ་སྒྱུར།
+	Channel Mixer	ཁ་དོག་སྲེ་སྦྱོར།
+	Channel:	བརྒྱུད་ལམ།
+	Check All Layers	བང་རིམ་ཚང་མར་ཞིབ་བཤེར།
+	Check Spelling	དག་ཆ་ཞིབ་བཤེར།
+	Clarity	གསལ་ཆ།
+	Clear All	ཚང་མ་གཙང་བཟོ།
+	Clear Override	བཀག་འགོག་སེལ་བ།
+	Clear Samples	དཔེ་ཚད་གསལ་པོ།
+	Click sets foreground · right-click sets background	གཡས་མཐེབ་མནན་ནས་རྒྱབ་ལྗོངས་སྒྲིག་པ།
+	Click the first point or press {key} to close · Esc cancels	ས་ཚིགས་དང་པོ་དེ་ལ་སྣུན། ཡང་ན་{key}ལ་མནན་ནས་སྒོ་རྒྱག་དགོས། · Esc ཆ་མེད་གཏོང་བ།
+	Click to add a point · drag off or {key}-click or Delete to remove	ས་ཚིགས་ཁ་སྣོན་བྱེད་པར་སྣུན། · འདྲུད་འཐེན་བྱེད་པའམ་ཡང་ན་ {key}-སྣུན། ཡང་ན་སུབ་པ་ལ་སྣུན།
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	འཇུག་སྤྱོད་བྱེད་པར་སྣུན། {key}-བཀག་འགོག་སེལ་བར་སྣུན། བཟོ་ལྟའི་གདམ་ཁའི་ཆེད་དུ་ཐེངས་གཉིས་སྣུན།
+	Click to edit the gradient	གཤམ་ཐིག་བཟོ་བཅོས་བྱེད་པར་སྣུན།
+	Click to restore the current colour	ད་ལྟའི་ཚོས་གཞི་སླར་གསོ་བྱེད་པར་སྣུན།
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	ཆེ་རུ་གཏོང་བར་སྣུན། {key}
+	Click with the Note tool to add a note.	དྲན་ཐོ་ལག་ཆས་དང་མཉམ་དུ་སྣུན། དྲན་ཐོ་ཁ་སྣོན་བྱེད།
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	སྣུན། ཟུར། · འདྲུད། འཇམ་པོ། · སྣུན། ས་ཚིགས་དང་པོ། ཁ་རྒྱག་པ། · {key} མཇུག་སྒྲིལ། · Esc ཆ་མེད་གཏོང་བ།
+	Clip to layer below	གཤམ་གྱི་བང་རིམ་ལ་བཤུད།
+	Clipped	བཅད་པ།
+	Close Style Options	བཟོ་ལྟའི་གདམ་ག་ཁ་རྒྱབ།
+	Cmd	Cmd
+	Coated CMYK	CMYK བཀབ་ཡོད།
+	Color & Swatches	ཚོས་གཞི་དང་དཔེ་ཚད།
+	Color Balance	ཚོན་དོ་སྙོམ།
+	Color Detail	ཁ་དོག་ཞིབ་ཕྲ།
+	Color Grading	ཚོན་མདོག་རིམ་པ།
+	Color Lookup	ཁ་དོག་དཔྱད་བསྡུར།
+	Color Management	ཁ་དོག་དོ་དམ།
+	Color Mixer	ཚོན་སྲེག་འཕྲུལ་ཆས།
+	Color Mode	ཚོན་མདོག་ཐབས་ལམ།
+	Color Priority	ཁ་དོག་གཙོ་གནད།
+	Color Range preview	ཚོན་མདོག་ཁྱབ་ཁོངས་སྔོན་ལྟ།
+	Color:	ཁ་དོག:
+	Colorize	ཚོན་བཏང་བ།
+	Colors	ཚོན་མདོག
+	Commit Perspective Warp ({key})	མཐོང་ཚུལ་གཡོ་འགུལ་ཁས་ལེན། ({key})
+	Commit Puppet Warp ({key})	རྐང་རྩེད་སྤོ་ལོའི་གཡོ་འགུལ་ཁས་ལེན། ({key})
+	Commit any current edits ({key})	ད་ལྟའི་བཟོ་བཅོས་གང་རུང་ཞིག་ཁས་ལེན་བྱེད་དགོས། ({key})
+	Commit current crop operation  ({key})	མིག་སྔའི་ལོ་ཏོག་བཀོལ་སྤྱོད་ཁས་ལེན།({key})
+	Commit transform ({key})	ཁས་ལེན་སྒྱུར་བཅོས་({key})
+	Commit warp ({key})	ཀམ་མིཊ་ཝརཔ་({key})
+	Constant	རྟག་པ།
+	Constrain proportions	ཚད་གཞི་ཚད་བཀག་བྱེད་པ།
+	Contact Sheet II	འབྲེལ་གཏུགས་ཤོག་བྱང་༢པ།
+	Content-Aware	ནང་དོན་ཤེས་རྟོགས་ཅན།
+	Contiguous	ཉེ་འདབས།
+	Contrast	ལྡོག་ཆོས།
+	Control:	ཚོད་འཛིན།
+	Convert document's colors to the working space	ཡིག་ཆའི་ཁ་དོག་ལས་ཀའི་བར་སྟོང་དུ་བསྒྱུར།
+	Convert to sRGB	sRGB ལ་བསྒྱུར།
+	Copies	འདྲ་གྲངས།
+	Copper	ཟངས།
+	Copyright	པར་དབང་།
+	Copyright and Contact Info	བདག་དབང་དང་འབྲེལ་གཏུགས་ཁ་བྱང་།
+	Corner Crop Marks	ཟུར་གྱི་ལོ་ཏོག་རྟགས།
+	Corner radius	ཟུར་གདོང་ཚངས་ཐིག
+	Correction	བཅོས་སྒྱུར
+	Count Jitter	གྲངས་སག་སག
+	Create	བཟོ།
+	Create Droplet	ཐིགས་པ་གསར་བཟོ།
+	Create Texture	ཐགས་རན་བཟོས།
+	Create Video Timeline	བརྙན་ཐུང་དུས་ཐིག་བཟོས།
+	Create a new count group	གྲངས་ཀ་སྡེ་ཚན་གསར་འཛུགས་བྱེད་པ།
+	Create a new document or open an existing file.	ཡིག་ཆ་གསར་པ་ཞིག་གསར་འཛུགས་བྱེད་པའམ་ཡང་ན་སྔར་ཡོད་ཀྱི་ཡིག་ཆ་ཁ་ཕྱེ་བ།
+	Create a new group	སྡེ་ཚན་གསར་པ་ཞིག་གསར་འཛུགས་བྱེད་པ།
+	Create a new layer	བང་རིམ་གསར་བ་གསར་སྐྲུན་བྱེད་པ།
+	Create new action	བྱ་སྤྱོད་གསར་པ་གཏོད་པ།
+	Create new channel	བརྒྱུད་ལམ་གསར་པ་བསྐྲུན་པ།
+	Create new document from current state	ད་ལྟའི་གནས་སྟངས་ནས་ཡིག་ཆ་གསར་པ་བཟོས།
+	Create new fill or adjustment layer	བཀང་བའམ་སྙོམ་སྒྲིག་བང་རིམ་གསར་པ་བཟོས།
+	Create new gradient	གྱེན་ཐུར་གསར་པ་བཟོས།
+	Create new group	སྡེ་ཚན་གསར་བ་གསར་འཛུགས།
+	Create new layer comp	བང་རིམ་གསར་པ་བཟོས།
+	Create new pattern from the selection	བདམས་ཐོན་ལས་དཔེ་རིས་གསར་པ་བཟོས།
+	Create new shape from the current path	མིག་སྔའི་འགྲོ་ལམ་ནས་དབྱིབས་གསར་བ་བསྐྲུན།
+	Create new snapshot	པར་ལེན་གསར་པ་བཟོས།
+	Create new style (from the selected type)	བཟོ་ལྟ་གསར་བ་བཟོས།(བདམས་པའི་རིགས་ལས།)
+	Create new style from the selected layer	བདམས་པའི་བང་རིམ་ནས་བཟོ་ལྟ་གསར་པ་བཟོས།
+	Create new tool preset	ལག་ཆ་སྔོན་སྒྲིག་གསར་པ་བཟོས།
+	Crop Factor	ལོ་ཏོག་གི་རྒྱུ་རྐྱེན།
+	Ctrl	Ctrl
+	Current & Below	ད་ལྟ་དང་འདིའི་འོག་མ།
+	Current Layer	ད་ལྟའི་ངོས།
+	Current Size	ད་ལྟའི་ཆེ་ཆུང་།
+	Current Tool Only	ད་ལྟའི་ལག་ཆ་ཁོ་ན།
+	Curve	གུག་གུག།
+	Curves	གུག་ཐིག
+	Custom	རང་སྒྲིག
+	Custom Shapes	རང་མོས་བཟོ་དབྱིབས།
+	Cyan	སྔོ་ལྗང་།
+	Cyan  ·  Red	སེར་སྐྱ་ · དམར་པོ།
+	Darken	ནག་ཏུ་གཏོང་།
+	Darks	མུན་ནག་ཅན།
+	Data Sets	གཞི་གྲངས་ཆ་ཚན།
+	Default	སྔོན་སྒྲིག
+	Default colours (D)	སྔོན་སྒྲིག་ཚོན་མདོག (D)
+	Default printer	སྔོན་སྒྲིག་དཔར་འཕྲུལ་ཆས།
+	Default restored.	སྔོན་སྒྲིག་སླར་གསོ་བྱས།
+	Define	ངེས་ཚིག།
+	Define at least one variable first.	དང་པོ་ཉུང་མཐར་ཡང་འགྱུར་ལྡོག་གཅིག་གསལ་བཤད་བྱོས།
+	Dehaze	མེ་དུག་མེད་པར་བཟོ་བ།
+	Delete Cropped Pixels	གཅོད་པའི་པིག་སེལ་རྣམས་སུབ་དགོས།
+	Delete Group	སྡེ་ཚན་སུབ་པ།
+	Delete Layer Mask	བང་རིམ་གྱི་ཁ་རས་སུབ།
+	Delete Layers	བང་རིམ་སུབ་པ།
+	Delete Shortcut	མགྱོགས་ཐབས་སུབ།
+	Delete Timeline	དུས་ཐིག་བསུབས་པ།
+	Delete Tool Preset	ལག་ཆའི་སྔོན་སྒྲིག་སུབ་པ།
+	Delete count group	གྲངས་ཀ་སྡེ་ཚན་སུབ་པ།
+	Delete current channel	མིག་སྔའི་རྒྱུད་ལམ་སུབ་པ།
+	Delete current state	ད་ལྟའི་གནས་སྟངས་སུབ་པ།
+	Delete effect layer	ནུས་པ་བང་རིམ་སུབ་པ།
+	Delete layer	ངོས་དོར།
+	Delete layer comp	བང་རིམ་མཉམ་སྡེབ་སུབ།
+	Delete note	དྲན་ཐོ་སུབ་པ།
+	Delete selected measurements	བདམས་པའི་ཚད་གཞི་སུབ་པ།
+	Delete style	བཟོ་ལྟ་སུབ་པ།
+	Delete tool preset	ལག་ཆའི་སྔོན་སྒྲིག་སུབ་པ།
+	Density	གར་ལོད།
+	Density:	མཐུག་ཚད།
+	Depth	གཏིང་།
+	Depth Jitter	གཏིང་ཚད་འཇིགས།
+	Description	འགྲེལ་བཤད།
+	Deselect All	ཚང་མ་བདམས་མེད།
+	Detail	ཞིབ་ཕྲ།
+	Diamond Gradient	རྡོ་རྗེ་ཕ་ལམ་གྱི་གྱེན་ཐུར།
+	Difference	བར་ཁྱད་ཅན།
+	Diffusion	ཁྱབ་འགྱུར།
+	Discard the embedded profile (don't color manage)	བཙུགས་པའི་གསལ་སྡུད་དེ་མེད་པར་བཟོས། (ཚོན་མདོག་དོ་དམ་མ་བྱེད།)
+	Discontiguous	འབྲེལ་མེད་པ།
+	Feedback	བསམ་འཆར།
+	Dismiss	གནས་དབྱུང་བཏང་བ།
+	Display P3	བཀྲམ་སྟོན་P3།
+	Display Text	ཡི་གེ་མངོན་པ།
+	Dither	དབྱི་ཐར།
+	Divide…	ཆ་བགོས་ཅན།…
+	Document	ཡིག་ཆ།
+	Don't Save	གསོག་འཇོག་མ་བྱེད།
+	Done	གྲུབ་སོང་།
+	Dots	ཚེག་རིས།
+	Drag a rectangle around the object	དངོས་པོའི་མཐའ་འཁོར་དུ་གྲུ་བཞི་ནར་མོ་འདྲུད།
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	ཚད་བཀག་ཁ་སྣོན་བྱེད་པར་པར་རིས་སྟེང་འདྲུད། འཕྲེད་ལངས་/ལངས་པའི་ཆེད་དུ་བསྒྱུར། གཡས་མཐེབ་མནན་ནས་བསུབས་དགོས།
+	Drag to move the active shape's path or the Work Path	ཤུགས་ལྡན་དབྱིབས་ཀྱི་འགྲོ་ལམ་ཡང་ན་ལས་ཀའི་འགྲོ་ལམ་སྤོ་བསྒྱུར་བྱེད་པར་འདྲུད།
+	Draw with the Pen tool (P) or make a work path from a selection.	སྨྱུ་གུ་ལག་ཆ་(P)བཀོལ་ནས་རི་མོ་བྲིས། ཡང་ན་འདེམས་སྒྲུག་ལས་ལས་ཀའི་འགྲོ་ལམ་བཟོས།
+	Drop an image or PSD anywhere to open it.	ཁ་ཕྱེ་ཆེད་དུ་པར་རིས་ཡང་ན་PSDགང་དུ་ཡང་བཞག་རོགས།
+	Duplicate Layers…	བང་རིམ་འདྲ་བཤུས།…
+	Duplicate style	བཟོ་ལྟ་འདྲ་བཤུས།
+	Edit Toolbar…	ལག་ཆའི་ཕྲ་རིང་ཞུན་དག་…
+	Edit in Quick Mask Mode  (Q)	མགྱོགས་མྱུར་གདོང་འབག་ཐབས་ལམ་ནང་རྩོམ་སྒྲིག་བྱེད་པ། (Q)
+	Edit in Standard Mode  (Q)	ཚད་ལྡན་ཐབས་ལམ་ནང་རྩོམ་སྒྲིག་བྱེད་པ། (Q)
+	Effects	ཤུགས་རྐྱེན།
+	Embed Color Profile	ཚོན་མདོག་གསལ་སྡུད་བཙུགས།
+	Embedded Profile Mismatch	བཙུགས་པའི་གསལ་སྡུད་མི་མཐུན་པ།
+	Enable airbrush-style build-up effects	རླུང་འཚུབ་ཀྱི་རྣམ་པའི་འཛུགས་སྐྲུན་གྱི་ནུས་པ་ལྕོགས་ཅན་བཟོས།
+	Enhance Edge	མཐའ་མཚམས་མཐོར་འདེགས།
+	Entire Font	ཡིག་གཟུགས་ཆ་ཚང་།
+	Exact	ཏག་ཏག།
+	Expansion:	རྒྱ་བསྐྱེད།
+	Export Presets	སྔོན་སྒྲིག་ཕྱིར་འདྲེན་བྱེད་པ།
+	Export selected measurements (CSV)	ཕྱིར་གཏོང་འདེམས་སྒྲུག་བྱས་པའི་ཚད་གཞི་(CSV)
+	Exposure	འཚེར་ཤུགས།
+	Exposure and Gamma	འོད་འཕྲོ་དང་གྷ་མ།
+	Exposure:	འགྲེམ་སྟོན།
+	Eyedropper	ཚོན་བཤེར།
+	Factor:	རྒྱུ་རྐྱེན།
+	Faux Bold	རྫུན་མའི་ནག་པོ།
+	Faux Italic	རྫུན་མ་ཡི་གུ།
+	Feather	བྱ་སྒྲོ།
+	Fewer Points	སྐར་མ་ཉུང་བ།
+	File Settings	ཡིག་ཆའི་སྒྲིག་སྟངས།
+	Fill	འགེང།
+	Fill:	བཀང།
+	Filter for adjustment layers	སྙོམ་སྒྲིག་བང་རིམ་གྱི་ཚགས་རླུང་།
+	Filter for pixel layers	པིག་སེལ་བང་རིམ་གྱི་ཚགས་རླུང་།
+	Filter for shape layers	དབྱིབས་བང་རིམ་ཚགས་ཆས།
+	Filter for smart objects	རིག་ལྡན་དངོས་པོ་ཚགས་རླུང་།
+	Filter for type layers	དབྱེ་བ་བང་རིམ་གྱི་ཚགས་རླུང་།
+	Filter:	ཚགས་རླུང་།
+	Finger Painting	མཛུབ་མོའི་རི་མོ།
+	Fisheye	ཉ་མིག་ཅན།
+	Fit	འཚམ་པོ།
+	Fit Screen	འཆར་ཤེལ་འཚམ་པོ།
+	Fit in View	མཐོང་སྣང་ནང་འཚམ་པ།
+	Fixed	གཏན་འཁེལ་བྱས།
+	Fixed Ratio	བསྡུར་ཚད་གཅིག
+	Fixed Size	བསྡུར་ཚད་གཅིག་འཇོག
+	Flip	བསྒྱུར།
+	Flip X	ཕིལཔ་ཨེགསི་
+	Flip X Jitter	ཕིལིཔ་ཨེགསི་ཇི་ཊར།
+	Flip Y	Y གཡོལ།
+	Flip Y Jitter	ཕི་ལིབ་ཝའི་ཇི་ཊར།
+	Flow	འགྲོས།
+	Flow Jitter	བཞུར་རྒྱུན་འཇིགས།
+	Focal Length	ཕོ་ཀལ་རིང་ཚད།
+	Font	ཡིག་གཟུགས།
+	Font Size:	ཡིག་གཟུགས་ཆེ་ཆུང་།
+	Font size	ཡིག་གཟུགས་ཆེ་ཆུང་།
+	Foreground	ཁ་ངོས།
+	Foreground to Background	མདུན་ངོས་ནས་རྒྱབ་ལྗོངས།
+	Foreground/Background Jitter	ཁ་ངོས་དང་རྒྱབ་ངོས་སག་སག
+	Format	རྣམ་གཞག
+	Frame from Layers…	བང་རིམ་ནས་སྒྲོམ་གཞི།…
+	Free	རིན་མེད།
+	Full Spherical	སྒོར་སྒོར་ཆ་ཚང་།
+	Fuzziness:	མུན་ནག་ཅན།
+	GPU	GPU
+	Gamma Correction	ག་མ་བཅོས་སྒྲིག
+	Gamma:	གྷ་མ།
+	Global	གོ་ལ་ཧྲིལ་པོ།
+	Glow Color	འོད་འཚེར་བའི་ཁ་དོག
+	Gradient Map	སྟེགས་རིས་ས་ཁྲ།
+	Grain	འབྲུ
+	Gray	སྐྱ་བོ།
+	Gray Gamma 2.2	གྷེ་རེ་གྷ་མ་ ༢.༢
+	Green	ལྗང་ཁུ།
+	Group	སྡེ་ཚན།
+	Hardness	མཁྲེགས་ལོད།
+	Heart	སྙིང་།
+	Height	མཐོ་ཚད།
+	Height:	མཐོ་ཚད།
+	Hide Auto Slices	རང་འགུལ་གྱི་དུམ་བུ་སྦས།
+	Hide Properties	རྒྱུ་དངོས་སྦས།
+	Highlight Compression	འོད་མདངས་བསྡུ་རུབ།
+	Highlight Priority	གཙོ་གནད་མངོན་པ།
+	Highlights	དཀར་ཆ།
+	Home	ཁྱིམ།
+	Horizontal scale	འཕྲེད་ཕྱོགས་ཆེ་ཆུང་།
+	Hue	ཚོན།
+	Hue Jitter	ཚོན་སག་སག
+	Hue/Saturation	ཚོན། / ཧར་ལོད།
+	Hyphenate	སྦྲེལ་སྦྱོར།
+	Ignore	རྩིས་མེད་གཏོང་བ།
+	Ignore All	ཡོད་ཚད་སྣང་མེད་དུ་བཏང་།
+	Image Size	དཔར་ཆེ་ཆུང་།
+	Import Brushes…	སྤུ་སྨྱུག་ནང་འདྲེན།…
+	Import Photoshop brushes (.abr)	ཕོ་ཊོ་ཤོབ་ཀྱི་སྤུ་གྲི། (.abr) ནང་འདྲེན་བྱེད།
+	Import Presets	སྔོན་སྒྲིག་ནང་འདྲེན་བྱེད།
+	Imported	ནང་འདྲེན་བྱས།
+	Indent First	དང་པོ།
+	Indent Left	གཡོན་ཕྱོགས་སུ་བཤུད།
+	Indent Right	གཡས་ཕྱོགས་སུ་བཤུད།
+	Indent first line	གྲལ་ཐིག་དང་པོ་ནང་འཇུག་བྱེད།
+	Indent left margin	གཡོན་གྱི་མཐའ་མཚམས་ནང་འཇུག་བྱེད།
+	Indent right margin	གཡས་ཀྱི་མཐའ་མཚམས་ནང་འཇུག་བྱེད།
+	Input:	ནང་འཇུག:
+	Inside	ནང་ལ།
+	Interlaced	ཕན་ཚུན་སྦྲེལ་བ།
+	Interpolation:	བརྗེ་སྒྱུར།
+	Intersect with selection  ({key})	འདེམས་སྒྲུག་({key})དང་མཉམ་དུ་བསྣོལ་དགོས།
+	Invert All	ཚང་མ་ལྡོག་པ།
+	Invert has no settings.	Invert ལ་སྒྲིག་སྟངས་མེད།
+	Italic	ཀྱོག་ཀུ།
+	Justify all	ཚང་མར་བདེན་དཔང་བྱེད་པ།
+	Justify last centered	མཐའ་མའི་དབུས་སུ་བདེན་དཔང་བྱེད།
+	Justify last left	གཡོན་མཐའ་མ་དེ་བདེན་དཔང་བྱེད།
+	Justify last right	ཐོབ་ཐང་མཐའ་མ་དེ་བདེན་དཔང་བྱེད་པ།
+	Kerning	ཀེར་ནིང་།
+	Keyboard Shortcuts	མྱུར་མཐེབ།
+	Keyboard Shortcuts and Menus	མཐེབ་གཞོང་མགྱོགས་ཐབས་དང་དཀར་ཆག།
+	Kind	བྱམས་བརྩེ།
+	Label Size	མིང་བྱང་ཆེ་ཆུང་།
+	Labels	མིང་བྱང་།
+	Lanczos (sharp)	ལན་ཅོས་(རྣོ་པོ)
+	Landscape	འཕྲེད།
+	Last Document State	མཐའ་མའི་ཡིག་ཆ་གནས་སྟངས།
+	Layout	སྒྲིག་བཀོད།
+	Leading	ཕྱོགས་སྟོན།
+	Leading (set to the font size × auto-leading when Auto)	འགོ་ཁྲིད། (ཡིག་གཟུགས་ཀྱི་ཚད་གཞི་×རང་འགུལ་སྐབས་རང་འགུལ་འགོ་ཁྲིད།)
+	Leave as is (don't color manage)	དེ་ལྟར་བཞག་རོགས། (ཚོན་མདོག་དོ་དམ་མ་བྱེད།)
+	Left	གཡོན།
+	Left align text	གཡོན་ཕྲེང་གི་ཡི་གེ།
+	Length:	རིང་ཚད།
+	Level	རིམ་པ།
+	Levels	ཆ་སྙོམ།
+	Lighten	དཀར་རུ་གཏོང་།
+	Lightness	མདངས།
+	Lights	གློག་སྒྲོན།
+	Limits:	ཚད་གཞི།
+	Linear Gradient	ཐིག་རིས་གྱེན་ཐུར།
+	Link layers	ངོས་དང་མཐུད།
+	Link width and height	སྦྲེལ་མཐུད་ཀྱི་རྒྱ་ཁྱོན་དང་མཐོ་ཚད།
+	Liquify is not open	Liquify ཁ་ཕྱེ་མེད།
+	Load	ཁུར་པོ།
+	Load 3D LUT…	3D LUT བླུགས།…
+	Load Photoshop brushes (.abr)	ཕོ་ཊོ་ཤོབ་ཀྱི་སྤུ་གྲི། (.abr)
+	Load channel as selection	བརྒྱུད་ལམ་འདེམས་སྒྲུག་ལྟར་མངོན་པ།
+	Load…	བླུགས།…
+	Localized Color Clusters	ས་གནས་ཀྱི་ཚོན་མདོག་ཚོགས།
+	Lock	བཀག་ནུས་ཡོད་བཟོ།
+	Lock all	ཚང་མ་སྒོ་རྒྱག་པ།
+	Lock image pixels	པར་རིས་ཀྱི་པིག་སེལ་ལྡེ་མིག
+	Lock layer	ལྡེ་མིག་བང་རིམ།
+	Lock position	ལྡེ་མིག་གི་གནས་སྟངས།
+	Lock transparent pixels	དྭངས་གསལ་གྱི་པིག་སེལ་ལྡེ་མིག
+	Lock:	ལྡེ་མིག་:
+	Logical Length:	གཏན་ཚིགས་རིང་ཚད།
+	Logical Units:	གཏན་ཚིགས་ཀྱི་ཚད་གཞི།
+	Luminance	འོད་འཚེར།
+	Luminance Detail	འོད་མདངས་ཞིབ་ཕྲ།
+	Magenta	དམར་སྨུག
+	Magenta  ·  Green	མེ་ཇེན་ཊ་ · ལྗང་ཁུ།
+	Maintain aspect ratio	ཆ་ཚད་རྒྱུན་འཁྱོངས།
+	Marker Size	རྟགས་རྟགས་ཆེ་ཆུང་།
+	Mask All	ཁ་རས་ཚང་མ།
+	Mask Options	ཁ་རས་གདམ་ག།
+	Masking	ཁ་རས་རྒྱག་པ།
+	Master	གཙོ་བོ།
+	Matte	མེ་ཊི།
+	Median:	བར་མཚམས།
+	Menus	དཀར་ཆག
+	Mesh Size	དྲ་མིག་ཆེ་ཆུང་།
+	Metadata	མེ་ཊ་ཌེ་ཊ།
+	Metrics	ཚད་གཞི།
+	Midpoint	དཀྱིལ་ཚེག
+	Midtones	གྲིབ་མདངས་དབུས།
+	Midtones from:	དཀྱིལ་སྒྲ།
+	Midtones to:	དཀྱིལ་སྒྲ།
+	Minimum Depth	ཆེས་དམའ་བའི་གཏིང་ཚད།
+	Minimum Diameter	ཆེས་ཆུང་བའི་དཀྱུས་ཚད།
+	Minimum Roundness	ཆེས་དམའ་བའི་ཟླུམ་པོ།
+	Mode:	ཐབས་ལམ།
+	Monochrome	ཁ་དོག་གཅིག་པོ།
+	More Points	སྐར་མ་མང་བ།
+	Move effect layer down	ནུས་པ་བང་རིམ་མར་སྤོ་བ།
+	Move effect layer up	ནུས་པ་བང་རིམ་ཡར་སྤོ་བ།
+	Move to	ལ་སྤོས།
+	Name	མིང་།
+	Name:	མིང་།
+	Nearest Neighbor	ཉེ་བའི་ཁྱིམ་མཚེས།
+	Nearest Neighbor (hard edges)	ཁྱིམ་མཚེས་ཉེ་ཤོས། (མཐའ་མཁྲེགས་པོ)
+	New Size	ཆེ་ཆུང་གསར་པ།
+	New document…	ཡིག་ཆ་གསར་པ།…
+	New effect layer	ནུས་པའི་བང་རིམ་གསར་བ།
+	New selection	འདེམས་སྒྲུག་གསར་བ།
+	Next frame	གཞི་སྒྲོམ་རྗེས་མ།
+	Next note	མཆན་འགྲེལ་རྗེས་མ།
+	No Color	ཁ་དོག་མེད།
+	No Color Management	ཚོན་མདོག་དོ་དམ་མེད།
+	No Dither	སེམས་ཁྲལ་མེད།
+	No author	རྩོམ་པ་པོ་མེད།
+	No character style	ཡིག་འབྲུའི་བཟོ་ལྟ་མེད།
+	No document	ཡིག་ཆ་མེད་པ།
+	No matching commands	མཐུན་པའི་བཀའ་ཚིག་མེད།
+	No presets for the current tool.	ད་ལྟའི་ལག་ཆའི་ཆེད་དུ་སྔོན་སྒྲིག་མེད།
+	No presets of this type.	འདིའི་རིགས་ཀྱི་སྔོན་སྒྲིག་མེད།
+	No properties	རྒྱུ་ནོར་མེད།
+	No tool presets.	ལག་ཆའི་སྔོན་སྒྲིག་མེད།
+	Noise Reduction	སྐད་ཅོར་ཉུང་དུ་གཏོང་བ།
+	Normal	སྤྱིར་བཏང་།
+	Not in Dictionary:	ཚིག་མཛོད་ནང་མེད།
+	OK	OK
+	Offset	ཟུར་འཇོག
+	Only Web Colors	དྲ་རྒྱའི་ཚོས་གཞི་ཁོ་ན།
+	Opacity	སྒྲིབ་ཚད།
+	Opacity Jitter	དྭངས་གསལ་མེད་པའི་འཇིག
+	Opacity:	དྭངས་གསལ་མེད་པ།
+	Open a document to define variables.	འགྱུར་ཅན་ངེས་འཛིན་བྱེད་པའི་ཡིག་ཆ་ཁ་ཕྱེ།
+	Open a document to select a colour range.	ཚོས་གཞིའི་ཁྱབ་ཁོངས་འདེམས་པའི་ཆེད་དུ་ཡིག་ཆ་ཞིག་ཁ་ཕྱེ།
+	Open a document to use the timeline.	ཡིག་ཆ་ཞིག་ཁ་ཕྱེས་ནས་དུས་ཐིག་བཀོལ་སྤྱོད་བྱེད་དགོས།
+	Optical	འོད་རིག་པ།
+	Optimized	ལེགས་སྒྲིག་བྱས་པ།
+	Option-click to define a source point to clone from	གདམ་ག-སྣུན་ནས་རིགས་མཚུངས་བཟོ་བའི་འབྱུང་ཁུངས་ས་ཚིགས་གསལ་བཤད་བྱེད།
+	Original	མ་དངུལ།
+	Output Channel:	ཐོན་འབྲས་རྒྱུ་ལམ།
+	Output Levels:	ཐོན་འབྲས་རིམ་པ།
+	Output:	ཐོན་འབྲས།
+	Outside	ཕྱི་ལ།
+	Overlay Color	བཀབ་པའི་ཚོས་གཞི།
+	Overlay Opacity	བཀབ་པའི་དྭངས་གསལ་མིན།
+	Overlay: Rule of Thirds	བཀབ་སྟངས། གསུམ་པའི་ཁྲིམས་ལུགས།
+	Override Pressure	གནོན་ཤུགས་ལས་བརྒལ་བ།
+	Override Rotation	འཁོར་སྐྱོད་བཀག་འགོག་བྱེད་པ།
+	Override Tilt	གཡོ་སྒྱུ་བཀག་འགོག་བྱེད་པ།
+	PRESET DETAILS	སྔོན་སྒྲིག་ཞིབ་ཕྲ།
+	PSD	PSD
+	Paint Overlay	ཚོན་བཏང་བ།
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	ལས་ཀའི་ས་ཁོངས་ནང་པེན་ནེལ་གྱི་གནས་ཡུལ་ཉར་ཚགས་བྱས་ཡོད། མཐེབ་གཞོང་མགྱོགས་ཐབས་དང་། དཀར་ཆག ལག་ཆའི་ཕྲ་རིང་བཅས་འདེམས་གཞི་ཡིན།
+	Paper	ཤོག་བུ།
+	Path	ཐིག
+	Pattern	བཀོད་རིས།
+	Pattern Size	བཀོད་རིས་ཆེ་ཆུང་།
+	Pause	མཚམས་འཇོག་པ།
+	Percent	བརྒྱ་ཆ།
+	Perceptual	ཚོར་སྣང་།
+	Perspective Warp is not active	མཐོང་ཚུལ་གཡོ་འགུལ་དེ་ཤུགས་ལྡན་མིན།
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	མཐོང་ཚུལ་གཡོ་སྒྱུ། པར་རིས་ཀྱི་མཐོང་ཚུལ་བརྒྱུད་ནས་གནམ་གྲུ་འབྲི་རྗེས་གཡོ་འགུལ་ལ་བསྒྱུར།
+	Photo Filter	དཔར་ཚགས།
+	PhotoSuite	པར་རིས་བཟོ་རྩལ།
+	PhotoSuite Manages Colors	པར་རིས་བཟོ་རྩལ་གྱིས་ཚོན་མདོག་དོ་དམ་བྱེད།
+	PhotoSuite — an open-source, native image editor written in Rust.	PhotoSuite — རས་ཊི་སྐད་ཡིག་ནང་བྲིས་པའི་ཁ་ཕྱེ་བའི་ཐོན་ཁུངས་དང་ས་གནས་ཀྱི་པར་རིས་རྩོམ་སྒྲིག་པ་ཞིག་རེད།
+	Pin Depth:	གཏིང་ཚད།
+	Pixel Length:	པར་རིས་རིང་ཚད།
+	Pixels/Centimeter	པིག་སེལ་/སེནཊི་མི་ཊར།
+	Pixels/Inch	པིག་ཟེལ།/ཨིན་ཅི།
+	Pixels:	པར་རིས་:
+	Play	འཁྲབ།
+	Play selection	རྩེད་མོ་འདེམས་སྒྲུག།
+	Portrait	གཞུང་།
+	Position	གནས།
+	Position and Size	གནས་དང་ཆེ་ཆུང་།
+	Posterize	སྦྱར་ཡིག་སྦྱར་བ།
+	Preserve Details	ཞིབ་ཕྲའི་གནས་ཚུལ་སྲུང་སྐྱོབ།
+	Preserve Luminosity	འོད་ཤུགས་ཉར་སྲུང་།
+	Preset	སྔོན་སྒྲིག
+	Preset Type	སྔོན་སྒྲིག་རིགས།
+	Preset:	སྔོན་སྒྲིག
+	Presets:	སྔོན་སྒྲིག
+	Press keys…	ལྡེ་མིག་མནན།…
+	Pressure	གནོན་ཤུགས།
+	Pressure for Opacity	དྭངས་གསལ་གྱི་གནོན་ཤུགས།
+	Pressure for Size	ཆེ་ཆུང་གི་གནོན་ཤུགས།
+	Prevent auto-nesting in and out of Artboards and Frames	སྒྱུ་རྩལ་གྱི་ཤོག་བུ་དང་སྒྲོམ་གཞིའི་ནང་དང་ཕྱི་རུ་རང་འགུལ་གྱིས་ཁང་པ་འཛུགས་རྒྱུ་བཀག་འགོག་བྱེད་དགོས།
+	Preview	སྔོན་ལྟ།
+	Previous frame	སྔོན་གྱི་སྒྲོམ་གཞི།
+	Previous note	སྔོན་གྱི་མཆན་འགྲེལ།
+	Print	Print
+	Printer	པར་འཕྲུལ།
+	Printer Manages Colors	པར་འཕྲུལ་གྱིས་ཚོན་མདོག་དོ་དམ།
+	Printer Setup	པར་འཕྲུལ་སྒྲིག་བཀོད།
+	Printing Marks	དཔར་རྟགས།
+	Progressive	ཡར་ཐོན་ཅན།
+	Promote	སྐུལ་འདེད་གཏོང་བ།
+	Protect Detail	ཞིབ་ཕྲ་སྲུང་སྐྱོབ།
+	Protect Foreground Color	མདུན་ངོས་ཀྱི་ཁ་དོག་སྲུང་སྐྱོབ།
+	Protect Tones	སྒྲ་དབྱངས་སྲུང་སྐྱོབ།
+	Proximity Match	ཉེ་འདབས་མཐུན་སྒྲིལ།
+	Pulled String Mode	འཐེན་པའི་སྐུད་པའི་ཐབས་ལམ།
+	Puppet Warp is not active	རྐང་རྩེད་སྤོ་ལོའི་གཡོ་འགུལ་དེ་ཤུགས་ལྡན་མིན།
+	Purity	དྭངས་གཙང་།
+	Quality	སྤུད་ཚད།
+	Quick Actions	མགྱོགས་མྱུར་བྱ་སྤྱོད།
+	Quick Export As PNG	PNG ལྟར་མྱུར་དུ་ཕྱིར་འདྲེན་བྱེད་པ།
+	Radial Gradient	འཕྲེད་ཐིག་གྱེན་ཐུར།
+	Radius	ཚངས་ཐིག
+	Radius:	ཕྱེད་ཀ།
+	Range:	ཁྱབ་ཁོངས།
+	Rate	ཚད།
+	Recently Used	ཉེ་ཆར་བེད་སྤྱོད།
+	Reconstruct	བསྐྱར་གསོ།
+	Record ● a sequence of edits, then play ▶ it on any document.	● རྩོམ་སྒྲིག་རིམ་པ་ཐོ་འགོད་བྱས་ནས་ཡིག་ཆ་གང་རུང་ཞིག་གི་སྟེང་ལ་གཏོང་དགོས།
+	Red	དམར་པོ།
+	Redefine style by current selection	མིག་སྔའི་འདེམས་སྒྲུག་གིས་བཟོ་ལྟ་བསྐྱར་དུ་གཏན་འཁེལ་བྱེད།
+	Reflected Gradient	ལྡོག་འཕྲོའི་གྱེན་ཐུར།
+	Registration Marks	ཐོ་འགོད་རྟགས།
+	Regular	རྒྱུན་ལྡན།
+	Relative	ལྟོས་ས་ལྟོས་འཇོག
+	Relative Colorimetric	འབྲེལ་བའི་ཚོན་མདོག་ཚད་འཇལ།
+	Remove	བཏོན་པ།
+	Remove All Pins	སྦྲེལ་མཐུད་ཚང་མ་མེད་པར་བཟོས།
+	Remove Background	རྒྱབ་ལྗོངས་མེད་པར་བཟོས།
+	Remove Planes	གནམ་གྲུ་མེད་པར་བཟོས།
+	Remove stop	མཚམས་འཇོག་མེད་པར་བཟོས།
+	Remove variable	འགྱུར་ཅན་མེད་པར་བཟོས།
+	Rename	མིང་བསྒྱུར།
+	Rename Group…	སྡེ་ཚན་གྱི་མིང་བསྒྱུར།…
+	Rename Layer…	བང་རིམ་གྱི་མིང་བསྒྱུར།…
+	Rename Tool Preset…	ལག་ཆའི་སྔོན་སྒྲིག མིང་བསྒྱུར།…
+	Rename…	མིང་བསྒྱུར།…
+	Resample	བསྐྱར་དཔེ།
+	Reset All to Defaults	ཚང་མ་སྔོན་སྒྲིག་ལ་སླར་སྒྲིག་བྱེད།
+	Reset Section	བསྐྱར་སྒྲིག་ཚན་པ།
+	Reset Transform	བསྐྱར་སྒྲིག་སྒྱུར་བཅོས།
+	Reset to defaults	སྔོན་སྒྲིག་ལ་སླར་སྒྲིག་བྱེད་པ།
+	Resolution	གསལ་ཚད།
+	Resolution:	གྲོས་ཆོད།
+	Restore All	ཚང་མ་སླར་གསོ།
+	Restore Defaults	སྔོན་སྒྲིག་སླར་གསོ།
+	Restrictive (Web)	ཚད་བཀག་ཅན་གྱི་(དྲ་རྒྱ།)
+	Right	གཡས།
+	Right align text	གཡས་ཕྱོགས་ཀྱི་ཡི་གེ་ཕྲེང་བསྒྲིགས།
+	Rigid	མཁྲེགས་པོ།
+	Rotate:	བསྒྱིར།
+	Rotation	འཁོར་རྒྱུག
+	Roughness	རྩུབ་པ།
+	Roundness	ཟླུམ་ལོད།
+	Roundness Jitter	ཟླུམ་ཟུར་སག་སག
+	Rulers & Grids	ཐིག་ཤིང་དང་དྲ་མིག་།
+	Sample All Layers	བང་རིམ་ཚང་མའི་དཔེ་ཚད།
+	Sample:	དཔེ་ཚད།
+	Sampling: Background Swatch	དཔེ་ཚད། རྒྱབ་ལྗོངས་དཔེ་ཚད།
+	Sampling: Continuous	དཔེ་ཚད། མུ་མཐུད།
+	Sampling: Once	དཔེ་ཚད། ཐེངས་གཅིག
+	Saturate	ཧར་པོ།
+	Saturation	ཧར་ལོད།
+	Saturation Jitter	ཧར་ལོད་སག་སག
+	Save HTML and Images	HTML དང་པར་རིས་ཉར་ཚགས་བྱེད་པ།
+	Save as PDF	PDF ལྟར་ཉར་ཚགས་བྱེད།
+	Save selection as channel	བརྒྱུད་ལམ་ལྟར་འདེམས་སྒྲུག་ཉར་ཚགས་བྱེད།
+	Save…	ཉར་ཚགས།…
+	Scale to Fit Media	བརྡ་འཕྲིན་ལ་འཚམ་པའི་ཚད་གཞི།
+	Scatter	ཁ་འཐོར།
+	Scratch disks	རྡེབ་སྒྲིག
+	Search	འཚོལ་ཞིབ།
+	Search commands	འཚོལ་བཤེར་བཀའ་བཀོད།
+	Search commands, tools and panels…	འཚོལ་ཞིབ་བཀའ་ཚིག་དང་། ལག་ཆ། སྒྲོམ་གཞི་བཅས་ཡིན།…
+	Search fonts	ཡིག་གཟུགས་འཚོལ་ཞིབ།
+	Select All	ཚང་མ་འདེམས།
+	Select Subject	བརྗོད་གཞི་འདེམས།
+	Select a type layer or click into text to insert glyphs	ཡིག་གཟུགས་བང་རིམ་འདེམས་པའམ་ཡང་ན་ཚིག་ཡིག་ནང་སྣུན།
+	Select text to apply a character style	ཡི་གེའི་བཟོ་ལྟ་འཇུག་སྤྱོད་བྱེད་པའི་ཡི་གེ་འདེམས།
+	Select:	འདེམས།
+	Selections	འདེམས་སྒྲུག།
+	Selective	འདེམས་སྒྲུག་ཅན།
+	Selective Color	གདམ་ག་ཅན་གྱི་ཁ་དོག
+	Send the selected pin backward	བདམས་པའི་པིན་དེ་རྒྱབ་ཕྱོགས་སུ་བསྐུར་རོགས།
+	Set additional smoothing options	འཇམ་འཇམ་གདམ་ག་ཁ་སྣོན་སྒྲིག་དགོས།
+	Set background color	རྒྱབ་ལྗོངས་ཚོས་གཞི་སྒྲིག་དགོས།
+	Set foreground color	མདུན་གྱི་ཚོས་གཞི་སྒྲིག་པ།
+	Set painting symmetry options	རི་མོའི་འདྲ་མཉམ་གདམ་ག་སྒྲིག་དགོས།
+	Set shape fill type	དབྱིབས་བཀང་རིགས་སྒྲིག་པ།
+	Set shape stroke type	དབྱིབས་ཐིག་རིས་རིགས་གཏན་འཁེལ།
+	Set the text color	ཡི་གེའི་ཚོས་གཞི་སྒྲིག་དགོས།
+	Shadows	གྲིབ་གཟུགས།
+	Shape:	དབྱིབས།
+	Sharpening	རྣོ་བ།
+	Shift	Shift
+	Shortcut removed.	མགྱོགས་ཐབས་མེད་པར་བཟོས་ཡོད།
+	Show All Menu Items	དཀར་ཆག་རྣམ་གྲངས་ཚང་མ་སྟོན།
+	Show Backdrop	རྒྱབ་ལྗོངས་སྟོན།
+	Show Guides	ལམ་སྟོན་སྟོན།
+	Show Mask	ཁ་རས་སྟོན་པ།
+	Show Mesh	དྲ་མིག་སྟོན།
+	Show Overlay	བཀབ་སྟོན།
+	Show Transform Controls	སྒྱུར་སྟངས་ཚོད་འཛིན་སྟོན།
+	Show or hide the Notes panel	དྲན་ཐོའི་པང་ལེབ་སྟོན་པའམ་སྦས།
+	Show:	སྟོན།
+	Sides	ངོས།
+	Sides:	ཕྱོགས།
+	Size	ཆེ་ཆུང།
+	Size Jitter	ཆེ་ཆུང་ཚད་སག་སག
+	Size:	ཆེ་ཆུང་།
+	Slice Options…	གཏུབ་ཆེད་གདམ་ག…
+	Slices From Guides	ལམ་སྟོན་གྱི་ཆ་ཤས།
+	Slices are locked (View › Lock Slices)	ཤོག་བུ་རྣམས་ལྡེ་མིག་བརྒྱབ་ཡོད།
+	Small Caps	མགོ་རྒྱན་ཆུང་བ།
+	Smoothing	འཇམ་པོ་བཟོ་བ།
+	Space After	བར་སྣང་རྗེས་སུ།
+	Space Before	བར་སྣང་སྔོན་ལ།
+	Spacing	སྟོང་ཆ།
+	Spell check complete.	ཡིག་སྡེབ་ཞིབ་བཤེར་ལེགས་གྲུབ་བྱུང་།
+	Split:	ཁ་ཕྱེ།
+	Star ratio	སྐར་མའི་བསྡུར་ཚད།
+	Stop playing/recording	གླུ་གཞས་གཏོང་མཚམས་འཇོག་པ།
+	Straighten	དྲང་པོར་བཟོ།
+	Straighten Layer	ངོས་ཁར་ཐུག་བཟོ།
+	Strength:	སྟོབས་ཤུགས།
+	Strikethrough	རྡུང་རྡེག་བརྒྱུད།
+	Stroke	ཐིག་རིས།
+	Stroke Catch-up	གཅོང་ནད་རྗེས་འདེད།
+	Stroke:	གྲིབ་ནད།
+	Style	བཀོད་སྒྲིག
+	Style Options	བཟོ་ལྟའི་གདམ་ཁ།
+	Style Options…	བཟོ་ལྟའི་གདམ་ག…
+	Style: Normal	བཟོ་ལྟ། སྤྱིར་བཏང་།
+	Subtract from Sample	དཔེ་ནས་ཕྲི།
+	Subtract from selection  ({key})	འདེམས་སྒྲུག་ལས་འཐེན་ ({key})
+	Suggestions:	བསམ་འཆར།
+	Swap colours (X)	ཚོན་མདོག་བརྗེ་རེས་(X)
+	Swaps height and width	མཐོ་ཚད་དང་ཞེང་ཚད་བརྗེ་རེས་བྱེད།
+	Switch between free transform and warp modes	རང་དབང་གི་སྒྱུར་བཅོས་དང་གཡོ་འགུལ་ཐབས་ལམ་བར་བརྗེ་སྒྱུར་བྱེད།
+	Switch theme	བརྗོད་བྱ་བརྗེ་བ།
+	Temperature	དྲོད་ཚད།
+	Tetrahedral	ཟུར་བཞི།
+	Text Position:	ཡིག་ཆའི་གནས་ཡུལ།
+	Texture	ཐགས་རན།
+	Texture Each Tip	བསླབ་བྱ་རེ་རེའི་ཐགས་རན།
+	Threshold	ཡས་ཆོད།
+	Threshold Level	སྒོ་ཐེམ་རིམ་པ།
+	Thumbnail size (smallest: list)	མཐེབ་གཞོང་གི་ཚད་ (ཆུང་ཤོས་: ཐོ་གཞུང་)
+	Tilt X	X གཡོ་སྒྱུར།
+	Tilt Y	Y གཡོ་བ།
+	Tint	ཚོན་མདངས།
+	Toggle count group visibility	གྲངས་འབོར་སྡེ་ཚན་གྱི་མཐོང་ཚུལ་བརྗེ་སྒྱུར།
+	Toggle text orientation	ཡི་གེའི་ཁ་ཕྱོགས་བརྗེ་སྒྱུར།
+	Tolerance	བཟོད་སྲན།
+	Tolerance:	བཟོད་སྒོམ།
+	Tone:	སྒྲ།
+	Toolbar	ལག་ཆའི་ཕྲ་རིང་།
+	Top	སྟེང་།
+	Total:	བསྡོམས་པ།
+	Tracking	རྗེས་འདེད།
+	Tracking (1/1000 em)	རྗེས་འདེད། (1/1000 em)
+	Transparency	ཕྱི་གསལ་ནང་གསལ།
+	Transparent	ཕྱི་གསལ་ནང་གསལ།
+	Trilinear	ཐིག་གསུམ།
+	Type Styles	བཟོ་ལྟ།
+	Type:	རིགས།
+	Underline	འོག་ཐིག།
+	Untitled	མིང་མེད།
+	Untitled-1	མིང་མེད་-1
+	Update layer comp (visibility, position and appearance)	བང་རིམ་གྱི་བསྡོམས་འབོར་དུས་བསྟུན་བྱེད་དགོས། (མཐོང་ཐུབ་ཚད་དང་། གནས་བབ། མཐོང་སྣང་།)
+	Use Default	སྔོན་སྒྲིག་བེད་སྤྱོད་བྱེད།
+	Use Legacy	འགྲོ་ལུགས་རྙིང་པ་སྤྱད།
+	Use Measurement Scale	ཚད་འཇལ་འཇལ་ཚད་བཀོལ་སྤྱོད།
+	Use the embedded profile (instead of the working space)	བཙུགས་པའི་གསལ་སྡུད་བེད་སྤྱོད་བྱེད་(ལས་ཀའི་ས་ཆའི་ཚབ་ཏུ)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	འགྱུར་ལྡོག་ཅན་གྱིས་བང་རིམ་གྱི་མཐོང་ཐུབ་ཚད་དང་། ཚིག་ཡིག ཡང་ན་པིག་སེལ་དེ་མིང་བཏགས་པའི་གནས་སྡུད་ཁ་ཕྱེ་ས་ལ་སྦྲེལ་ཡོད།
+	Vertical scale	གཞུང་ཕྱོགས་ཆེ་ཆུང་།
+	Vibrance	ཚོན་ཤུགས།
+	View Options	གདམ་ག་ལྟ་བ།
+	Vignetting	རི་མོ་བྲིས་པ།
+	Violet, Orange	སྔོ་ལྗངས། ཚ་ལུ་མ།
+	Visibility	མཐོང་ཐུབ་ཚད།
+	Visible	མཐོང་ཐུབ་པ།
+	Warp:	ཝར་པི།
+	Web Snap	དྲ་རྒྱའི་པར་རིས།
+	Weight	ལྗིད་ཚད།
+	Weight:	ལྗིད་ཚད།
+	White	དཀར་པོ།
+	White Balance: As Shot	དཀར་པོའི་ཚད་གཞི། པར་བརྒྱབ་པ་ལྟར།
+	Whites	དཀར་པོ།
+	Width	ཞེང་ཁ།
+	Width:	ཞེང་ཚད།
+	Work Path	ལས་ཀའི་ལམ་བུ།
+	Yellow	སེར་པོ།
+	Yellow  ·  Blue	སེར་པོ · སྔོན་པོ།
+	Zoom	མཐོང་ཆ།
+	Zoom in	ཆེ་རུ་མངོན།
+	Zoom out	ཆུང་དུ་མངོན།
+	command or shortcut	བཀའ་ཚིག་གམ་མགྱོགས་ཐབས།
+	current	དེའི་
+	image file path	པར་རིས་ཡིག་ཆའི་འགྲོ་ལམ།
+	modified	བཟོ་བཅོས།
+	name	མིང་།
+	new	གསར་པ།
+	{name} options	{name}གདམ་ཁ།
+	↑↓ navigate   {key} run   esc close	↑↓ འགྲིམ་འགྲུལ་ {key} གཡོག་བཀོལ་ esc ཁ་རྒྱག་པ།
+	Version {version}	ཐོན་རིམ་{version}།
+	New Document	ཡིག་ཆ་གསར་བ།
+	Error	ནོར་འཁྲུལ།
+	Command	བཀའ་བཀོད།
+	Adjustment layers have nothing to transform	སྙོམ་སྒྲིག་བང་རིམ་ལ་སྒྱུར་བཅོས་གཏོང་རྒྱུ་གང་ཡང་མེད།
+	Altitude	ས་བབ་མཐོ་ཚད།
+	Android 1080p	ཨན་ཌོ་1080p།
+	Apple Watch 45mm	ཀུ་ཤུ་ཆུ་ཚོད་45mm
+	Aqua	Aqua
+	Art & Illustration	སྒྱུ་རྩལ་དང་རི་མོ།
+	Background Eraser Tool	རྒྱབ་ལྗོངས་སུབ་བྱེད་ཀྱི་ལག་ཆ།
+	Bevel & Emboss	བེ་ཝེལ་དང་བརྐོས།
+	Blend Mode	བསྲེ་སྦྱོར་རྣམ་པ།
+	Blues	སྔོན་པོ།
+	Blur Tool	རབ་རིབ་བཟོ་ཆས།
+	Bold	བརྗིད་པོ།
+	Brush	པིར།
+	Brush Pose	སྤུ་སྨྱུག་གི་རྣམ་པ།
+	Brush Tip Shape	སྤུ་སྨྱུག་མཇུག་མའི་དབྱིབས།
+	Brush Tool	པིར།
+	Build-up	འཛུགས་སྐྲུན།
+	Burn Tool	སྲེག་ཆས།
+	Centimeters	སེན་ཊི་མི་ཊར།
+	Choke	ཆོག།
+	Classic	སྔར་སྲོལ་ཅན།
+	Click to add text	ཡི་གེ་ཁ་སྣོན་བྱེད་པར་སྣུན།
+	Click to fill similar colours	ཚོན་མདོག་འདྲ་བ་འགེངས་ན་སྣུན།
+	Clone Stamp Tool	འདྲ་བཤུས་མཚོན་རྟགས་ལག་ཆ།
+	Color Burn	མཚོན་སྲེག
+	Color Dodge	མཚོན་གཡོལ།
+	Color Dynamics	ཚོན་ཤུགས་ཅན།
+	Color Overlay	སྒང་ལ་ཚོན་འདེབས།
+	Comic Book	དགོད་བྲོའི་དེབ།
+	Conform	མཐུན་པ།
+	Content-Aware Fill needs a selection on a pixel layer	ནང་དོན་ཤེས་རྟོགས་ཅན་གྱི་བཀང་ཆ་ལ་པིག་སེལ་བང་རིམ་སྟེང་འདེམས་སྒྲུག་བྱེད་དགོས།
+	Could not transform: the layer is empty	བརྗེ་སྒྱུར་བྱེད་མི་ཐུབ།བང་རིམ་དེ་སྟོང་པ་རེད།
+	Could not use Perspective Warp: the layer is empty	མཐོང་ཚུལ་གཡོ་འགུལ་སྤྱོད་མི་ཐུབ། བང་རིམ་སྟོང་པ་རེད།
+	Could not use Puppet Warp: no opaque pixels	རྐང་རྩེད་སྤོ་ལོའི་གཡོ་འགུལ་སྤྱོད་མི་ཐུབ། དྭངས་གསལ་མེད་པའི་པིག་སེལ་མེད།
+	Could not use Puppet Warp: the layer is empty	རྐང་རྩེད་སྤོ་ལོ་བཀོལ་སྤྱོད་བྱེད་མི་ཐུབ། བང་རིམ་སྟོང་པ་རེད།
+	Crop Tool	གཏུབ་ཆས།
+	Crosswise	འཕྲེད་ཐིག་དུ།
+	Current Tool	ད་ལྟའི་ལག་ཆ།
+	Custom Shape Tool	བཟོ་དབྱིབས་ལག་ཆ།
+	Cyans	སི་ཡན།
+	Default Photoshop Size	སྔོན་སྒྲིག་ཕོ་ཊོ་ཤོབ་ཀྱི་ཚད་གཞི།
+	Delete Workspace	ལས་ཀའི་ས་ཁོངས་སུབ་པ།
+	Diamond	ས་ཕག
+	Dimensions:	རྒྱ་ཁྱོན།
+	Direction	ཁ་ཕྱོགས།
+	Distance	རྒྱང་ཚད།
+	Document Dimensions	ཡིག་ཆའི་རྒྱ་ཁྱོན།
+	Document Profile	ཡིག་ཆའི་ངོ་སྤྲོད།
+	Document Sizes	ཡིག་ཆའི་ཆེ་ཆུང་།
+	Dodge Tool	སླ་ཆས།
+	Down	མར།
+	Drag to draw a gradient	གཤམ་ཐིག་འབྲི་བར་འདྲུད།
+	Drag to move the active layer	ཤུགས་ལྡན་གྱི་བང་རིམ་སྤོ་བར་འདྲུད།
+	Drag to pan  ·  hold Space with any tool	ལག་ཆ་གང་རུང་ཞིག་གིས་བར་སྟོང་ལ་འདྲུད།
+	Drop Shadow	གྲིབ་གཟུགས།
+	Dual Brush	སྤུ་སྨྱུག་གཉིས།
+	Edge	མཐའ།
+	Efficiency	ནུས་པ།
+	Efficiency: 100%	ཕན་ནུས། 100%
+	Ellipse Tool	སྒོང་དབྱིབས་ལག་ཆ།
+	Elliptical Marquee Tool	སྒོང་དབྱིབས་མར་ཁི་ལག་ཆ།
+	Emboss	འབུར་འབུར།
+	Eraser	བསུབས་ཆས།
+	Eraser Tool	སུབ་ཆས།
+	ExtraBold	ཧ་ཅང་མཁྲེགས་པོ།
+	ExtraLight	འོད་འཕར་མ།
+	Eyedropper Tool	མིག་ཐིགས་ལག་ཆ།
+	Fade	ཡལ།
+	Fill Opacity	གསལ་མེད་བཀང་བ།
+	Film & Video	གློག་བརྙན་དང་བརྙན་འཕྲིན།
+	From	ནས།
+	General	སྤྱིར་བཏང་།
+	GitHub	གྷི་ཊི་ཧབ།
+	Gradient Overlay	སྒང་ལ་སྟེགས་ཚོན་འདེབས།
+	Gradient Tool	སྟེགས་ཚོན་ལག་ཆ།
+	Greens	ལྗང་ཁུ།
+	Hand Tool	ལག་པ།
+	Hard	དཀའ་ཚེགས་ཆེ།
+	Hard Mix	སྲེ་ཆེ་བ།
+	Healing Brush Tool	གསོ་བྱེད་པིར།
+	Highlights from:	གཙོ་གནད་ནི།
+	History Brush Tool	ལོ་རྒྱུས་སྤུ་སྨྱུག་ལག་ཆ།
+	Horizontal Type Tool	ཐད་སྙོམས་རིགས་ཀྱི་ལག་ཆ།
+	Image Size:	པར་རིས་ཆེ་ཆུང་།
+	Inches	ཨིན་ཅི།
+	Indexed	དཀར་ཆག་བཟོས་ཡོད།
+	Initial Direction	ཐོག་མའི་ཁ་ཕྱོགས།
+	Inner Bevel	ནང་གསེག
+	Inner Glow	འོད་གཟུགས་ནང་མ།
+	Inner Shadow	གྲིབ་གཟུགས་ནང་མ།
+	Lab	Lab
+	Landscape, 10 x 8	ཡུལ་ལྗོངས། 10 x 8
+	Landscape, 6 x 4	ཡུལ་ལྗོངས། 6 x 4
+	Landscape, 7 x 5	ཡུལ་ལྗོངས། 7 x 5
+	Lasso	ལཱ་སོ།
+	Lasso Tool	ལ་སོའི་ལག་ཆ།
+	Layer Count	བང་རིམ་གྲངས།
+	Layer Knocks Out Drop Shadow	བང་རིམ་གྱིས་གྲིབ་ནག་ཕྱིར་འཐེན་བྱེད།
+	Legal	ཁྲིམས་མཐུན།
+	Letter	ཡི་གེ།
+	Light	འོད།
+	Line Tool	ཐིག་ལག་ཆ།
+	Linear	ནར་མོ།
+	Linear Burn	ཐད་སྲེག
+	Linear Height	ཐིག་རིས་མཐོ་ཚད།
+	Link with Layer	བང་རིམ་དང་སྦྲེལ་མཐུད།
+	Lorem Ipsum	ལོ་རེམ་ཨིཔ་སུམ།
+	Magentas	མེ་ཇེན་ཊས།
+	Magic Eraser Tool	སྒྱུ་འཕྲུལ་སུབ་ཆས་ལག་ཆ།
+	Magic Wand Tool	སྒྱུ་མའི་ལག་ཆ།
+	Marquee	མར་ཁི།
+	Mean:	དོན་ནི།
+	Measurement Scale	ཚད་འཇལ་ཚད་གཞི།
+	Measurement Scale Marker	ཚད་འཇལ་ཚད་འཇལ་རྟགས།
+	Millimeters	མི་ལི་མི་ཊར།
+	Mobile	ཁ་པར།
+	Move Tool	འདེམས་བྱེད།
+	Multiply	འཕེལ་སྐྱེད་གཏོང་།
+	My Brushes	ངའི་སྤུ་སྨྱུག།
+	Neutrals	བར་གནས་པ།
+	New Workspace	ལས་གནས་གསར་པ།
+	Note Tool	དྲན་ཐོའི་ལག་ཆ།
+	Object Selection Tool	དངོས་པོ་འདེམས་སྒྲུག་ལག་ཆ།
+	Off	ཁ་བསྡམས།
+	Open	ཁ་འབྱེད།
+	Orange	ལི་ཝང་།
+	Original Ratio	ཐོག་མའི་བསྡུར་ཚད།
+	Out Of Gamut	གྷ་མུཊ་ཀྱི་ཕྱི་རོལ་དུ།
+	Outer Bevel	ཕྱི་གསེག
+	Outer Glow	འོད་གཟུགས་ཕྱི་མ།
+	Overlay	ཡོངས་སུ་འགྲེམ་པ།
+	Paint Bucket Tool	ལྕགས་ཀྲིན།
+	Paints from the document's opening state	ཡིག་ཆའི་སྒོ་འབྱེད་ཀྱི་གནས་སྟངས་ནས་ཚོན་རྩི།
+	Path Selection Tool	འགྲོ་ལམ་འདེམས་སྒྲུག་ལག་ཆ།
+	Pattern Overlay	སྒང་ལ་བཀོད་རིས་འདེབས།
+	Pen Pressure	སྨྱུ་གུའི་གནོན་ཤུགས།
+	Pen Tilt	སྨྱུག་གུག་གུག་པ།
+	Pen Tool	སྨྱུ་གུའི་ལག་ཆ།
+	Photo	འདྲ་པར།
+	PhotoSuite website	པར་རིས་བཟོ་རྩལ་གྱི་དྲ་ཚིགས།
+	Picas	པི་ཀ་སི།
+	Pillow Emboss	འབོལ་འབུར།
+	Pixel Replacement	པིག་སེལ་ཚབ་བརྗེ།
+	Pixels	པིག་ཟེལ།
+	Points	སྐར་མ།
+	Polygon Tool	ཟུར་མང་ལག་ཆ།
+	Polygonal Lasso Tool	ཟུར་མང་ལག་ཆ།
+	Portrait, 4 x 6	འདྲ་པར་། ༤ x ༦
+	Portrait, 5 x 7	འདྲ་པར་། ༥ x ༧
+	PostScript (72 points/inch)	པོསཊ་སི་ཁི་རིཔཊ། (72སྐར་མ་རེར་དབྱིན་ཚུན་)
+	Postcard	སྦྲག་བྱང་།
+	Poster	སྦྱར་ཡིག།
+	Pro (Dark)	མུན་ནག
+	Pro (Medium Gray)	པྲོ་(སྐྱ་བོ་འབྲིང་བ)
+	Protect Texture	ཐགས་རན་སྲུང་སྐྱོབ།
+	Purple	མུ་མེན།
+	Quick Mask	མགྱོགས་མྱུར་ཁ་རས།
+	Quick Selection Tool	མྱུར་འདེམས་ལག་ཆ།
+	Radial	འཁོར་མོ།
+	Rasterize Layer	རྡུལ་ཕྲན་བང་རིམ་བཟོས།
+	Ratio	བསྡུར་ཚད།
+	Recent	ཉེ་ཆར།
+	Rectangle Tool	གྲུ་བཞི་ནར་མོའི་ལག་ཆ།
+	Rectangular Marquee Tool	གྲུ་བཞི་ནར་མོའི་མར་ཁི་ལག་ཆ།
+	Reds	དམར་པོ།
+	Reflected	ལྡོག་འཕྲོས།
+	Sample: foreground colour	དཔེ་ཚད།: མདུན་གྱི་ཚོས་གཞི།
+	Sampled Colors	དཔེ་ཚད་ཀྱི་ཚོས་གཞི།
+	Satin	འཇམ་འོད།
+	Save Pixel Aspect Ratio	པིག་སེལ་གྱི་ཆ་སྙོམས་ཉར་ཚགས་བྱེད།
+	Scattering	ཁ་གཏོར་བ།
+	Scratch Sizes	རྩིག་པའི་ཚད་གཞི།
+	Select Data Points	གཞི་གྲངས་ས་ཚིགས་འདེམས།
+	Selection	འདེམས་བྱ།
+	SemiBold	ཕྱེད་ཀ་མཁྲེགས་པོ།
+	Shadows up to:	གྲིབ་ནག་བར།
+	Shape Dynamics	དབྱིབས་ཀྱི་སྒུལ་ཤུགས།
+	Sharpen Tool	དྭངས་གསལ་གཏོང་ཆས།
+	Show Extras Options	ཁ་སྣོན་འདེམས་གཞི་སྟོན།
+	Slice Select Tool	གཏུབ་ཆ་འདེམས་ཆས།
+	Slice Tool	གཏུབ་ཆས།
+	Smart Filters	བསྡུ་ཚགས།
+	Smudge Tool	ནག་ནོག་བཟོ་ཆས།
+	Soft	འཇམ་པོ།
+	Soften	སོབ་སོབ།
+	Source	ཁུངས།
+	Source: set	ཡོང་ཁུངས།: སྒྲིག་ཆས།
+	Sponge Tool	འགྱིག་སོབ།
+	Spot Healing Brush Tool	ནག་ཐིག་གསོ་བའི་པིར།
+	Spread	བརྐྱངས།
+	Square, 12 x 12	གྲུ་བཞི། 12 x 12
+	Square, 5 x 5	གྲུ་བཞི། ༥ x ༥
+	Std Dev:	Sd Dev:
+	Studio (Dark)	གློག་བརྙན་ཁང་། (མུན་ནག)
+	Studio (Light)	གློག་བརྙན་ཁང་། (འོད།)
+	Stylus Wheel	སྨྱུ་གུའི་འཁོར་ལོ།
+	Subtract	འབྲེད་པ་ཅན།
+	Tabloid	ཚགས་པར།
+	Text Replacement	ཡི་གེའི་ཚབ་བྱེད་པ།
+	Thin	སྲབ་པ།
+	Traditional (72.27 points/inch)	སྲོལ་རྒྱུན་(དབྱིན་ཚུན་རེར་སྐར་མ72.27)
+	Transfer	སྤོ་སྒྱུར།
+	Triangle Tool	ཟུར་གསུམ་མའི་ལག་ཆ།
+	Unsaved changes	ཉར་ཚགས་མ་བྱས་པའི་བཟོ་བཅོས།
+	Uses the foreground and background colours.	མདུན་ངོས་དང་རྒྱབ་ལྗོངས་ཀྱི་ཚོན་མདོག་བེད་སྤྱོད་བྱེད།
+	Web	དྲ་བ།
+	Web Large	དྲ་རྒྱ་ཆེ་བ།
+	Web Minimum	དྲ་རྒྱའི་མ་མཐའ།
+	Web Most Common	དྲ་རྒྱ་མང་ཤོས།
+	WebP (lossless)	WebP (གྱོང་གུན་མེད་པ་)
+	Wet Edges	རློན་པའི་མཐའ་མཚམས།
+	Yellows	སེར་པོ།
+	Zoom Tool	མཐོང་ཆ།
+	{name} Properties	{name} རྒྱུ་དངོས།
+	Revert “{name}” to the last saved version? Your changes will be lost.	“{name}” མཐའ་མའི་ཉར་ཚགས་བྱས་པའི་ཐོན་རིམ་ལ་སླར་ལོག་བྱེད་དགོས་སམ། ཁྱེད་ཀྱི་འགྱུར་བ་རྣམས་བརླག་པར་འགྱུར།
+	Do you want to save the changes you made to “{name}” before quitting?	ཁྱོད་ཀྱིས་ “{name}” ལ་བསྒྱུར་བཅོས་བྱས་པ་དེ་ཕྱིར་མ་ཐོན་གོང་ཉར་ཚགས་བྱེད་འདོད་དམ།
+	Do you want to save the changes you made to “{name}” before closing?	ཁྱེད་ཀྱིས་ “{name}” ལ་བསྒྱུར་བཅོས་བྱས་པ་ཁ་མ་རྒྱག་གོང་ཉར་ཚགས་བྱེད་འདོད་དམ།
+	Doc: {flat}/{layered}	ཡིག་ཆ། {flat}/{layered}
+	Scratch: {size}	རྨ་རྫེས། {size}
+	Untagged {mode}	མིང་རྟགས་མ་བཀོད། {mode}
+	{w} px x {h} px ({ppi} ppi)	{w} པི་ཨེགསི་ x {h} པི་ཨེགསི་ ({ppi} པི་པི་)
+	Resolution: {dpi} pixels/inch	གསལ་ཆ། {dpi}པིག་སེལ་/ཨིན་ཅི་
+	Doc: {w} × {h} px	ཡིག་ཆ། {w} × {h} px
+	Frame {current} / {total}	གཞི་གྲངས་ {current} / {total}
+	Count: {n}	གྲངས།: {n}
+	BLANK DOCUMENT PRESETS ({n})	ཡིག་ཆ་སྟོང་པའི་སྔོན་སྒྲིག་({n})
+	Constraints ({n})	ཚད་བཀག་({n})
+	Align {what}	ཕྲེང་སྒྲིག་ {what}
+@plural	{n} Layer|{n} Layers	{n} བང་རིམ་1།|{n} བང་རིམ་གཉིས།
+@plural	Group · {n} layer|Group · {n} layers	{n} སྡེ་ཚན། · བང་རིམ་གཅིག|{n} སྡེ་ཚན། · བང་རིམ་གཉིས།
+	Additional plugins folder	ཁ་སྣོན་པ་ལག་ཨིན་གྱི་སྣོད་ཐོ།
+	Adobe	ཨེ་ཌོབ།
+	Adobe rgb	ཨེ་ཌོབ་rgb
+	Allow agent control	བྱེད་པོ་ཚོད་འཛིན་བྱེད་དུ་འཇུག་པ།
+	Allow scripts to connect	ཡིག་གཟུགས་འབྲེལ་མཐུད་བྱེད་དུ་འཇུག་པ།
+	Always	རྟག་ཏུ།
+	Always create smart objects when placing	ག་དུས་ཡིན་ཡང་བཀོད་སྒྲིག་བྱེད་སྐབས་དངོས་པོ་རིག་པ་ཅན་བཟོས།
+	Animated zoom	འགུལ་རིས་ཆེ་རུ་གཏོང་བ།
+	Apply auto tone	རང་འགུལ་སྒྲ་གདངས་འཇུག་པ།
+	Ask	དྲིས།
+	Ask before saving layered tiff	བང་རིམ་ཅན་གྱི་ཊིཕ་ཉར་ཚགས་མ་བྱེད་གོང་དྲིས།
+	Auto collapse icon panels	རང་འགུལ་གྱིས་རྡིབ་པའི་རི་མོའི་པང་ལེབ།
+	Auto show hidden panels	རང་འགུལ་གྱིས་སྦས་པའི་པང་ལེབ་སྟོན་པ།
+	Auto show home screen	རང་འགུལ་གྱིས་གཙོ་གཟུགས་སྟོན་པ།
+	Autosave	རང་འགུལ་ཉར་ཚགས།
+	Autosave minutes	སྐར་མ་རང་འགུལ་ཉར་ཚགས་བྱེད་པ།
+	Beep when done	ཚར་རྗེས་སྒྲ་བིབ།
+	Bicubic automatic	Bicubic རང་འགུལ་ཅན།
+	Bicubic sharper	གསུམ་ཐིག་དྭངས་གསལ་ཆེ།
+	Bicubic smoother	བི་ཁུ་བྷིག་འཇམ་པོ།
+	Bit depth	བིཊ་གཏིང་ཚད།
+	Brush preview color	སྤུ་སྨྱུག་སྔོན་ལྟའི་ཚོས་གཞི།
+	Cache levels	མཛོད་གནས་རིམ།
+	Cache tile size	འདྲ་མཛོད་ཀྱི་རྡོ་རིང་ཆེ་ཆུང་།
+	Camera Raw Defaults	པར་ཆས་སྔོན་སྒྲིག
+	Canvas border	རས་རས་མཐའ་མཚམས།
+	Canvas color	རས་རས་ཚོས་གཞི།
+	Canvas custom color	རས་རས་རང་མོས་ཚོས་གཞི།
+	Color picker	ཚོན་འདེམ་བྱེད།
+	Color space	ཚོས་གཞིའི་བར་སྟོང་།
+	Column width	ཀ་རིལ་ཞེང་ཚད།
+	Concise	མདོར་བསྡུས།
+	Control port	ཚོད་འཛིན་མཐུད་ཁ།
+	Convert to srgb	srgb ལ་བསྒྱུར།
+	Cursors	འོད་རྟགས་ཚུ།
+	Custom dark	སྲོལ་རྒྱུན་ནག་པོ།
+	Custom light	རང་མོས་གློག་སྒྲོན།
+	Dark	མུན་ནག་པོ།
+	Dark gray	སྐྱ་བོ་ནག་པོ།
+	Dashed lines	ཆད་ཐིག
+	Destination	ཕྱོགས་ཡུལ།
+	Detailed	ཞིབ་ཕྲ།
+	Disks	སྲབ་སྡེར།
+	Display p3	བཀྲམ་སྟོན་ p3
+	Double click layer mask launches select and mask	བང་རིམ་གདོང་ཁེབས་གཉིས་མནན་ནས་འདེམས་སྒྲུག་དང་གདོང་ཁེབས།
+	Drop shadow	གྲིབ་གཟུགས།
+	Dynamic color sliders	སྒུལ་ཤུགས་ཅན་གྱི་ཚོན་མདོག་བཤུད་ཆས།
+	East asian	ཤར་ཨེ་ཤ་ཡ།
+	Effect cache mb	ནུས་པའི་འདྲ་མཛོད་ mb
+	Enable flick panning	ཕིལིཀ་པེན་ནིང་ལྕོགས་ཅན་བཟོས།
+	Enable floating document window docking	འཕྱོ་བའི་ཡིག་ཆའི་སྒེའུ་ཁུང་སྦྲེལ་མཐུད་བྱེད་ཐུབ།
+	Enable narrow options bar	གདམ་གའི་ཕྲ་རིང་དོག་པོ་ལྕོགས་ཅན་བཟོས།
+	Enabled	ནུས་ལྡན་བཟོས།
+	Enhanced Controls	ཚོད་འཛིན་མཐོར་འདེགས།
+	Export clipboard	བཤུད་སྒྲོམ་ཕྱིར་འདྲེན་བྱེད་པ།
+	Extra large	ཆེ་དྲགས་པ།
+	File Handling	ཡིག་ཆ་འཛིན་སྐྱོང་།
+	File path	ཡིག་ཆའི་འགྲོ་ལམ།
+	Fill new type layers with placeholder	རིགས་གསར་པའི་བང་རིམ་རྣམས་ས་གནས་འཛིན་མཁན་གྱིས་བཀང་།
+	Font preview	ཡིག་གཟུགས་སྔོན་ལྟ།
+	Full size tip	ཚད་གཞི་ཆ་ཚང་གི་མཛུབ་མོ།
+	Gamut warning color	གྷ་མུཊ་ཉེན་བརྡའི་ཚོས་གཞི།
+	Gamut warning opacity	གྷ་མུཊ་ཉེན་བརྡའི་དྭངས་གསལ་མིན།
+	Generator enabled	གློག་འདོན་འཕྲུལ་འཁོར་ནུས་ལྡན་བཟོས་པ།
+	Gif	Gif
+	Glossy	བཀྲག་མདངས་ཅན།
+	Grid color	དྲ་མིག་ཚོས་གཞི།
+	Grid colors	དྲ་མིག་གི་ཚོས་གཞི།
+	Grid size	དྲ་མིག་ཆེ་ཆུང་།
+	Grid style	དྲ་མིག་བཟོ་ལྟ།
+	Grid unit	དྲ་མིག་སྡེ་ཚན།
+	Gridline every	དྲ་མིག་རེ་རེ།
+	Guide color	ལམ་སྟོན་ཚོས་གཞི།
+	Guide style	ལམ་སྟོན་བྱེད་སྟངས།
+	Guides, Grid & Slices	སྣོན་ཐིག སྒྲོམ་ཐིག དང་གཏུབ་ཆ།
+	Gutter	ཆུ་རགས།
+	History Log	ལོ་རྒྱུས་ཟིན་ཐོ།
+	History states	ལོ་རྒྱུས་ཀྱིས་བསྟན་དོན།
+	Ignore exif profile tag	exif གསལ་སྡུད་རྟགས་སྣང་མེད་དུ་གཏོང་།
+	Image interpolation	པར་རིས་བརྗེ་སྒྱུར།
+	Image previews	པར་རིས་སྔོན་ལྟ།
+	Integrations	མཉམ་བསྲེས།
+	Interface	འབྲེལ་མཐུད་ངོས།
+	Jpeg quality	Jpeg སྤུས་ཚད།
+	Jpg	Jpg
+	Language	སྐད་ཡིག
+	Large tabs	མཆོང་ལྡེ་ཆེ་བ།
+	Legacy compositing	ཤུལ་བཞག་བསྡུ་སྒྲིག།
+	Light gray	སྐྱ་བོ།
+	Line	ཐིག
+	Lines	ཐིག་རིས།
+	Lowercase extension	ཡི་གེ་ཆུང་བའི་རྒྱ་བསྐྱེད།
+	Maximize psd compatibility	psdམཐུན་སྒྲིལ་ཆེ་རུ་གཏོང་བ།
+	Medium gray	སྐྱ་བོ་འབྲིང་།
+	Memory usage mb	དྲན་ཤེས་བེད་སྤྱོད།mb
+	Missing glyph protection	གྷི་ལིཕ་སྲུང་སྐྱོབ་མེད་པ།
+	Modern	དེང་རབས་ཅན།
+	Nearest neighbor	ཉེ་བའི་ཁྱིམ་མཚེས།
+	Never	ནམ་ཡང་མིན།
+	Normal tip	སྤྱིར་བཏང་གི་བསླབ་བྱ།
+	Open as smart object	རིག་ལྡན་དངོས་པོ་ལྟར་ཁ་ཕྱེ།
+	Open documents as tabs	ཡིག་ཆ་རྣམས་མཆོང་ལྡེ་ལྟར་ཁ་ཕྱེ།
+	Overscroll	བཤུད་བརྒལ་བྱེད་པ།
+	Performance	འཁྲབ་སྟོན།
+	Png	Png
+	Point size	ས་ཚིགས་ཆེ་ཆུང་།
+	Precise	ཏག་ཏག
+	Preserve details	ཞིབ་ཕྲའི་གནས་ཚུལ་ཉར་ཚགས་བྱེད་པ།
+	Print resolution	པར་ཤུགས།
+	Pro	ལས་ཕྱོགས།
+	Pro medium	བརྒྱུད་ལམ་བཟང་པོ།
+	Pro photo	པར་རིས།
+	Quick export format	མགྱོགས་མྱུར་ཕྱིར་འདྲེན་རྣམ་པ།
+	Quick export location	མགྱོགས་མྱུར་ཕྱིར་གཏོང་ས་གནས།
+	Recent file count	ཉེ་ཆར་ཡིག་ཆའི་གྲངས།
+	Recent files	ཉེ་བའི་ཡིག་ཆ།
+	Recent fonts	ཉེ་ཆར་གྱི་ཡིག་གཟུགས།
+	Recover on launch	འགྲེམ་སྤེལ་བྱེད་སྐབས་སླར་གསོ།
+	Remember workspace changes	ལས་ཀའི་ས་ཁོངས་ཀྱི་འགྱུར་བ་དྲན་པ།
+	Resize image during place	གནས་སྐབས་པར་རིས་ཆེ་ཆུང་བསྒྱུར།
+	Rotate view with trackpad	ཐེག་པེཌ་དང་མཉམ་དུ་མཐོང་སྣང་བསྒྱུར།
+	Same folder	སྣོད་གཅིག་པ།
+	Save in background	རྒྱབ་ལྗོངས་སུ་ཉར་ཚགས་བྱས།
+	Scratch Disks	རྡེབ་སྒྲིག
+	Screen	འཆར་ངོས།
+	Screen resolution	བརྙན་ཤེལ་གྱི་གསལ་ཚད།
+	Scrubby slider acceleration	གཙང་སྦྲ་བཤུད་འཕྲུལ་གྱི་མགྱོགས་ཚད།
+	Sessions only	ཚོགས་ཐེངས་ཁོ་ན།
+	Sharpen for	ཆེད་དུ་རྣོ་བ།
+	Show channels in color	ཚོན་མདོག་གིས་བརྒྱུད་ལམ་སྟོན།
+	Show crosshair in brush tip	སྤུ་སྨྱུག་རྩེ་མོའི་ནང་དུ་སྐྲ་བརྒལ་བ་སྟོན།
+	Show extension panels	རྒྱ་བསྐྱེད་སྒྲོམ་སྟོན།
+	Show font names in english	དབྱིན་ཡིག་ནང་ཡིག་གཟུགས་ཀྱི་མིང་སྟོན་པ།
+	Show menu colors	དཀར་ཆག་ཚོན་མདོག་སྟོན།
+	Show only crosshair while painting	རི་མོ་འབྲི་སྐབས་སྐྲ་ཕྲེང་ཁོ་ན་སྟོན།
+	Show slice numbers	ཤོག་བུའི་ཨང་གྲངས་སྟོན།
+	Show tooltips	ལག་ཆས་མཛུབ་སྟོན་སྟོན།
+	Show transformation values	བརྗེ་སྒྱུར་རིན་ཐང་སྟོན་པ།
+	Slice color	ཚོན་མདོག་གཅོད་པ།
+	Smart guide color	ལམ་སྟོན་ཚོན་མདོག་རིག་པ།
+	Smart quotes	ཚིག་བཅད་རིག་པ་ཅན།
+	Snap vector tools and transforms to pixel grid	བརྡ་རྟགས་ལག་ཆ་འཛིན་ནས་པིག་སེལ་དྲ་མིག་ལ་སྒྱུར་བ།
+	Srgb	Srgb
+	Standard	ཚད་ལྡན་ཅན།
+	Studio	གློག་བརྙན་ཁང་།
+	Studio light	གློག་བརྙན་ཁང་གི་གློག་སྒྲོན།
+	Subdivisions	སྒྲོམ་ཆུང་གྲངས།
+	System	ལམ་ལུགས།
+	Text engine	ཡིག་གཟུགས་འཕྲུལ་འཁོར།
+	Text file	ཚིག་ཡིག་ཡིག་ཆ།
+	Tiny	ཆུང་ཆུང་།
+	Touch gestures	རེག་བྱ་ལག་བརྡ།
+	Transparency & Gamut	དྭངས་གསལ་དང་ཁྱབ་ཚད།
+	Type units	དབྱེ་བའི་ཚད་གཞི།
+	UI font size	མཐོང་ངོས་ཡིག་གཟུགས་ཆེ་ཆུང་།
+	UI scale	UI ཚད་གཞི།
+	Units & Rulers	ཚད་གཞི་དང་ཐིག་ཤིང་།
+	Use additional plugins folder	ཁ་སྣོན་གྱི་པ་ལག་ཨིན་སྣོད་བེད་སྤྱོད་བྱེད།
+	Use esc to commit	ཁས་ལེན་བྱེད་པར་escབེད་སྤྱོད་བྱེད།
+	Use gpu	ཇི་པུ་བེད་སྤྱོད་བྱེད་པ།
+	Use legacy free transform	ཤུལ་བཞག་རིན་མེད་སྒྱུར་བཅོས་བེད་སྤྱོད་བྱེད་པ།
+	Use shift key for tool switch	ལག་ཆ་བརྗེ་སྒྱུར་ཆེད་དུ་བརྗེ་སྒྱུར་ལྡེ་མིག་བེད་སྤྱོད་བྱེད།
+	Vary round brush hardness on hud	ཧུད་སྟེང་གི་སྤུ་སྨྱུག་སྒོར་པོའི་མཁྲེགས་ཚད་མི་འདྲ་བ།
+	Webp	Webp
+	World ready	འཛམ་གླིང་གྲ་སྒྲིག།
+	Zoom clicked point to center	ཟུམ་གྱིས་དཀྱིལ་ལ་སྣུན།
+	Zoom resizes windows	Zoom ཡིས་སྒེའུ་ཁུང་ཆེ་ཆུང་བསྒྱུར།
+	Zoom with scroll wheel	འཁོར་ལོའི་སྒོར་མོས་མཐོང་ཆ་སྤོར་བ།
+	Zoom with trackpad pinch	ཊེག་པེཌ་སྣུམ་གྱིས་ཆེ་རུ་གཏོང་བ།
+	Pass Through	གསེབ་ལམ།
+	Dissolve	ཐིམ་པ།
+	Darker Color	མཚོན་ནག་ཏུ་གཏོང་།
+	Linear Dodge (Add)	ཐིག་རིས་བྲོས་བྱོལ། (ཁ་སྣོན།)
+	Lighter Color	དཀར་ཆ་ཆེ་བའི་མཚོན།
+	Soft Light	འོད་འཇམ་པ།
+	Hard Light	འོད་ཤུགས་ཆེ་བ།
+	Vivid Light	འོད་གསལ།
+	Linear Light	འོག་ཕྱོགས་གཅིག
+	Pin Light	འོད་སྣེ་མོ་གཅིག
+	Exclusion	ཟུར་འདོན་ཅན།
+	Divide	ཆ་བགོས་ཅན།
+	Luminosity	འོད་ཀྱི་ཁྱབ་ཤུགས།
+@plural	{n} sample|{n} samples	{n} དཔེ་ཚད།|{n} དཔེ་ཚད།2
+	{added}, {removed} subtracted	{added}, {removed} ཕབ་ཡོད།
+	Adjustment Preview	སྙོམ་སྒྲིག་སྔོན་ལྟ།
+	Airbrush: keeps depositing paint while the pointer rests.	མཁའ་དབྱིངས་རི་མོ། མཚོན་རྟགས་དེ་ངལ་གསོ་བྱེད་པའི་སྐབས་སུ་ཚོན་བཏང་བཞིན་ཡོད།
+	Angle:	ཟུར།
+	Blend If	བསྲེ་སྦྱོར། གལ་ཏེ།
+	Close Tab Group	མཆོང་ལྡེ་སྡེ་ཚན་ཁ་རྒྱབ།
+	Collapse	བསྡུ།
+	Collapse All Groups	སྡེ་ཚན་ཚང་མ་བཤིག་པ།
+	Collapse Panel Group	རྡིབ་པའི་སྒྲོམ་གཞིའི་སྡེ་ཚན།
+	Collapse group  ({key}-click: all groups)	བསྡུ་སྒྲིག་སྡེ་ཚན་ ({key}-ཨེབ་གཏང་: སྡེ་ཚན་ཚང་མ)
+	Create new brush from the current settings	ད་ལྟའི་སྒྲིག་སྟངས་ནས་སྤུ་སྨྱུག་གསར་པ་བཟོས།
+	Create new brush from these settings	སྒྲིག་སྟངས་འདི་དག་ལས་སྤུ་སྨྱུག་གསར་པ་བཟོས།
+	Delete brush	སྤུ་སྨྱུག་སུབ་པ།
+	Drag the arrow to set the angle, the dots to set the roundness	ཟུར་ཚད་སྒྲིག་པའི་ཆེད་དུ་མདའ་རྩེ་འདྲུད། སྒོར་ཐིག་སྒྲིག་པའི་ཆེད་དུ་ཚག་འདྲུད།
+	Expand	རྒྱ་སྐྱེད།
+	Expand Panel Group	ཚོགས་ཆུང་གི་སྡེ་ཚན་རྒྱ་བསྐྱེད།
+	Expand group  ({key}-click: all groups)	སྡེ་ཚན་རྒྱ་བསྐྱེད། ({key}-སྣུན་: སྡེ་ཚན་ཚང་མ)
+	Fade steps	གོམ་པ་མར་ཉམས་པ།
+	Hide the layer's effects  ({key}-click: all layers)	བང་རིམ་གྱི་ནུས་པ་སྦས་ ({key}-སྣུན་:བང་རིམ་ཚང་མ)
+	Import Brushes… (.abr)	ནང་འདྲེན་སྤུ་གྲི། (.abr)
+	Move Group Down	སྡེ་ཚན་མར་སྤོ་བ།
+	Move Group Up	སྡེ་ཚན་ཡར་སྤོ་བ།
+	Reset the brush to the defaults	སྤུ་སྨྱུག་དེ་སྔོན་སྒྲིག་ལ་སླར་སྒྲིག་བྱེད།
+	Restore original size	ཐོག་མའི་ཆེ་ཆུང་སླར་གསོ་བྱེད་པ།
+	Roundness:	སྒོར་སྒོར།
+	Search Brushes	སྤུ་སྨྱུག་འཚོལ་ཞིབ།
+	Show the layer's effects  ({key}-click: all layers)	བང་རིམ་གྱི་ནུས་པ་སྟོན། ({key}-སྣུན་:བང་རིམ་ཚང་མ)
+	Brush picker	སྤུ་སྨྱུག་འཐུ་མཁན།
+	Erase	སུབ་པ།
+	Right click with painting tools	རི་མོའི་ཡོ་བྱད་ལ་གཡས་མཐེབ་གནོན།
+	System Info…	མ་ལག་གི་ཆ་འཕྲིན།…
+	System Info	མ་ལག་ཆ་འཕྲིན།
+	More panels	ཤོག་བུ་མང་བ།
+	These settings aren't available in PhotoSuite yet.	སྒྲིག་སྟངས་འདི་དག་ད་དུང་པར་རིས་བཟོ་རྩལ་ནང་དུ་མེད་པ་རེད།
+	Graphics	རི་མོ།
+	Reset GPU Backend	GPUརྒྱབ་ཕྱོགས་སླར་སྒྲིག་བྱེད།
+	Applies at next launch.	འགོ་འཛུགས་རྗེས་མར་འཇུག་སྤྱོད་བྱེད།
+	Click to sample the foreground colour  ·  {key}-click for background	མདུན་གྱི་ཚོས་གཞིའི་དཔེ་ཚད་ལ་སྣུན། · {key}-རྒྱབ་ལྗོངས་ལ་སྣུན།
+	{key}-click to set the source	{key}-མནན་ནས་འབྱུང་ཁུངས་སྒྲིག་དགོས།
+	{key} to subtract	{key} ཕབ་དགོས།
+	Clone source {n} ({key}-click with Clone Stamp to set)	འདྲ་བཤུས་འབྱུང་ཁུངས་{n} ({key}-འདྲ་བཤུས་མཚོན་རྟགས་དང་མཉམ་དུ་སྣུན་ནས་སྒྲིག་དགོས།)
+	Source: not set ({key}-click with Clone Stamp)	འབྱུང་ཁུངས། གཞི་སྒྲིག་བྱས་མེད། ({key}-རིགས་མཚུངས་མཚོན་རྟགས་དང་མཉམ་དུ་སྣུན།)
+	Pixel Layer	པིག་སེལ་བང་རིམ།
+	Type Layer	བང་རིམ་བྲིས།
+	Shape Layer	དབྱིབས་བང་རིམ།
+	Group Layer	སྡེ་ཚན་བང་རིམ།
+	Fill Layer	བང་རིམ་བཀང་བ།
+	Smart Object Layer	རིག་ནུས་ཅན་གྱི་དངོས་པོའི་བང་རིམ།
+	Create Warped Text	ལོག་པའི་ཡི་གེ་གསར་བཟོ།
+	Rasterize Smart Object	རིག་ནུས་ཅན་གྱི་དངོས་པོ་རྡུལ་ཕྲན་བཟོ་བ།
+	Rasterize Fill Content	རས་ཊར་བཟོ་བའི་ནང་དོན་བཀང་བ།
+	Unlock: picking a preset replaces these settings	ལྡེ་མིག་ཕྱེ། སྔོན་སྒྲིག་འདེམས་ནས་སྒྲིག་སྟངས་འདི་དག་བརྗེ་སྒྱུར་བྱེད།
+	Lock: keep these settings when picking another preset	ལྡེ་མིག: སྔོན་སྒྲིག་གཞན་ཞིག་འདེམས་སྐབས་སྒྲིག་སྟངས་འདི་དག་ཉར་དགོས།
+	Diameter:	དཀྱུས་ཚད།
+	Hardness:	མཁྲེགས་ཚད།
+	No brush presets	སྤུ་སྨྱུག་སྔོན་སྒྲིག་མེད།
+	Toggle the Brush Settings panel  (F5)	སྤུ་སྨྱུག་སྒྲིག་སྟངས་སྒྲོམ་བསྒྱུར། (F5)
+	Create new brush preset from the current settings	ད་ལྟའི་སྒྲིག་སྟངས་ནས་སྤུ་སྨྱུག་སྔོན་སྒྲིག་གསར་པ་བཟོས།
+	Brush Settings…  (F5): every option of this brush	སྤུ་སྨྱུག་སྒྲིག་སྟངས། (F5): སྤུ་སྨྱུག་འདིའི་གདམ་ག་ཚང་མ།
+	Rename Brush…	སྤུ་སྨྱུག་གི་མིང་བསྒྱུར།…
+	Delete Brush	སྤུ་སྨྱུག་བསུབ།
+	Group name	སྡེ་ཚན་གྱི་མིང་།
+	Brush name	སྤུ་སྨྱུག་གི་མིང་།
+	Grid view	དྲ་མིག་མཐོང་སྣང་།
+	List view	ཐོ་གཞུང་ལྟ་ཚུལ།
+	Off: the speed of the pointer sets the spacing	ཁ་བསྡམས། མཚོན་རྟགས་ཀྱི་མགྱོགས་ཚད་ཀྱིས་བར་ཐག་གཏན་འཁེལ་བྱེད།
+	Tilt Scale	གཡོ་སྒྱུའི་ཚད་གཞི།
+	Brush Projection	སྤུ་སྨྱུག་འཆར་འགོད།
+	Apply the pen's tilt and rotation to the tip shape	སྨྱུ་གུའི་གུག་གུག་དང་འཁོར་སྐྱོད་དེ་རྩེ་མོའི་དབྱིབས་ལ་སྦྱར་བ།
+	Mixer Brush	སྲེག་ཆས་སྤུ་སྨྱུག།
+	Wet	རློན་པ།
+	Mix	བསྲེས།
+	Wetness Jitter	རློན་པའི་འཇིགས།
+	Mix Jitter	ཇི་ཊར་སྲེ་སྲེ།
+	Show the layer mask as an overlay	བང་རིམ་གྱི་གདོང་ཁེབས་དེ་ཁེབས་སུ་སྟོན།
+	Toggle visibility	མཐོང་ཚད་བརྗེ་སྒྱུར།
+	Unlink the mask from the layer	བང་རིམ་ནས་ཁ་རས་སྦྲེལ་མཐུད་མེད་པར་བཟོས།
+	Link the mask to the layer	གདོང་ཁེབས་བང་རིམ་ལ་སྦྲེལ་བ།
+	Gradient	སྟེགས་ཚོན།
+	Gradient Options	གྱེན་ཐིག་གདམ་ཁ།
+	Align with layer	ངོས་དང་འཁོད་སྙོམ།
+	Reset Alignment	བསྐྱར་སྒྲིག་ཕྲེང་བསྒྲིགས།
+	Centre the gradient (offset 0, 0)	གྱེན་ཐུར་གྱི་དབུས་སུ་བཞག (0, 0)
+	The current gradient (pick one in Window › Gradients)	ད་ལྟའི་གྱེན་ཐུར་(སྒེའུ་ཁུང་›གྱེན་ཐུར་ནང་ནས་གཅིག་འདེམས།)
+	Select a type layer to edit its character and paragraph settings.	ཡིག་འབྲུ་དང་དོན་མཚམས་སྒྲིག་སྟངས་རྩོམ་སྒྲིག་བྱེད་པའི་རིགས་བང་རིམ་འདེམས།
+	Text color	ཡི་གེའི་ཚོས་གཞི།
+	Type Options	ཡིག་གཟུགས་གདམ་ཁ།
+	Anti-aliasing method	མིང་གཞན་འགོག་པའི་ཐབས་ལམ།
+	Horizontal type	ཐད་སྙོམས་རིགས།
+	Vertical type	ལངས་པའི་རིགས།
+	Fill path with foreground color	མདུན་གྱི་ཚོན་མདོག་གིས་འགྲོ་ལམ་བཀང་།
+	Stroke path with brush	སྤུ་སྨྱུག་གིས་རྡེག་པའི་ལམ་བུ།
+	Load path as a selection	འདེམས་སྒྲུག་ལྟར་འགྲོ་ལམ་མངོན་པ།
+	Make work path from selection	འདེམས་སྒྲུག་ལས་ལས་ཀའི་འགྲོ་ལམ་བཟོས།
+	Add vector mask	སྲ་འབག་སྣོན།
+	Create new path	ལམ་བུ་གསར་པ་གཏོད་པ།
+	Delete path	འགྲོ་ལམ་སུབ་པ།
+	Delete vector mask	སྲ་འབག་དོར།
+	CPU (no GPU acceleration)	CPU (GPU མགྱོགས་ཚད་མེད།)
+	DirectX 12	ཐད་ཀར་ཨེགསི་༡༢
+	GPU backend	GPUརྒྱབ་ལྗོངས།
+	Metal	ལྕགས་རིགས།
+	OpenGL	OpenGL
+	Use tablet pressure	སྨན་ཁབ་ཀྱི་གནོན་ཤུགས་སྤྱོད་པ།
+	Vulkan	ཝུལ་ཁན།

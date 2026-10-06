@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PhotoSuite MSI (WiX Toolset v5: `dotnet tool install -g wix`). Built by package.ps1:
+
+    wix build photosuite.wxs -arch x64 -d Version=1.2.3 -d BinDir=... -d IconPath=... -o out.msi
+
+  Per-machine install into Program Files, a Start Menu shortcut, `.pcraft` owned by PhotoSuite,
+  and PhotoSuite offered under "Open with" for PSD/PSB and the image formats it reads (without
+  taking over the user's default app for them).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="PhotoSuite"
+      Manufacturer="PhotoSuite"
+      Version="$(var.Version)"
+      UpgradeCode="6B57301F-97D4-4F8B-AB45-1BDFC4A5D7DE"
+      Scope="perMachine"
+      Compressed="yes"
+      Language="1033">
+    <SummaryInformation Description="PhotoSuite image editor" Manufacturer="PhotoSuite" />
+    <!-- Same-version upgrades let successive pre-releases of one X.Y.Z replace each other
+         (MSI versions are numeric, so 1.2.3-rc.1 and 1.2.3-rc.2 are both 1.2.3). -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of PhotoSuite is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- MSI caches this icon using its Id as the filename. Advertised shortcuts to an
+         .exe need an .exe icon identifier (ICE50), even when the source is an ICO. -->
+    <Icon Id="PhotosuiteIcon.exe" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="PhotosuiteIcon.exe" />
+    <Property Id="ARPURLINFOABOUT" Value="https://photosuite.app" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://photosuite.app" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/eolix/photosuite/issues" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="PhotoSuite">
+        <Directory Id="RESOURCESFOLDER" Name="resources" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="PhotoSuite" Level="1">
+      <ComponentGroupRef Id="PhotosuiteFiles" />
+      <ComponentGroupRef Id="PhotosuiteResources" />
+      <ComponentGroupRef Id="PhotosuiteNotices" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="PhotosuiteFiles" Directory="INSTALLFOLDER">
+      <Component Id="PhotosuiteApp" Guid="0F1B97BA-BC0A-4E0B-8115-C90723589AF3">
+        <File Id="PhotosuiteExe" Source="$(var.BinDir)\photosuite.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="PhotoSuite"
+              Description="PhotoSuite image editor" WorkingDirectory="INSTALLFOLDER" Advertise="yes"
+              Icon="PhotosuiteIcon.exe" IconIndex="0" />
+        </File>
+
+        <!-- .pcraft: the native document format; PhotoSuite is its default app. -->
+        <ProgId Id="Photosuite.Document" Description="PhotoSuite Document" Icon="PhotosuiteExe" IconIndex="0">
+          <Extension Id="pcraft" ContentType="application/x-photosuite">
+            <Verb Id="open" Command="Open" TargetFile="PhotosuiteExe" Argument="&quot;%1&quot;" />
+          </Extension>
+        </ProgId>
+        <!-- PSD/PSB and images: offered under "Open with", never forced as the default. -->
+        <ProgId Id="Photosuite.PhotoshopDocument" Description="Photoshop Document" Icon="PhotosuiteExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Photosuite.PhotoshopDocument\shell\open\command" Value="&quot;[#PhotosuiteExe]&quot; &quot;%1&quot;" Type="string" />
+        <ProgId Id="Photosuite.Image" Description="Image" Icon="PhotosuiteExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Photosuite.Image\shell\open\command" Value="&quot;[#PhotosuiteExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.psd\OpenWithProgids" Name="Photosuite.PhotoshopDocument" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.psb\OpenWithProgids" Name="Photosuite.PhotoshopDocument" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.png\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.jpg\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.jpeg\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.tif\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.tiff\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.webp\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.gif\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.bmp\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.tga\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.exr\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.hdr\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.avif\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.qoi\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.ico\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+
+        <!-- "Open with" app list and the Run dialog (Win+R "photosuite"). -->
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe" Name="FriendlyAppName" Value="PhotoSuite" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\shell\open\command" Value="&quot;[#PhotosuiteExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".pcraft" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".psd" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".psb" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".png" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".jpg" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".jpeg" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".tif" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".tiff" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".webp" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".gif" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".bmp" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".tga" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".exr" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".hdr" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".avif" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".qoi" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".ico" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\photosuite.exe" Value="[#PhotosuiteExe]" Type="string" />
+      </Component>
+
+      <Component Id="PhotosuiteCli">
+        <File Id="PhotosuiteCliExe" Source="$(var.BinDir)\photosuite-cli.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <!-- LUTs, lens profiles and preset libraries (the app reads them from resources\ beside the exe),
+         each folder with its licence beside it. -->
+    <ComponentGroup Id="PhotosuiteResources" Directory="RESOURCESFOLDER">
+      <Files Include="$(var.BinDir)\resources\**" />
+    </ComponentGroup>
+    <!-- NOTICE must travel with the binary (Apache-2.0 4(d)); licences and third-party notices too. -->
+    <ComponentGroup Id="PhotosuiteNotices" Directory="INSTALLFOLDER">
+      <Files Include="$(var.BinDir)\notices\*" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

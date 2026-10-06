@@ -1,0 +1,1951 @@
+# Català (ca) catalog. Columns, separated by a TAB:  context <TAB> source <TAB> translation
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+# Català translations for PhotoSuite UI.
+
+	File	Fitxer
+	Edit	Editar
+	Image	Imatge
+	Layer	Capa
+	Type	Tipus
+	Select	Selecciona
+	Filter	Filtre
+	View	Veure
+	Window	Finestra
+	Help	Ajuda
+	(coming soon)	(properament)
+	New…	Nou…
+	Open…	Obrir…
+	Open As…	Obre com a…
+	Open Recent	Obre recents
+	Clear Recent Files	Esborra els fitxers recents
+	Clear history	Neteja l’historial
+	Close	Tancar
+	Close All	Tanca-ho tot
+	Close Others	Tanca els altres
+	Save	Desar
+	Save As…	Anomena i desa…
+	Save a Copy…	Desa una còpia…
+	Revert	Revertir
+	Export	Exporta
+	Quick Export as PNG	Exportació ràpida com a PNG
+	Export As…	Exportar com a…
+	Export Preferences…	Exporta les preferències…
+	Save for Web (Legacy)…	Desa per al web (heretat)…
+	Artboards to Files…	Taules de treball a fitxers…
+	Artboards to PDF…	Taules de treball a PDF…
+	Layers to Files…	Capes a fitxers…
+	Layer Comps to Files…	Composició de capes a fitxers…
+	Color Lookup Tables…	Taules de cerca de colors…
+	Data Sets as Files…	Conjunts de dades com a fitxers…
+	Paths to Illustrator…	Camins cap a Illustrator…
+	Render Video…	Renderitza el vídeo…
+	Generate	Generar
+	Image Assets	Actius d'imatge
+	Place Embedded…	Lloc incrustat…
+	Place Linked…	Lloc enllaçat…
+	Package…	Paquet…
+	Automate	Automatitzar
+	Batch…	Lot…
+	Create Droplet…	Crea una gota…
+	Crop and Straighten Photos	Retalla i endreça les fotos
+	Contact Sheet II…	Full de contacte II…
+	Conditional Mode Change…	Canvi de mode condicional…
+	Fit Image…	Ajust de la imatge…
+	Lens Correction…	Correcció de les lents…
+	Merge to HDR Pro…	Combina a HDR Pro…
+	Photomerge…	Photomerge…
+	Scripts	Guions
+	Image Processor…	Processador d'imatges…
+	Delete All Empty Layers	Suprimeix totes les capes buides
+	Flatten All Layer Effects	Aplana tots els efectes de capa
+	Flatten All Masks	Aplanar totes les màscares
+	Script Events Manager…	Gestor d'esdeveniments de script…
+	Import	Importar
+	Browse…	Navega…
+	Reveal in Finder	Revela al Finder
+	File Info…	Informació del fitxer…
+	Print…	Print…
+	Print One Copy	Imprimeix una còpia
+	Exit	Surt
+	Undo	Desfer
+	Redo	Refer
+	Toggle Last State	Commuta l'últim estat
+	Fade…	Esvaeix…
+	Cut	Tallar
+	Copy	Copiar
+	Copy Merged	Còpiar fusionada
+	Paste	Enganxar
+	Paste Special	Enganxa especial
+	Paste in Place	Enganxa al lloc
+	Paste Into	Enganxa a
+	Paste Outside	Enganxa a l'exterior
+	Paste Lorem Ipsum	Enganxa Lorem Ipsum
+	Clear	Neteja
+	Search…	Cerca…
+	Check Spelling…	Revisa l'ortografia…
+	Find and Replace Text…	Cerca i substitueix el text…
+	Fill…	Omple…
+	Stroke…	Traç…
+	Content-Aware Fill…	Emplenament conscient del contingut…
+	Content-Aware Scale	Escala amb reconeixement de contingut
+	Puppet Warp	Deformació de titella
+	Perspective Warp	Deformació de perspectiva
+	Free Transform	Transformació lliure
+	Transform	Transformar
+	Again	De nou
+	Scale	Escala
+	Rotate	Gira
+	Skew	Esbiaixat
+	Distort	Distorciona
+	Perspective	Perspectiva
+	Warp	Deforma
+	Flip Horizontal	Gira horitzontal
+	Flip Vertical	Flip Vertical
+	Rotate 180°	Gira 180°
+	Rotate 90° Clockwise	Gireu 90° en sentit horari
+	Rotate 90° Counter Clockwise	Gireu 90° en sentit contrari a les agulles del rellotge
+	180°	180°
+	90° Clockwise	90° en sentit horari
+	90° Counter Clockwise	90° en sentit contrari a les agulles del rellotge
+	Arbitrary…	Arbitrària…
+	Auto-Align Layers…	Alinea automàticament les capes…
+	Auto-Blend Layers…	Barreja automàtica de capes…
+	Define Brush Preset…	Definiu la configuració predeterminada del pinzell…
+	Define Pattern…	Definiu el patró…
+	Define Custom Shape…	Definiu la forma personalitzada…
+	Purge	Purga
+	Clipboard	Porta-retalls
+	Histories	Històries
+	Video Cache	Memòria cau de vídeo
+	All	Tot
+	Presets	Presets
+	Preset Manager…	Gestor de presets…
+	Migrate Presets	Migrar presets
+	Export/Import Presets…	Exporta/Importa valors predefinits…
+	Color Settings…	Configuració de color…
+	Assign Profile…	Assigna el perfil…
+	Convert to Profile…	Converteix a perfil…
+	Keyboard Shortcuts…	Dreceres del teclat…
+	Menus…	Menús…
+	Toolbar…	Barra d'eines…
+	Preferences	Preferències
+	General…	General…
+	Interface…	Interfície…
+	Workspace…	Espai de treball…
+	Tools…	Eines…
+	History Log…	Registre d'historial…
+	File Handling…	Gestió de fitxers…
+	Export…	Exporta…
+	Performance…	Rendiment…
+	Scratch Disks…	Discs Scratch…
+	Cursors…	Cursors…
+	Transparency & Gamut…	Transparència i gamma…
+	Units & Rulers…	Unitats i regles…
+	Guides, Grid & Slices…	Guies, quadrícula i sectors…
+	Plug-ins…	Connectors…
+	Type…	Tipus…
+	Enhanced Controls…	Controls millorats…
+	Camera Raw…	Camera Raw…
+	Raw Defaults…	Valors predeterminats en brut…
+	Integrations…	Integracions…
+	AI Integrations…	Integracions d'IA…
+	Install Plug-in…	Instal·la el connector…
+	Language Options	Opcions d'idioma
+	Settings…	Configuració…
+	Mode	Mode
+	Bitmap	Mapa de bits
+	Grayscale	Grayscale
+	Duotone	Duoton
+	Indexed Color	Color indexat
+	RGB Color	Color RGB
+	CMYK Color	Color CMYK
+	Lab Color	Color de laboratori
+	Multichannel	Multicanal
+	8 Bits/Channel	8 bits/canal
+	16 Bits/Channel	16 bits/canal
+	32 Bits/Channel	32 bits/canal
+	Color Table…	Taula de colors…
+	Bitmap…	Mapa de bits…
+	Duotone…	Duoton…
+	Indexed Color…	Color indexat…
+	Adjustments	Ajustaments
+	Brightness/Contrast…	Brillantor/Contrast…
+	Levels…	Nivells…
+	Curves…	Corbes…
+	Exposure…	Exposició…
+	Vibrance…	Vivor…
+	Hue/Saturation…	To/Saturació…
+	Color Balance…	Balanç de color…
+	Black & White…	Blanc i negre…
+	Photo Filter…	Filtre fotogràfic…
+	Channel Mixer…	Mesclador de canals…
+	Color Lookup…	Cerca de colors…
+	Invert	Invertir
+	Posterize…	Posteritzar…
+	Threshold…	Llindar…
+	Gradient Map…	Mapa de degradat…
+	Selective Color…	Color selectiu…
+	Shadows/Highlights…	Ombres/Llums…
+	HDR Toning…	Tonificació HDR…
+	Desaturate	Dessatura
+	Match Color…	Coincideix amb el color…
+	Replace Color…	Reemplaça color…
+	Equalize	Igualar
+	Auto Tone	To automàtic
+	Auto Contrast	Contrast automàtic
+	Auto Color	Color automàtic
+	Image Size…	Mida de la imatge…
+	Canvas Size…	Mida del llenç…
+	Image Rotation	Rotació de la imatge
+	Flip Canvas Horizontal	Flip Canvas horitzontal
+	Flip Canvas Vertical	Flip Canvas Vertical
+	Crop	Buida
+	Trim…	Retalla…
+	Reveal All	Mostra-ho tot
+	Duplicate…	Duplica…
+	Apply Image…	Aplica la imatge…
+	Calculations…	Càlculs…
+	Variables	Variables
+	Define…	Definiu…
+	Data Sets…	Conjunts de dades…
+	Apply Data Set…	Aplica el conjunt de dades…
+	Variable Data Sets…	Conjunts de dades variables…
+	Trap…	Trampa…
+	Analysis	Anàlisi
+	Set Measurement Scale…	Estableix l'escala de mesura…
+	Select Data Points…	Seleccioneu els punts de dades…
+	Record Measurements	Registre de mesures
+	Ruler Tool	Eina Regla
+	Count Tool	Eina de recompte
+	Place Scale Marker…	Marcador d'escala de lloc…
+	Custom…	Personalitzada…
+	New	Nou
+	Layer…	Capa…
+	Group…	Grup…
+	Group from Layers…	Agrupa des de capes…
+	Artboard…	Tauler d'art…
+	Artboard from Group…	Taula de treball del grup…
+	Artboard from Layers…	Taula de treball de Capes…
+	Layer via Copy	Capa a través d'una còpia
+	Layer via Cut	Capa mitjançant retall
+	Layer From Background…	Capa de fons…
+	Layer from Background…	Capa del fons…
+	New Shape Layer	Nova capa de forma
+	New Type Layer	Nova capa de tipus
+	New Fill Layer	Nova capa d'emplenament
+	New Adjustment Layer	Nova capa d'ajustament
+	New Layer Based Slice	Nova llesca basada en capes
+	New Smart Object via Copy	Nou objecte intel·ligent mitjançant la còpia
+	New Blank Video Layer	Nova capa de vídeo en blanc
+	New Video Layer from File…	Nova capa de vídeo del fitxer…
+	Duplicate Layer…	Duplica la capa…
+	Delete Layer	Eliminar capa
+	Delete	Eliminar
+	Rename Layer	Canvia el nom de la capa
+	Create Layer	Crea capa
+	Layer Style	Estil de la capa
+	Blending Options…	Opcions de fusió…
+	Bevel & Emboss…	Bisellat i relleu…
+	Inner Shadow…	Ombra interior…
+	Inner Glow…	Resplendor intern…
+	Satin…	Setinat…
+	Color Overlay…	Superposició de color…
+	Gradient Overlay…	Superposició de degradat…
+	Pattern Overlay…	Superposició de patró…
+	Outer Glow…	Resplendor exterior…
+	Drop Shadow…	Ombra paral·lela…
+	Copy Layer Style	Copia l'estil de capa
+	Paste Layer Style	Enganxa l'estil de capa
+	Clear Layer Style	Estil de capa clara
+	Global Light…	Llum global…
+	Hide All Effects	Amaga tots els efectes
+	Scale Effects…	Efectes d'escala…
+	Smart Filter	Filtre intel·ligent
+	Convert for Smart Filters	Converteix per a filtres intel·ligents
+	Clear Smart Filters	Neteja filtres intel·ligents
+	Disable Smart Filters	Inhabilita filtres intel·ligents
+	Delete Filter Mask	Eliminar màscara de filtre
+	Disable Filter Mask	Inhabilita màscara de filtre
+	Solid Color…	Color sòlid…
+	Gradient…	Degradat…
+	Pattern…	Patró…
+	Layer Mask	Màscara de capa
+	Vector Mask	Màscara vectorial
+	Reveal Selection	Revelar la selecció
+	Hide Selection	Amaga la selecció
+	Hide All	Amaga-ho tot
+	From Transparency	A partir de transparència
+	Delete Vector Mask	Eliminar màscara vectorial
+	Enable Layer Mask	Activa la màscara de capa
+	Disable Layer Mask	Desactiva la màscara de capa
+	Enable Vector Mask	Habilita màscara vectorial
+	Link Layer Mask	Màscara de capa d'enllaç
+	Unlink Layer Mask	Desenllaça la màscara de capa
+	Link Vector Mask	Enllaça màscara vectorial
+	Add Vector Mask	Afegir màscara vectorial
+	Vector Mask from Current Path	Màscara vectorial del camí actual
+	Create Clipping Mask	Crea una màscara de retall
+	Release Clipping Mask	Allibera la màscara de retall
+	Smart Objects	Objectes intel·ligents
+	Smart Object	Objecte intel·ligent
+	Convert to Smart Object	Convertir en objecte intel·ligent
+	Convert to Embedded	Converteix a incrustat
+	Convert to Linked…	Converteix a enllaçat…
+	Edit Contents	Edita el contingut
+	Replace Contents…	Substitueix el contingut…
+	Relink to File…	Torneu a enllaçar al fitxer…
+	Export Contents…	Exporta contingut…
+	Update Modified Content	Actualitzar el contingut modificat
+	Update All Modified Content	Actualitza tot el contingut modificat
+	Stack Mode	Mode d'empilament
+	Entropy	Entropia
+	Kurtosis	Kurtosi
+	Maximum	Màxim
+	Mean	Mitjançant
+	Median	Mitjana
+	Minimum	Mínim
+	Range	Tram
+	Skewness	Sesg
+	Standard Deviation	Desviació estàndard
+	Summation	Sumació
+	Variance	Variància
+	Video Layers	Capes de vídeo
+	Interpret Footage…	Interpreta el material…
+	Replace Footage…	Substitueix el metratge…
+	Reload Frame	Torna a carregar el marc
+	Show Altered Video	Mostra el vídeo alterat
+	Restore Frame	Restaura el marc
+	Restore All Frames	Restaura tots els marcs
+	Insert Blank Frame	Insereix un marc en blanc
+	Delete Frame	Suprimeix el marc
+	Duplicate Frame	Marc duplicat
+	Frame from Layers	Marc a partir de Capes
+	Video Frames to Layers…	Marcs de vídeo a capes…
+	Rasterize	Rasteritzar
+	Rasterize Type	Tipus de rasterització
+	Rasterize Type Layer	Rasteritza la capa de tipus
+	Rasterize Shape	Rasteritzar la forma
+	New Guide Layout…	Nou disseny de la guia…
+	New Guides From Shape	Noves guies de Shape
+	Lock Layers…	Bloqueja capes…
+	Link Layers	Enllaça capes
+	Select Linked Layers	Seleccioneu Capes enllaçades
+	Merge Layers	Fusiona les capes
+	Merge Down	Fusiona cap avall
+	Merge Visible	Fusiona els visibles
+	Flatten Image	Aplana la imatge
+	Matting	Estera
+	Color Decontaminate…	Descontaminar el color…
+	Remove Black Matte	Elimina Black Matte
+	Remove White Matte	Traieu el mat blanc
+	Defringe…	Delimitar…
+	Group Layers	Agrupa les capes
+	Ungroup Layers	Desagrupa les capes
+	Hide Layers	Amaga les capes
+	Arrange	Organitza
+	Bring to Front	Porta al davant
+	Bring Forward	Porta endavant
+	Send Backward	Mou cap al fons
+	Send to Back	Envia cap endarrere
+	Reverse	Inverteix
+	Combine Shapes	Combina formes
+	Unite Shapes	Uneix les formes
+	Subtract Front Shape	Resta la forma frontal
+	Intersect Shape Areas	Àrees de forma d'intersecció
+	Exclude Overlapping Shapes	Exclou les formes superposades
+	Merge Shape Components	Combina els components de la forma
+	Align	Alinear
+	Top Edges	Vores superiors
+	Vertical Centers	Centres verticals
+	Bottom Edges	Vores inferiors
+	Left Edges	Vores esquerres
+	Horizontal Centers	Centres horitzontals
+	Right Edges	Vores dretes
+	Distribute	Distribuir
+	Vertically	verticalment
+	Horizontally	horitzontalment
+	Layer Edges	Vores de la capa
+	Isolate Layers	Capes aïllades
+	Layer Content Options…	Opcions de contingut de la capa…
+	Fill Content	Omplir contingut
+	Deselect Layers	Desseleccioneu Capes
+	Find Layers	Cerca capes
+	Layer Comps	Composició de capa
+	Layers	Capes
+	All Layers	Totes les capes
+	Hidden Layers	Capes ocultes
+	Mask All Objects	Enmascarar tots els objectes
+	Subject	Assumpte
+	Sky	Cel
+	Panels	Panells
+	Character Panel	Panell de personatges
+	Paragraph Panel	Panell de paràgrafs
+	Character Styles Panel	Panell d'estils de caràcters
+	Paragraph Styles Panel	Panell d'estils de paràgraf
+	Glyphs Panel	Panell de glifos
+	Anti-Alias	Antialiasing
+	Sharp	Afilat
+	Crisp	Cruixent
+	Strong	Fort
+	Smooth	Suau
+	Windows LCD	LCD de Windows
+	Windows	Windows
+	Orientation	Orientació
+	Horizontal	Horitzontal
+	Vertical	Vertical
+	OpenType	OpenType
+	Standard Ligatures	Lligadures estàndard
+	Contextual Alternates	Alternatives contextuals
+	Discretionary Ligatures	Lligadures discrecionals
+	Swash	Swash
+	Oldstyle	Estil antic
+	Stylistic Alternates	Alternatius estilístics
+	Titling Alternates	Titulació Suplentes
+	Ornaments	Ornaments
+	Ordinals	Ordinals
+	Fractions	Fraccions
+	Create Work Path	Crear un camí de treball
+	Convert to Shape	Convertir en forma
+	Warp Text…	Deforma el text…
+	Convert to Point Text	Convertir en text de punt
+	Convert to Paragraph Text	Convertir en text de paràgraf
+	Default Features	Característiques per defecte
+	East Asian Features	Característiques d'Àsia Oriental
+	Middle Eastern Features	Característiques de l'Orient Mitjà
+	Middle Eastern & South Asian Composer	Compositor de l'Orient Mitjà i del Sud d'Àsia
+	Update All Text Layers	Actualitza totes les capes de text
+	Replace All Missing Fonts	Substitueix tots els tipus de lletra que falten
+	Resolve Missing Fonts…	Resol els tipus de lletra que falten…
+	Font Preview Size	Mida de previsualització del tipus de lletra
+	None	Cap
+	Small	Petit
+	Medium	Mitjà
+	Large	Gran
+	Extra Large	Extragran
+	Huge	Enorme
+	Load Default Type Styles	Carrega els estils de tipus predeterminats
+	Save Default Type Styles	Desa els estils de tipus predeterminats
+	Deselect	Deseleccionar
+	Reselect	Torna a seleccionar
+	Inverse	Inverteix
+	Inverse Selection	Selecció inversa
+	Similar	Similars
+	Color Range…	Rang de color…
+	Focus Area…	Àrea d'enfocament…
+	Select and Mask…	Selecciona i emmascara…
+	Modify	Modifica
+	Border…	Vora…
+	Smooth…	Suau…
+	Expand…	Expandeix…
+	Contract…	Redueix…
+	Feather…	Pluma…
+	Grow	Créixer
+	Transform Selection	Transformar la selecció
+	Edit in Quick Mask Mode	Edita en el mode de màscara ràpida
+	Load Selection…	Carrega la selecció…
+	Save Selection…	Desa la selecció…
+	Match All	Coincideix amb tots
+	Last Filter	Últim filtre
+	Filter Gallery…	Galeria de filtres…
+	Adaptive Wide Angle…	Gran angular adaptatiu…
+	Camera Raw Filter…	Filtre Raw de la càmera…
+	Liquify…	Liqua…
+	Vanishing Point…	Punt de fuga…
+	Blur	Desenfoca
+	Blur Gallery	Galeria Blur
+	Field Blur…	Desenfocament de camp…
+	Iris Blur…	Iris Blur…
+	Tilt-Shift…	Inclinació-Maj…
+	Path Blur…	Desenfocament del camí…
+	Spin Blur…	Girar Blur…
+	Blur More	Difumina més
+	Box Blur…	Control de difuminat…
+	Gaussian Blur…	Difuminat gaussià…
+	Lens Blur…	Difuminat de lent…
+	Motion Blur…	Difumina mode moviment…
+	Radial Blur…	Difuminat radial…
+	Shape Blur…	Desenfocament de forma…
+	Smart Blur…	Desenfocament intel·ligent…
+	Surface Blur…	Difuminat de superfície…
+	Average	Promig
+	Displace…	Desplaça…
+	Pinch…	Pessiga…
+	Polar Coordinates…	Coordenades polars…
+	Ripple…	Onades del mar…
+	Shear…	Inclina…
+	Spherize…	Esfèric…
+	Twirl…	Regira…
+	Wave…	Onada…
+	ZigZag…	ZigZag…
+	Noise	Soroll
+	Add Noise…	Afegeix soroll…
+	Despeckle	Elimina els pics
+	Dust & Scratches…	Pols i ratllades…
+	Median…	Mitjana…
+	Reduce Noise…	Reducció del soroll…
+	Pixelate	Pixela
+	Color Halftone…	Mig to de color…
+	Crystallize…	Cristal·litza…
+	Facet	Faceta
+	Fragment	Fragment
+	Mezzotint…	Manera negra…
+	Mosaic…	Mosàic…
+	Pointillize…	Puntilitzar…
+	Render	Renderitza
+	Clouds	Núvols
+	Difference Clouds	Diferencia de núvols
+	Fibers…	Fibres…
+	Flame…	Flama…
+	Lens Flare…	Llum enlluernador…
+	Lighting Effects…	Efectes d'il·luminació…
+	Picture Frame…	Marc d'imatge…
+	Tree…	Arbre…
+	Sharpen	Realça la vora
+	Sharpen Edges	Ressalta les vores
+	Sharpen More	Ressalta més
+	Smart Sharpen…	Realçat intel·ligent…
+	Unsharp Mask…	Emmascara les parts borroses…
+	High Pass…	Filtre passaalt…
+	Stylize	Estilitzar
+	Diffuse…	Difusió…
+	Emboss…	Esculpeix…
+	Extrude…	Extrusió…
+	Find Edges	Detecta els contorns
+	Oil Paint…	Pintura a l’oli…
+	Solarize	Solaritza
+	Tiles…	Rajoles…
+	Trace Contour…	Traça el contorn…
+	Wind…	Vent…
+	Video	Vídeo
+	De-Interlace…	Desentrellaçar…
+	NTSC Colors	Colors NTSC
+	Other	Altres
+	Maximum…	Màxim…
+	Minimum…	Mínim…
+	Offset…	Desplaçament…
+	Plug-ins	Connectors
+	Proof Setup	Configuració de la prova
+	Proof Colors	Colors de prova
+	Gamut Warning	Avís de gamma
+	Working CMYK	CMYK funcionant
+	Working Cyan Plate	Placa cian de treball
+	Working Magenta Plate	Placa magenta de treball
+	Working Yellow Plate	Placa groga de treball
+	Working Black Plate	Placa Negra Funcionant
+	Working CMY Plate	Placa CMY de treball
+	Legacy Macintosh RGB	Llegat Macintosh RGB
+	Internet Standard RGB	Internet estàndard RGB
+	Monitor RGB	Monitor RGB
+	Color Blindness — Protanopia-type	Daltonisme: tipus protanopia
+	Color Blindness — Deuteranopia-type	Daltonisme: tipus deuteranopia
+	Zoom In	Ampliar
+	Zoom Out	Reduir
+	Fit on Screen	Fit a la pantalla
+	Fit Layer(s) on Screen	Ajusta capes a la pantalla
+	Fit Artboard on Screen	Ajusta la taula de treball a la pantalla
+	100%	100%
+	200%	200%
+	Print Size	Mida d'impressió
+	Pixel Aspect Ratio	Relació d'aspecte de píxels
+	Pixel Aspect Ratio Correction	Correcció de la relació d'aspecte de píxels
+	Custom Pixel Aspect Ratio…	Relació d'aspecte de píxels personalitzada…
+	Square	Quadrat
+	D1/DV NTSC (0.91)	D1/DV NTSC (0,91)
+	D1/DV NTSC Widescreen (1.21)	Pantalla panoràmica D1/DV NTSC (1.21)
+	D1/DV PAL (1.09)	D1/DV PAL (1,09)
+	D1/DV PAL Widescreen (1.46)	Pantalla panoràmica D1/DV PAL (1,46)
+	Anamorphic 2:1 (2)	Anamòrfic 2:1 (2)
+	HDV 1080/DVCPRO HD 720 (1.33)	HDV 1080/DVCPRO HD 720 (1,33)
+	DVCPRO HD 1080/HDV 1080 (1.5)	DVCPRO HD 1080/HDV 1080 (1,5)
+	32-bit Preview Options…	Opcions de vista prèvia de 32 bits…
+	Screen Mode	Mode de pantalla
+	Standard Screen Mode	Mode de pantalla estàndard
+	Full Screen Mode With Menu Bar	Mode de pantalla completa amb barra de menús
+	Full Screen Mode	Mode de pantalla completa
+	Cycle Screen Mode	Cicle el mode de pantalla
+	Show	Mostrar
+	Extras	Extres
+	Selection Edges	Vores de selecció
+	Target Path	Camí objectiu
+	Current Path	Camí actual
+	Grid	Quadrícula
+	Guides	Guies
+	Canvas Guides	Guies de tela
+	Artboard Guides	Guies de taules de treball
+	Count	Conta
+	Smart Guides	Guies intel·ligents
+	Slices	Sectors
+	Notes	Notes
+	Pixel Grid	Quadrícula de píxels
+	Pixel Art	Pixel Art
+	Pixel Art Preview	Vista prèvia de Pixel Art
+	Pattern Preview	Vista prèvia del patró
+	Brush Preview	Vista prèvia del pinzell
+	Mesh	Malla
+	Edit Pins	Edita els pins
+	Document Bounds	Límits del document
+	Show Extras Options…	Mostra les opcions addicionals…
+	Rulers	Regles
+	Snap	Ajusta
+	Snap To	Ajusta a
+	Lock Guides	Guies de bloqueig
+	Clear Guides	Neteja guies
+	Clear Selected Artboard Guides	Esborra les guies de taules de treball seleccionades
+	Clear Canvas Guides	Neteja les guies del llenç
+	New Guide…	Nova guia…
+	Lock Slices	Talls de bloqueig
+	Clear Slices	llesques clares
+	Match Zoom	Coincideix amb el zoom
+	Match Location	Localització de coincidència
+	Match Rotation	Rotació del partit
+	Cascade	Cascada
+	Tile	Mosaic
+	Tile All Horizontally	Enrajola tot horitzontalment
+	Tile All Vertically	Enrajola tot verticalment
+	2-up Horizontal	2-up horitzontal
+	2-up Vertical	2-up Vertical
+	3-up Horizontal	3-up horitzontal
+	3-up Stacked	3-up apilat
+	3-up Vertical	3-up Vertical
+	4-up	4 amunt
+	6-up	6 amunt
+	Consolidate All to Tabs	Consolideu-ho tot a pestanyes
+	Float in Window	Flota a la finestra
+	Float All in Windows	Flota tot a Windows
+	New Window for Document	Nova finestra per al document
+	Workspace	Espai de treball
+	Essentials	Essencials
+	Graphic and Web	Gràfic i Web
+	Painting	Pintura
+	Photography	Fotografia
+	New Workspace…	Nou espai de treball…
+	Delete Workspace…	Suprimeix l'espai de treball…
+	Reset Workspace	Restableix l'espai de treball
+	Lock Workspace	Bloquejar l'espai de treball
+	Theme	Tema
+	Pro Theme	Tema Pro
+	Pro Medium Gray Theme	Tema Pro Gris mitjà
+	Studio Theme	Tema d'estudi
+	Studio Light Theme	Tema de llum d'estudi
+	Classic Theme	Tema clàssic
+	Next Theme	Següent Tema
+	Midnight	Mitjanit
+	Anthracite	Antracita
+	Slate	Pissarra
+	Pearl	Perla
+	Aubergine	albergínia
+	Ocean	Oceà
+	Actions	Accions
+	Brush Settings	Configuració del pinzell
+	Brushes	Pinzells
+	Channels	Canals
+	Character	Caràcters
+	Character Styles	Estils de caràcters
+	Clone Source	Font de clonació
+	Color	Color
+	Glyphs	Glifs
+	Gradients	Gradients
+	Histogram	Histograma
+	History	Historial
+	Info	Informació
+	Measurement Log	Registre de mesures
+	Modifier Keys	Tecles modificadores
+	Navigator	Navegador
+	Options	Opcions
+	Paragraph	Paràgraf
+	Paragraph Styles	Estils de paràgraf
+	Paths	Camí
+	Patterns	Patrons
+	Properties	Propietats
+	Shapes	Formes
+	Styles	Estils
+	Swatches	Mostres
+	Timeline	Cronologia
+	Tool Presets	Predefinits de l'eina
+	Tools	Eines
+	About PhotoSuite	Sobre PhotoSuite
+	Website	Lloc web
+	Report an Issue…	Informa d'un problema…
+	WIA Support…	Suport WIA…
+	Apply	Aplica
+	HSB/HSL	HSB/HSL
+	Invert…	Invertir…
+	Load Files into Stack…	Carregueu fitxers a la pila…
+	Motion	Moviment
+	Notes…	Notes…
+	Other…	Altres…
+	Remove Warp Split	Elimina Warp Split
+	Shape	Forma
+	Split Warp Crosswise	Split Warp transversal
+	Split Warp Horizontally	Split Warp horitzontalment
+	Split Warp Vertically	Dividir Warp verticalment
+	Statistics…	Estadístiques…
+@plural	{n} item|{n} items	{n} element|{n} articles
+	Auto	Automàtic
+	(print to the printer)	(imprimir a la impressora)
+	+ Add variable	+ Afegeix variable
+	30 frames @ 30 fps	30 fotogrames @ 30 fps
+	3D LUT File	Fitxer LUT 3D
+	Absolute	Absolut
+	Absolute Colorimetric	Colorimètric absolut
+	Action	Acció
+	Adaptive	Adaptatiu
+	Adaptive Wide Angle isn't open	El gran angular adaptatiu no està obert
+	Add	Afegeix
+	Add Layer Mask	Afegeix una màscara de capa
+	Add Stop	Afegeix Stop
+	Add a layer style	Afegiu un estil de capa
+	Add a mask  (from the selection; {key} inverts)	Afegeix una màscara (de la selecció; {key} inverteix)
+	Add an adjustment	Afegeix un ajust
+	Add disk	Afegeix disc
+	Add space after paragraph	Afegeix espai després del paràgraf
+	Add space before paragraph	Afegiu espai abans del paràgraf
+	Add to Sample	Afegeix a la mostra
+	Add to selection  ({key})	Afegeix a la selecció ({key})
+	Adjust for Zoom	Ajusta el zoom
+	Adjustment visible	Ajust visible
+	Adobe RGB (1998) compatible	Compatible amb Adobe RGB (1998)
+	Align and Distribute	Alinear i distribuir
+	Align and distribute	Alinear i distribuir
+	Align horizontal centers	Alinear els centres horitzontals
+	Align left edges	Alinea les vores a l'esquerra
+	Align right edges	Alinea les vores a la dreta
+	Aligned	Alineat
+	All Caps	Tot en majúscules
+	All Slices	Totes les rodanxes
+	All User Slices	Totes les parts d'usuari
+	All shortcuts reset to Photoshop defaults.	Totes les dreceres es restableixen als valors predeterminats de Photoshop
+	Alt	Alt
+	Always use pressure for opacity	Feu servir sempre pressió per a l'opacitat
+	Always use pressure for size	Feu servir sempre pressió per a la mida
+	Amount	Quantitat
+	Anchor:	Àncora:
+	Angle	Angle
+	Angle Gradient	Gradient d'angle
+	Angle Jitter	Variació d'angle
+	Answer the unsaved-changes prompt first	Respon primer el missatge de canvis no desats
+	Anti-alias	Antialiasing
+	Appearance	Aparença
+	Appearance (Layer Style)	Aparença (estil de capa)
+	Apply Layer Mask	Aplica la màscara de capa
+	Apply Per Tip	Aplica per consell
+	Apply next selected layer comp	Aplica la següent composició de la capa seleccionada
+	Apply previous selected layer comp	Aplica la composició de la capa seleccionada anteriorment
+	Artboard	Taula d'art
+	Artboard Background Color	Color de fons de la taula de treball
+	Assign working space	Assignar espai de treball
+	Author:	Autor:
+	Auto Hide	Ocultació automàtica
+	Auto-Select:	Selecció automàtica:
+	Automatically level near-horizontal line segments	Anivella automàticament els segments de línia gairebé horitzontals
+	Automatically straighten and level	Redreçar i nivelar automàticament
+	Automatically straighten near-vertical line segments	Redreça automàticament els segments de línia gairebé verticals
+	Background	Fons
+	Background Color	Color de fons
+	Background Contents	Contingut del fons
+	Balance	Equilibri
+	Baseline	Línia de base
+	Baseline shift	Canvi de la línea base
+	Basic	Bàsica
+	Before (Y)	Abans (Y)
+	Begin recording	Comenceu a gravar
+	Bend:	Doblar:
+	Bicubic	Bicúbic
+	Bicubic (smooth gradients)	Bicúbic (gradients suaus)
+	Bilinear	Bilinear
+	Black	Negre
+	Black & White	Blanc i negre
+	Black Point Compensation	Compensació del punt negre
+	Black, White	Negre, Blanc
+	Blacks	Els negres
+	Blending	Barreja
+	Blending Options	Opcions de fusió
+	Blue	Blau
+	Blue, Red, Yellow	Blau, Vermell, Groc
+	Both	Tots dos
+	Both Axes	Els dos eixos
+	Bottom	Inferior
+	Brightness	Brillantor
+	Brightness Jitter	Variació de brillantor
+	Brightness/Contrast	Brillantor/Contrast
+	Bring the selected pin forward	Avança el pin seleccionat
+	Brush Preset picker	Selector de preajustos de pinzell
+	Brush Reconstruct Options	Opcions de reconstrucció del pinzell
+	Brush Tool Options	Opcions de l'eina pinzell
+	Cache Level:	Nivell de memòria cau:
+	Camera Raw isn't open	Camera Raw no està obert
+	Cancel	Cancel·la
+	Cancel (Esc)	Cancel·la (Esc)
+	Cancel any current edits (Esc)	Cancel·la qualsevol edició actual (Esc)
+	Cancel current crop operation  (Esc)	Cancel·la l'operació de retall actual (Esc)
+	Cancel transform (Esc)	Cancel·la transformació (Esc)
+	Cancel warp (Esc)	Cancel·la deformació (Esc)
+	Canvas	Llenç
+	Canvas extension color:	Color de l'extensió del llenç:
+	Capture	Captura
+	Capture the visibility, position and style of every layer with + below, then switch between versions.	Captura la visibilitat, la posició i l'estil de cada capa amb + a sota i després canvia entre les versions
+	Catch-up on Stroke End	Posa al dia al final del traç
+	Center	Centre
+	Center Crop Marks	Marques de tall central
+	Center text	Text central
+	Change	Canviar
+	Change All	Canvia tot
+	Change Screen Mode  (F)	Canvia el mode de pantalla (F)
+	Change To:	Canvia a:
+	Channel Mixer	Mesclador de canals
+	Channel:	Canal:
+	Check All Layers	Comproveu totes les capes
+	Check Spelling	Revisa l'ortografia
+	Clarity	Claredat
+	Clear All	Esborra-ho tot
+	Clear Override	Esborra l'anul·lació
+	Clear Samples	Mostres clares
+	Click sets foreground · right-click sets background	Feu clic a estableix el primer pla · feu clic amb el botó dret a estableix el fons
+	Click the first point or press {key} to close · Esc cancels	Feu clic al primer punt o premeu {key} per tancar · Esc cancel·la
+	Click to add a point · drag off or {key}-click or Delete to remove	Feu clic per afegir un punt · arrossegueu o feu clic amb {key} o Suprimeix per eliminar-lo
+	Click to apply, {key}-click to clear overrides, double-click for Style Options	Feu clic per aplicar, feu clic amb {key} per esborrar les substitucions, feu doble clic per a Opcions d'estil
+	Click to edit the gradient	Feu clic per editar el degradat
+	Click to restore the current colour	Feu clic per restaurar el color actual
+	Click to zoom in  ·  {key}-click to zoom out  ·  drag right/left to zoom in/out	Feu clic per ampliar · {key}-clic per allunyar la imatge · arrossegueu cap a la dreta/esquerra per apropar/reduir la imatge
+	Click with the Note tool to add a note.	Feu clic amb l'eina Nota per afegir una nota
+	Click: corner · Drag: smooth · Click first point: close · {key} finish · Esc cancel	Clic: cantonada · Arrossegament: suau · Clic primer punt: tancar · {key} acabar · Esc cancel·lar
+	Clip to layer below	Retalla a la capa de sota
+	Clipped	Retallat
+	Close Style Options	Tanca les opcions d'estil
+	Cmd	Cmd
+	Coated CMYK	CMYK recobert
+	Color & Swatches	Color i mostres
+	Color Balance	Balanç de color
+	Color Detail	Detall de color
+	Color Grading	Classificació de colors
+	Color Lookup	Cerca de colors
+	Color Management	Gestió del color
+	Color Mixer	Mesclador de colors
+	Color Mode	Mode de color
+	Color Priority	Prioritat del color
+	Color Range preview	Vista prèvia de la gamma de colors
+	Color:	Color:
+	Colorize	Acoloreix
+	Colors	Colors
+	Commit Perspective Warp ({key})	Commit Perspective Warp ({key})
+	Commit Puppet Warp ({key})	Commit Puppet Warp ({key})
+	Commit any current edits ({key})	Confirmeu les edicions actuals ({key})
+	Commit current crop operation  ({key})	Confirmeu l'operació de retall actual ({key})
+	Commit transform ({key})	Transformació de confirmació ({key})
+	Commit warp ({key})	Commit warp ({key})
+	Constant	Constant
+	Constrain proportions	Restringir les proporcions
+	Contact Sheet II	Full de contacte II
+	Content-Aware	Conscient del contingut
+	Contiguous	Contigu
+	Contrast	Contrast
+	Control:	Control:
+	Convert document's colors to the working space	Converteix els colors del document a l'espai de treball
+	Convert to sRGB	Converteix a sRGB
+	Copies	Còpies
+	Copper	coure
+	Copyright	Copyright
+	Copyright and Contact Info	Copyright i informació de contacte
+	Corner Crop Marks	Marques de tall de cantonada
+	Corner radius	Radi de cantonada
+	Correction	Correcció
+	Count Jitter	Variació del conta
+	Create	Crea
+	Create Droplet	Crea una gota
+	Create Texture	Crea textura
+	Create Video Timeline	Crea una línia de temps de vídeo
+	Create a new count group	Creeu un grup de recompte nou
+	Create a new document or open an existing file.	Creeu un document nou o obriu un fitxer existent
+	Create a new group	Crea un grup nou
+	Create a new layer	Creeu una nova capa
+	Create new action	Crea una acció nova
+	Create new channel	Crea un canal nou
+	Create new document from current state	Crea un document nou des de l'estat actual
+	Create new fill or adjustment layer	Creeu una nova capa de farciment o ajust
+	Create new gradient	Crea un degradat nou
+	Create new group	Crea un grup nou
+	Create new layer comp	Crea una nova capa comp
+	Create new pattern from the selection	Creeu un patró nou a partir de la selecció
+	Create new shape from the current path	Crea una forma nova a partir del camí actual
+	Create new snapshot	Crea una nova instantània
+	Create new style (from the selected type)	Crea un estil nou (a partir del tipus seleccionat)
+	Create new style from the selected layer	Creeu un estil nou a partir de la capa seleccionada
+	Create new tool preset	Crea una nova eina predeterminada
+	Crop Factor	Factor de cultiu
+	Ctrl	Ctrl
+	Current & Below	Actual i de sota
+	Current Layer	Capa actual
+	Current Size	Mida actual
+	Current Tool Only	Només eina actual
+	Curve	Corba
+	Curves	Corbes
+	Custom	Personalitzada
+	Custom Shapes	Formes personalitzades
+	Cyan	Cian
+	Cyan  ·  Red	Cian · Vermell
+	Darken	Enfosqueix
+	Darks	Les fosques
+	Data Sets	Conjunts de dades
+	Default	Per defecte
+	Default colours (D)	Colors per defecte (D)
+	Default printer	Impressora per defecte
+	Default restored.	S'ha restaurat el valor per defecte
+	Define	Definir
+	Define at least one variable first.	Definiu primer almenys una variable
+	Dehaze	Desembolica
+	Delete Cropped Pixels	Suprimeix els píxels retallats
+	Delete Group	Suprimeix el grup
+	Delete Layer Mask	Suprimeix la màscara de capa
+	Delete Layers	Suprimeix capes
+	Delete Shortcut	Suprimeix la drecera
+	Delete Timeline	Suprimeix la línia de temps
+	Delete Tool Preset	Suprimeix l'eina predefinit
+	Delete count group	Suprimeix el grup de recompte
+	Delete current channel	Suprimeix el canal actual
+	Delete current state	Suprimeix l'estat actual
+	Delete effect layer	Suprimeix la capa d'efectes
+	Delete layer	Eliminar capa
+	Delete layer comp	Suprimeix la capa comp
+	Delete note	Suprimeix la nota
+	Delete selected measurements	Suprimeix les mesures seleccionades
+	Delete style	Esborra l'estil
+	Delete tool preset	Suprimeix el valor predefinit d'eines
+	Density	Densitat
+	Density:	Densitat:
+	Depth	Profunditat
+	Depth Jitter	Jitter de profunditat
+	Description	Descripció
+	Deselect All	Desseleccioneu-ho tot
+	Detail	Detall
+	Diamond Gradient	Gradient de diamants
+	Difference	Diferència
+	Diffusion	Difusió
+	Discard the embedded profile (don't color manage)	Descarta el perfil incrustat (no gestiones el color)
+	Discontiguous	Discontinu
+	Feedback	Feedback
+	Dismiss	Descartar
+	Display P3	Pantalla P3
+	Display Text	Mostra el text
+	Dither	Dither
+	Divide…	Divideix…
+	Document	Document
+	Don't Save	No deseu
+	Done	Fet
+	Dots	Punts
+	Drag a rectangle around the object	Arrossegueu un rectangle al voltant de l'objecte
+	Drag on the image to add a constraint; Shift for horizontal/vertical; right-click to delete.	Arrossegueu la imatge per afegir una restricció; Canvi per horitzontal/vertical; feu clic amb el botó dret per suprimir
+	Drag to move the active shape's path or the Work Path	Arrossegueu per moure el camí de la forma activa o el camí de treball
+	Draw with the Pen tool (P) or make a work path from a selection.	Dibuixa amb l'eina Bolígraf (P) o fes un camí de treball a partir d'una selecció
+	Drop an image or PSD anywhere to open it.	Deixeu una imatge o un PSD a qualsevol lloc per obrir-lo
+	Duplicate Layers…	Duplicar capes…
+	Duplicate style	Estil duplicat
+	Edit Toolbar…	Edita la barra d'eines…
+	Edit in Quick Mask Mode  (Q)	Edita en el mode de màscara ràpida (Q)
+	Edit in Standard Mode  (Q)	Edita en mode estàndard (Q)
+	Effects	Efectes
+	Embed Color Profile	Insereix el perfil de color
+	Embedded Profile Mismatch	El perfil incrustat no coincideix
+	Enable airbrush-style build-up effects	Activa els efectes d'acumulació d'estil aerògraf
+	Enhance Edge	Millora Edge
+	Entire Font	Font sencera
+	Exact	Exacte
+	Expansion:	Expansió:
+	Export Presets	Exporta els valors predefinits
+	Export selected measurements (CSV)	Exporta les mesures seleccionades (CSV)
+	Exposure	Exposició
+	Exposure and Gamma	Exposició i gamma
+	Exposure:	Exposició:
+	Eyedropper	Comptagotes
+	Factor:	Factor:
+	Faux Bold	Faux Bold
+	Faux Italic	Falsa cursiva
+	Feather	Pluma
+	Fewer Points	Menys punts
+	File Settings	Configuració del fitxer
+	Fill	Omple
+	Fill:	Omplir:
+	Filter for adjustment layers	Filtre per a capes d'ajust
+	Filter for pixel layers	Filtre per a capes de píxels
+	Filter for shape layers	Filtre per a capes de forma
+	Filter for smart objects	Filtre per a objectes intel·ligents
+	Filter for type layers	Filtre per a capes de tipus
+	Filter:	Filtre:
+	Finger Painting	Pintura amb els dits
+	Fisheye	Ull de peix
+	Fit	Fit
+	Fit Screen	Pantalla d'ajust
+	Fit in View	Encaixa a la vista
+	Fixed	Arreglat
+	Fixed Ratio	Fixa relació
+	Fixed Size	Mida fixa
+	Flip	Flip
+	Flip X	Gira X
+	Flip X Jitter	Flip X Jitter
+	Flip Y	Gira Y
+	Flip Y Jitter	Flip Y Jitter
+	Flow	Flux
+	Flow Jitter	Flux Jitter
+	Focal Length	Distància focal
+	Font	Font
+	Font Size:	Mida de la lletra:
+	Font size	Mida de la lletra
+	Foreground	Primer pla
+	Foreground to Background	Primer pla a fons
+	Foreground/Background Jitter	Variació de primer pla/fons
+	Format	Format
+	Frame from Layers…	Marc des de les capes…
+	Free	Lliure
+	Full Spherical	Esfèric complet
+	Fuzziness:	Borrositat:
+	GPU	GPU
+	Gamma Correction	Correcció gamma
+	Gamma:	Gamma:
+	Global	Global
+	Glow Color	Color brillant
+	Gradient Map	Mapa de degradat
+	Grain	Gra
+	Gray	Gris
+	Gray Gamma 2.2	Gamma grisa 2.2
+	Green	Verd
+	Group	Grup
+	Hardness	Duresa
+	Heart	Cor
+	Height	Alçada
+	Height:	Alçada:
+	Hide Auto Slices	Amaga els talls automàtics
+	Hide Properties	Amaga les propietats
+	Highlight Compression	Ressaltar la compressió
+	Highlight Priority	Ressaltar la prioritat
+	Highlights	Ressaltats
+	Home	Casa
+	Horizontal scale	Escala horitzontal
+	Hue	To
+	Hue Jitter	Variació de to
+	Hue/Saturation	To/Saturació
+	Hyphenate	Guionar
+	Ignore	Ignorar
+	Ignore All	Ignora-ho tot
+	Image Size	Mida de la imatge
+	Import Brushes…	Importa els pinzells…
+	Import Photoshop brushes (.abr)	Importa els pinzells de Photoshop (.abr)
+	Import Presets	Importa els valors predefinits
+	Imported	Importat
+	Indent First	Primer sagnat
+	Indent Left	Sagnat a l'esquerra
+	Indent Right	Sagnat a la dreta
+	Indent first line	Sagnat a la primera línia
+	Indent left margin	Sagna el marge esquerre
+	Indent right margin	Sagna el marge dret
+	Input:	Entrada:
+	Inside	Dins
+	Interlaced	Entrellaçat
+	Interpolation:	Interpolació:
+	Intersect with selection  ({key})	Intersecció amb la selecció ({key})
+	Invert All	Inverteix-ho tot
+	Invert has no settings.	Invert no té cap configuració
+	Italic	Cursiva
+	Justify all	Justifiqueu-ho tot
+	Justify last centered	Justifica l'últim centrat
+	Justify last left	Justifica l'últim que queda
+	Justify last right	Justifica l'últim dret
+	Kerning	Kerning
+	Keyboard Shortcuts	Dreceres del teclat
+	Keyboard Shortcuts and Menus	Dreceres de teclat i menús
+	Kind	amable
+	Label Size	Mida de l'etiqueta
+	Labels	Etiquetes
+	Lanczos (sharp)	Lanczos (agut)
+	Landscape	Horitzontal
+	Last Document State	Estat de l'últim document
+	Layout	Disposició
+	Leading	Iniciar
+	Leading (set to the font size × auto-leading when Auto)	Interlig (establert a la mida de la lletra × interlineat automàtic quan és automàtic)
+	Leave as is (don't color manage)	Deixeu tal qual (no gestioneu el color)
+	Left	Esquerra
+	Left align text	Text alineat a l'esquerra
+	Length:	Longitud:
+	Level	Nivell
+	Levels	Nivells
+	Lighten	Aclareix
+	Lightness	Brillantor
+	Lights	Llums
+	Limits:	Límits:
+	Linear Gradient	Gradient lineal
+	Link layers	Enllaça capes
+	Link width and height	Amplada i alçada de l'enllaç
+	Liquify is not open	Liquify no està obert
+	Load	Carrega
+	Load 3D LUT…	Carrega 3D LUT…
+	Load Photoshop brushes (.abr)	Carrega els pinzells de Photoshop (.abr)
+	Load channel as selection	Carrega el canal com a selecció
+	Load…	Carrega…
+	Localized Color Clusters	Clústers de colors localitzats
+	Lock	Bloqueja
+	Lock all	Bloqueja-ho tot
+	Lock image pixels	Bloqueja els píxels de la imatge
+	Lock layer	Capa de bloqueig
+	Lock position	Posició de bloqueig
+	Lock transparent pixels	Bloqueja píxels transparents
+	Lock:	Bloqueig:
+	Logical Length:	Longitud lògica:
+	Logical Units:	Unitats lògiques:
+	Luminance	Lluminància
+	Luminance Detail	Detall de lluminància
+	Magenta	Magenta
+	Magenta  ·  Green	Magenta · Verd
+	Maintain aspect ratio	Mantenir la relació d'aspecte
+	Marker Size	Mida del marcador
+	Mask All	Mascara Tot
+	Mask Options	Opcions de màscara
+	Masking	Enmascarament
+	Master	Principal
+	Matte	Mat
+	Median:	Mediana:
+	Menus	Menús
+	Mesh Size	Mida de malla
+	Metadata	Metadades
+	Metrics	Mètriques
+	Midpoint	Punt mitjà
+	Midtones	Tons mitjans
+	Midtones from:	Tons mitjans de:
+	Midtones to:	Tons mitjans a:
+	Minimum Depth	Profunditat mínima
+	Minimum Diameter	Diàmetre mínim
+	Minimum Roundness	Rodoneïtat mínima
+	Mode:	Mode:
+	Monochrome	Monocrom
+	More Points	Més Punts
+	Move effect layer down	Mou la capa d'efecte cap avall
+	Move effect layer up	Mou la capa d'efecte cap amunt
+	Move to	Mou a
+	Name	Nom
+	Name:	Nom:
+	Nearest Neighbor	Veí més proper
+	Nearest Neighbor (hard edges)	Veí més proper (vores dures)
+	New Size	Talla nova
+	New document…	Nou document…
+	New effect layer	Nova capa d'efectes
+	New selection	Nova selecció
+	Next frame	Següent fotograma
+	Next note	Nota següent
+	No Color	Sense color
+	No Color Management	Sense gestió del color
+	No Dither	No Dither
+	No author	Cap autor
+	No character style	Sense estil de personatge
+	No document	Cap document
+	No matching commands	No hi ha ordres coincidents
+	No presets for the current tool.	No hi ha preajustos per a l'eina actual
+	No presets of this type.	No hi ha preajustos d'aquest tipus
+	No properties	Sense propietats
+	No tool presets.	Sense eines predefinits
+	Noise Reduction	Reducció de soroll
+	Normal	Normal
+	Not in Dictionary:	No al diccionari:
+	OK	OK
+	Offset	Desplaçament
+	Only Web Colors	Només Colors Web
+	Opacity	Opacitat
+	Opacity Jitter	Jitter d'opacitat
+	Opacity:	Opacitat:
+	Open a document to define variables.	Obriu un document per definir variables
+	Open a document to select a colour range.	Obriu un document per seleccionar una gamma de colors
+	Open a document to use the timeline.	Obriu un document per utilitzar la línia de temps
+	Optical	Òptic
+	Optimized	Optimitzat
+	Option-click to define a source point to clone from	Feu clic amb l'opció Opció per definir un punt d'origen des del qual es clonar
+	Original	Original
+	Output Channel:	Canal de sortida:
+	Output Levels:	Nivells de sortida:
+	Output:	Sortida:
+	Outside	Fora
+	Overlay Color	Color de superposició
+	Overlay Opacity	Opacitat de superposició
+	Overlay: Rule of Thirds	Superposició: regla dels terços
+	Override Pressure	Anul·lació de la pressió
+	Override Rotation	Anul·lar la rotació
+	Override Tilt	Anul·la la inclinació
+	PRESET DETAILS	Detalls de la predefinició
+	PSD	PSD
+	Paint Overlay	Superposició de pintura
+	Panel locations are saved in the workspace. Keyboard shortcuts, menus and toolbar are optional.	Les ubicacions dels panells es desen a l'espai de treball. Les dreceres del teclat, els menús i la barra d'eines són opcionals
+	Paper	Paper
+	Path	Camí
+	Pattern	Patró
+	Pattern Size	Mida del patró
+	Pause	Pausa
+	Percent	Percentatge
+	Perceptual	Perceptual
+	Perspective Warp is not active	Perspective Warp no està actiu
+	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Deformació de perspectiva: dibuixeu plans al llarg de la perspectiva de la imatge i, a continuació, canvieu a Deformació
+	Photo Filter	Filtre fotogràfic
+	PhotoSuite	PhotoSuite
+	PhotoSuite Manages Colors	PhotoSuite gestiona els colors
+	PhotoSuite — an open-source, native image editor written in Rust.	PhotoSuite: un editor d'imatges nadiu de codi obert escrit en Rust
+	Pin Depth:	Profunditat del pin:
+	Pixel Length:	Longitud de píxels:
+	Pixels/Centimeter	Píxels/centímetre
+	Pixels/Inch	Píxels/polzada
+	Pixels:	Píxels:
+	Play	Jugar
+	Play selection	Selecció de reproducció
+	Portrait	Vertical
+	Position	Posició
+	Position and Size	Posició i mida
+	Posterize	Posteritzar
+	Preserve Details	Preservar detalls
+	Preserve Luminosity	Conservar lluminositat
+	Preset	Preestablert
+	Preset Type	Tipus preestablert
+	Preset:	Preestablert:
+	Presets:	Presets:
+	Press keys…	Premeu les tecles…
+	Pressure	Pressió
+	Pressure for Opacity	Pressió per a l'opacitat
+	Pressure for Size	Pressió per a la mida
+	Prevent auto-nesting in and out of Artboards and Frames	Eviteu la nidificació automàtica dins i fora de les taules de treball i els marcs
+	Preview	Previsualització
+	Previous frame	Marc anterior
+	Previous note	Nota anterior
+	Print	Print
+	Printer	Impressora
+	Printer Manages Colors	La impressora gestiona els colors
+	Printer Setup	Configuració de la impressora
+	Printing Marks	Marques d'impressió
+	Progressive	Progressiu
+	Promote	Promocionar
+	Protect Detail	Protegir detall
+	Protect Foreground Color	Protegir el color de primer pla
+	Protect Tones	Protegeix els tons
+	Proximity Match	Partit de proximitat
+	Pulled String Mode	Mode de corda estirada
+	Puppet Warp is not active	Puppet Warp no està actiu
+	Purity	Puresa
+	Quality	Qualitat
+	Quick Actions	Accions ràpides
+	Quick Export As PNG	Exportació ràpida com a PNG
+	Radial Gradient	Gradient radial
+	Radius	Radi
+	Radius:	Radi:
+	Range:	Interval:
+	Rate	Taxa
+	Recently Used	Usat recentment
+	Reconstruct	Reconstrueix
+	Record ● a sequence of edits, then play ▶ it on any document.	Enregistreu ● una seqüència d'edicions i, a continuació, reproduïu-la ▶ en qualsevol document
+	Red	Vermell
+	Redefine style by current selection	Redefiniu l'estil per la selecció actual
+	Reflected Gradient	Gradient reflectit
+	Registration Marks	Marques de registre
+	Regular	Normal
+	Relative	Relatiu
+	Relative Colorimetric	Colorimètric relatiu
+	Remove	Eliminar
+	Remove All Pins	Elimina tots els pins
+	Remove Background	Elimina el fons
+	Remove Planes	Eliminar avions
+	Remove stop	Elimina la parada
+	Remove variable	Elimina variable
+	Rename	Canvia el nom
+	Rename Group…	Canvia el nom del grup…
+	Rename Layer…	Canvia el nom de la capa…
+	Rename Tool Preset…	Canvia el nom del valor predefinit de l'eina…
+	Rename…	Canvia el nom…
+	Resample	Remostreja
+	Reset All to Defaults	Restableix tot als valors predeterminats
+	Reset Section	Restableix la secció
+	Reset Transform	Restableix la transformació
+	Reset to defaults	Restableix els valors predeterminats
+	Resolution	Resolució
+	Resolution:	Resolució:
+	Restore All	Restaura-ho tot
+	Restore Defaults	Restaura els valors predeterminats
+	Restrictive (Web)	Restrictive (web)
+	Right	Dreta
+	Right align text	Alinea el text a la dreta
+	Rigid	Rígida
+	Rotate:	Girar:
+	Rotation	Rotació
+	Roughness	Rugositat
+	Roundness	Arrodoniment
+	Roundness Jitter	Variació d'arrodoniment
+	Rulers & Grids	Regles i quadrícules
+	Sample All Layers	Mostra totes les capes
+	Sample:	Mostra:
+	Sampling: Background Swatch	Mostra: mostra de fons
+	Sampling: Continuous	Mostreig: continu
+	Sampling: Once	Mostra: una vegada
+	Saturate	Satura
+	Saturation	Saturació
+	Saturation Jitter	Variació de saturació
+	Save HTML and Images	Desa HTML i imatges
+	Save as PDF	Desa com a PDF
+	Save selection as channel	Desa la selecció com a canal
+	Save…	Desar…
+	Scale to Fit Media	Escala per adaptar-se als mitjans
+	Scatter	Dispersió
+	Scratch disks	Discs de rascar
+	Search	Cerca
+	Search commands	Ordres de cerca
+	Search commands, tools and panels…	Cerca ordres, eines i panells…
+	Search fonts	Cerca fonts
+	Select All	Seleccioneu Tot
+	Select Subject	Seleccioneu Assumpte
+	Select a type layer or click into text to insert glyphs	Seleccioneu una capa de tipus o feu clic al text per inserir glifs
+	Select text to apply a character style	Seleccioneu text per aplicar un estil de caràcter
+	Select:	Seleccioneu:
+	Selections	Seleccions
+	Selective	Selectiu
+	Selective Color	Color selectiu
+	Send the selected pin backward	Envieu el pin seleccionat cap enrere
+	Set additional smoothing options	Estableix opcions de suavització addicionals
+	Set background color	Estableix el color de fons
+	Set foreground color	Estableix el color de primer pla
+	Set painting symmetry options	Estableix les opcions de simetria de la pintura
+	Set shape fill type	Estableix el tipus de farciment de forma
+	Set shape stroke type	Estableix el tipus de traç de la forma
+	Set the text color	Estableix el color del text
+	Shadows	Ombres
+	Shape:	Forma:
+	Sharpening	Afilat
+	Shift	Shift
+	Shortcut removed.	S'ha eliminat la drecera
+	Show All Menu Items	Mostra tots els elements del menú
+	Show Backdrop	Mostra el teló de fons
+	Show Guides	Mostra les guies
+	Show Mask	Mostra la màscara
+	Show Mesh	Mostra la malla
+	Show Overlay	Mostra la superposició
+	Show Transform Controls	Mostra els controls de transformació
+	Show or hide the Notes panel	Mostra o amaga el tauler Notes
+	Show:	Mostra:
+	Sides	Cares
+	Sides:	Laterals:
+	Size	Mida
+	Size Jitter	Variació de mida
+	Size:	Mida:
+	Slice Options…	Opcions delliçans…
+	Slices From Guides	Talls de guies
+	Slices are locked (View › Lock Slices)	Les rodanxes estan bloquejades (Visualitza › Bloqueja les rodanxes)
+	Small Caps	Petites majúscules
+	Smoothing	Allisant
+	Space After	Espai Després
+	Space Before	Espai abans
+	Spacing	Espaiat
+	Spell check complete.	Revisió ortogràfica completada
+	Split:	Divisió:
+	Star ratio	Relació d'estrelles
+	Stop playing/recording	Atura la reproducció/enregistrament
+	Straighten	Redreça
+	Straighten Layer	Redreçar la capa
+	Strength:	Força:
+	Strikethrough	Tallat
+	Stroke	Traç
+	Stroke Catch-up	Posa al dia de l'ictus
+	Stroke:	Traç:
+	Style	Estil
+	Style Options	Opcions d'estil
+	Style Options…	Opcions d'estil…
+	Style: Normal	Estil: Normal
+	Subtract from Sample	Restar de la mostra
+	Subtract from selection  ({key})	Resta de la selecció ({key})
+	Suggestions:	Suggeriments:
+	Swap colours (X)	Canvia els colors (X)
+	Swaps height and width	Canvia l'alçada i l'amplada
+	Switch between free transform and warp modes	Canvia entre els modes de transformació lliure i warp
+	Switch theme	Canvia el tema
+	Temperature	Temperatura
+	Tetrahedral	Tetraèdric
+	Text Position:	Posició del text:
+	Texture	Textura
+	Texture Each Tip	Textura cada punta
+	Threshold	Llindar
+	Threshold Level	Nivell llindar
+	Thumbnail size (smallest: list)	Mida de la miniatura (la més petita: llista)
+	Tilt X	Inclina X
+	Tilt Y	Inclina Y
+	Tint	Matís
+	Toggle count group visibility	Commuta la visibilitat del grup de recompte
+	Toggle text orientation	Canvia l'orientació del text
+	Tolerance	Tolerància
+	Tolerance:	Tolerància:
+	Tone:	To:
+	Toolbar	Barra d'eines
+	Top	Superior
+	Total:	Total:
+	Tracking	Seguiment
+	Tracking (1/1000 em)	Seguiment (1/1000 em)
+	Transparency	Transparència
+	Transparent	Transparent
+	Trilinear	Trilineal
+	Type Styles	Tipus d'estils
+	Type:	Tipus:
+	Underline	Subratlla
+	Untitled	Sense títol
+	Untitled-1	Sense títol-1
+	Update layer comp (visibility, position and appearance)	Actualitza la composició de la capa (visibilitat, posició i aparença)
+	Use Default	Utilitza el valor predeterminat
+	Use Legacy	Utilitzeu l’algorisme anterior
+	Use Measurement Scale	Utilitzeu l'escala de mesura
+	Use the embedded profile (instead of the working space)	Utilitzeu el perfil incrustat (en lloc de l'espai de treball)
+	Variables bind a layer's visibility, text or pixels to a named data slot.	Les variables uneixen la visibilitat, el text o els píxels d'una capa a una ranura de dades anomenada
+	Vertical scale	Escala vertical
+	Vibrance	Vivor
+	View Options	Veure les opcions
+	Vignetting	Vinyetatge
+	Violet, Orange	Violeta, Taronja
+	Visibility	Visibilitat
+	Visible	Visible
+	Warp:	Deformació:
+	Web Snap	Web Snap
+	Weight	Pes
+	Weight:	Pes:
+	White	Blanc
+	White Balance: As Shot	Balanç de blancs: com a fotografia
+	Whites	Blancs
+	Width	Amplada
+	Width:	Amplada:
+	Work Path	Camí de treball
+	Yellow	Groc
+	Yellow  ·  Blue	Groc · Blau
+	Zoom	Zoom
+	Zoom in	Ampliar
+	Zoom out	Reduir
+	command or shortcut	comanda o drecera
+	current	actual
+	image file path	ruta del fitxer d'imatge
+	modified	modificat
+	name	Nom
+	new	Nou
+	{name} options	opcions de {name}
+	↑↓ navigate   {key} run   esc close	↑↓ navega {key} executa esc tanca
+	Version {version}	Versió {version}
+	New Document	Nou document
+	Error	Error
+	Command	Comandament
+	Adjustment layers have nothing to transform	Les capes d'ajust no tenen res a transformar
+	Altitude	Altitud
+	Android 1080p	Android 1080p
+	Apple Watch 45mm	Apple Watch de 45 mm
+	Aqua	Aqua
+	Art & Illustration	Art i il·lustració
+	Background Eraser Tool	Eina d'esborrar de fons
+	Bevel & Emboss	Bisell i relleu
+	Blend Mode	Mode de fusió
+	Blues	Els blaus
+	Blur Tool	Eina desenfoca
+	Bold	Atrevit
+	Brush	Pinzell
+	Brush Pose	Pose del pinzell
+	Brush Tip Shape	Forma de punta del pinzell
+	Brush Tool	Eina pinzell
+	Build-up	Acumulació
+	Burn Tool	Eina crema
+	Centimeters	Centímetres
+	Choke	Sufocar
+	Classic	Clàssic
+	Click to add text	Feu clic per afegir text
+	Click to fill similar colours	Feu clic per omplir colors similars
+	Clone Stamp Tool	Eina de segell de clonació
+	Color Burn	Crema de color
+	Color Dodge	Aclareix de color
+	Color Dynamics	Dinàmica de color
+	Color Overlay	Superposició de color
+	Comic Book	Còmic
+	Conform	Conformar
+	Content-Aware Fill needs a selection on a pixel layer	L'emplenament conscient del contingut necessita una selecció en una capa de píxels
+	Could not transform: the layer is empty	No s'ha pogut transformar: la capa està buida
+	Could not use Perspective Warp: the layer is empty	No s'ha pogut utilitzar Perspective Warp: la capa està buida
+	Could not use Puppet Warp: no opaque pixels	No s'ha pogut utilitzar Puppet Warp: no hi ha píxels opacs
+	Could not use Puppet Warp: the layer is empty	No s'ha pogut utilitzar Puppet Warp: la capa està buida
+	Crop Tool	Eina escapça
+	Crosswise	En creu
+	Current Tool	Eina actual
+	Custom Shape Tool	Eina de forma personalitzada
+	Cyans	Cians
+	Default Photoshop Size	Mida per defecte de Photoshop
+	Delete Workspace	Suprimeix l'espai de treball
+	Diamond	Diamant
+	Dimensions:	Dimensions:
+	Direction	Direcció
+	Distance	Distància
+	Document Dimensions	Dimensions del document
+	Document Profile	Perfil del document
+	Document Sizes	Mides dels documents
+	Dodge Tool	Eina esvaeix
+	Down	Avall
+	Drag to draw a gradient	Arrossegueu per dibuixar un degradat
+	Drag to move the active layer	Arrossegueu per moure la capa activa
+	Drag to pan  ·  hold Space with any tool	Arrossegueu per panoràmica · manteniu premut Espai amb qualsevol eina
+	Drop Shadow	Ombra paral·lela
+	Dual Brush	Raspall doble
+	Edge	Vora
+	Efficiency	Eficiència
+	Efficiency: 100%	Eficiència: 100%
+	Ellipse Tool	Eina d'el·lipse
+	Elliptical Marquee Tool	Eina de marquesina el·líptica
+	Emboss	Esculpeix
+	Eraser	Goma d'esborrar
+	Eraser Tool	Eina borrador
+	ExtraBold	ExtraBold
+	ExtraLight	ExtraLight
+	Eyedropper Tool	Eina comptagotes
+	Fade	Esvaeix
+	Fill Opacity	Omplir l'opacitat
+	Film & Video	Pel·lícula i vídeo
+	From	Des de
+	General	General
+	GitHub	GitHub
+	Gradient Overlay	Superposició de degradat
+	Gradient Tool	Degradat
+	Greens	Verds
+	Hand Tool	Eina mà
+	Hard	Dur
+	Hard Mix	Mescla màxima
+	Healing Brush Tool	Eina pinzell corrector
+	Highlights from:	Destacats de:
+	History Brush Tool	Eina pinzell d'història
+	Horizontal Type Tool	Eina de tipus horitzontal
+	Image Size:	Mida de la imatge:
+	Inches	Polzades
+	Indexed	Indexat
+	Initial Direction	Direcció Inicial
+	Inner Bevel	Bisell intern
+	Inner Glow	Resplendor intern
+	Inner Shadow	Ombra interior
+	Lab	Lab
+	Landscape, 10 x 8	Paisatge, 10 x 8
+	Landscape, 6 x 4	Paisatge, 6 x 4
+	Landscape, 7 x 5	Paisatge, 7 x 5
+	Lasso	Lazo
+	Lasso Tool	Eina del lazo
+	Layer Count	Recompte de capes
+	Layer Knocks Out Drop Shadow	La capa elimina l'ombra paralela
+	Legal	Legal
+	Letter	Carta
+	Light	Clar
+	Line Tool	Eina de línia
+	Linear	Lineal
+	Linear Burn	Crema lineal
+	Linear Height	Alçada lineal
+	Link with Layer	Enllaç amb la capa
+	Lorem Ipsum	Lorem Ipsum
+	Magentas	Magenta
+	Magic Eraser Tool	Eina d'esborrar màgic
+	Magic Wand Tool	Eina de vareta màgica
+	Marquee	Carpa
+	Mean:	Mitjana:
+	Measurement Scale	Escala de mesura
+	Measurement Scale Marker	Marcador d'escala de mesura
+	Millimeters	Mil·límetres
+	Mobile	Mòbil
+	Move Tool	Eina mou
+	Multiply	Multiplica
+	My Brushes	Els meus pinzells
+	Neutrals	Neutres
+	New Workspace	Nou espai de treball
+	Note Tool	Eina de notes
+	Object Selection Tool	Eina de selecció d'objectes
+	Off	Apagat
+	Open	Obrir
+	Orange	Taronja
+	Original Ratio	Relació original
+	Out Of Gamut	Fora de Gamut
+	Outer Bevel	Bisell extern
+	Outer Glow	Resplendor exterior
+	Overlay	Superposa
+	Paint Bucket Tool	Eina cubell de pintura
+	Paints from the document's opening state	Pintures des de l'estat d'obertura del document
+	Path Selection Tool	Eina de selecció de camins
+	Pattern Overlay	Superposició de patró
+	Pen Pressure	Pressió del bolígraf
+	Pen Tilt	Inclinació del llapis
+	Pen Tool	Eina de ploma
+	Photo	Foto
+	PhotoSuite website	Lloc web de PhotoSuite
+	Picas	Picas
+	Pillow Emboss	Relleu tipus coixí
+	Pixel Replacement	Substitució de píxels
+	Pixels	Píxels
+	Points	Punts
+	Polygon Tool	Eina de polígon
+	Polygonal Lasso Tool	Eina de lazo poligonal
+	Portrait, 4 x 6	Retrat, 4 x 6
+	Portrait, 5 x 7	Retrat, 5 x 7
+	PostScript (72 points/inch)	PostScript (72 punts/polzada)
+	Postcard	Postal
+	Poster	Cartell
+	Pro (Dark)	Pro (fosc)
+	Pro (Medium Gray)	Pro (gris mitjà)
+	Protect Texture	Protegeix la textura
+	Purple	Lila
+	Quick Mask	Màscara ràpida
+	Quick Selection Tool	Eina de selecció ràpida
+	Radial	Radial
+	Rasterize Layer	Rasteritza la capa
+	Ratio	Ratio
+	Recent	Recents
+	Rectangle Tool	Eina rectangle
+	Rectangular Marquee Tool	Eina de marquesina rectangular
+	Reds	Vermells
+	Reflected	Reflexa
+	Sample: foreground colour	Mostra: color de primer pla
+	Sampled Colors	Colors mostrats
+	Satin	Setinat
+	Save Pixel Aspect Ratio	Desa la relació d'aspecte de píxels
+	Scattering	Dispersió
+	Scratch Sizes	Mides Scratch
+	Select Data Points	Seleccioneu Punts de dades
+	Selection	Selecció
+	SemiBold	SemiNegreta
+	Shadows up to:	Ombres fins a:
+	Shape Dynamics	Dinàmica de formes
+	Sharpen Tool	Perfila
+	Show Extras Options	Mostra les opcions addicionals
+	Slice Select Tool	Eina de Selecció de Sectors
+	Slice Tool	Eina de Sectors
+	Smart Filters	Filtres intel·ligents
+	Smudge Tool	Eina difumina
+	Soft	Suau
+	Soften	Suavitza
+	Source	Font
+	Source: set	Font: conjunt
+	Sponge Tool	Esponja
+	Spot Healing Brush Tool	Eina pinzell corrector puntual
+	Spread	Escampa
+	Square, 12 x 12	Quadrat, 12 x 12
+	Square, 5 x 5	Quadrat, 5 x 5
+	Std Dev:	Desenvolupament estàndard:
+	Studio (Dark)	Estudi (fosc)
+	Studio (Light)	Estudi (llum)
+	Stylus Wheel	Roda del llapis
+	Subtract	Sostreu
+	Tabloid	Tabloide
+	Text Replacement	Substitució de text
+	Thin	Prima
+	Traditional (72.27 points/inch)	Tradicional (72,27 punts/polzada)
+	Transfer	Transferència
+	Triangle Tool	Eina Triangle
+	Unsaved changes	Canvis no desats
+	Uses the foreground and background colours.	Utilitza els colors de primer pla i de fons
+	Web	Web
+	Web Large	Web gran
+	Web Minimum	Web mínim
+	Web Most Common	Web més comú
+	WebP (lossless)	WebP (sense pèrdues)
+	Wet Edges	Vores humides
+	Yellows	Grocs
+	Zoom Tool	Lupa
+	{name} Properties	Propietats de {name}
+	Revert “{name}” to the last saved version? Your changes will be lost.	Voleu revertir "{name}" a la darrera versió desada? Els vostres canvis es perdran
+	Do you want to save the changes you made to “{name}” before quitting?	Voleu desar els canvis que heu fet a “{name}” abans de sortir?
+	Do you want to save the changes you made to “{name}” before closing?	Voleu desar els canvis que heu fet a “{name}” abans de tancar?
+	Doc: {flat}/{layered}	Document: {flat}/{layered}
+	Scratch: {size}	Scratch: {size}
+	Untagged {mode}	{mode} sense etiquetar
+	{w} px x {h} px ({ppi} ppi)	{w} px x {h} px ({ppi} ppi)
+	Resolution: {dpi} pixels/inch	Resolució: {dpi} píxels/polzada
+	Doc: {w} × {h} px	Document: {w} × {h} px
+	Frame {current} / {total}	Fotograma {current} / {total}
+	Count: {n}	Recompte: {n}
+	BLANK DOCUMENT PRESETS ({n})	PRESETS DE DOCUMENTS EN BLAN ({n})
+	Constraints ({n})	Restriccions ({n})
+	Align {what}	Alinea {what}
+@plural	{n} Layer|{n} Layers	{n} capa|{n} capes
+@plural	Group · {n} layer|Group · {n} layers	Grup · {n} capa|Grup · {n} capes
+	Additional plugins folder	Carpeta de connectors addicionals
+	Adobe	Adobe
+	Adobe rgb	Adobe rgb
+	Allow agent control	Permetre el control de l'agent
+	Allow scripts to connect	Permet que els scripts es connectin
+	Always	Sempre
+	Always create smart objects when placing	Creeu sempre objectes intel·ligents quan els col·loqueu
+	Animated zoom	Zoom animat
+	Apply auto tone	Aplica un to automàtic
+	Ask	Pregunta
+	Ask before saving layered tiff	Pregunta abans de desar tiff en capes
+	Auto collapse icon panels	Replega automàticament els panells d'icones
+	Auto show hidden panels	Mostra automàticament els panells ocults
+	Auto show home screen	Mostra automàticament la pantalla d'inici
+	Autosave	Desat automàticament
+	Autosave minutes	Desa automàticament minuts
+	Beep when done	Bip quan estigui acabat
+	Bicubic automatic	Bicúbic automàtic
+	Bicubic sharper	Bicúbica més nítida
+	Bicubic smoother	Llisador bicúbic
+	Bit depth	Profunditat de bits
+	Brush preview color	Color de vista prèvia del pinzell
+	Cache levels	Nivells de memòria cau
+	Cache tile size	Mida del mosaic de la memòria cau
+	Camera Raw Defaults	Valors predeterminats de Camera Raw
+	Canvas border	Vora del llenç
+	Canvas color	Color llenç
+	Canvas custom color	Color personalitzat de tela
+	Color picker	Tria un color
+	Color space	Espai de color
+	Column width	Amplada de la columna
+	Concise	Concís
+	Control port	Port de control
+	Convert to srgb	Converteix a srgb
+	Cursors	Cursors
+	Custom dark	Personalitzat fosc
+	Custom light	Llum personalitzada
+	Dark	Fosc
+	Dark gray	Gris fosc
+	Dashed lines	Línies discontínues
+	Destination	Destinació
+	Detailed	Detallada
+	Disks	Discos
+	Display p3	Mostra p3
+	Double click layer mask launches select and mask	Feu doble clic a la màscara de capa inicia la selecció i la màscara
+	Drop shadow	Ombra paral·lela
+	Dynamic color sliders	Lliscants de color dinàmics
+	East asian	Est asiàtic
+	Effect cache mb	Memòria cau d'efectes mb
+	Enable flick panning	Activa la panoràmica de lliscar
+	Enable floating document window docking	Activa l'acoblament de finestres de documents flotants
+	Enable narrow options bar	Activa la barra d'opcions estreta
+	Enabled	Habilitat
+	Enhanced Controls	Controls millorats
+	Export clipboard	Exporta el porta-retalls
+	Extra large	Extra gran
+	File Handling	Manipulació de fitxers
+	File path	Ruta del fitxer
+	Fill new type layers with placeholder	Ompliu capes de tipus noves amb un marcador de posició
+	Font preview	Vista prèvia de la font
+	Full size tip	Punta de mida completa
+	Gamut warning color	Color d'advertència de gamma
+	Gamut warning opacity	Opacitat d'advertència de gamma
+	Generator enabled	Generador habilitat
+	Gif	Gif
+	Glossy	brillant
+	Grid color	Color de quadrícula
+	Grid colors	Colors de quadrícula
+	Grid size	Mida de la graella
+	Grid style	Estil de quadrícula
+	Grid unit	Unitat de graella
+	Gridline every	Línia de graella cada
+	Guide color	Color guia
+	Guide style	Estil guia
+	Guides, Grid & Slices	Guies, quadrícula i sectors
+	Gutter	Canaleta
+	History Log	Registre d'historial
+	History states	La història diu
+	Ignore exif profile tag	Ignora l'etiqueta de perfil exif
+	Image interpolation	Interpolació d'imatges
+	Image previews	Previsualitzacions d'imatges
+	Integrations	Integracions
+	Interface	Interfície
+	Jpeg quality	Qualitat Jpeg
+	Jpg	Jpg
+	Language	Llengua
+	Large tabs	Pestanyes grans
+	Legacy compositing	Composició heretada
+	Light gray	Gris clar
+	Line	Línia
+	Lines	Línies
+	Lowercase extension	Extensió en minúscula
+	Maximize psd compatibility	Maximitzar la compatibilitat amb PSD
+	Medium gray	Gris mitjà
+	Memory usage mb	Ús de memòria mb
+	Missing glyph protection	Falta la protecció de glifs
+	Modern	Modern
+	Nearest neighbor	Veí més proper
+	Never	Mai
+	Normal tip	Punta normal
+	Open as smart object	Obre com a objecte intel·ligent
+	Open documents as tabs	Obriu els documents com a pestanyes
+	Overscroll	Sobrescroll
+	Performance	Rendiment
+	Png	Png
+	Point size	Mida del punt
+	Precise	Precisió
+	Preserve details	Conservar detalls
+	Print resolution	Resolució d'impressió
+	Pro	Pro
+	Pro medium	Mitjana professional
+	Pro photo	Foto professional
+	Quick export format	Format d'exportació ràpida
+	Quick export location	Ubicació ràpida d'exportació
+	Recent file count	Recompte de fitxers recents
+	Recent files	Fitxers recents
+	Recent fonts	Fonts recents
+	Recover on launch	Recuperació en el llançament
+	Remember workspace changes	Recordeu els canvis de l'espai de treball
+	Resize image during place	Canvia la mida de la imatge durant el lloc
+	Rotate view with trackpad	Gira la vista amb el trackpad
+	Same folder	La mateixa carpeta
+	Save in background	Desa en segon pla
+	Scratch Disks	Discs Scratch
+	Screen	Pantalla
+	Screen resolution	Resolució de pantalla
+	Scrubby slider acceleration	Acceleració del control lliscant
+	Sessions only	Només sessions
+	Sharpen for	Esmola per
+	Show channels in color	Mostra els canals en color
+	Show crosshair in brush tip	Mostra la creu a la punta del pinzell
+	Show extension panels	Mostra els panells d'extensió
+	Show font names in english	Mostra els noms de fonts en anglès
+	Show menu colors	Mostra els colors del menú
+	Show only crosshair while painting	Mostra només el punt de mira mentre pinta
+	Show slice numbers	Mostra els números de la porció
+	Show tooltips	Mostra informació sobre eines
+	Show transformation values	Mostra els valors de transformació
+	Slice color	Color de la rodanxa
+	Smart guide color	Color de guia intel·ligent
+	Smart quotes	Cites intel·ligents
+	Snap vector tools and transforms to pixel grid	Agafeu eines vectorials i transformeu-les a la graella de píxels
+	Srgb	Srgb
+	Standard	Estàndard
+	Studio	Estudi
+	Studio light	Llum d'estudi
+	Subdivisions	Subdivisions
+	System	Sistema
+	Text engine	Motor de text
+	Text file	Fitxer de text
+	Tiny	Petit
+	Touch gestures	Gestos tàctils
+	Transparency & Gamut	Transparència i gamma
+	Type units	Unitats de tipus
+	UI font size	Mida de lletra de la interfície
+	UI scale	escala de la IU
+	Units & Rulers	Unitats i regles
+	Use additional plugins folder	Utilitzeu una carpeta de connectors addicionals
+	Use esc to commit	Utilitzeu esc per comprometre's
+	Use gpu	Utilitzeu la gpu
+	Use legacy free transform	Utilitzeu la transformació lliure heretada
+	Use shift key for tool switch	Utilitzeu la tecla majúscules per a l'interruptor d'eina
+	Vary round brush hardness on hud	Varieu la duresa del pinzell rodó a l'hud
+	Webp	Webp
+	World ready	Món preparat
+	Zoom clicked point to center	S'ha fet clic al zoom apunta al centre
+	Zoom resizes windows	El zoom canvia la mida de les finestres
+	Zoom with scroll wheel	Zoom amb la roda de desplaçament
+	Zoom with trackpad pinch	Zoom amb pessiga del trackpad
+	Pass Through	Transferència
+	Dissolve	Dissol
+	Darker Color	Color més fosc
+	Linear Dodge (Add)	Esquiva lineal (Afegeix)
+	Lighter Color	Color més clar
+	Soft Light	Llum suau
+	Hard Light	Llum forta
+	Vivid Light	Llum intensa
+	Linear Light	Llum lineal
+	Pin Light	Llum focal
+	Exclusion	Exclusió
+	Divide	Divideix
+	Luminosity	Lluminositat
+@plural	{n} sample|{n} samples	{n} mostra|{n} mostres
+	{added}, {removed} subtracted	{added}, {removed} restat
+	Adjustment Preview	Vista prèvia de l'ajust
+	Airbrush: keeps depositing paint while the pointer rests.	Aerògraf: segueix dipositant pintura mentre el punter descansa
+	Angle:	Angle:
+	Blend If	Fusionar si és
+	Close Tab Group	Tanca el grup de pestanyes
+	Collapse	Redueix
+	Collapse All Groups	Replega tots els grups
+	Collapse Panel Group	Redueix el grup de panells
+	Collapse group  ({key}-click: all groups)	Replega el grup ({key}-clic: tots els grups)
+	Create new brush from the current settings	Creeu un pinzell nou a partir de la configuració actual
+	Create new brush from these settings	Creeu un pinzell nou a partir d'aquesta configuració
+	Delete brush	Suprimeix el pinzell
+	Drag the arrow to set the angle, the dots to set the roundness	Arrossegueu la fletxa per definir l'angle, els punts per definir la rodonesa
+	Expand	Expandeix
+	Expand Panel Group	Amplieu el grup de panells
+	Expand group  ({key}-click: all groups)	Amplia el grup ({key}-clic: tots els grups)
+	Fade steps	Passos esvaïts
+	Hide the layer's effects  ({key}-click: all layers)	Amaga els efectes de la capa ({key}-clic: totes les capes)
+	Import Brushes… (.abr)	Importa els pinzells... (.abr)
+	Move Group Down	Mou el grup cap avall
+	Move Group Up	Mou el grup cap amunt
+	Reset the brush to the defaults	Restableix el pinzell als valors predeterminats
+	Restore original size	Restaura la mida original
+	Roundness:	Rodona:
+	Search Brushes	Cerca Pinzells
+	Show the layer's effects  ({key}-click: all layers)	Mostra els efectes de la capa ({key}-clic: totes les capes)
+	Brush picker	Selector de pinzells
+	Erase	Esborrar
+	Right click with painting tools	Feu clic amb el botó dret amb eines de pintura
+	System Info…	Informació del sistema…
+	System Info	Informació del sistema
+	More panels	Més panells
+	These settings aren't available in PhotoSuite yet.	Aquesta configuració encara no està disponible a PhotoSuite
+	Graphics	Gràfics
+	Reset GPU Backend	Restableix el backend de la GPU
+	Applies at next launch.	S'aplica al proper llançament
+	Click to sample the foreground colour  ·  {key}-click for background	Feu clic per mostrar el color de primer pla · {key}-clic per al fons
+	{key}-click to set the source	{key} + feu clic per definir la font
+	{key} to subtract	{key} per restar
+	Clone source {n} ({key}-click with Clone Stamp to set)	Font de clonació {n} ({key}-clic amb el segell de clonació per configurar-la)
+	Source: not set ({key}-click with Clone Stamp)	Font: no establerta ({key}-clic amb el segell de clonació)
+	Pixel Layer	Capa de píxels
+	Type Layer	Tipus de capa
+	Shape Layer	Capa de forma
+	Group Layer	Capa de grup
+	Fill Layer	Omplir la capa
+	Smart Object Layer	Capa d'objectes intel·ligents
+	Create Warped Text	Crear text deformat
+	Rasterize Smart Object	Rasteritza l'objecte intel·ligent
+	Rasterize Fill Content	Rasteritzar el contingut d'ompliment
+	Unlock: picking a preset replaces these settings	Desbloquejar: escollir un valor predefinit substitueix aquests paràmetres
+	Lock: keep these settings when picking another preset	Bloquejar: manteniu aquests paràmetres quan trieu un altre valor predefinit
+	Diameter:	Diàmetre:
+	Hardness:	Duresa:
+	No brush presets	Sense pinzells predefinits
+	Toggle the Brush Settings panel  (F5)	Commuta el tauler de configuració del pinzell (F5)
+	Create new brush preset from the current settings	Creeu un nou pinzell predefinit a partir de la configuració actual
+	Brush Settings…  (F5): every option of this brush	Configuració del pinzell... (F5): totes les opcions d'aquest pinzell
+	Rename Brush…	Canvia el nom del pinzell…
+	Delete Brush	Suprimeix el pinzell
+	Group name	Nom del grup
+	Brush name	Nom del pinzell
+	Grid view	Vista de quadrícula
+	List view	Vista de llista
+	Off: the speed of the pointer sets the spacing	Off: la velocitat del punter estableix l'espaiat
+	Tilt Scale	Escala d'inclinació
+	Brush Projection	Projecció de pinzell
+	Apply the pen's tilt and rotation to the tip shape	Apliqueu la inclinació i la rotació del llapis a la forma de la punta
+	Mixer Brush	Raspall mesclador
+	Wet	Humit
+	Mix	Barrejar
+	Wetness Jitter	Temblor d'humitat
+	Mix Jitter	Barreja el jitter
+	Show the layer mask as an overlay	Mostra la màscara de capa com a superposició
+	Toggle visibility	Commuta la visibilitat
+	Unlink the mask from the layer	Desenllaça la màscara de la capa
+	Link the mask to the layer	Enllaceu la màscara a la capa
+	Gradient	Degradat
+	Gradient Options	Opcions de degradat
+	Align with layer	Alinea amb la capa
+	Reset Alignment	Restableix l'alineació
+	Centre the gradient (offset 0, 0)	Centreu el degradat (desplaçament 0, 0)
+	The current gradient (pick one in Window › Gradients)	El degradat actual (trieu-ne un a Finestra › Gradients)
+	Select a type layer to edit its character and paragraph settings.	Seleccioneu una capa de tipus per editar-ne la configuració de caràcters i paràgrafs
+	Text color	Color del text
+	Type Options	Opcions de tipus
+	Anti-aliasing method	Mètode antialiasing
+	Horizontal type	Tipus horitzontal
+	Vertical type	Tipus vertical
+	Fill path with foreground color	Ompliu el camí amb el color de primer pla
+	Stroke path with brush	Traçat de traçat amb pinzell
+	Load path as a selection	Carregueu el camí com a selecció
+	Make work path from selection	Feu un camí de treball a partir de la selecció
+	Add vector mask	Afegir màscara vectorial
+	Create new path	Crea un camí nou
+	Delete path	Suprimeix el camí
+	Delete vector mask	Eliminar màscara vectorial
+	CPU (no GPU acceleration)	CPU (sense acceleració de GPU)
+	DirectX 12	DirectX 12
+	GPU backend	Backend de la GPU
+	Metal	Metall
+	OpenGL	OpenGL
+	Use tablet pressure	Utilitzeu la pressió de la tauleta
+	Vulkan	Vulcan
