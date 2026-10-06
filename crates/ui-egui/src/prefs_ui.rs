@@ -371,6 +371,9 @@ pub fn shortcut_items(app: &PhotosuiteApp) -> Vec<(String, String, Vec<String>, 
 
 /// Text of a key press for the shortcut editor (`Cmd+Shift+K`), `None` for bare modifiers.
 pub fn shortcut_text(key: egui::Key, m: egui::Modifiers) -> Option<String> {
+    if is_modifier_key(key) {
+        return None;
+    }
     let mut parts = Vec::new();
     if m.command || m.mac_cmd {
         parts.push(tl!("Cmd").to_string());
@@ -396,6 +399,14 @@ pub fn shortcut_text(key: egui::Key, m: egui::Modifiers) -> Option<String> {
     };
     parts.push(name.to_string());
     prefs::normalize_shortcut(&parts.join("+"))
+}
+
+/// A modifier key on its own. egui reports Ctrl, Shift, Alt and ⌘ presses as key events too
+/// (`ControlLeft`…), before the key pressed with them: they are never a shortcut's key, so
+/// shortcut capture waits for the real key (#292: Ctrl+F was recorded as "Ctrl+ControlLeft").
+pub fn is_modifier_key(key: egui::Key) -> bool {
+    use egui::Key::*;
+    matches!(key, ShiftLeft | ShiftRight | ControlLeft | ControlRight | AltLeft | AltRight | SuperLeft | SuperRight)
 }
 
 // ------------------------------------------------------------------ menu routing
@@ -875,7 +886,7 @@ fn shortcuts_body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, f: &mut Map<String
     if capture && tab == 0 && !selected.is_empty() {
         let pressed = ui.input(|i| {
             i.events.iter().find_map(|e| match e {
-                egui::Event::Key { key, pressed: true, modifiers, .. } => Some((*key, *modifiers)),
+                egui::Event::Key { key, pressed: true, modifiers, .. } if !is_modifier_key(*key) => Some((*key, *modifiers)),
                 _ => None,
             })
         });
@@ -1170,6 +1181,10 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
         _ => Err("unknown dialog".into()),
     }
 }
+
+#[cfg(test)]
+#[path = "shortcut_capture_tests.rs"]
+mod shortcut_capture_tests;
 
 #[cfg(test)]
 mod tests {
