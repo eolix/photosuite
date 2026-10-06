@@ -333,6 +333,10 @@ fn build() -> Vec<CommandSpec> {
                 let aa = p.get("antiAlias").and_then(Value::as_bool).unwrap_or(true);
                 let feather = p.get("feather").and_then(Value::as_f64).unwrap_or(0.0).clamp(0.0, 1000.0) as f32;
                 s.edit("Rectangular Marquee", |doc, _| {
+                    let area = doc.bounds();
+                    // A marquee dragged past the canvas stops at its edge (Photoshop); the ellipse
+                    // keeps the dragged shape and is only cut there.
+                    let cut = r.intersect(&area);
                     let mut shape = Surface::new(photosuite_color::PixelFormat::GRAY8);
                     if ellipse {
                         let (cx, cy) = ((r.x0 + r.x1) as f32 / 2.0, (r.y0 + r.y1) as f32 / 2.0);
@@ -341,8 +345,8 @@ fn build() -> Vec<CommandSpec> {
                             let (dx, dy) = ((x - cx) / rx, (y - cy) / ry);
                             dx * dx + dy * dy <= 1.0
                         };
-                        for y in r.y0..r.y1 {
-                            for x in r.x0..r.x1 {
+                        for y in cut.y0..cut.y1 {
+                            for x in cut.x0..cut.x1 {
                                 let (fx, fy) = (x as f32, y as f32);
                                 let corners = [(fx, fy), (fx + 1.0, fy), (fx, fy + 1.0), (fx + 1.0, fy + 1.0)].iter().filter(|(a, b)| inside(*a, *b)).count();
                                 let cov = if !aa {
@@ -359,9 +363,8 @@ fn build() -> Vec<CommandSpec> {
                             }
                         }
                     } else {
-                        shape.fill_rect(r, &[1.0]);
+                        shape.fill_rect(cut, &[1.0]);
                     }
-                    let area = doc.bounds();
                     if feather > 0.0 {
                         use photosuite_algo::selection as sel;
                         let m = sel::feather(&sel::mask_from_surface(Some(&shape), area), area.width() as usize, area.height() as usize, feather);
@@ -375,7 +378,8 @@ fn build() -> Vec<CommandSpec> {
                         ("intersect", Some(o)) => combine(&o, &shape, area, |a, b| a.min(b)),
                         _ => shape,
                     };
-                    doc.selection = Some(combined);
+                    // Nothing selected on the canvas (e.g. dragged entirely outside it) deselects.
+                    doc.selection = (!combined.content_bounds().is_empty()).then_some(combined);
                     Ok(())
                 })?;
                 Ok(Value::Null)

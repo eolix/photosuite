@@ -139,6 +139,19 @@ fn paint_stroke_and_selection() {
 }
 
 #[test]
+fn marquee_dragged_past_the_canvas_stops_at_its_edge() {
+    let mut s = session_with_doc(); // 64 × 48
+    let bounds = |s: &mut Session| s.execute("document.inspect", json!({})).unwrap()["selectionBounds"].clone();
+    s.execute("select.rect", json!({"x": -20, "y": 10, "width": 200, "height": 100})).unwrap();
+    assert_eq!(bounds(&mut s), json!([0, 10, 64, 38]));
+    s.execute("select.rect", json!({"x": -30, "y": -30, "width": 200, "height": 200, "ellipse": true})).unwrap();
+    assert_eq!(bounds(&mut s), json!([0, 0, 64, 48]));
+    // Entirely off the canvas: nothing is selected.
+    s.execute("select.rect", json!({"x": 100, "y": 100, "width": 20, "height": 20})).unwrap();
+    assert_eq!(bounds(&mut s), Value::Null);
+}
+
+#[test]
 fn selection_modes() {
     let mut s = session_with_doc();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 10, "height": 10})).unwrap();
