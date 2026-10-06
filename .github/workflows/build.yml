@@ -191,7 +191,9 @@ jobs:
   flatpak:
     name: Package (Flatpak x86_64)
     needs: linux
-    runs-on: ubuntu-22.04
+    # Not 22.04: its flatpak-builder (1.2) runs appstream-compose, which current SDKs no longer
+    # ship. This job only repackages the x86_64 binaries, so the runner's glibc doesn't matter.
+    runs-on: ubuntu-24.04
     # The Flatpak needs the Flathub runtime; a Flathub outage shouldn't hold back the release.
     continue-on-error: true
     env:
