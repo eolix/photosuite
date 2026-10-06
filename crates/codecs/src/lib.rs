@@ -95,6 +95,11 @@ pub fn decode_as_with(format: Format, bytes: &[u8], opts: &DecodeOptions) -> Res
         Format::Tiff => exif_orientation(bytes),
         _ => img.meta.exif.as_deref().map_or(1, exif_orientation),
     };
+    // Orientations 5–8 swap width and height: with asymmetric limits a stored landscape
+    // that fit can turn into a portrait that does not, so check the upright size too.
+    if (5..=8).contains(&o) {
+        l.check(img.height(), img.width(), img.layout(), img.sample_type())?;
+    }
     img.oriented(o)
 }
 

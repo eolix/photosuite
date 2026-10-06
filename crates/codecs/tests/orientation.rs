@@ -124,6 +124,8 @@ fn reads_orientation_in_every_encoding() {
                 assert_eq!(exif_orientation(&fixed), 1);
                 assert_eq!(fixed.len(), prefixed.len(), "rewritten in place");
                 assert_eq!(&fixed[..6], b"Exif\0\0");
+                // Rewritten in the entry's own type and width: exactly `exif(1, ..)`.
+                assert_eq!(&fixed[6..], &exif(1, big, long)[..], "o={o} big={big} long={long}");
             }
         }
     }
@@ -139,10 +141,11 @@ fn malformed_or_out_of_range_orientation_reads_as_1() {
         assert_eq!(exif_orientation(&exif(bad, false, true)), 1, "{bad}");
     }
     let good = exif(6, false, false);
+    assert_eq!(exif_orientation(&good), 6);
     for n in 0..good.len() {
-        let o = exif_orientation(&good[..n]);
-        assert!(o == 1 || o == 6, "truncated at {n}: {o}");
-        let _ = upright_exif(&good[..n]);
+        // Any cut, even one that keeps the Orientation entry but loses the next-IFD pointer.
+        assert_eq!(exif_orientation(&good[..n]), 1, "truncated at {n}");
+        assert!(matches!(upright_exif(&good[..n]), std::borrow::Cow::Borrowed(_)), "truncated at {n}");
     }
     // IFD offset past the end, a huge entry count, a wrong field type.
     let mut far = good.clone();
@@ -150,7 +153,7 @@ fn malformed_or_out_of_range_orientation_reads_as_1() {
     assert_eq!(exif_orientation(&far), 1);
     let mut many = good.clone();
     many[8..10].copy_from_slice(&u16::MAX.to_le_bytes());
-    assert_eq!(exif_orientation(&many), 6, "entries past the end are ignored, the real one still found");
+    assert_eq!(exif_orientation(&many), 1, "an entry count past the end is a truncated table");
     let mut typed = good.clone();
     typed[24..26].copy_from_slice(&2u16.to_le_bytes()); // ASCII
     assert_eq!(exif_orientation(&typed), 1);
@@ -385,5 +388,169 @@ fn rotating_24_mp_is_fast() {
         }
         eprintln!("orientation {o}: 24 MP RGB8 in {best:.1} ms");
         assert!(best <= 50.0, "orientation {o} took {best:.1} ms");
+    }
+}
+
+/// A TIFF-structured EXIF block: IFD0 at offset 8 holding `entries`
+/// (`tag, type, count, 4-byte value field`), a zero next-IFD pointer, then `tail`.
+fn ifd(big: bool, entries: &[(u16, u16, u32, [u8; 4])], tail: &[u8]) -> Vec<u8> {
+    let u16b = |v: u16| if big { v.to_be_bytes() } else { v.to_le_bytes() };
+    let u32b = |v: u32| if big { v.to_be_bytes() } else { v.to_le_bytes() };
+    let mut v = if big { b"MM\0*".to_vec() } else { b"II*\0".to_vec() };
+    v.extend_from_slice(&u32b(8));
+    v.extend_from_slice(&u16b(entries.len() as u16));
+    for &(tag, ty, count, value) in entries {
+        v.extend_from_slice(&u16b(tag));
+        v.extend_from_slice(&u16b(ty));
+        v.extend_from_slice(&u32b(count));
+        v.extend_from_slice(&value);
+    }
+    v.extend_from_slice(&u32b(0));
+    v.extend_from_slice(tail);
+    v
+}
+
+/// The 4-byte value field of a SHORT.
+fn short(v: u16, big: bool) -> [u8; 4] {
+    let b = if big { v.to_be_bytes() } else { v.to_le_bytes() };
+    [b[0], b[1], 0, 0]
+}
+
+#[test]
+fn duplicate_orientation_entries_first_wins() {
+    for big in [false, true] {
+        let o = |v| (0x0112, 3, 1, short(v, big));
+        assert_eq!(exif_orientation(&ifd(big, &[o(6), o(3)], &[])), 6);
+        assert_eq!(exif_orientation(&ifd(big, &[o(3), o(6)], &[])), 3);
+        assert_eq!(exif_orientation(&ifd(big, &[o(1), o(8)], &[])), 1);
+        // A malformed first entry is ignored as a whole: a later good one does not count.
+        let bad_first = ifd(big, &[(0x0112, 3, 2, short(6, big)), o(8)], &[]);
+        assert_eq!(exif_orientation(&bad_first), 1);
+        let long = |v: u32| (0x0112, 4, 1, if big { v.to_be_bytes() } else { v.to_le_bytes() });
+        let long_first = ifd(big, &[long(6), o(8)], &[]);
+        assert_eq!(exif_orientation(&long_first), 6, "a LONG first entry counts");
+        assert_eq!(&upright_exif(&long_first)[..], &ifd(big, &[long(1), o(1)], &[])[..], "each in its own width");
+        let rational_first = ifd(big, &[(0x0112, 5, 1, short(6, big)), o(8)], &[]);
+        assert_eq!(exif_orientation(&rational_first), 1);
+        // Upright: every well-formed duplicate becomes 1, so no reader rotates twice.
+        let dup = ifd(big, &[o(6), o(3)], &[]);
+        let fixed = upright_exif(&dup);
+        assert_eq!(fixed.len(), dup.len());
+        assert_eq!(&fixed[..], &ifd(big, &[o(1), o(1)], &[])[..]);
+        // Only a later duplicate disagrees: it is rewritten too.
+        assert_eq!(&upright_exif(&ifd(big, &[o(1), o(8)], &[]))[..], &ifd(big, &[o(1), o(1)], &[])[..]);
+        assert!(matches!(upright_exif(&ifd(big, &[o(1), o(1)], &[])), std::borrow::Cow::Borrowed(_)));
+    }
+}
+
+#[test]
+fn strict_ifd_parsing_ignores_the_tag() {
+    for big in [false, true] {
+        let o6 = (0x0112, 3, 1, short(6, big));
+        let good = ifd(big, &[o6], &[]);
+        assert_eq!(exif_orientation(&good), 6);
+        // Truncated before (or inside) the next-IFD pointer.
+        for cut in 1..=4 {
+            assert_eq!(exif_orientation(&good[..good.len() - cut]), 1, "cut {cut}");
+        }
+        // IFD offsets inside the 8-byte header.
+        for off in 0..8u32 {
+            let mut b = good.clone();
+            b[4..8].copy_from_slice(&if big { off.to_be_bytes() } else { off.to_le_bytes() });
+            assert_eq!(exif_orientation(&b), 1, "offset {off}");
+            assert!(matches!(upright_exif(&b), std::borrow::Cow::Borrowed(_)));
+        }
+        // Count must be exactly 1, type must be SHORT or LONG.
+        let long6 = if big { 6u32.to_be_bytes() } else { 6u32.to_le_bytes() };
+        for count in [0, 2, 3, u32::MAX] {
+            assert_eq!(exif_orientation(&ifd(big, &[(0x0112, 3, count, short(6, big))], &[])), 1, "count {count}");
+            assert_eq!(exif_orientation(&ifd(big, &[(0x0112, 4, count, long6)], &[])), 1, "LONG count {count}");
+        }
+        for ty in [1, 2, 5, 6, 7, 8, 9, 0, 0xFFFF] {
+            let b = ifd(big, &[(0x0112, ty, 1, short(6, big))], &[]);
+            assert_eq!(exif_orientation(&b), 1, "type {ty}");
+            assert!(matches!(upright_exif(&b), std::borrow::Cow::Borrowed(_)), "type {ty}");
+        }
+    }
+}
+
+#[test]
+fn upright_exif_keeps_every_other_byte() {
+    for big in [false, true] {
+        let u32b = |v: u32| if big { v.to_be_bytes() } else { v.to_le_bytes() };
+        // IFD0: Make (12-byte ASCII stored after the IFD), Orientation 6, Software (inline ASCII),
+        // ExifIFD pointer to a sub-IFD with its own entries.
+        let ifd_end = 8 + 2 + 4 * 12 + 4;
+        let make_at = ifd_end as u32;
+        let sub_at = make_at + 12;
+        let mut tail = b"PhotoSuiteCo".to_vec();
+        // Sub-IFD: one DateTimeOriginal-ish SHORT entry, then next-IFD 0.
+        tail.extend_from_slice(&if big { 1u16.to_be_bytes() } else { 1u16.to_le_bytes() });
+        tail.extend_from_slice(&if big { 0x9000u16.to_be_bytes() } else { 0x9000u16.to_le_bytes() });
+        tail.extend_from_slice(&if big { 7u16.to_be_bytes() } else { 7u16.to_le_bytes() });
+        tail.extend_from_slice(&u32b(4));
+        tail.extend_from_slice(b"0232");
+        tail.extend_from_slice(&u32b(0));
+        let e = ifd(big, &[(0x010F, 2, 12, u32b(make_at)), (0x0112, 3, 1, short(6, big)), (0x0131, 2, 4, *b"PC1\0"), (0x8769, 4, 1, u32b(sub_at))], &tail);
+        let mut prefixed = b"Exif\0\0".to_vec();
+        prefixed.extend_from_slice(&e);
+        let fixed = upright_exif(&prefixed).into_owned();
+        assert_eq!(exif_orientation(&fixed), 1);
+        assert_eq!(fixed.len(), prefixed.len());
+        // Only the Orientation value (2 bytes in the second entry) differs.
+        let value = 6 + 8 + 2 + 12 + 8;
+        let changed: Vec<usize> = (0..fixed.len()).filter(|&i| fixed[i] != prefixed[i]).collect();
+        assert_eq!(changed, vec![if big { value + 1 } else { value }], "big={big}");
+        assert_eq!(&fixed[..value], &prefixed[..value]);
+        assert_eq!(&fixed[value + 2..], &prefixed[value + 2..]);
+        // The offset-based Make string and the inline Software tag are intact.
+        assert_eq!(&fixed[6 + make_at as usize..][..12], b"PhotoSuiteCo");
+        assert!(fixed.windows(4).any(|w| w == b"PC1\0"));
+    }
+}
+
+#[test]
+fn limits_apply_to_the_upright_size() {
+    // Stored 32×16 landscape; Orientation 6 makes it a 16×32 portrait.
+    let jpeg = encode(&gray(32, 16, vec![90; 32 * 16]), Format::Jpeg, &EncodeOptions::default()).unwrap();
+    let tall = jpeg_with_exif(&jpeg, &exif(6, false, false));
+    let limits = Limits { max_width: 32, max_height: 16, ..Limits::default() };
+    let opts = DecodeOptions { limits, ..Default::default() };
+    assert!(matches!(decode_with(&tall, &opts), Err(CodecError::LimitExceeded(_))), "the upright portrait is too tall");
+    // As stored it fits, and a 180° turn keeps the size.
+    let kept = decode_with(&tall, &DecodeOptions { keep_orientation: true, ..opts.clone() }).unwrap();
+    assert_eq!(kept.dimensions(), (32, 16));
+    let flipped = decode_with(&jpeg_with_exif(&jpeg, &exif(3, false, false)), &opts).unwrap();
+    assert_eq!(flipped.dimensions(), (32, 16));
+    // The same holds for a TIFF, whose orientation lives in its own IFD0.
+    let tiff = tiff_with_orientation(&[7; 32 * 16], 32, 16, 8);
+    assert!(matches!(decode_with(&tiff, &opts), Err(CodecError::LimitExceeded(_))));
+    assert_eq!(decode_with(&tiff, &DecodeOptions::default()).unwrap().dimensions(), (16, 32));
+}
+
+#[test]
+fn long_orientation_reads_and_rewrites_in_both_byte_orders() {
+    for big in [false, true] {
+        let u32b = |v: u32| if big { v.to_be_bytes() } else { v.to_le_bytes() };
+        let long = |v: u32| (0x0112u16, 4u16, 1u32, u32b(v));
+        for o in 1..=8u32 {
+            let e = ifd(big, &[(0x0131, 2, 4, *b"PC1\0"), long(o)], b"tail");
+            assert_eq!(exif_orientation(&e), o as u16, "o={o} big={big}");
+            let fixed = upright_exif(&e);
+            assert_eq!(exif_orientation(&fixed), 1);
+            // Still a LONG, all 4 value bytes set to 1 in the file's byte order; nothing else moved.
+            assert_eq!(&fixed[..], &ifd(big, &[(0x0131, 2, 4, *b"PC1\0"), long(1)], b"tail")[..], "o={o} big={big}");
+        }
+        // Out of range, including values that only fit in a LONG, reads as 1 and is left alone.
+        for bad in [0, 9, 0x1_0006, u32::MAX] {
+            let e = ifd(big, &[long(bad)], &[]);
+            assert_eq!(exif_orientation(&e), 1, "{bad}");
+        }
+        // A LONG 6 in a JPEG opens upright.
+        let jpeg = encode(&gray(32, 16, vec![90; 32 * 16]), Format::Jpeg, &EncodeOptions::default()).unwrap();
+        let img = decode(&jpeg_with_exif(&jpeg, &ifd(big, &[long(6)], &[]))).unwrap();
+        assert_eq!(img.dimensions(), (16, 32));
+        let kept = img.meta.exif.as_deref().unwrap();
+        assert_eq!(kept.strip_prefix(b"Exif\0\0").unwrap_or(kept), &ifd(big, &[long(1)], &[])[..]);
     }
 }

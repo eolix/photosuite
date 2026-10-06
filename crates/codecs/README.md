@@ -78,9 +78,13 @@ the same.
 * **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the IFD0 tag in TIFF) is applied on
   decode, like Photoshop: the pixels come back upright and the EXIF/XMP orientation is rewritten
   to 1 (`DecodeOptions::keep_orientation` opts out). Encoders always write Orientation = 1
-  (`upright_exif`, `upright_xmp`), so upright pixels are never rotated twice. Malformed or
-  out-of-range values read as 1. `Image::oriented` turns any layout and depth in parallel bands
-  (about 10 ms for 24 MP RGB8 in release).
+  (`upright_exif`, `upright_xmp`, which change only the tag's value, kept in its own type), so upright pixels
+  are never rotated twice. Parsing is strict: an IFD0 inside the 8-byte header or cut off before
+  its next-IFD pointer, an Orientation that is not exactly one SHORT or LONG, or an out-of-range value
+  reads as 1; with duplicate entries the first wins. `Limits` are checked again on the upright
+  size (5–8 swap width and height), and the rotated buffer is allocated fallibly.
+  `Image::oriented` turns any layout and depth in parallel bands (about 10 ms for 24 MP RGB8 in
+  release).
 * **JPEG**
   * 8-bit only. Neither decoder backend supports 12-bit.
   * CMYK is always written 4:4:4 (subsampled CMYK is not portable) as Adobe-inverted CMYK with an
