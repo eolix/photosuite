@@ -317,7 +317,7 @@ async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
                     json!({"id": id, "ok": true, "result": {"tool": "brush", "panels": ["layers"]}})
                 }
                 "engine.execute" => {
-                    json!({"id": id, "ok": true, "result": {"ran": req["params"]["command"]}})
+                    json!({"id": id, "ok": true, "result": {"ran": req["params"]["command"], "params": req["params"]["params"]}})
                 }
                 "engine.commands" => {
                     json!({"id": id, "ok": true, "result": [{"id": "file.new", "label": "New…", "enabled": true}]})
@@ -349,6 +349,9 @@ async fn bridge_forwards_to_control_protocol() {
     assert_eq!(ui["tool"], "brush");
     let r = json_of(&call(&client, "command_run", json!({"id": "layer.new.layer", "params": {"name": "X"}})).await);
     assert_eq!(r["ran"], "layer.new.layer");
+    let inspected = json_of(&call(&client, "doc_inspect", json!({"index": 1})).await);
+    assert_eq!(inspected["ran"], "document.inspect");
+    assert_eq!(inspected["params"], json!({"document": 1}));
     let l = json_of(&call(&client, "command_list", json!({})).await);
     assert_eq!(l[0]["id"], "file.new");
     let shot = call(&client, "ui_screenshot", json!({"max_side": 20})).await;

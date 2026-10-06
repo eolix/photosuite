@@ -397,7 +397,8 @@ impl PhotosuiteMcp {
         let Some(b) = self.bridge_client() else {
             return Ok(no_backend());
         };
-        to_result(b.call("engine.execute", json!({"command": "document.inspect", "params": {}})).await)
+        let params = p.index.map(|index| json!({"document": index})).unwrap_or_else(|| json!({}));
+        to_result(b.call("engine.execute", json!({"command": "document.inspect", "params": params})).await)
     }
 
     #[tool(description = "Render the flattened document and return it as a PNG image (bridge mode: window screenshot).")]
