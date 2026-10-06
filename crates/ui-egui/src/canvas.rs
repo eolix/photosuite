@@ -207,6 +207,19 @@ pub(crate) fn pencil_cursor_rect(xf: &ViewXform, doc: [f64; 2], size: f32, ppp: 
     Rect::from_min_max(pos2(snap(r.min.x), snap(r.min.y)), pos2(snap(r.max.x), snap(r.max.y)))
 }
 
+/// Whether a brush-tip circle draws its centre mark.
+/// Clone Stamp and Healing Brush stay an empty circle until Option is held, the source-point
+/// cursor. Other brushes follow the cursor preference, the large-tip mark, or the Background Eraser.
+fn brush_tip_centre(tool: Tool, option: bool, show_crosshair: bool, radius: f32) -> bool {
+    if tool == Tool::QuickSelection {
+        return false;
+    }
+    if matches!(tool, Tool::CloneStamp | Tool::Healing) {
+        return option || show_crosshair;
+    }
+    show_crosshair || radius > 6.0 || tool == Tool::BackgroundEraser
+}
+
 fn begin_live_stroke(app: &PhotosuiteApp) -> Option<LiveStroke> {
     static STROKES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let st = app.session.active()?;
@@ -1707,9 +1720,7 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
                         _ => {
                             painter.circle_stroke(p, r + 0.5, Stroke::new(1.0, Color32::from_black_alpha(140)));
                             painter.circle_stroke(p, r, Stroke::new(1.0, Color32::from_white_alpha(220)));
-                            // The Background Eraser always shows its sampling hotspot (Photoshop).
-                            // Quick Selection shows its +/− badge there instead.
-                            if (cur.show_crosshair_in_brush_tip || r > 6.0 || tool == Tool::BackgroundEraser) && tool != Tool::QuickSelection {
+                            if brush_tip_centre(tool, alt || app.ui.shell.sticky_alt, cur.show_crosshair_in_brush_tip, r) {
                                 crosshair(3.0);
                             }
                             egui::CursorIcon::None
@@ -2431,6 +2442,18 @@ mod tests {
         for t in [Tool::Move, Tool::Eyedropper, Tool::Gradient, Tool::Crop, Tool::RectMarquee, Tool::Type, Tool::Hand] {
             assert!(!freehand_tool(t), "{t:?} is driven by the pointer's latest position");
         }
+    }
+
+    #[test]
+    fn clone_stamp_centre_appears_only_with_option() {
+        assert!(!brush_tip_centre(Tool::CloneStamp, false, false, 20.0));
+        assert!(brush_tip_centre(Tool::CloneStamp, true, false, 20.0));
+        assert!(brush_tip_centre(Tool::Healing, true, false, 20.0));
+        assert!(!brush_tip_centre(Tool::Healing, false, false, 20.0));
+        assert!(brush_tip_centre(Tool::CloneStamp, false, true, 20.0));
+        assert!(brush_tip_centre(Tool::Brush, false, false, 20.0));
+        assert!(!brush_tip_centre(Tool::QuickSelection, false, false, 20.0));
+        assert!(brush_tip_centre(Tool::BackgroundEraser, false, false, 2.0));
     }
 
     #[test]

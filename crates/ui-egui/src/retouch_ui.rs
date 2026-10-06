@@ -109,7 +109,9 @@ pub fn draw_source_marker(app: &PhotosuiteApp, painter: &egui::Painter, xf: &Vie
     if !matches!(app.ui.tool, Tool::CloneStamp | Tool::Healing) {
         return;
     }
-    let src = match (crate::preset_panels::clone_sample_point(app, app.hover_doc), app.ui.clone_offset, app.hover_doc, app.ui.clone_source) {
+    let at =
+        app.drag.as_ref().filter(|d| matches!(d.tool, Tool::CloneStamp | Tool::Healing)).and_then(|d| d.points.last().map(|p| [p[0], p[1]])).or(app.hover_doc);
+    let src = match (crate::preset_panels::clone_sample_point(app, at), app.ui.clone_offset, at, app.ui.clone_source) {
         (Some(p), ..) => Some(p),
         (None, Some(off), Some(h), _) => Some([h[0] + off[0], h[1] + off[1]]),
         (None, None, _, Some(s)) => Some(s),
