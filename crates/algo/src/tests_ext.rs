@@ -666,3 +666,25 @@ fn oil_paint_smooths_along_strokes() {
     let inner = Rect::new(8, 8, 32, 22);
     assert!(variance(&out, inner, 0) < variance(&s, inner, 0) * 0.5);
 }
+
+#[test]
+fn cancelled_filters_return_none_and_progress_is_monotonic() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    let s = pattern(SampleType::U8, R);
+    let p = FilterParams::GaussianBlur { radius: 3.0 };
+    let area = output_area(&p, s.content_bounds(), R, None);
+    let yes = || true;
+    assert!(apply_tiled_with(&s, &p, area, R, None, 16, Some(R), &photosuite_raster::Interrupt::cancel_only(&yes)).is_none());
+    let last = AtomicU32::new(0);
+    let calls = AtomicU32::new(0);
+    let no = || false;
+    let progress = |f: f32| {
+        assert!(f >= f32::from_bits(last.load(Ordering::Relaxed)));
+        last.store(f.to_bits(), Ordering::Relaxed);
+        calls.fetch_add(1, Ordering::Relaxed);
+    };
+    let out = apply_tiled_with(&s, &p, area, R, None, 16, Some(R), &photosuite_raster::Interrupt::new(&no, &progress)).unwrap();
+    assert_eq!(f32::from_bits(last.load(Ordering::Relaxed)), 1.0);
+    assert!(calls.load(Ordering::Relaxed) >= 1);
+    assert_eq!(out.read_region(R), apply_tiled(&s, &p, area, R, None, 16, Some(R)).read_region(R));
+}

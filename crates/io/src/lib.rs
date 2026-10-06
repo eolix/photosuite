@@ -50,7 +50,7 @@ use photosuite_psd::{PsdError, PsdFile};
 pub use adjust_map::ADJUSTMENT_KEYS;
 pub use flat::document_to_image;
 pub use psd_export::{PsdExportOptions, document_to_psd, document_to_psd_with};
-pub use psd_import::psd_to_document;
+pub use psd_import::{psd_to_document, psd_to_document_with};
 
 /// Errors from import/export.
 #[derive(Debug, thiserror::Error)]
@@ -73,6 +73,9 @@ pub enum IoError {
     /// Camera raw decode failure.
     #[error("{0}")]
     Raw(#[from] photosuite_raw::RawError),
+    /// A background import was cancelled ([`import_with`]).
+    #[error("cancelled")]
+    Cancelled,
 }
 
 /// Result of [`import`].
@@ -110,13 +113,29 @@ pub fn is_psd(bytes: &[u8]) -> bool {
 /// Imports a file. PSD/PSB and camera raws are detected by magic; everything
 /// else is decoded with `photosuite-codecs`.
 pub fn import(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
+    import_with(name, bytes, &photosuite_raster::Interrupt::NONE)
+}
+
+/// [`import`] for a background open: checks `ctl` between stages (and per layer for PSD/PSB) and
+/// reports progress. A cancelled import fails with [`IoError::Cancelled`].
+pub fn import_with(name: &str, bytes: &[u8], ctl: &photosuite_raster::Interrupt) -> Result<ImportResult, IoError> {
+    ctl.check().map_err(|_| IoError::Cancelled)?;
+    let r = import_stages(name, bytes, ctl)?;
+    ctl.check().map_err(|_| IoError::Cancelled)?;
+    ctl.progress(1.0);
+    Ok(r)
+}
+
+fn import_stages(name: &str, bytes: &[u8], ctl: &photosuite_raster::Interrupt) -> Result<ImportResult, IoError> {
     // A declared native extension must reach its loader so malformed bundles retain format errors.
     if has_extension(name, photosuite_format::EXTENSION) || photosuite_format::is_pcraft(bytes) {
         return Ok(ImportResult { document: photosuite_format::load_from_bytes(bytes)?, warnings: Vec::new() });
     }
     if is_psd(bytes) {
         let file = PsdFile::from_bytes(bytes)?;
-        let (mut document, warnings) = psd_to_document(&file);
+        ctl.check().map_err(|_| IoError::Cancelled)?;
+        ctl.progress(0.05);
+        let (mut document, warnings) = psd_import::psd_to_document_with(&file, ctl).ok_or(IoError::Cancelled)?;
         document.name = name.to_string();
         return Ok(ImportResult { document, warnings });
     }

@@ -194,38 +194,52 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
     if let Value::Object(m) = &mut params {
         m.remove("__kind");
     }
-    s.edit(&label, |doc, _| {
-        let selection = doc.selection.clone();
-        let sel_bounds = selection.as_ref().map(photosuite_raster::Surface::content_bounds);
-        // Distortions centre on the selection when there is one, else the canvas.
-        let doc_bounds = doc.bounds();
-        let bounds = sel_bounds.filter(|b| !b.is_empty()).unwrap_or(doc_bounds);
-        // Neighbourhood filters repeat edge pixels at the canvas edge (or past it, where the
-        // layer has off-canvas pixels) instead of fading in transparency, as Photoshop does.
-        if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, p)? {
+    let id = id.to_string();
+    let p = p.clone();
+    let layer_id = layer.0;
+    // A background job when started with `Session::start` (#210): the filter runs on a worker,
+    // checking for cancellation before every tile.
+    crate::jobs::edit_job(
+        s,
+        &label,
+        move |doc, _, ctx| {
+            let msg = fp.label().to_string();
+            let filter = |surf: &photosuite_raster::Surface, fp: &FilterParams, area, bounds, sel: Option<&photosuite_raster::Surface>, extent| {
+                ctx.stage(0.0, 1.0, &msg, |ctl| algo::apply_in_with(surf, fp, area, bounds, sel, extent, ctl)).ok_or(EngineError::Cancelled)
+            };
+            let selection = doc.selection.clone();
+            let sel_bounds = selection.as_ref().map(photosuite_raster::Surface::content_bounds);
+            // Distortions centre on the selection when there is one, else the canvas.
+            let doc_bounds = doc.bounds();
+            let bounds = sel_bounds.filter(|b| !b.is_empty()).unwrap_or(doc_bounds);
+            // Neighbourhood filters repeat edge pixels at the canvas edge (or past it, where the
+            // layer has off-canvas pixels) instead of fading in transparency, as Photoshop does.
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, &p)? {
+                let content = surf.content_bounds();
+                let area = algo::output_area(&fp, content, bounds, sel_bounds);
+                *surf = filter(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content))?;
+                return Ok(fp.clone());
+            }
+            let l = doc.layer_mut(layer).ok_or(EngineError::NoLayer(layer))?;
+            let mut fp = fp.clone();
+            crate::filters_ext::resolve_in_layer(&mut fp, l, bounds);
+            let surf = match &mut l.content {
+                LayerContent::Raster(surf) => surf,
+                LayerContent::Smart(_) => {
+                    // Non-destructive: record the filter and re-render the smart object from its source.
+                    let sf =
+                        SmartFilter { command: id.clone(), params: params.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
+                    return crate::smart_cmds::add_smart_filter(doc, layer, sf, selection.as_ref()).map(|()| fp);
+                }
+                _ => return Err(EngineError::Other("not a pixel layer".into())),
+            };
             let content = surf.content_bounds();
             let area = algo::output_area(&fp, content, bounds, sel_bounds);
-            *surf = algo::apply_in(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content));
-            return Ok(());
-        }
-        let l = doc.layer_mut(layer).ok_or(EngineError::NoLayer(layer))?;
-        crate::filters_ext::resolve_in_layer(&mut fp, l, bounds);
-        let surf = match &mut l.content {
-            LayerContent::Raster(surf) => surf,
-            LayerContent::Smart(_) => {
-                // Non-destructive: record the filter and re-render the smart object from its source.
-                let sf =
-                    SmartFilter { command: id.to_string(), params: params.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
-                return crate::smart_cmds::add_smart_filter(doc, layer, sf, selection.as_ref());
-            }
-            _ => return Err(EngineError::Other("not a pixel layer".into())),
-        };
-        let content = surf.content_bounds();
-        let area = algo::output_area(&fp, content, bounds, sel_bounds);
-        *surf = algo::apply_in(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content));
-        Ok(())
-    })?;
-    Ok(json!({ "layer": layer.0, "filter": serde_json::to_value(&fp).unwrap_or(Value::Null) }))
+            *surf = filter(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content))?;
+            Ok(fp)
+        },
+        move |fp| json!({ "layer": layer_id, "filter": serde_json::to_value(&fp).unwrap_or(Value::Null) }),
+    )
 }
 
 macro_rules! filter_cmd {

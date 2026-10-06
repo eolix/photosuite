@@ -55,6 +55,11 @@ pub(crate) struct Ctx<'a> {
     pub txt2: Option<photosuite_text::engine_data::Value>,
     /// Smart-filter caches from the global `FEid`/`FXid` blocks (filter masks, by placed id).
     pub filter_effects: Vec<photosuite_psd::filter_effects::FilterEffectsItem>,
+    /// Cancellation and progress for background opens (checked per layer record).
+    pub ctl: photosuite_raster::Interrupt<'a>,
+    /// Layer records decoded so far, out of `total` (progress).
+    pub done: usize,
+    pub total: usize,
 }
 
 fn doc_mode(m: PsdMode) -> Option<ColorMode> {
@@ -366,10 +371,19 @@ impl Ctx<'_> {
 
     fn build(&mut self, nodes: &[LayerNode]) -> Vec<Layer> {
         let layers = self.file.layers();
+        let ctl = self.ctl;
         nodes
             .iter()
+            // A cancelled open stops decoding; the caller discards the partial document.
+            .take_while(|_| !ctl.cancelled())
             .map(|n| match n {
-                LayerNode::Layer { index } => self.layer_from_record(&layers[*index]),
+                LayerNode::Layer { index } => {
+                    let l = self.layer_from_record(&layers[*index]);
+                    self.done += 1;
+                    // Layers are 10–95 % of an open (the merged image and channels the rest).
+                    self.ctl.progress(0.1 + 0.85 * self.done as f32 / self.total.max(1) as f32);
+                    l
+                }
                 LayerNode::Group { index, children, .. } => {
                     let rec = &layers[*index];
                     let children = self.build(children);
@@ -442,6 +456,14 @@ fn parse_guides(data: &[u8], doc: &mut Document) {
 
 /// Converts a parsed PSD into a document. Never fails: problems become warnings.
 pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
+    // Never cancelled, so always `Some`; the fallback is unreachable.
+    psd_to_document_with(file, &photosuite_raster::Interrupt::NONE)
+        .unwrap_or_else(|| (Document::new("Untitled", Size::new(1, 1), ColorMode::Rgb, SampleType::U8), Vec::new()))
+}
+
+/// [`psd_to_document`] for a background open: checks `ctl` per layer record and reports
+/// progress. `None` when cancelled.
+pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) -> Option<(Document, Vec<String>)> {
     let h = &file.header;
     let mut warnings = Vec::new();
     let mode = doc_mode(h.color_mode).unwrap_or_else(|| {
@@ -520,18 +542,32 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
         dpi: doc.resolution_dpi,
         txt2: file.global_blocks.iter().find(|b| &b.key == b"Txt2").and_then(|b| photosuite_text::psd::parse_txt2(&b.data)),
         filter_effects: Vec::new(),
+        ctl: *ctl,
+        done: 0,
+        total: file.layers().len(),
     };
     for b in file.global_blocks.iter().filter(|b| matches!(&b.key, b"FEid" | b"FXid")) {
+        // Smart-filter caches can be large: a cancelled open stops between blocks.
+        if ctl.cancelled() {
+            return None;
+        }
         match photosuite_psd::filter_effects::FilterEffects::parse(&b.data) {
             Ok(fx) => cx.filter_effects.extend(fx.items),
             Err(e) => cx.warn(format!("smart filter masks ({}) could not be read: {e}", b.key_str())),
         }
+    }
+    if ctl.cancelled() {
+        return None;
     }
 
     let (w, hh) = (h.width as usize, h.height as usize);
     let n = w * hh;
     let canvas = Rect::new(0, 0, h.width as i32, h.height as i32);
     let merged = file.decode_merged();
+    if ctl.cancelled() {
+        return None;
+    }
+    ctl.progress(0.1);
     if let Err(e) = &merged {
         cx.warn(format!("merged image could not be decoded: {e}"));
     }
@@ -685,5 +721,9 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
     // Character and paragraph styles from the type layers' engine data.
     crate::text_styles_map::import(&mut doc);
 
-    (doc, cx.warnings)
+    if ctl.cancelled() {
+        return None;
+    }
+    ctl.progress(1.0);
+    Some((doc, cx.warnings))
 }

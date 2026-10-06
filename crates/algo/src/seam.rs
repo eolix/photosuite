@@ -11,6 +11,8 @@
 //! seams avoid protected pixels. Buffers are interleaved `w × h × ch` normalised floats of any
 //! colour model and depth (alpha is carried like any other channel). Deterministic.
 
+use photosuite_raster::{Cancelled, Interrupt};
+
 /// Energy added per unit of protection: far above any gradient magnitude.
 const PROTECT_ENERGY: f32 = 1.0e4;
 
@@ -97,10 +99,17 @@ fn transpose(w: usize, h: usize, ch: usize, img: &[f32]) -> Vec<f32> {
 
 /// Change the width of `img` to `new_w` by removing or duplicating vertical seams.
 pub fn carve_width(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&[f32]>, new_w: usize) -> Vec<f32> {
+    // Never cancelled; the fallback is unreachable.
+    carve_width_with(w, h, ch, img, protect, new_w, &Interrupt::NONE).unwrap_or_else(|_| img.to_vec())
+}
+
+/// [`carve_width`] that checks `ctl` before every seam and reports progress per seam.
+pub fn carve_width_with(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&[f32]>, new_w: usize, ctl: &Interrupt) -> Result<Vec<f32>, Cancelled> {
     let new_w = new_w.max(1);
     if new_w == w || w == 0 || h == 0 {
-        return img.to_vec();
+        return Ok(img.to_vec());
     }
+    let seams = new_w.abs_diff(w).max(1) as f32;
     let protect_e = |e: &mut [f32], p: Option<&Vec<f32>>| {
         if let Some(p) = p {
             for (e, p) in e.iter_mut().zip(p) {
@@ -112,6 +121,8 @@ pub fn carve_width(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&
         let (mut cur, mut cw) = (img.to_vec(), w);
         let mut prot = protect.map(<[f32]>::to_vec);
         while cw > new_w {
+            ctl.check()?;
+            ctl.progress((w - cw) as f32 / seams);
             let mut e = energy(cw, h, ch, &cur);
             protect_e(&mut e, prot.as_ref());
             let seam = find_seam(cw, h, &e);
@@ -119,7 +130,7 @@ pub fn carve_width(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&
             prot = prot.map(|p| remove_seam_1(cw, h, &p, &seam));
             cw -= 1;
         }
-        return cur;
+        return Ok(cur);
     }
     // Enlarge in rounds of at most half the current width, each duplicating the k lowest seams.
     let (mut cur, mut cw) = (img.to_vec(), w);
@@ -135,6 +146,8 @@ pub fn carve_width(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&
             if tw <= 1 {
                 break;
             }
+            ctl.check()?;
+            ctl.progress((cw + (cw - tw)).saturating_sub(w) as f32 / seams);
             let mut e = energy(tw, h, ch, &tmp);
             protect_e(&mut e, tprot.as_ref());
             let seam = find_seam(tw, h, &e);
@@ -177,21 +190,44 @@ pub fn carve_width(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&
         prot = nprot;
         cw = nw;
     }
-    cur
+    Ok(cur)
 }
 
 /// Content-aware resize of `img` to `new_w × new_h` (width first, then height by transposing).
 pub fn carve(w: usize, h: usize, ch: usize, img: &[f32], protect: Option<&[f32]>, new_w: usize, new_h: usize) -> Vec<f32> {
+    // Never cancelled; the fallback is unreachable.
+    carve_with(w, h, ch, img, protect, new_w, new_h, &Interrupt::NONE).unwrap_or_else(|_| img.to_vec())
+}
+
+/// [`carve`] that checks `ctl` before every seam (a cancel takes effect within one seam) and
+/// reports progress over both passes.
+#[allow(clippy::too_many_arguments)]
+pub fn carve_with(
+    w: usize,
+    h: usize,
+    ch: usize,
+    img: &[f32],
+    protect: Option<&[f32]>,
+    new_w: usize,
+    new_h: usize,
+    ctl: &Interrupt,
+) -> Result<Vec<f32>, Cancelled> {
     let (new_w, new_h) = (new_w.max(1), new_h.max(1));
-    let wide = carve_width(w, h, ch, img, protect, new_w);
+    // Split progress between the passes by their seam counts.
+    let (sw, sh) = (new_w.abs_diff(w) as f32, new_h.abs_diff(h) as f32);
+    let split = if sw + sh > 0.0 { sw / (sw + sh) } else { 1.0 };
+    let cancel = || ctl.cancelled();
+    let first = |f: f32| ctl.progress(f * split);
+    let wide = carve_width_with(w, h, ch, img, protect, new_w, &Interrupt::new(&cancel, &first))?;
     if new_h == h {
-        return wide;
+        return Ok(wide);
     }
     // Protection follows the width change by plain resampling (it only steers seams).
     let prot_t = protect.map(|p| transpose(new_w, h, 1, &resize_bilinear(w, h, 1, p, new_w, h)));
     let t = transpose(new_w, h, ch, &wide);
-    let tall = carve_width(h, new_w, ch, &t, prot_t.as_deref(), new_h);
-    transpose(new_h, new_w, ch, &tall)
+    let second = |f: f32| ctl.progress(split + f * (1.0 - split));
+    let tall = carve_width_with(h, new_w, ch, &t, prot_t.as_deref(), new_h, &Interrupt::new(&cancel, &second))?;
+    Ok(transpose(new_h, new_w, ch, &tall))
 }
 
 /// Plain bilinear resize (the non-content-aware part of the Amount blend).
@@ -240,6 +276,15 @@ pub fn skin_mask(w: usize, h: usize, ch: usize, img: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cancelled_carve_stops() {
+        let (w, h) = (40, 20);
+        let img = vec![0.5f32; w * h * 3];
+        let yes = || true;
+        assert_eq!(carve_with(w, h, 3, &img, None, 30, 15, &Interrupt::cancel_only(&yes)), Err(Cancelled));
+        assert_eq!(carve_with(w, h, 3, &img, None, 30, 15, &Interrupt::NONE).unwrap(), carve(w, h, 3, &img, None, 30, 15));
+    }
 
     /// A flat grey image with a salient vertical bar at x = 10..14 (red/blue columns).
     fn bar(w: usize, h: usize) -> Vec<f32> {

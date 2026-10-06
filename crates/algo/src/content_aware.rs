@@ -17,8 +17,8 @@
 //!
 //! Buffers are interleaved `w × h × ch` normalised floats (any model/depth); deterministic.
 
-use crate::inpaint::{CompleteParams, complete};
-use crate::poisson::membrane_fill;
+use crate::inpaint::{CompleteParams, complete_with};
+use crate::poisson::membrane_fill_with;
 
 /// Options for [`fill`].
 #[derive(Clone, Debug, PartialEq)]
@@ -161,11 +161,27 @@ fn box_blur(w: usize, h: usize, ch: usize, v: &[f32], r: usize) -> Vec<f32> {
 /// Returns the full buffer (unchanged outside the hole). Falls back to the membrane fill when
 /// nothing can be sampled.
 pub fn fill(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], source: &[bool], opts: &FillOptions) -> Vec<f32> {
+    // Never cancelled; the fallback (the input unchanged) is unreachable.
+    fill_with(w, h, ch, img, hole, source, opts, &photosuite_raster::Interrupt::NONE).unwrap_or_else(|_| img.to_vec())
+}
+
+/// [`fill`] that can be cancelled (see [`crate::inpaint::complete_with`]) and reports progress.
+#[allow(clippy::too_many_arguments)]
+pub fn fill_with(
+    w: usize,
+    h: usize,
+    ch: usize,
+    img: &[f32],
+    hole: &[bool],
+    source: &[bool],
+    opts: &FillOptions,
+    ctl: &photosuite_raster::Interrupt,
+) -> Result<Vec<f32>, photosuite_raster::Cancelled> {
     assert_eq!(img.len(), w * h * ch);
     assert_eq!(hole.len(), w * h);
     assert_eq!(source.len(), w * h);
     if !hole.iter().any(|h| *h) {
-        return img.to_vec();
+        return Ok(img.to_vec());
     }
     let params = CompleteParams { seed: opts.seed, ..Default::default() };
     let gap = 2 * params.patch_radius + 2;
@@ -208,7 +224,11 @@ pub fn fill(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], source: &
         }
         oy += v.h + gap;
     }
-    let filled = complete(mw, mh, ch, &mimg, &unknown, &params);
+    ctl.check()?;
+    // The completion is nearly all the work: it reports 0–90 %.
+    let cancel = || ctl.cancelled();
+    let progress = |f: f32| ctl.progress(f * 0.9);
+    let filled = complete_with(mw, mh, ch, &mimg, &unknown, &params, &photosuite_raster::Interrupt::new(&cancel, &progress))?;
     let mut out = img.to_vec();
     match filled {
         Some(f) => {
@@ -221,16 +241,28 @@ pub fn fill(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], source: &
                 }
             }
         }
-        None => out = membrane_fill(w, h, ch, img, hole),
+        None => out = membrane_fill_with(w, h, ch, img, hole, ctl)?,
     }
+    ctl.check()?;
     if opts.color_adaptation > 0.0 {
-        adapt_colors(w, h, ch, img, hole, &mut out, opts.color_adaptation);
+        adapt_colors(w, h, ch, img, hole, &mut out, opts.color_adaptation, ctl)?;
     }
-    out
+    ctl.progress(1.0);
+    Ok(out)
 }
 
 /// Pull the fill's low frequencies towards the membrane interpolation of the hole boundary.
-fn adapt_colors(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], out: &mut [f32], k: f32) {
+#[allow(clippy::too_many_arguments)]
+fn adapt_colors(
+    w: usize,
+    h: usize,
+    ch: usize,
+    img: &[f32],
+    hole: &[bool],
+    out: &mut [f32],
+    k: f32,
+    ctl: &photosuite_raster::Interrupt,
+) -> Result<(), photosuite_raster::Cancelled> {
     let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
     for y in 0..h {
         for x in 0..w {
@@ -240,7 +272,9 @@ fn adapt_colors(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], out: 
         }
     }
     let r = ((x1 - x0).max(y1 - y0) / 6).clamp(1, 32);
-    let membrane = membrane_fill(w, h, ch, img, hole);
+    let membrane = membrane_fill_with(w, h, ch, img, hole, ctl)?;
+    ctl.progress(0.97);
+    ctl.check()?;
     let low = box_blur(w, h, ch, out, r);
     for (i, &hl) in hole.iter().enumerate() {
         if hl {
@@ -250,6 +284,7 @@ fn adapt_colors(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], out: 
             }
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -261,6 +296,26 @@ mod tests {
         let img: Vec<f32> = (0..w * h).map(|i| if (i % w) % 6 < 3 { 0.2 } else { 0.8 }).collect();
         let hole: Vec<bool> = (0..w * h).map(|i| (i % w).abs_diff(w / 2) < 4 && (i / w).abs_diff(h / 2) < 4).collect();
         (img, hole)
+    }
+
+    #[test]
+    fn cancelled_fill_stops_and_progress_reaches_one() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let (w, h) = (60, 40);
+        let (img, hole) = stripes(w, h);
+        let source = vec![true; w * h];
+        let yes = || true;
+        let cancelled = photosuite_raster::Interrupt::cancel_only(&yes);
+        assert!(fill_with(w, h, 1, &img, &hole, &source, &FillOptions::default(), &cancelled).is_err());
+        let last = AtomicU32::new(0);
+        let no = || false;
+        let progress = |f: f32| {
+            assert!(f >= f32::from_bits(last.load(Ordering::Relaxed)), "progress went backwards");
+            last.store(f.to_bits(), Ordering::Relaxed);
+        };
+        let out = fill_with(w, h, 1, &img, &hole, &source, &FillOptions::default(), &photosuite_raster::Interrupt::new(&no, &progress)).unwrap();
+        assert_eq!(f32::from_bits(last.load(Ordering::Relaxed)), 1.0);
+        assert_eq!(out, fill(w, h, 1, &img, &hole, &source, &FillOptions::default()), "same result as the plain fill");
     }
 
     #[test]

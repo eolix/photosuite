@@ -31,10 +31,13 @@ const FINE_OMEGA: f32 = 1.7;
 pub fn solve_membrane(w: usize, h: usize, unknown: &[bool], v: &mut [f32]) {
     assert_eq!(unknown.len(), w * h);
     assert_eq!(v.len(), w * h);
-    solve_rec(w, h, unknown, v, 0);
+    solve_rec(w, h, unknown, v, 0, &|| false);
 }
 
-fn solve_rec(w: usize, h: usize, unknown: &[bool], v: &mut [f32], depth: usize) {
+fn solve_rec(w: usize, h: usize, unknown: &[bool], v: &mut [f32], depth: usize, stop: &(dyn Fn() -> bool + Sync)) {
+    if stop() {
+        return;
+    }
     let n_unknown = unknown.iter().filter(|u| **u).count();
     if n_unknown == 0 {
         return;
@@ -64,7 +67,7 @@ fn solve_rec(w: usize, h: usize, unknown: &[bool], v: &mut [f32], depth: usize) 
                 }
             }
         }
-        solve_rec(cw, chh, &cu, &mut cv, depth + 1);
+        solve_rec(cw, chh, &cu, &mut cv, depth + 1, stop);
         // Prolong: bilinear sample of the coarse solution as the initial guess.
         for y in 0..h {
             let fy = ((y as f32 + 0.5) / 2.0 - 0.5).clamp(0.0, (chh - 1) as f32);
@@ -84,7 +87,7 @@ fn solve_rec(w: usize, h: usize, unknown: &[bool], v: &mut [f32], depth: usize) 
                 v[y * w + x] = a + (b - a) * ty;
             }
         }
-        sor(w, h, unknown, v, FINE_ITERS, FINE_OMEGA);
+        sor(w, h, unknown, v, FINE_ITERS, FINE_OMEGA, stop);
     } else {
         let mean = known.iter().sum::<f32>() / known.len() as f32;
         for (x, u) in v.iter_mut().zip(unknown) {
@@ -92,12 +95,12 @@ fn solve_rec(w: usize, h: usize, unknown: &[bool], v: &mut [f32], depth: usize) 
                 *x = mean;
             }
         }
-        sor(w, h, unknown, v, 2000, 1.85);
+        sor(w, h, unknown, v, 2000, 1.85, stop);
     }
 }
 
 /// SOR sweeps over the unknown pixels until the largest update drops below [`TOL`].
-fn sor(w: usize, h: usize, unknown: &[bool], v: &mut [f32], max_iter: usize, omega: f32) {
+fn sor(w: usize, h: usize, unknown: &[bool], v: &mut [f32], max_iter: usize, omega: f32, stop: &(dyn Fn() -> bool + Sync)) {
     // Precompute the unknown pixels and which neighbours exist.
     let cells: Vec<(u32, u8)> = (0..w * h)
         .filter(|&i| unknown[i])
@@ -108,6 +111,9 @@ fn sor(w: usize, h: usize, unknown: &[bool], v: &mut [f32], max_iter: usize, ome
         })
         .collect();
     for _ in 0..max_iter {
+        if stop() {
+            return;
+        }
         let mut max_d = 0.0f32;
         for &(i, m) in &cells {
             let i = i as usize;
@@ -227,6 +233,28 @@ pub fn membrane_fill(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool]) 
         solve_membrane(w, h, hole, &mut v);
         v
     })
+}
+
+/// [`membrane_fill`] that stops at the next SOR sweep once `ctl` is cancelled.
+pub fn membrane_fill_with(
+    w: usize,
+    h: usize,
+    ch: usize,
+    img: &[f32],
+    hole: &[bool],
+    ctl: &photosuite_raster::Interrupt,
+) -> Result<Vec<f32>, photosuite_raster::Cancelled> {
+    ctl.check()?;
+    let stop = || ctl.cancelled();
+    let out = per_channel(w, h, ch, |c| {
+        let mut v: Vec<f32> = (0..w * h).map(|i| if hole[i] { 0.0 } else { img[i * ch + c] }).collect();
+        if hole.len() == w * h && v.len() == w * h {
+            solve_rec(w, h, hole, &mut v, 0, &stop);
+        }
+        v
+    });
+    ctl.check()?;
+    Ok(out)
 }
 
 #[cfg(test)]

@@ -117,6 +117,18 @@ pub struct RunParams {
     /// Command parameters as a JSON object (see the `params` doc in `command_list`).
     #[serde(default)]
     pub params: Option<Value>,
+    /// Wait for a long command (filters, Content-Aware Fill, Photomerge, …) to finish (default
+    /// true). With false it runs as a background job and the result is `{"job": id}`: poll it
+    /// with `jobs_list`, stop it with `jobs_cancel`.
+    #[serde(default)]
+    pub wait: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct JobCancelParams {
+    /// The job id from `command_run` / `jobs_list` (omit to cancel every running job).
+    #[serde(default)]
+    pub job: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -374,7 +386,7 @@ impl PhotosuiteMcp {
         if let Some(v) = p.name {
             params.insert("name".into(), v.into());
         }
-        self.run_command("file.new".into(), Value::Object(params)).await
+        self.run_command("file.new".into(), Value::Object(params), true).await
     }
 
     #[tool(description = "Save the document. `.pcraft` is the lossless native format (incremental); other extensions \
@@ -464,9 +476,23 @@ impl PhotosuiteMcp {
         Ok(ok_json(&Value::Array(items)))
     }
 
-    #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result.")]
+    #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result. \
+        Long commands (filters, Content-Aware Fill/Scale, Photomerge, brush import) wait to finish unless `wait` is false: \
+        then they run as a background job and the result is {job: id} (see jobs_list, jobs_cancel).")]
     async fn command_run(&self, Parameters(p): Parameters<RunParams>) -> Result<CallToolResult, McpError> {
-        self.run_command(p.id, p.params.unwrap_or_else(|| json!({}))).await
+        self.run_command(p.id, p.params.unwrap_or_else(|| json!({})), p.wait.unwrap_or(true)).await
+    }
+
+    #[tool(description = "List background jobs: running ones with progress (0-1), message and elapsed time, then the last few \
+        that ended (state done|failed|cancelled with their result or error). Finished jobs are applied first.")]
+    async fn jobs_list(&self) -> Result<CallToolResult, McpError> {
+        self.jobs_call("jobs.list", json!({})).await
+    }
+
+    #[tool(description = "Cancel a background job by id (or every running job when `job` is omitted). The document is left \
+        unchanged.")]
+    async fn jobs_cancel(&self, Parameters(p): Parameters<JobCancelParams>) -> Result<CallToolResult, McpError> {
+        self.jobs_call("jobs.cancel", p.job.map_or_else(|| json!({}), |j| json!({"job": j}))).await
     }
 
     #[tool(description = "Run several engine commands in one call (fewer round trips). Returns {completed, failed, \
@@ -572,15 +598,27 @@ fn bridge_only_headless(name: &str) -> Result<CallToolResult, McpError> {
 }
 
 impl PhotosuiteMcp {
-    async fn run_command(&self, id: String, params: Value) -> Result<CallToolResult, McpError> {
+    async fn run_command(&self, id: String, params: Value, wait: bool) -> Result<CallToolResult, McpError> {
         let (id2, params2) = (id.clone(), params.clone());
-        if let Some(r) = self.headless_op(move |h| h.command_run(&id2, params2)).await {
+        if let Some(r) = self.headless_op(move |h| h.command_start(&id2, params2, wait)).await {
             return to_result(r);
         }
         let Some(b) = self.bridge_client() else {
             return Ok(no_backend());
         };
-        to_result(b.call("engine.execute", json!({"command": id, "params": params})).await)
+        to_result(b.call("engine.execute", json!({"command": id, "params": params, "wait": wait})).await)
+    }
+
+    /// `jobs.list` / `jobs.cancel` in either backend.
+    async fn jobs_call(&self, method: &'static str, params: Value) -> Result<CallToolResult, McpError> {
+        let p2 = params.clone();
+        if let Some(r) = self.headless_op(move |h| h.command_start(method, p2, true)).await {
+            return to_result(r);
+        }
+        let Some(b) = self.bridge_client() else {
+            return Ok(no_backend());
+        };
+        to_result(b.call(method, params).await)
     }
 
     async fn save_impl(&self, p: SaveParams) -> Result<CallToolResult, McpError> {

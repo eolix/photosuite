@@ -403,83 +403,114 @@ fn photomerge(s: &mut Session, p: &Value) -> Result<Value> {
     if srcs.len() < 2 {
         return Err(bad(cmd, "Photomerge needs two or more images"));
     }
-    let focal35 = p.get("focalLength").and_then(Value::as_f64).filter(|f| *f > 0.0).or_else(|| exif_focal(&srcs));
-    let images: Vec<(&Surface, Rect)> = srcs.iter().map(|s| (&s.surf, Rect::new(0, 0, s.w as i32, s.h as i32))).collect();
-    let al = register(&images, layout, None, geometric, focal35)
-        .ok_or_else(|| EngineError::Other("Photomerge couldn't find enough matching detail between the images".into()))?;
-    let t_reg = t0.ms() / 1000.0;
-    let placed: Vec<usize> = (0..srcs.len()).filter(|&i| al.placements[i].is_some()).collect();
-    // Parallel to `placed`.
-    let placements: Vec<&Placement> = placed.iter().filter_map(|&i| al.placements[i].as_ref()).collect();
-    let failed: Vec<String> = (0..srcs.len()).filter(|&i| al.placements[i].is_none()).map(|i| srcs[i].name.clone()).collect();
-    // Canvas: union of the placed images.
-    let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
-    for (&i, pl) in placed.iter().zip(&placements) {
-        let b = pl.bounds(srcs[i].w as f64, srcs[i].h as f64);
-        x0 = x0.min(b[0]);
-        y0 = y0.min(b[1]);
-        x1 = x1.max(b[2]);
-        y1 = y1.max(b[3]);
-    }
-    let (cw, ch) = ((x1 - x0).ceil(), (y1 - y0).ceil());
-    if !(cw.is_finite() && ch.is_finite()) || cw > 30_000.0 || ch > 30_000.0 || cw * ch > 6.0e8 {
-        return Err(EngineError::Other(format!("the panorama would be {cw}×{ch} px; try another layout")));
-    }
-    let canvas = Rect::new(0, 0, cw as i32, ch as i32);
-    let offset = (-x0.floor(), -y0.floor());
-    let warped: Vec<Surface> = {
-        placed
-            .iter()
-            .zip(&placements)
-            .map(|(&i, pl)| warp_placed(&srcs[i].surf, Rect::new(0, 0, srcs[i].w as i32, srcs[i].h as i32), (0.0, 0.0), pl, offset, Interp::Bicubic))
-            .collect()
-    };
-    let t_warp = t0.ms() / 1000.0;
-    let mut doc = Document::new(format!("Untitled_Panorama{}", s.documents().len() + 1), Size::new(cw as u32, ch as u32), fmt.mode, fmt.sample);
-    doc.icc_profile = icc;
-    let mut info = json!({});
-    let ref_pos = placed.iter().position(|&i| i == al.reference).unwrap_or(0);
-    if blend {
-        let pls: Vec<Placement> = placements.iter().map(|p| (*p).clone()).collect();
-        let sizes: Vec<(usize, usize)> = placed.iter().map(|&i| (srcs[i].w, srcs[i].h)).collect();
-        let order = seam_order(&warped, ref_pos);
-        let geo = vignette.then_some((pls.as_slice(), sizes.as_slice(), offset));
-        let b = seam_blend(&warped, canvas, &order, true, true, geo);
-        for (k, (px, mask)) in b.layers.into_iter().enumerate() {
-            let mut l = Layer::new(srcs[placed[k]].name.clone(), LayerContent::Raster(px));
-            let mut m = LayerMask::hide_all();
-            m.surface = mask;
-            l.mask = Some(m);
-            doc.layers.push(l);
-        }
-        info = json!({"gains": b.gains, "vignette": b.vignette});
-        if fill {
-            let filled = content_aware_fill(&b.composite, canvas);
-            doc.layers.push(Layer::new("Content-Aware Fill", LayerContent::Raster(filled)));
-        }
-    } else {
-        for (k, px) in warped.into_iter().enumerate() {
-            doc.layers.push(Layer::new(srcs[placed[k]].name.clone(), LayerContent::Raster(px)));
-        }
-    }
-    let n = doc.layers.len();
-    let idx = s.add_document(doc, None);
-    Ok(json!({
-        "document": idx,
-        "layout": al.layout.name(),
-        "reference": srcs[al.reference].name,
-        "focalLength35": al.focal / (srcs.iter().map(|s| s.w.max(s.h)).max().unwrap_or(1) as f64) * 36.0,
-        "geometricK1": al.k1,
-        "rms": al.rms,
-        "pairs": al.pairs,
-        "placed": placed.iter().map(|&i| srcs[i].name.clone()).collect::<Vec<_>>(),
-        "failed": failed,
-        "width": cw as u32,
-        "height": ch as u32,
-        "layers": n,
-        "photometric": info,
-        "ms": {"register": t_reg * 1000.0, "warp": (t_warp - t_reg) * 1000.0, "total": t0.ms()},
-    }))
+    let focal_param = p.get("focalLength").and_then(Value::as_f64).filter(|f| *f > 0.0);
+    let doc_name = format!("Untitled_Panorama{}", s.documents().len() + 1);
+    // A background job when started with `Session::start` (#210): alignment, warping and
+    // blending run on a worker, checking for cancellation between stages and images.
+    crate::jobs::run(
+        s,
+        "Photomerge",
+        false,
+        move |ctx| {
+            ctx.progress(0.0, "Photomerge: aligning images");
+            let focal35 = focal_param.or_else(|| exif_focal(&srcs));
+            let images: Vec<(&Surface, Rect)> = srcs.iter().map(|s| (&s.surf, Rect::new(0, 0, s.w as i32, s.h as i32))).collect();
+            let al = register(&images, layout, None, geometric, focal35)
+                .ok_or_else(|| EngineError::Other("Photomerge couldn't find enough matching detail between the images".into()))?;
+            let t_reg = t0.ms() / 1000.0;
+            ctx.check()?;
+            ctx.progress(0.35, "Photomerge: warping images");
+            let placed: Vec<usize> = (0..srcs.len()).filter(|&i| al.placements[i].is_some()).collect();
+            // Parallel to `placed`.
+            let placements: Vec<&Placement> = placed.iter().filter_map(|&i| al.placements[i].as_ref()).collect();
+            let failed: Vec<String> = (0..srcs.len()).filter(|&i| al.placements[i].is_none()).map(|i| srcs[i].name.clone()).collect();
+            // Canvas: union of the placed images.
+            let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+            for (&i, pl) in placed.iter().zip(&placements) {
+                let b = pl.bounds(srcs[i].w as f64, srcs[i].h as f64);
+                x0 = x0.min(b[0]);
+                y0 = y0.min(b[1]);
+                x1 = x1.max(b[2]);
+                y1 = y1.max(b[3]);
+            }
+            let (cw, ch) = ((x1 - x0).ceil(), (y1 - y0).ceil());
+            if !(cw.is_finite() && ch.is_finite()) || cw > 30_000.0 || ch > 30_000.0 || cw * ch > 6.0e8 {
+                return Err(EngineError::Other(format!("the panorama would be {cw}×{ch} px; try another layout")));
+            }
+            let canvas = Rect::new(0, 0, cw as i32, ch as i32);
+            let offset = (-x0.floor(), -y0.floor());
+            let warped: Vec<Surface> = {
+                placed
+                    .iter()
+                    .zip(&placements)
+                    .enumerate()
+                    .map(|(k, (&i, pl))| {
+                        ctx.check()?;
+                        ctx.progress(0.35 + 0.25 * k as f32 / placed.len().max(1) as f32, "");
+                        Ok(warp_placed(&srcs[i].surf, Rect::new(0, 0, srcs[i].w as i32, srcs[i].h as i32), (0.0, 0.0), pl, offset, Interp::Bicubic))
+                    })
+                    .collect::<Result<Vec<Surface>>>()?
+            };
+            let t_warp = t0.ms() / 1000.0;
+            ctx.check()?;
+            ctx.progress(0.6, "Photomerge: blending images");
+            let mut doc = Document::new(doc_name, Size::new(cw as u32, ch as u32), fmt.mode, fmt.sample);
+            doc.icc_profile = icc;
+            let mut info = json!({});
+            let ref_pos = placed.iter().position(|&i| i == al.reference).unwrap_or(0);
+            if blend {
+                let pls: Vec<Placement> = placements.iter().map(|p| (*p).clone()).collect();
+                let sizes: Vec<(usize, usize)> = placed.iter().map(|&i| (srcs[i].w, srcs[i].h)).collect();
+                let order = seam_order(&warped, ref_pos);
+                let geo = vignette.then_some((pls.as_slice(), sizes.as_slice(), offset));
+                let b = seam_blend(&warped, canvas, &order, true, true, geo);
+                for (k, (px, mask)) in b.layers.into_iter().enumerate() {
+                    let mut l = Layer::new(srcs[placed[k]].name.clone(), LayerContent::Raster(px));
+                    let mut m = LayerMask::hide_all();
+                    m.surface = mask;
+                    l.mask = Some(m);
+                    doc.layers.push(l);
+                }
+                info = json!({"gains": b.gains, "vignette": b.vignette});
+                ctx.check()?;
+                if fill {
+                    ctx.progress(0.85, "Photomerge: filling edges");
+                    let filled = content_aware_fill(&b.composite, canvas);
+                    doc.layers.push(Layer::new("Content-Aware Fill", LayerContent::Raster(filled)));
+                }
+            } else {
+                for (k, px) in warped.into_iter().enumerate() {
+                    doc.layers.push(Layer::new(srcs[placed[k]].name.clone(), LayerContent::Raster(px)));
+                }
+            }
+            let n = doc.layers.len();
+            ctx.check()?;
+            ctx.progress(1.0, "");
+            Ok((
+                doc,
+                json!({
+                    "document": Value::Null,
+                    "layout": al.layout.name(),
+                    "reference": srcs[al.reference].name,
+                    "focalLength35": al.focal / (srcs.iter().map(|s| s.w.max(s.h)).max().unwrap_or(1) as f64) * 36.0,
+                    "geometricK1": al.k1,
+                    "rms": al.rms,
+                    "pairs": al.pairs,
+                    "placed": placed.iter().map(|&i| srcs[i].name.clone()).collect::<Vec<_>>(),
+                    "failed": failed,
+                    "width": cw as u32,
+                    "height": ch as u32,
+                    "layers": n,
+                    "photometric": info,
+                    "ms": {"register": t_reg * 1000.0, "warp": (t_warp - t_reg) * 1000.0, "total": t0.ms()},
+                }),
+            ))
+        },
+        |s, (doc, mut info): (Document, Value)| {
+            info["document"] = json!(s.add_document(doc, None));
+            Ok(info)
+        },
+    )
 }
 
 /// Fills the transparent areas of a composite (inside its bounding rectangle) with

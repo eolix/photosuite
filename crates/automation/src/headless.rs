@@ -185,10 +185,25 @@ impl Headless {
     }
 
     pub fn command_run(&mut self, id: &str, params: Value) -> Result<Value, AutomationError> {
+        self.command_start(id, params, true)
+    }
+
+    /// Run a command; with `wait` false, a job-capable command (filters, Content-Aware Fill,
+    /// Photomerge, …) runs in the background and this returns `{"job": id}` at once (poll with
+    /// `jobs.list`, stop with `jobs.cancel`). Other commands finish before returning either way.
+    pub fn command_start(&mut self, id: &str, params: Value, wait: bool) -> Result<Value, AutomationError> {
         let params = if params.is_null() { json!({}) } else { params };
         if !matches!(&self.filesystem, Filesystem::TrustedLocal) {
             authorize_engine_command(id, &params)?;
         }
-        Ok(self.session.execute(id, params)?)
+        // Background jobs that finished since the last request are applied first.
+        self.session.poll_jobs();
+        if wait {
+            return Ok(self.session.execute(id, params)?);
+        }
+        Ok(match self.session.start(id, params)? {
+            photosuite_engine::jobs::Started::Done(v) => v,
+            photosuite_engine::jobs::Started::Job(job) => json!({"job": job.0, "pending": true}),
+        })
     }
 }

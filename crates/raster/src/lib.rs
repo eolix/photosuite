@@ -7,6 +7,9 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+mod interrupt;
+pub use interrupt::{Cancelled, Interrupt};
+
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

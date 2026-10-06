@@ -39,6 +39,7 @@ pub mod gradient_fill_cmds;
 pub mod group_view_cmds;
 pub mod image_cmds;
 pub mod inspect;
+pub mod jobs;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
 pub mod layer_style;
@@ -109,6 +110,9 @@ pub enum EngineError {
     NoLayer(LayerId),
     #[error("{0}")]
     Other(String),
+    /// A background job was cancelled (see [`jobs`]); nothing changed.
+    #[error("cancelled")]
+    Cancelled,
 }
 
 pub type Result<T> = std::result::Result<T, EngineError>;
@@ -283,6 +287,8 @@ pub struct Session {
     /// Persistent brush preset store (desktop only; `None` keeps presets session-only, as in
     /// headless and test sessions). See `preset_store`.
     pub preset_store: Option<preset_store::PresetStore>,
+    /// Background jobs (see [`jobs`]).
+    jobs: jobs::Jobs,
 }
 
 impl Session {
@@ -333,6 +339,9 @@ impl Session {
             return None;
         }
         smart_cmds::on_close(self, index);
+        if let Some(id) = self.docs.get(index).map(|d| d.doc.id) {
+            self.cancel_jobs_on(id);
+        }
         let d = self.docs.remove(index);
         self.active = if self.docs.is_empty() { None } else { Some(index.min(self.docs.len() - 1)) };
         Some(d)
@@ -343,39 +352,27 @@ impl Session {
     /// Any command accepts an optional `"coalesce": "<key>"` param: consecutive edits with the same
     /// key (and no other edit, undo or redo in between) share one history step, like Photoshop's
     /// single "Edit Type Layer" step for a whole typing session or one step per slider drag.
+    ///
+    /// Runs synchronously, including job-capable commands (see [`jobs`]; [`Session::start`] runs
+    /// those in the background).
     pub fn execute(&mut self, id: &str, params: Value) -> Result<Value> {
-        let spec = commands::find(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
-        if let Err(why) = (spec.enabled)(self) {
-            return Err(EngineError::Disabled(id.to_string(), why));
+        match self.dispatch(id, params, false)? {
+            jobs::Started::Done(v) => Ok(v),
+            // Not reached: inline dispatch never starts a job. Waiting is still correct.
+            jobs::Started::Job(j) => self.wait_job(j),
         }
-        self.coalesce_request = params.get("coalesce").and_then(Value::as_str).map(str::to_string);
-        // Pixel commands follow the Channels panel target unless the caller names one.
-        let run_params = channel_cmds::inject_target(self, id, commands::inject_kind(id, params.clone()));
-        self.color_restrict = channel_cmds::color_restriction(self, id, &run_params);
-        // Last-resort guard (AGENTS.md, Never crash): a command that panics anyway fails with an
-        // error instead of taking the app down. `edit` only commits a document after its closure
-        // returns, so the documents are unchanged.
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (spec.run)(self, &run_params)))
-            .unwrap_or_else(|_| Err(EngineError::Other(format!("`{id}` failed with an internal error (logged); the document is unchanged"))));
-        self.coalesce_request = None;
-        self.color_restrict = None;
-        let r = r?;
-        // A layer-mask view ends when another layer becomes active (#196).
-        if let Some(st) = self.active_mut() {
-            mask_view_cmds::fix(st);
-        }
-        edit_menu_cmds::after_command(self, id);
-        automate_cmds::after_command(self, id);
-        self.sync_preset_store();
-        if spec.journal && !brush_cmds::coalesce_journal(self, id, &params) {
-            self.journal.push((id.to_string(), params));
-        }
-        Ok(r)
     }
 
     /// Is the command currently runnable? (drives menu enablement)
     pub fn is_enabled(&self, id: &str) -> bool {
-        commands::find(id).is_some_and(|s| (s.enabled)(self).is_ok())
+        commands::find(id).is_some_and(|s| (s.enabled)(self).is_ok() && self.job_conflict(id, s.journal).is_none())
+    }
+
+    /// Why the command can't run now (None = it can): its own precondition, or a background job
+    /// running on the active document.
+    pub fn disabled_reason(&self, id: &str) -> Option<String> {
+        let Some(s) = commands::find(id) else { return Some(format!("unknown command `{id}`")) };
+        (s.enabled)(self).err().or_else(|| self.job_conflict(id, s.journal))
     }
 
     /// Apply an undoable edit to the active document.
@@ -425,6 +422,10 @@ impl Session {
     }
 
     pub fn undo(&mut self) -> bool {
+        // A background job is computing from the current state: it must not move under it.
+        if self.active_job().is_some() {
+            return false;
+        }
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.undo(st.doc.clone()) {
@@ -440,6 +441,9 @@ impl Session {
     }
 
     pub fn redo(&mut self) -> bool {
+        if self.active_job().is_some() {
+            return false;
+        }
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.redo(st.doc.clone()) {
