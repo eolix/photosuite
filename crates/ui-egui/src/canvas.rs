@@ -1558,27 +1558,23 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
     // Under an open dialog the canvas widget is inert, but the image still pans and zooms.
     let under_dialog = !app.ui.dialogs.is_empty();
     let free_hover = under_dialog && crate::dialogs::free_pointer_over(&ctx, rect).is_some();
-    // Navigation: scroll pans, pinch / ⌘-scroll zooms around the pointer.
+    // Navigation (wheel_nav.rs): scroll pans; pinch, ⌘-scroll and ⌥-scroll zoom around the pointer.
+    let wheel = crate::wheel_nav::read(&ctx, app.session.prefs().general.zoom_with_scroll_wheel);
     // The wheel also scrolls over the scrollbars drawn on top of the canvas (last frame's hover).
     let bars_id = egui::Id::new(("pc-canvas-bars-hover", idx));
     let over_bars = ctx.data(|d| d.get_temp::<bool>(bars_id)).unwrap_or(false);
     if response.hovered() || free_hover || over_bars {
-        let (scroll, zoom_delta, pointer) = ui.input(|i| (i.smooth_scroll_delta, i.zoom_delta(), i.pointer.hover_pos()));
-        if zoom_delta != 1.0
-            && let Some(p) = pointer
-        {
-            let nz = (view.zoom * zoom_delta).clamp(0.01, 64.0);
-            zoom_about(&mut view, &xf, p, nz);
-        } else if scroll.y != 0.0
-            && app.session.prefs().general.zoom_with_scroll_wheel
-            && let Some(p) = pointer
-        {
-            // Preferences › General › Zoom with Scroll Wheel.
-            let nz = (view.zoom * (scroll.y / 200.0).exp()).clamp(0.01, 64.0);
-            zoom_about(&mut view, &xf, p, nz);
-        } else if scroll != Vec2::ZERO {
-            view.center[0] -= scroll.x / view.zoom * if flip { -1.0 } else { 1.0 };
-            view.center[1] -= scroll.y / view.zoom;
+        let pointer = ui.input(|i| i.pointer.hover_pos());
+        match (wheel, pointer) {
+            (Some(crate::wheel_nav::Wheel::Zoom(f)), Some(p)) => {
+                let nz = (view.zoom * f).clamp(0.01, 64.0);
+                zoom_about(&mut view, &xf, p, nz);
+            }
+            (Some(crate::wheel_nav::Wheel::Pan(scroll)), _) => {
+                view.center[0] -= scroll.x / view.zoom * if flip { -1.0 } else { 1.0 };
+                view.center[1] -= scroll.y / view.zoom;
+            }
+            _ => {}
         }
     }
 

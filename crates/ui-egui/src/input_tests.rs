@@ -136,6 +136,68 @@ fn clicking_outside_a_dialog_keeps_it_open_and_the_canvas_pans_and_zooms() {
 /// Type tool (#206): Alt+←/→ at a collapsed caret kerns the pair before it by 20/1000 em (100
 /// with ⌘/Ctrl), one history step per press; ⌘/Ctrl+←/→ moves by word; Alt+Shift+→ extends
 /// the selection by a word.
+fn wheel(h: &Harness<'static, PhotosuiteApp>, dy: f32, modifiers: Modifiers) {
+    h.event_modifiers(egui::Event::MouseWheel { unit: egui::MouseWheelUnit::Line, delta: vec2(0.0, dy), phase: egui::TouchPhase::Move, modifiers }, modifiers);
+}
+
+/// The document point under screen point `p` (no flip).
+fn doc_at(h: &Harness<'static, PhotosuiteApp>, p: Pos2) -> [f32; 2] {
+    let v = &h.state().ui.views[0];
+    let c = h.state().last_canvas_rect.center();
+    [v.center[0] + (p.x - c.x) / v.zoom, v.center[1] + (p.y - c.y) / v.zoom]
+}
+
+#[test]
+fn alt_scroll_zooms_gently_around_the_pointer() {
+    let mut h = harness();
+    let r = h.state().last_canvas_rect;
+    let p = pos2(r.center().x + 120.0, r.center().y - 70.0);
+    h.hover_at(p);
+    h.run_steps(2);
+    let (z0, d0) = (zoom(&h), doc_at(&h, p));
+    // One notch with ⌥ held: +5%, the point under the pointer stays put. The modifiers are
+    // released right after the event, while egui still smooths the notch over later frames.
+    wheel(&h, 1.0, Modifiers::ALT);
+    h.run_steps(40);
+    let (z1, d1) = (zoom(&h), doc_at(&h, p));
+    assert!((z1 / z0 - 1.05).abs() < 1e-3, "one ⌥ notch is 5%: {z0} -> {z1}");
+    assert!((d1[0] - d0[0]).abs() < 0.05 && (d1[1] - d0[1]).abs() < 0.05, "centred on the pointer: {d0:?} -> {d1:?}");
+    // Three notches back out.
+    wheel(&h, -3.0, Modifiers::ALT);
+    h.run_steps(40);
+    assert!((zoom(&h) / z1 - 1.05f32.powi(-3)).abs() < 1e-3, "{z1} -> {}", zoom(&h));
+
+    // A plain notch still pans, and does not zoom.
+    let (z2, c2) = (zoom(&h), h.state().ui.views[0].center);
+    wheel(&h, -1.0, Modifiers::NONE);
+    h.run_steps(40);
+    assert_eq!(zoom(&h), z2, "a plain scroll never zooms");
+    assert!(h.state().ui.views[0].center[1] > c2[1], "a plain scroll pans");
+
+    // ⌘/Ctrl + scroll is still the faster gesture zoom.
+    wheel(&h, 1.0, Modifiers::COMMAND);
+    h.run_steps(40);
+    assert!(zoom(&h) / z2 > 1.05, "⌘-scroll zooms in bigger steps: {z2} -> {}", zoom(&h));
+}
+
+#[test]
+fn alt_scroll_zooms_while_a_temporary_tool_is_held() {
+    let mut h = harness();
+    let p = h.state().last_canvas_rect.center();
+    h.hover_at(p);
+    // Space (the temporary Hand, #249) is down: ⌥ + scroll still zooms by notches, and the
+    // held key never changes the current tool.
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    let z0 = zoom(&h);
+    wheel(&h, 2.0, Modifiers::ALT);
+    h.run_steps(40);
+    assert!((zoom(&h) / z0 - 1.05f32.powi(2)).abs() < 1e-3, "{z0} -> {}", zoom(&h));
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    assert_eq!(h.state().ui.tool, crate::state::Tool::Brush);
+}
+
 #[test]
 fn type_tool_alt_arrows_kern_the_pair() {
     use photosuite_doc::text::Kerning;

@@ -123,6 +123,7 @@ pub mod type_tool;
 mod variables_ui;
 pub mod vector_ui;
 pub mod view_cmds;
+pub mod wheel_nav;
 pub mod wide_angle_ui;
 pub mod widgets;
 pub mod workspace_ui;
