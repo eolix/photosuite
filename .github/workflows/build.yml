@@ -61,7 +61,8 @@ jobs:
           # Keep the build cache even when a test fails, so the next run isn't a cold build.
           cache-on-failure: true
       - name: Tests
-        run: cargo test --workspace --locked
+        # Every failure in one run, rather than stopping at the first failing test binary.
+        run: cargo test --workspace --locked --no-fail-fast
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-about

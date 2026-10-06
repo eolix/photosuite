@@ -267,12 +267,9 @@ summary before trusting a regression, and record it next to any number you quote
 bench `--json` support through `photosuite_testkit::perf::{row, report, write_report}`, then add a
 `[[scenario]]` to `perf/budgets.toml` and run `cargo xtask scorecard`.
 
-**CI.** `ci.yml` runs `cargo xtask scorecard --check`. `perf-nightly.yml` runs `cargo xtask perf`
-on a fixed macOS runner every night (and on demand), posts the table as the job summary, uploads
-`results.json`, and fails on a broken budget or regression. It never runs on pull requests: the
-release build of the benches alone takes longer than PR CI should. To give the nightly runner
-its own baseline, run the workflow by hand with `update_baseline` and commit the `perf-baseline`
-artifact as `perf/baseline.json`.
+**CI.** Neither the scorecard nor the benchmarks run in CI: run `cargo xtask scorecard` and
+`cargo xtask perf` locally (the release build of the benches alone takes longer than CI should).
+`cargo xtask perf --update-baseline` writes a new `perf/baseline.json` to commit.
 
 ## Web build
 
