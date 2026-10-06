@@ -352,4 +352,51 @@ mod tests {
         assert_eq!(st.history.undo_label(), Some("Eraser"));
         assert!(!app.ui.status_error, "{}", app.ui.status);
     }
+
+    /// Assert the one committed stroke contains a point at each queued screen position.
+    fn assert_committed_points(h: &Harness<'static, PhotosuiteApp>, queued: &[Pos2]) {
+        let s = strokes(h);
+        assert_eq!(s.len(), 1);
+        let points = s[0]["points"].as_array().unwrap();
+        let app = h.state();
+        let v = app.ui.views[0].clone();
+        let r = app.last_canvas_rect;
+        for p in queued {
+            let d = (*p - r.center()) / v.zoom;
+            let want = [d.x as f64 + v.center[0] as f64, d.y as f64 + v.center[1] as f64];
+            assert!(
+                points.iter().any(|q| {
+                    let q = q.as_array().unwrap();
+                    (q[0].as_f64().unwrap() - want[0]).abs() < 1.0 && (q[1].as_f64().unwrap() - want[1]).abs() < 1.0
+                }),
+                "queued move {want:?} missing from {points:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn one_frame_feeds_every_pointer_move_not_just_the_latest() {
+        // Fast strokes used to lose the moves between two frames: the canvas read only
+        // `interact_pointer_pos()` once per frame, so the stroke was a coarse polyline. Every
+        // `PointerMoved` egui-winit delivered in one frame must now reach the stroke.
+        let mut h = harness(None);
+        let c = h.state().last_canvas_rect.center();
+        let a = c - vec2(90.0, 0.0);
+        h.event(egui::Event::PointerMoved(a));
+        h.run_steps(1);
+        press(&mut h, a, PointerButton::Primary, true);
+        // Cross egui's drag threshold on its own frame.
+        h.event(egui::Event::PointerMoved(a + vec2(20.0, 0.0)));
+        h.run_steps(1);
+        // Several moves in ONE frame: `Harness::event` would make one frame per event, so push
+        // them straight into the next frame's input. All of them must reach the committed stroke.
+        let queued: Vec<Pos2> = (1..=6).map(|i| a + vec2(20.0 + i as f32 * 8.0, 0.0)).collect();
+        for p in &queued {
+            h.input_mut().events.push(egui::Event::PointerMoved(*p));
+        }
+        h.run_steps(1);
+        let end = *queued.last().unwrap();
+        press(&mut h, end, PointerButton::Primary, false);
+        assert_committed_points(&h, &queued);
+    }
 }

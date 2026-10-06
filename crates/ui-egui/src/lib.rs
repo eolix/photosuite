@@ -258,6 +258,9 @@ pub struct PhotosuiteApp {
     pub(crate) move_preview: Option<move_ui::MovePreview>,
     /// The next tool `Down` is a right-button drag that erases (see `paint_mouse`).
     secondary_erase: bool,
+    /// While a batch of recovered pointer samples is replayed, defer the live-stroke update to one
+    /// call for the whole frame (see `canvas::canvas_view`).
+    defer_live_stroke: bool,
     /// End of the last painting stroke: ⇧-click draws a straight line from it (#178).
     last_stroke_end: Option<(DocId, [f64; 2])>,
     /// Control+Alt-drag brush resize in progress (`brush_resize`, #231).
@@ -393,6 +396,7 @@ impl PhotosuiteApp {
             trail: None,
             move_preview: None,
             secondary_erase: false,
+            defer_live_stroke: false,
             last_stroke_end: None,
             brush_resize: None,
             control_rx: None,

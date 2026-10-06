@@ -4,7 +4,7 @@
 //! update only their damage rectangle (`set_partial`). The wgpu compositor (M5) will replace this
 //! with direct GPU rendering behind the same `CanvasCache` interface.
 
-use egui::{Color32, Pos2, Rect, Sense, Stroke, TextureOptions, Vec2, pos2, vec2};
+use egui::{Color32, PointerButton, Pos2, Rect, Sense, Stroke, TextureOptions, Vec2, pos2, vec2};
 use photosuite_doc::{Document, LayerContent};
 use photosuite_geom::Rect as DRect;
 use serde_json::json;
@@ -221,6 +221,11 @@ fn begin_live_stroke(app: &PhotosuiteApp) -> Option<LiveStroke> {
 /// Render the drag points the live stroke hasn't seen yet, with the pen pressure, tilt and
 /// rotation the commit's `paint.stroke` gets for them.
 fn feed_live_stroke(app: &mut PhotosuiteApp) {
+    // A batched move replays several samples in one frame and calls this once at the end, so the
+    // per-sample calls from `tool_event` are skipped (see `canvas_view`).
+    if app.defer_live_stroke {
+        return;
+    }
     let (Some(l), Some(d)) = (app.live_stroke.as_mut(), app.drag.as_ref()) else { return };
     let pose = &app.stylus.stroke;
     let pts: Vec<_> = (l.fed..d.points.len())
@@ -240,6 +245,48 @@ fn feed_live_stroke(app: &mut PhotosuiteApp) {
         Ok(r) => l.damage.push(r),
         Err(_) => app.live_stroke = None,
     }
+}
+
+/// Tools whose gesture follows a freehand path (a polyline of the input points), so every pointer
+/// sample the OS delivered improves the result. Other tools are driven by the pointer's latest
+/// position (endpoints, anchors, guides), so feeding them a whole frame's moves only repeats work.
+pub(crate) fn freehand_tool(tool: Tool) -> bool {
+    matches!(
+        tool,
+        Tool::Brush
+            | Tool::Pencil
+            | Tool::Eraser
+            | Tool::BackgroundEraser
+            | Tool::HistoryBrush
+            | Tool::SpotHealing
+            | Tool::Healing
+            | Tool::CloneStamp
+            | Tool::Blur
+            | Tool::Sharpen
+            | Tool::Smudge
+            | Tool::Dodge
+            | Tool::Burn
+            | Tool::Sponge
+            | Tool::Lasso
+            | Tool::QuickSelection
+    )
+}
+
+/// The pointer moves this frame delivered while `button` was held, in order. `down_at_start` is
+/// whether the button was already down when the frame began. A move before a press or after a
+/// release in the same frame is dropped, so a gesture never picks up input from outside its own
+/// press..release interval.
+fn pointer_moves(events: &[egui::Event], button: egui::PointerButton, down_at_start: bool) -> Vec<Pos2> {
+    let mut down = down_at_start;
+    let mut out = Vec::new();
+    for e in events {
+        match e {
+            egui::Event::PointerButton { button: b, pressed, .. } if *b == button => down = *pressed,
+            egui::Event::PointerMoved(p) if down => out.push(*p),
+            _ => {}
+        }
+    }
+    out
 }
 
 /// Abstract tool event, produced by the mouse or by automation (`ui.pointer`).
@@ -1494,6 +1541,7 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
         }
         // A drag is only recognised once the pointer has moved past egui's click distance: the
         // gesture starts where the button went down, not where it is now (#123).
+        let gesture_active_before = app.drag.is_some();
         if buttons.started
             && let Some(p) = ui.input(|i| i.pointer.press_origin()).filter(|p| rect.contains(*p)).or(response.interact_pointer_pos())
         {
@@ -1503,11 +1551,49 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
             let d = xf.to_doc(p);
             tool_event(app, ToolEvent::Down { x: d[0], y: d[1], pressure: app.stylus.pressure() }, mods);
         }
-        if buttons.dragged
-            && let Some(p) = response.interact_pointer_pos()
-        {
-            let d = xf.to_doc(p);
-            tool_event(app, ToolEvent::Move { x: d[0], y: d[1], pressure: app.stylus.pressure() }, mods);
+        if buttons.dragged || buttons.stopped {
+            // Feed every pointer move the OS delivered this frame, not just the latest position, so
+            // a fast stroke is sampled densely and renders as a smooth curve instead of a coarse
+            // polyline. egui-winit pushes one `PointerMoved` per `CursorMoved`, and they accumulate
+            // while a frame is slow, so reading them all recovers the moves a per-frame
+            // `interact_pointer_pos()` would drop. Only freehand tools take the whole batch; the
+            // rest follow the pointer's latest position. The moves are bounded to the gesture's own
+            // press..release interval (`pointer_moves`), so the start and stop frames keep their
+            // valid samples without leaking a move from outside the gesture.
+            let events = ui.input(|i| i.events.clone());
+            let button = if response.dragged_by(PointerButton::Secondary)
+                || response.drag_started_by(PointerButton::Secondary)
+                || response.drag_stopped_by(PointerButton::Secondary)
+            {
+                PointerButton::Secondary
+            } else {
+                PointerButton::Primary
+            };
+            let press_this_frame = events.iter().any(|e| matches!(e, egui::Event::PointerButton { button: b, pressed: true, .. } if *b == button));
+            let down_at_start = !press_this_frame && (gesture_active_before || buttons.started);
+            let mut positions = if freehand_tool(tool) {
+                pointer_moves(&events, button, down_at_start)
+            } else if buttons.dragged {
+                response.interact_pointer_pos().into_iter().collect()
+            } else {
+                Vec::new()
+            };
+            // A frame with no raw move still tracks a held gesture (a still pointer, a modifier
+            // change): fall back to the latest position, as the old code always did.
+            if positions.is_empty()
+                && buttons.dragged
+                && let Some(p) = response.interact_pointer_pos()
+            {
+                positions.push(p);
+            }
+            app.defer_live_stroke = true;
+            for p in positions {
+                let d = xf.to_doc(p);
+                tool_event(app, ToolEvent::Move { x: d[0], y: d[1], pressure: app.stylus.pressure() }, mods);
+            }
+            app.defer_live_stroke = false;
+            // One live-stroke update for the whole frame, not one per recovered sample.
+            feed_live_stroke(app);
         }
         if buttons.stopped {
             let p = response.interact_pointer_pos().map(|p| xf.to_doc(p)).or_else(|| app.drag.as_ref().and_then(|d| d.points.last().map(|q| [q[0], q[1]])));
@@ -1934,6 +2020,33 @@ fn sample_eyedropper(app: &mut PhotosuiteApp, x: f64, y: f64, mods: egui::Modifi
     }
 }
 
+/// The body of a `Move` for every tool: tracked position, ⇧ constraint, the moving layer, and so
+/// on. It does not feed the live stroke, so the canvas can push a whole frame's recovered samples
+/// and update the live stroke once (see `canvas_view`).
+fn tool_move(app: &mut PhotosuiteApp, x: f64, y: f64, pressure: f32, mods: egui::Modifiers) {
+    let tool = app.ui.tool;
+    if tool == Tool::Type && app.drag.is_none() {
+        crate::type_tool::pointer_move(app, x, y);
+    }
+    if tool == Tool::Pen {
+        crate::vector_ui::pen_move(app, x, y);
+    }
+    let zoom = app.current_zoom();
+    if let Some(d) = app.drag.as_mut().filter(|d| d.reposition) {
+        d.track(mods);
+        d.shift_to([x, y]);
+    } else if let Some(d) = &mut app.drag {
+        d.track(mods);
+        // ⇧: straight 0/45/90° strokes, 45° gradient angles (stroke_constraint.rs).
+        let last = d.points.last().map_or(d.start, |p| [p[0], p[1]]);
+        let [x, y] = crate::stroke_constraint::constrain(d.tool, &mut d.constrain, d.start, last, [x, y], mods.shift, zoom);
+        if d.points.last().is_none_or(|p| (p[0] - x).abs() + (p[1] - y).abs() > 0.25) {
+            d.points.push([x, y, pressure as f64]);
+            app.stylus.record_point();
+        }
+    }
+}
+
 /// Tool state machine. Shared by mouse input and automation.
 pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) {
     // View › Snap / Snap To and smart guides (snap_ui.rs).
@@ -2079,26 +2192,7 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
             app.live_stroke = if strokes_live(tool) { begin_live_stroke(app) } else { None };
         }
         ToolEvent::Move { x, y, pressure } => {
-            if tool == Tool::Type && app.drag.is_none() {
-                crate::type_tool::pointer_move(app, x, y);
-            }
-            if tool == Tool::Pen {
-                crate::vector_ui::pen_move(app, x, y);
-            }
-            let zoom = app.current_zoom();
-            if let Some(d) = app.drag.as_mut().filter(|d| d.reposition) {
-                d.track(mods);
-                d.shift_to([x, y]);
-            } else if let Some(d) = &mut app.drag {
-                d.track(mods);
-                // ⇧: straight 0/45/90° strokes, 45° gradient angles (stroke_constraint.rs).
-                let last = d.points.last().map_or(d.start, |p| [p[0], p[1]]);
-                let [x, y] = crate::stroke_constraint::constrain(d.tool, &mut d.constrain, d.start, last, [x, y], mods.shift, zoom);
-                if d.points.last().is_none_or(|p| (p[0] - x).abs() + (p[1] - y).abs() > 0.25) {
-                    d.points.push([x, y, pressure as f64]);
-                    app.stylus.record_point();
-                }
-            }
+            tool_move(app, x, y, pressure, mods);
             feed_live_stroke(app);
         }
         ToolEvent::Up { x, y } => {
@@ -2306,6 +2400,37 @@ mod tests {
         // The title's width is the tab's minus 42 (tabs are sized as title + 42): it ends before the
         // button.
         assert!(text_right + (tab.width() - 42.0) <= x_right.left() + 0.5);
+    }
+
+    #[test]
+    fn pointer_moves_are_bounded_by_the_press_and_release() {
+        use egui::{Event, PointerButton, pos2};
+        let button = |pos, pressed| Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE };
+        let events = [
+            Event::PointerMoved(pos2(1.0, 0.0)),
+            button(pos2(2.0, 0.0), true),
+            Event::PointerMoved(pos2(3.0, 0.0)),
+            Event::PointerMoved(pos2(4.0, 0.0)),
+            button(pos2(5.0, 0.0), false),
+            Event::PointerMoved(pos2(6.0, 0.0)),
+        ];
+        // The press is in this frame: only the moves between press and release count.
+        assert_eq!(pointer_moves(&events, PointerButton::Primary, false), vec![pos2(3.0, 0.0), pos2(4.0, 0.0)]);
+        // The button was already down when the frame began: the move before the release counts,
+        // the one after it does not.
+        assert_eq!(pointer_moves(&events, PointerButton::Primary, true), vec![pos2(1.0, 0.0), pos2(3.0, 0.0), pos2(4.0, 0.0)]);
+    }
+
+    #[test]
+    fn freehand_tools_are_the_ones_that_follow_a_path() {
+        for t in
+            [Tool::Brush, Tool::Pencil, Tool::Eraser, Tool::BackgroundEraser, Tool::CloneStamp, Tool::Smudge, Tool::Dodge, Tool::Lasso, Tool::QuickSelection]
+        {
+            assert!(freehand_tool(t), "{t:?} paints or retouches along a path");
+        }
+        for t in [Tool::Move, Tool::Eyedropper, Tool::Gradient, Tool::Crop, Tool::RectMarquee, Tool::Type, Tool::Hand] {
+            assert!(!freehand_tool(t), "{t:?} is driven by the pointer's latest position");
+        }
     }
 
     #[test]
