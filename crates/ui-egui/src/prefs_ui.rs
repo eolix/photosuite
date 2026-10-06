@@ -5,7 +5,7 @@
 //!
 //! The values live in the engine ([`photosuite_engine::prefs::Preferences`], so agents read and
 //! change them with `prefs.get` / `prefs.set`); this module only edits a working copy in a dialog
-//! and commits it with those commands on OK.
+//! and commits it with those commands on Apply or OK.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -506,6 +506,37 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
     fields.contains_key("__prefsui")
 }
 
+/// Only Preferences supports applying changes without closing the dialog.
+pub fn is_preferences(fields: &Map<String, Value>) -> bool {
+    fields.get("__prefsui").and_then(Value::as_str) == Some("prefs")
+}
+
+fn preference_values(p: &prefs::Preferences) -> Map<String, Value> {
+    let values = p.to_json();
+    SECTIONS.iter().filter_map(|(id, _)| Some((id.to_string(), values.get(id)?.clone()))).collect()
+}
+
+/// Compare the editable sections, excluding settings managed outside Preferences.
+pub fn preferences_changed(app: &PhotosuiteApp, fields: &Map<String, Value>) -> bool {
+    is_preferences(fields) && fields.get("values").and_then(Value::as_object).is_some_and(|values| *values != preference_values(app.session.prefs()))
+}
+
+/// Commit the working copy and keep the current section open. Failure leaves the draft intact.
+pub fn apply(app: &mut PhotosuiteApp, id: u64) -> Result<Value, String> {
+    let d = app.ui.dialogs.iter().find(|d| d.id == id).ok_or_else(|| format!("no dialog {id}"))?;
+    if d.kind != DialogKind::Command || !is_preferences(&d.fields) {
+        return Err("Apply is only available for Preferences".into());
+    }
+    let fields = d.fields.clone();
+    let result = confirm(app, &fields)?;
+    let values = Value::Object(preference_values(app.session.prefs()));
+    if let Some(d) = app.ui.dialog_mut(id) {
+        // Use the validated values as the next draft, including any normalisation by prefs.set.
+        d.fields.insert("values".into(), values);
+    }
+    Ok(result)
+}
+
 /// Max dialog width for our dialogs.
 pub fn width(fields: &Map<String, Value>) -> Option<f32> {
     match fields.get("__prefsui").and_then(Value::as_str)? {
@@ -518,8 +549,7 @@ pub fn width(fields: &Map<String, Value>) -> Option<f32> {
 /// Open Edit › Preferences on `section`.
 pub fn open_preferences(app: &mut PhotosuiteApp, section: &str) -> u64 {
     let section = if SECTIONS.iter().any(|(id, _)| *id == section) { section } else { "general" };
-    let values = app.session.prefs().to_json();
-    let working: Map<String, Value> = SECTIONS.iter().filter_map(|(id, _)| Some((id.to_string(), values.get(id)?.clone()))).collect();
+    let working = preference_values(app.session.prefs());
     let order = field_order(app.session.prefs(), &working);
     let gpu = app.perf.gpu_info.lines();
     open_kind(app, "prefs", "Preferences", json!({"section": section, "values": working, "__order": order, "__gpuInfo": gpu}))
@@ -1442,6 +1472,109 @@ mod tests {
         app.ui.dialog_mut(id).unwrap().fields.insert("values".into(), values);
         assert!(crate::dialogs::confirm(&mut app, id).is_err());
         assert_eq!(app.session.prefs().performance.history_states, 50);
+    }
+
+    #[test]
+    fn preferences_apply_button_saves_without_closing_and_cancel_keeps_applied_values() {
+        use egui_kittest::{
+            Harness,
+            kittest::{NodeT, Queryable},
+        };
+
+        let (mut app, store) = app_with_store();
+        app.run("prefs.set", json!({"values": {"interface.language": "en", "type.smartQuotes": false}})).unwrap();
+        let id = open_preferences(&mut app, "interface");
+        let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
+            PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+            app
+        });
+        h.run_steps(4);
+        assert!(h.get_by_label("Apply").accesskit_node().is_disabled());
+
+        let values = h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap();
+        values["interface"]["theme"] = json!("pearl");
+        values["performance"]["historyStates"] = json!(12);
+        h.run_steps(2);
+        assert!(!h.get_by_label("Apply").accesskit_node().is_disabled());
+        h.get_by_label("Apply").click();
+        h.run_steps(4);
+
+        assert_eq!(h.state().session.prefs().performance.history_states, 12);
+        assert_eq!(h.state().ui.theme, ThemeKind::Pearl);
+        assert!(!h.state().session.prefs().type_.smart_quotes, "hidden settings round-trip unchanged");
+        let d = h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap();
+        assert_eq!(d.fields["section"], "interface");
+        assert_eq!(d.fields["values"]["performance"]["historyStates"], 12);
+        assert!(h.get_by_label("Apply").accesskit_node().is_disabled());
+        let saved: Value = serde_json::from_str(store.lock().unwrap().as_ref().unwrap()).unwrap();
+        assert_eq!(saved["performance"]["historyStates"], 12);
+        assert_eq!(saved["interface"]["theme"], "pearl");
+
+        // Repeated Apply starts from the validated values, not the dialog's original snapshot.
+        h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = json!(22);
+        h.run_steps(2);
+        h.get_by_label("Apply").click();
+        h.run_steps(4);
+        assert_eq!(h.state().session.prefs().performance.history_states, 22);
+        h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = json!(33);
+        h.run_steps(2);
+        h.get_by_label("Cancel").click();
+        h.run_steps(4);
+        assert!(h.state().ui.dialogs.iter().all(|d| d.id != id));
+        assert_eq!(h.state().session.prefs().performance.history_states, 22);
+        let saved = store.lock().unwrap().clone().unwrap();
+        let (mut restarted, _) = app_with_saved(Some(saved));
+        tick(&mut restarted, &egui::Context::default());
+        assert_eq!(restarted.session.prefs().performance.history_states, 22);
+        assert_eq!(restarted.ui.theme, ThemeKind::Pearl);
+    }
+
+    #[test]
+    fn preferences_confirm_after_apply_commits_later_edits() {
+        let (mut app, _) = app_with_store();
+        let id = open_preferences(&mut app, "cursors");
+        app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["cursors"]["painting"] = json!("fullSizeTip");
+        apply(&mut app, id).unwrap();
+        app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["unitsAndRulers"]["rulers"] = json!("inches");
+        crate::dialogs::confirm(&mut app, id).unwrap();
+        assert!(app.ui.dialogs.iter().all(|d| d.id != id));
+        assert_eq!(app.session.prefs().cursors.painting, prefs::PaintingCursor::FullSizeTip);
+        assert_eq!(app.session.prefs().units_and_rulers.rulers, prefs::Unit::Inches);
+    }
+
+    #[test]
+    fn preferences_apply_rejects_invalid_drafts_and_keeps_them_open() {
+        let (mut app, _) = app_with_store();
+        let before = app.session.prefs().to_json();
+        for invalid in [json!(0), json!("invalid"), Value::Null] {
+            let id = open_preferences(&mut app, "performance");
+            app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = invalid;
+            let draft = app.ui.dialog_mut(id).unwrap().fields.clone();
+            assert!(apply(&mut app, id).is_err());
+            assert_eq!(app.session.prefs().to_json(), before);
+            assert_eq!(app.ui.dialog_mut(id).unwrap().fields, draft);
+            app.ui.close_dialog(id);
+        }
+        let id = open_preferences(&mut app, "interface");
+        app.ui.dialog_mut(id).unwrap().fields.remove("values");
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        assert_eq!(app.session.prefs().to_json(), before);
+    }
+
+    #[test]
+    fn apply_rejects_missing_and_non_preferences_dialogs() {
+        let (mut app, _) = app_with_store();
+        let before = app.session.prefs().to_json();
+        assert!(apply(&mut app, u64::MAX).is_err());
+        let id = open_shortcuts(&mut app, 0);
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        let fields = json!({"__prefsui": "prefs", "values": preference_values(app.session.prefs())}).as_object().unwrap().clone();
+        let id = app.ui.open_dialog(DialogKind::About, fields);
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        assert_eq!(app.session.prefs().to_json(), before);
     }
 
     #[test]

@@ -10,6 +10,7 @@
 //! - `ui.set {tool?, panels?, zoom?, center?, dark?}`: change UI state
 //! - `ui.menu.invoke {id}` / `ui.menu.list`: activate a menu item by id; list the menu tree
 //! - `ui.dialog.open {kind, fields?}` (kinds: newDocument, about, layerStyle {effect?}, colorPicker {target: foreground|background}, command {command}) / `ui.dialog.set {dialog, field, value}` / `ui.dialog.confirm {dialog}` / `ui.dialog.cancel {dialog}`
+//! - `ui.dialog.apply {dialog}`: commit Preferences changes without closing the dialog
 //! - `ui.window.open {document?}` / `ui.window.close {window}`: extra document windows
 //! - `ui.pointer {events: [{kind: down|move|up, x, y, pressure?, tiltX?, tiltY?, rotation?}], modifiers?, button?}`: drive the active tool in document coordinates (`button: "secondary"` = the right button: opens the Brush Preset picker, or erases with Preferences › Tools › Right-click with painting tools = erase)
 //! - `ui.click {x, y, button?, count?}` / `ui.move {x, y}`: synthetic pointer input in screen points
@@ -234,10 +235,14 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                 None => err(format!("no dialog {id}")),
             }
         }
-        "ui.dialog.confirm" => match u("dialog") {
+        "ui.dialog.confirm" | "ui.dialog.apply" => match u("dialog") {
             Some(id) => {
                 let command = app.ui.dialogs.iter().find(|dialog| dialog.id == id).and_then(|dialog| {
-                    dialog.fields.get("__command").and_then(Value::as_str).map(|command| (command.to_string(), Value::Object(dialog.fields.clone())))
+                    if req.method == "ui.dialog.apply" {
+                        dialog.fields.get("values").map(|values| ("prefs.set".to_string(), json!({"path": "", "value": values})))
+                    } else {
+                        dialog.fields.get("__command").and_then(Value::as_str).map(|command| (command.to_string(), Value::Object(dialog.fields.clone())))
+                    }
                 });
                 if let Some((command, params)) = command
                     && let Some(authorize) = app.services.automation_command.as_ref()
@@ -249,7 +254,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                 if events_enabled {
                     app.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
                 }
-                let result = crate::dialogs::confirm(app, id);
+                let result = if req.method == "ui.dialog.apply" { crate::prefs_ui::apply(app, id) } else { crate::dialogs::confirm(app, id) };
                 if events_enabled {
                     app.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
                 }
@@ -518,6 +523,43 @@ mod tests {
         let r = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "filter.blur.gaussianBlur"}));
         assert!(r.to_string().contains("dialog"), "ui.menu.invoke should open the dialog: {r}");
         assert_eq!(app.session.active().unwrap().revision, rev, "opening a dialog must not edit the document");
+    }
+
+    #[test]
+    fn preferences_apply_is_available_over_control_without_closing() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        let r = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "edit.preferences.interface"}));
+        let id = r["result"]["dialog"].as_u64().unwrap();
+        let mut values = app.ui.dialog_mut(id).unwrap().fields["values"].clone();
+        values["interface"]["uiScale"] = json!("200");
+        assert_eq!(call(&mut app, &ctx, "ui.dialog.set", json!({"dialog": id, "field": "values", "value": values}))["ok"], true);
+        assert_eq!(call(&mut app, &ctx, "ui.dialog.apply", json!({"dialog": id}))["ok"], true);
+        assert_eq!(app.session.prefs().interface.ui_scale, photosuite_engine::prefs::UiScale::P200);
+        assert!(app.ui.dialog_mut(id).is_some());
+        assert_eq!(call(&mut app, &ctx, "ui.dialog.cancel", json!({"dialog": id}))["ok"], true);
+        assert_eq!(app.session.prefs().interface.ui_scale, photosuite_engine::prefs::UiScale::P200);
+        for params in [json!({}), json!({"dialog": "invalid"}), json!({"dialog": u64::MAX})] {
+            assert_eq!(call(&mut app, &ctx, "ui.dialog.apply", params)["ok"], false);
+        }
+    }
+
+    #[test]
+    fn preferences_apply_respects_the_automation_command_policy() {
+        let services = crate::Services {
+            automation_command: Some(Box::new(|id, _| if id == "prefs.set" { Err("preference changes denied".into()) } else { Ok(()) })),
+            ..Default::default()
+        };
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), services);
+        let ctx = egui::Context::default();
+        let before = app.session.prefs().to_json();
+        let id = crate::prefs_ui::open_preferences(&mut app, "interface");
+        app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["interface"]["uiScale"] = json!("200");
+        let r = call(&mut app, &ctx, "ui.dialog.apply", json!({"dialog": id}));
+        assert_eq!(r["ok"], false);
+        assert_eq!(r["error"], "preference changes denied");
+        assert_eq!(app.session.prefs().to_json(), before);
+        assert!(app.ui.dialog_mut(id).is_some());
     }
 
     #[test]
