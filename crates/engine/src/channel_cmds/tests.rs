@@ -177,6 +177,9 @@ fn shortcut_slots_target_channels() {
     s.execute("channel.target.slot6", json!({})).unwrap();
     assert_eq!(s.active().unwrap().channel_view.target, ChannelTarget::Alpha(0));
     assert!(!s.is_enabled("channel.target.slot7"));
+    // The reason names the shortcut in the platform's notation (⌘7 on the Mac, Ctrl+7 elsewhere).
+    let err = s.execute("channel.target.slot7", json!({})).unwrap_err().to_string();
+    assert!(err.contains(if cfg!(target_os = "macos") { "no channel for ⌘7" } else { "no channel for Ctrl+7" }), "{err}");
     s.execute("channel.target.composite", json!({})).unwrap();
     assert_eq!(s.active().unwrap().channel_view.target, ChannelTarget::Composite);
     // Grayscale: ⌘3 is the first alpha channel.

@@ -26,7 +26,13 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
                 (Some(off), _) => p["offset"] = json!(off),
                 (None, Some(src)) => p["source"] = json!(src),
                 (None, None) => {
-                    app.ui.status = tl!("Option-click to define a source point to clone from").into();
+                    // Photoshop says Option-click on the Mac and Alt-click on Windows.
+                    app.ui.status = if cfg!(target_os = "macos") {
+                        tl!("Option-click to define a source point to clone from")
+                    } else {
+                        tl!("Alt-click to define a source point to clone from")
+                    }
+                    .into();
                     app.ui.status_error = true;
                     return true;
                 }
@@ -234,6 +240,19 @@ mod tests {
     fn stripes(app: &mut PhotosuiteApp, step: usize, target: &str) {
         for x in (0..100).step_by(step) {
             app.run("paint.pencil", json!({"points": [[x, 0], [x, 60]], "size": 2, "color": "#606060", "target": target})).unwrap();
+        }
+    }
+
+    #[test]
+    fn clone_without_a_source_names_the_platform_modifier() {
+        // Option-click on the Mac, Alt-click elsewhere (#251).
+        for tool in [Tool::CloneStamp, Tool::Healing] {
+            let mut app = app();
+            app.ui.tool = tool;
+            assert!(finish_stroke(&mut app, tool, &[[10.0, 30.0, 1.0], [50.0, 30.0, 1.0]], egui::Modifiers::NONE));
+            assert!(app.ui.status_error, "{tool:?}");
+            let want = if cfg!(target_os = "macos") { "Option-click" } else { "Alt-click" };
+            assert!(app.ui.status.starts_with(want), "{tool:?}: {}", app.ui.status);
         }
     }
 

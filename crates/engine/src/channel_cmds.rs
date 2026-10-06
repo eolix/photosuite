@@ -1067,6 +1067,9 @@ fn target_cmd(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(list(s))
 }
 
+/// The channel shortcuts' modifier as the platform writes it, for error messages (`⌘4`, `Ctrl+4`).
+const SLOT_KEY: &str = if cfg!(target_os = "macos") { "⌘" } else { "Ctrl+" };
+
 /// ⌘2 composite, ⌘3… colour channels then alpha channels (Photoshop CC defaults).
 fn target_slot(s: &mut Session, slot: usize) -> Result<Value> {
     let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
@@ -1076,7 +1079,7 @@ fn target_slot(s: &mut Session, slot: usize) -> Result<Value> {
         2 => ChannelTarget::Composite,
         n if n - 3 < shown_colors => ChannelTarget::Color(n - 3),
         n if n - 3 - shown_colors < doc.channels.len() => ChannelTarget::Alpha(n - 3 - shown_colors),
-        _ => return Err(EngineError::Other(format!("no channel for ⌘{slot}"))),
+        _ => return Err(EngineError::Other(format!("no channel for {SLOT_KEY}{slot}"))),
     };
     target(s, t);
     Ok(list(s))
@@ -1595,7 +1598,7 @@ fn slot_ok<const N: usize>(s: &Session) -> std::result::Result<(), String> {
     let d = s.active().ok_or("no document open")?;
     let colors = color_count(&d.doc);
     let shown = if colors > 1 { colors } else { 0 };
-    if N - 3 < shown + d.doc.channels.len() { Ok(()) } else { Err(format!("no channel for ⌘{N}")) }
+    if N - 3 < shown + d.doc.channels.len() { Ok(()) } else { Err(format!("no channel for {SLOT_KEY}{N}")) }
 }
 
 fn has_apply_target(s: &Session) -> std::result::Result<(), String> {
