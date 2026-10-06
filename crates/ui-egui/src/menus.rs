@@ -834,7 +834,10 @@ pub fn menu_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) -> f32 {
     nav.store(ui.ctx());
     if let Some(id) = clicked {
         let ctx = ui.ctx().clone();
-        let _ = invoke(app, &ctx, &id, json!({}));
+        let id = alt_click(id, ctx.input(|i| i.modifiers.alt));
+        if let Err(e) = invoke(app, &ctx, &id, json!({})) {
+            app.ui.status = e;
+        }
     }
     right
 }
@@ -942,6 +945,15 @@ fn render_level_rows(ui: &mut egui::Ui, items: &[&MenuItem], depth: usize, click
             });
             last_was_sep = false;
         }
+    }
+}
+
+/// The command a menu click runs: ⌥ + Merge Down / Merge Layers / Merge Visible keep the
+/// originals, running Stamp Down / Stamp Visible instead (#217).
+pub fn alt_click(id: String, alt: bool) -> String {
+    match photosuite_engine::stamp_cmds::alt_variant(&id) {
+        Some(stamp) if alt => stamp.to_string(),
+        _ => id,
     }
 }
 

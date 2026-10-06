@@ -350,16 +350,23 @@ pub fn shortcut_items(app: &PhotosuiteApp) -> Vec<(String, String, Vec<String>, 
     // temporary tools (#249).
     let tools_key = |id: &str| id.starts_with("tools.") || photosuite_engine::fill_key_cmds::IDS.contains(&id);
     let mut tools = Vec::new();
+    let mut layer = Vec::new();
     for c in photosuite_engine::command_specs() {
         if seen.insert(c.id.to_string()) && c.shortcut.is_some() {
             let item = (c.id.to_string(), c.label.to_string(), c.menu.iter().map(|s| s.to_string()).collect::<Vec<_>>(), c.shortcut.map(Into::into));
             if c.menu.is_empty() && tools_key(c.id) {
                 tools.push((item.0, item.1, vec!["Tools".to_string()], item.3));
+            } else if c.menu.is_empty() && c.id.starts_with("layer.") {
+                // Stamp Visible / Stamp Down (#217): no menu item in Photoshop; listed at the end
+                // of the Layer section.
+                layer.push((item.0, item.1, vec!["Layer".to_string()], item.3));
             } else {
                 out.push(item);
             }
         }
     }
+    let at = out.iter().rposition(|i| i.2.first().map(String::as_str) == Some("Layer")).map_or(out.len(), |i| i + 1);
+    out.splice(at..at, layer);
     out.extend(tools);
     for (id, label, def) in prefs::TEMPORARY_TOOLS {
         if seen.insert(id.to_string()) {
