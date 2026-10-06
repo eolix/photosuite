@@ -2148,6 +2148,9 @@ fn tool_move(app: &mut PhotosuiteApp, x: f64, y: f64, pressure: f32, mods: egui:
 
 /// Tool state machine. Shared by mouse input and automation.
 pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) {
+    // An Alt+right-drag armed for this press (`paint_mouse`): taken before anything else can
+    // consume the event, so it never outlives the press it was armed for (#297).
+    let armed = std::mem::take(&mut app.brush_resize_armed);
     // View › Snap / Snap To and smart guides (snap_ui.rs).
     let raw = ev;
     let ev = crate::snap_ui::filter_event(app, ev, mods);
@@ -2159,8 +2162,9 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     }
     // Window › Modifier Keys: sticky Shift/⌘/⌥ act as held keys.
     let mods = crate::workspace_ui::sticky_mods(app, mods);
-    // Control+Alt-drag with a painting tool resizes the brush instead of painting (#231).
-    if crate::brush_resize::pointer(app, ev, mods) {
+    // Control+Alt-drag or Alt+right-drag with a painting tool resizes the brush instead of
+    // painting (#231, #297).
+    if crate::brush_resize::pointer(app, ev, mods, armed) {
         return;
     }
     // Move tool: ⇧ locks the axis, ⌥ duplicates (move_mods.rs).

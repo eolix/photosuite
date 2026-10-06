@@ -58,12 +58,23 @@ pub fn right_erases(app: &PhotosuiteApp, tool: Tool) -> bool {
     matches!(tool, Tool::Brush | Tool::Eraser) && app.session.prefs().tools.right_click_with_painting_tools == RightClickPaint::Erase
 }
 
-/// Route the canvas response's buttons: the left one drives the tool; the right one erases (Erase
-/// preference) or opens the Brush Preset picker. Arms `secondary_erase` for this frame's `Down`.
+/// Route the canvas response's buttons: the left one drives the tool; the right one resizes the
+/// brush with Alt held (#297), erases (Erase preference) or opens the Brush Preset picker. Arms
+/// `secondary_erase` or `brush_resize_armed` for this frame's `Down`.
 pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) -> Buttons {
+    let (mods, right_down) = response.ctx.input(|i| (i.modifiers, i.pointer.secondary_down()));
+    // Alt+right-drag resizes the brush (brush_resize.rs); its events reach `tool_event` like a
+    // left drag's, and nothing paints. A resize whose release was missed ends here.
+    crate::brush_resize::release_stale(app, right_down || response.drag_stopped_by(PointerButton::Secondary));
+    let resize_start = crate::brush_resize::applies(tool)
+        && app.drag.is_none()
+        && crate::brush_resize::is_right_gesture(crate::workspace_ui::sticky_mods(app, mods))
+        && response.drag_started_by(PointerButton::Secondary);
+    let resizing = app.brush_resize.is_some_and(|r| r.secondary);
+    app.brush_resize_armed = resize_start;
     // ⌘/Ctrl+right-click lists the layers under the pointer instead (layer_pick_ui.rs, #307).
-    let layer_menu = crate::layer_pick_ui::is_gesture(tool, response.ctx.input(|i| i.modifiers));
-    let erase = right_erases(app, tool) && !layer_menu;
+    let layer_menu = crate::layer_pick_ui::is_gesture(tool, mods);
+    let erase = right_erases(app, tool) && !resize_start && !resizing && !layer_menu;
     let right_stroke = erase && app.drag.is_some();
     let right_start = erase && response.drag_started_by(PointerButton::Secondary);
     let right_click = response.secondary_clicked();
@@ -77,19 +88,25 @@ pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) 
     }
     let erase_click = erase && right_click;
     app.secondary_erase = right_start || erase_click;
+    let right_drag = right_stroke || resizing;
     Buttons {
-        started: response.drag_started_by(PointerButton::Primary) || right_start,
-        dragged: response.dragged_by(PointerButton::Primary) || (right_stroke && response.dragged_by(PointerButton::Secondary)),
-        stopped: response.drag_stopped_by(PointerButton::Primary) || (right_stroke && response.drag_stopped_by(PointerButton::Secondary)),
+        started: response.drag_started_by(PointerButton::Primary) || right_start || resize_start,
+        dragged: response.dragged_by(PointerButton::Primary) || (right_drag && response.dragged_by(PointerButton::Secondary)),
+        stopped: response.drag_stopped_by(PointerButton::Primary) || (right_drag && response.drag_stopped_by(PointerButton::Secondary)),
         clicked: response.clicked() || erase_click,
     }
 }
 
 /// `ui.pointer` with `"button": "secondary"`: true when its events should reach the tool (an
-/// erasing right stroke; `secondary_erase` is armed for its `Down`). Otherwise a right-click with
-/// a painting tool opens the Brush Preset picker over the canvas, and nothing paints.
-pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool) -> bool {
+/// Alt+right-drag brush resize, `brush_resize_armed` for its `Down`; or an erasing right stroke,
+/// `secondary_erase` armed for its `Down`). Otherwise a right-click with a painting tool opens
+/// the Brush Preset picker over the canvas, and nothing paints.
+pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool, mods: egui::Modifiers) -> bool {
     let tool = app.ui.tool;
+    if crate::brush_resize::applies(tool) && (crate::brush_resize::is_right_gesture(mods) || app.brush_resize.is_some_and(|r| r.secondary)) {
+        app.brush_resize_armed = down && app.drag.is_none();
+        return true;
+    }
     if right_erases(app, tool) {
         app.secondary_erase = down;
         return true;
@@ -284,7 +301,7 @@ mod tests {
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
         app.ui.tool = Tool::Brush;
         let m = Modifiers::NONE;
-        assert!(pointer_secondary(&mut app, true));
+        assert!(pointer_secondary(&mut app, true, egui::Modifiers::NONE));
         tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 40.0, pressure: 0.4 }, m);
         assert!(!app.secondary_erase, "armed for one stroke only");
         tool_event(&mut app, ToolEvent::Move { x: 100.0, y: 40.0, pressure: 0.8 }, m);
@@ -297,7 +314,7 @@ mod tests {
         assert_eq!(st.doc.layers[0].surface().unwrap().rgba(50, 40), [1.0, 1.0, 1.0, 1.0]);
         // With the default preference the right button opens the picker and nothing paints.
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "brushPicker"})).unwrap();
-        assert!(!pointer_secondary(&mut app, true));
+        assert!(!pointer_secondary(&mut app, true, egui::Modifiers::NONE));
         assert!(app.ui.brush_picker.is_some() && !app.secondary_erase);
     }
 
