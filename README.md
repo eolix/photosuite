@@ -45,7 +45,7 @@ Installers are on the **[Releases](https://github.com/eolix/photosuite/releases)
 |:---|:---|:---|
 | **macOS** 11+ | `.dmg` (and a command-line `.zip`) | Universal: Apple silicon and Intel |
 | **Windows** 10+ | `.msi` installer, portable `.zip` | x64 |
-| **Linux** | `.AppImage`, `.deb`, `.rpm`, `.tar.gz` | x86_64 and arm64 |
+| **Linux** | `.AppImage`, `.deb`, `.rpm`, `.tar.gz` | x86_64 |
 | **Linux** | `.flatpak` | x86_64 |
 
 ## What this is

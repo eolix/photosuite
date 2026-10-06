@@ -5,7 +5,6 @@
 #   photosuite-macos            universal (arm64 + x86_64) .dmg, CLI .zip
 #   photosuite-windows          x64 .msi installer, portable .zip
 #   photosuite-linux-x86_64     .AppImage, .deb, .rpm, .tar.gz
-#   photosuite-linux-aarch64    .AppImage, .deb, .rpm, .tar.gz
 #   photosuite-flatpak-x86_64   single-file .flatpak bundle (built from the x86_64 tarball)
 #
 # Linux builds on Ubuntu 22.04 (glibc 2.35) so the binaries run on newer distributions too.
@@ -144,8 +143,6 @@ jobs:
         include:
           - arch: x86_64
             os: ubuntu-22.04
-          - arch: aarch64
-            os: ubuntu-22.04-arm
     runs-on: ${{ matrix.os }}
     env:
       DIST: ${{ github.workspace }}/dist/release
