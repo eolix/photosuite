@@ -209,7 +209,10 @@ pub(crate) fn invoke_unguarded(app: &mut PhotosuiteApp, ctx: &egui::Context, id:
             let st = app.session.active().ok_or("no document")?;
             let id = params.get("layer").and_then(Value::as_u64).or(st.active_layer.map(|l| l.0)).ok_or("no active layer")?;
             let name = st.doc.layer(photosuite_doc::LayerId(id)).map(|l| l.name.clone()).ok_or("no such layer")?;
-            ctx.data_mut(|d| d.insert_temp(egui::Id::new(("rename", id)), name));
+            // Another rename in progress is committed first (#314).
+            if let Some((cmd, p)) = crate::layer_row_ui::start_rename(ctx, id, &name) {
+                app.run(&cmd, p)?;
+            }
             Ok(Value::Null)
         }
         "file.new" if params.as_object().is_none_or(|o| o.is_empty()) => {

@@ -95,7 +95,8 @@ pub enum Focus {
 
 impl Focus {
     pub fn of(ctx: &egui::Context) -> Focus {
-        if ctx.text_edit_focused() {
+        // A layer rename keeps its keys even in the frame egui drops its focus (Esc, Tab).
+        if ctx.text_edit_focused() || crate::layer_row_ui::rename_active(ctx) {
             Focus::Text
         } else if ctx.egui_wants_keyboard_input() {
             Focus::Widget

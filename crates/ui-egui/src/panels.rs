@@ -1447,6 +1447,14 @@ fn layers(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                 }
                 crate::smart_ui::filter_rows(app, ui, l, depth, &mut actions);
             }
+            // A rename whose row is gone (deleted, filtered out, inside a closed group) ends,
+            // committed: nothing else could commit or cancel it.
+            if let Some(layer) = crate::layer_row_ui::renaming(ui.ctx())
+                && !crate::layer_row_ui::recorded(ui.ctx()).iter().any(|r| r.layer == layer)
+                && let Some(done) = crate::layer_row_ui::end_rename(ui.ctx(), true)
+            {
+                actions.push(done);
+            }
         });
     // End any layer drag after every row has had a chance to accept the drop.
     if ctx.input(|i| i.pointer.any_released()) {
@@ -1601,11 +1609,7 @@ fn layer_row(
     // A row scrolled out of view only keeps its place (#125): a layout's hundreds of rows would
     // otherwise lay out names, icons and thumbnails every frame. Group rows stay whole: their
     // disclosure triangle is a widget (accessibility, scroll-to).
-    if !ui.is_rect_visible(rect)
-        && !l.is_group()
-        && !resp.context_menu_opened()
-        && ctx.data(|d| d.get_temp::<String>(egui::Id::new(("rename", l.id.0)))).is_none()
-    {
+    if !ui.is_rect_visible(rect) && !l.is_group() && !resp.context_menu_opened() && crate::layer_row_ui::renaming(ctx) != Some(l.id.0) {
         return;
     }
     let painter = ui.painter_at(rect.expand(1.0));
@@ -1736,36 +1740,26 @@ fn layer_row(
     }
     // Double-click the name to rename in place (Photoshop ergonomics). The Background can't be
     // renamed while it's locked, so a double-click turns it into a normal layer instead.
-    let rename_id = egui::Id::new(("rename", l.id.0));
     if resp.double_clicked() {
         if crate::doc_props_ui::is_background(doc, l) {
             actions.push(("layer.new.layerFromBackground".into(), json!({})));
-        } else {
-            ctx.data_mut(|d| d.insert_temp(rename_id, l.name.clone()));
+        } else if let Some(done) = crate::layer_row_ui::start_rename(ctx, l.id.0, &l.name) {
+            // One rename at a time: starting this one commits any other (#314).
+            actions.push(done);
         }
     }
-    if let Some(mut text) = ctx.data(|d| d.get_temp::<String>(rename_id)) {
-        let edit_rect = Rect::from_min_max(pos2(x - 3.0, rect.center().y - 11.0), pos2(name_right.max(x + 40.0), rect.center().y + 11.0));
-        let te = ui.put(edit_rect, egui::TextEdit::singleline(&mut text).font(egui::FontId::proportional(12.5)));
-        te.request_focus();
-        let (enter, esc) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
-        if esc {
-            ctx.data_mut(|d| d.remove::<String>(rename_id));
-        } else if enter || te.lost_focus() {
-            ctx.data_mut(|d| d.remove::<String>(rename_id));
-            if !text.trim().is_empty() && text != l.name {
-                actions.push(("layer.setProps".into(), json!({"layer": l.id.0, "name": text.trim()})));
-            }
-        } else {
-            ctx.data_mut(|d| d.insert_temp(rename_id, text));
-        }
+    let edit_rect = Rect::from_min_max(pos2(x - 3.0, rect.center().y - 11.0), pos2(name_right.max(x + 40.0), rect.center().y + 11.0));
+    if let Some(done) = crate::layer_row_ui::rename_field(ui, l.id.0, edit_rect) {
+        actions.push(done);
     }
     // Right-click context menu.
     resp.context_menu(|ui| {
         // Right-clicking inside a multi-selection keeps it and acts on every selected layer.
         let on_set = row.multi && selected;
-        if crate::layer_menu_ui::show(app, ui, l, on_set, actions) {
-            ui.ctx().data_mut(|d| d.insert_temp(rename_id, l.name.clone()));
+        if crate::layer_menu_ui::show(app, ui, l, on_set, actions)
+            && let Some(done) = crate::layer_row_ui::start_rename(ui.ctx(), l.id.0, &l.name)
+        {
+            actions.push(done);
         }
     });
 }
