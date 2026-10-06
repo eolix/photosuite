@@ -577,6 +577,10 @@ pub struct UiState {
     /// Brush Preset picker opened by a right-click on the canvas: its screen position (points).
     #[serde(default)]
     pub brush_picker: Option<[f32; 2]>,
+    /// Layers under the pointer, listed by a right-click on the canvas with the Move tool or
+    /// ⌘/Ctrl+right-click with any tool (`layer_pick_ui`, #307).
+    #[serde(default)]
+    pub layer_menu: Option<crate::layer_pick_ui::LayerMenu>,
     /// Smoothing is a per-tool option (Brush and Eraser each keep theirs): the tool whose
     /// smoothing the session brush holds, and the other tools' saved values.
     #[serde(default)]
@@ -675,6 +679,7 @@ impl Default for UiState {
             mask_target: false,
             vector_mask_target: false,
             brush_picker: None,
+            layer_menu: None,
             smoothing_tool: None,
             tool_smoothing: Vec::new(),
             clone_source: None,

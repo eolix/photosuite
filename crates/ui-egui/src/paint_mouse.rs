@@ -61,12 +61,15 @@ pub fn right_erases(app: &PhotosuiteApp, tool: Tool) -> bool {
 /// Route the canvas response's buttons: the left one drives the tool; the right one erases (Erase
 /// preference) or opens the Brush Preset picker. Arms `secondary_erase` for this frame's `Down`.
 pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) -> Buttons {
-    let erase = right_erases(app, tool);
+    // ⌘/Ctrl+right-click lists the layers under the pointer instead (layer_pick_ui.rs, #307).
+    let layer_menu = crate::layer_pick_ui::is_gesture(tool, response.ctx.input(|i| i.modifiers));
+    let erase = right_erases(app, tool) && !layer_menu;
     let right_stroke = erase && app.drag.is_some();
     let right_start = erase && response.drag_started_by(PointerButton::Secondary);
     let right_click = response.secondary_clicked();
     if right_click
         && !erase
+        && !layer_menu
         && has_brush_picker(tool)
         && let Some(p) = response.interact_pointer_pos()
     {

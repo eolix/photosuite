@@ -342,6 +342,14 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                     "up" => ToolEvent::Up { x, y },
                     _ => ToolEvent::Move { x, y, pressure: pr },
                 };
+                // Right-click with the Move tool, or ⌘/Ctrl+right-click: list the layers there.
+                if matches!(s("button"), Some("secondary" | "right")) && crate::layer_pick_ui::is_gesture(app.ui.tool, mods) {
+                    if matches!(ev, ToolEvent::Down { .. }) {
+                        let at = app.last_canvas_rect.center();
+                        crate::layer_pick_ui::open(app, [at.x, at.y], x, y);
+                    }
+                    continue;
+                }
                 if matches!(s("button"), Some("secondary" | "right")) && !crate::paint_mouse::pointer_secondary(app, matches!(ev, ToolEvent::Down { .. })) {
                     continue;
                 }
@@ -485,6 +493,7 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
         "window": {"width": screen.width(), "height": screen.height(), "pixelsPerPoint": ctx.pixels_per_point()},
         "tool": app.ui.tool,
         "textEdit": app.ui.text_edit,
+        "layerMenu": app.ui.layer_menu,
         "panels": app.ui.panels,
         "views": app.ui.views,
         "dialogs": dialogs,
