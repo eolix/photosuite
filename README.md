@@ -33,9 +33,10 @@ Rust image-editing engine (MIT OR Apache-2.0): its document model, PSD reader an
 compositor and command system are the foundation, with PhotoSuite's interface, tools and features
 on top.
 
-> **Status: early.** PhotoSuite is usable for real work, but it is young: expect rough edges,
-> missing pieces and behaviour that doesn't yet match Photoshop. Bug reports with a file that
-> shows the problem are the most useful thing you can send.
+> PhotoSuite's intention is to fully tolerate Photoshop-PhotoSuite PSD round trips, with 
+> any effects and smart objects/filters. It's a work in progress.
+> It was originally clean-room written in JS with a Rust engine (Tauri), but it has since
+> taken a more modern, performant approach. The Javascript version still lives in many forks.
 
 ## Downloads
 
