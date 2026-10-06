@@ -42,7 +42,7 @@ fn has_clip_and_selection(s: &Session) -> std::result::Result<(), String> {
     d.doc.selection.as_ref().map(|_| ()).ok_or_else(|| "Paste Into needs a selection".into())
 }
 
-fn is_background(l: &Layer) -> bool {
+pub(crate) fn is_background(l: &Layer) -> bool {
     l.name == "Background" && l.locks.transparency && l.locks.position && matches!(l.content, LayerContent::Raster(_))
 }
 
@@ -333,13 +333,25 @@ fn paste_into(s: &mut Session, p: &Value, outside: bool) -> Result<Value> {
 fn layer_from_background(s: &mut Session) -> Result<Value> {
     let id = s.edit("Layer From Background", |doc, active| {
         let l = doc.layers.first_mut().filter(|l| is_background(l)).ok_or(EngineError::Other("the document has no Background layer".into()))?;
-        l.name = "Layer 0".into();
-        l.locks.transparency = false;
-        l.locks.position = false;
+        unlock_background(l);
         *active = Some(l.id);
         Ok(l.id)
     })?;
     Ok(json!({"layer": id.0}))
+}
+
+fn unlock_background(l: &mut Layer) {
+    l.name = "Layer 0".into();
+    l.locks.transparency = false;
+    l.locks.position = false;
+}
+
+/// Before `id` gets a layer mask: the Background can't have one, so it becomes a normal layer
+/// first ("Layer 0"), as when adding a mask to it in Photoshop. Other layers are left alone.
+pub(crate) fn background_to_layer_for_mask(doc: &mut photosuite_doc::Document, id: photosuite_doc::LayerId) {
+    if let Some(l) = doc.layers.first_mut().filter(|l| l.id == id && is_background(l)) {
+        unlock_background(l);
+    }
 }
 
 fn toggle_mask(s: &mut Session, p: &Value, key: &str) -> Result<Value> {
@@ -816,6 +828,38 @@ mod tests {
         s.execute("edit.pasteSpecial.pasteOutside", json!({})).unwrap();
         let m = active(&s).mask.as_ref().unwrap();
         assert_eq!((m.value(0, 0), m.value(22, 12)), (1.0, 0.0));
+    }
+
+    #[test]
+    fn a_mask_turns_the_background_into_a_layer() {
+        for (cmd, needs_selection) in [
+            ("layer.layerMask.revealAll", false),
+            ("layer.layerMask.hideAll", false),
+            ("layer.layerMask.revealSelection", true),
+            ("layer.layerMask.hideSelection", true),
+        ] {
+            let mut s = session(8);
+            let bg = doc(&s).layers[0].id;
+            if needs_selection {
+                s.execute("select.rect", json!({"x": 2, "y": 2, "width": 10, "height": 10})).unwrap();
+            }
+            s.execute(cmd, json!({"layer": bg.0})).unwrap();
+            let l = &doc(&s).layers[0];
+            assert!(l.mask.is_some() && l.name == "Layer 0" && !l.locks.transparency && !l.locks.position, "{cmd}");
+            assert!(!s.is_enabled("layer.new.layerFromBackground"), "{cmd}");
+            // One step: undo brings the locked Background back, without a mask.
+            assert!(s.undo());
+            let l = &doc(&s).layers[0];
+            assert!(l.mask.is_none() && l.name == "Background" && l.locks.transparency, "{cmd}");
+        }
+        // Other layers keep their name and locks.
+        let mut s = session(8);
+        let top = doc(&s).layers[1].id;
+        s.execute("layer.setProps", json!({"layer": top.0, "locks": {"position": true}})).unwrap();
+        s.execute("layer.layerMask.revealAll", json!({"layer": top.0})).unwrap();
+        let l = doc(&s).layer(top).unwrap();
+        assert!(l.mask.is_some() && l.name != "Layer 0" && l.locks.position);
+        assert_eq!(doc(&s).layers[0].name, "Background");
     }
 
     #[test]

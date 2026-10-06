@@ -88,12 +88,24 @@ fn copy(s: &mut Session, merged: bool) -> Result<Value> {
     Ok(json!({"bounds": [b.x0, b.y0, b.width(), b.height()]}))
 }
 
-fn clear_selected(doc: &mut Document, id: LayerId) -> Result<()> {
+fn clear_selected(doc: &mut Document, id: LayerId, background: [f32; 4]) -> Result<()> {
     let sel = doc.selection.clone();
     let canvas = doc.bounds();
-    let surf = doc.layer_mut(id).and_then(|l| l.surface_mut()).ok_or(EngineError::Other("the active layer has no pixels".into()))?;
     let area = sel.as_ref().map_or(canvas, |m| m.content_bounds().intersect(&canvas));
-    crate::pixels::clear_surface(surf, area, sel.as_ref());
+    clear_area(doc, id, area, sel.as_ref(), background)
+}
+
+/// Cut / Clear on a layer: makes the selected pixels transparent. The Background can't hold
+/// transparency, so there the area is filled with the background colour instead (Photoshop).
+pub(crate) fn clear_area(doc: &mut Document, id: LayerId, area: Rect, sel: Option<&Surface>, background: [f32; 4]) -> Result<()> {
+    let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+    let bg = crate::extra_cmds::is_background(l);
+    let surf = l.surface_mut().ok_or(EngineError::Other("the active layer has no pixels".into()))?;
+    if bg {
+        crate::pixels::fill_surface(surf, area, background, sel, true);
+    } else {
+        crate::pixels::clear_surface(surf, area, sel);
+    }
     surf.prune();
     Ok(())
 }
@@ -149,10 +161,11 @@ fn layer_via(s: &mut Session, cut: bool) -> Result<Value> {
     if clip.bounds.is_empty() {
         return Err(EngineError::Other("Could not complete the command: the selected area is empty".into()));
     }
+    let bg = s.tools.background;
     let label = if cut { "Layer Via Cut" } else { "Layer Via Copy" };
     let nid = s.edit(label, |doc, active| {
         if cut {
-            clear_selected(doc, id)?;
+            clear_selected(doc, id, bg)?;
         }
         let mut l = Layer::raster(doc.next_layer_name("Layer"), clip.surface.format());
         *crate::pixels_mut(&mut l)? = clip.surface;
@@ -396,7 +409,8 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!("edit.cut", "Cut", &["Edit"], Some("Cmd+X"), "{}", has_pixels, |s, _| {
             let r = copy(s, false)?;
             let id = active_id(s)?;
-            s.edit("Cut Pixels", |doc, _| clear_selected(doc, id))?;
+            let bg = s.tools.background;
+            s.edit("Cut Pixels", |doc, _| clear_selected(doc, id, bg))?;
             Ok(r)
         }),
         spec!("edit.copy", "Copy", &["Edit"], Some("Cmd+C"), "{}", has_pixels, |s, _| copy(s, false)),
@@ -523,6 +537,36 @@ mod tests {
         // Scaled ~2x about the origin (≈ 80x40 at ≈ (20,20)); allow ~1px bilinear edge bleed.
         assert!((cb.x0 - 20).abs() <= 2 && (cb.y0 - 20).abs() <= 2, "origin ~ (20,20): {cb:?}");
         assert!((cb.width() as i32 - 80).abs() <= 3 && (cb.height() as i32 - 40).abs() <= 3, "size ~ 80x40: {cb:?}");
+    }
+
+    #[test]
+    fn cut_and_clear_on_the_background_fill_with_the_background_colour() {
+        // The Background keeps its transparency lock: cutting fills with the background colour.
+        let fresh = || {
+            let mut s = Session::new();
+            s.execute("file.new", json!({"width": 40, "height": 30})).unwrap();
+            s.tools.background = [1.0, 0.0, 0.0, 1.0];
+            s.execute("select.rect", json!({"x": 5, "y": 5, "width": 10, "height": 10})).unwrap();
+            s
+        };
+        let px = |s: &Session, i: usize, x: i32, y: i32| s.active().unwrap().doc.layers[i].surface().unwrap().pixel(x, y);
+        for cmd in ["edit.cut", "edit.clear", "layer.new.layerViaCut"] {
+            let mut s = fresh();
+            s.execute(cmd, json!({})).unwrap();
+            let d = &s.active().unwrap().doc;
+            assert!(crate::extra_cmds::is_background(&d.layers[0]), "{cmd}: still the Background");
+            assert_eq!(px(&s, 0, 8, 8), vec![1.0, 0.0, 0.0, 1.0], "{cmd}: cut area is the background colour");
+            assert_eq!(px(&s, 0, 30, 20), vec![1.0, 1.0, 1.0, 1.0], "{cmd}: outside untouched");
+        }
+        // Layer via Cut still lifts the original pixels onto the new layer.
+        let mut s = fresh();
+        s.execute("layer.new.layerViaCut", json!({})).unwrap();
+        assert_eq!(px(&s, 1, 8, 8), vec![1.0, 1.0, 1.0, 1.0]);
+        // Once it's a normal layer, cutting makes transparency again.
+        let mut s = fresh();
+        s.execute("layer.new.layerFromBackground", json!({})).unwrap();
+        s.execute("edit.clear", json!({})).unwrap();
+        assert_eq!(px(&s, 0, 8, 8)[3], 0.0);
     }
 
     #[test]

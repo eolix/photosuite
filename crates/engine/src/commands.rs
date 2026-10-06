@@ -278,12 +278,11 @@ fn build() -> Vec<CommandSpec> {
         ),
         cmd!("edit.clear", "Clear", ["Edit"], Some("Delete"), "{}", has_pixel_layer, |s, p| {
             let id = layer_param(s, p)?;
+            let bg = s.tools.background;
             s.edit("Clear", |doc, _| {
                 let sel = doc.selection.clone();
                 let area = sel.as_ref().map(|m| m.content_bounds()).unwrap_or(doc.bounds());
-                let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-                pixels::clear_surface(l.surface_mut().ok_or_else(|| EngineError::Other("not a pixel layer".into()))?, area, sel.as_ref());
-                Ok(())
+                crate::edit_cmds::clear_area(doc, id, area, sel.as_ref(), bg)
             })?;
             Ok(Value::Null)
         }),
@@ -1059,6 +1058,9 @@ fn arrange(s: &mut Session, p: &Value, delta: i32) -> Result<Value> {
 fn set_mask(s: &mut Session, p: &Value, label: &str, mask: Option<LayerMask>) -> Result<Value> {
     let id = layer_param(s, p)?;
     s.edit(label, |doc, _| {
+        if mask.is_some() {
+            crate::extra_cmds::background_to_layer_for_mask(doc, id);
+        }
         doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = mask;
         Ok(())
     })?;

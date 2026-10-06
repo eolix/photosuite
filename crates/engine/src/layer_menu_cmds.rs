@@ -179,6 +179,7 @@ fn hide_selection(s: &mut Session, p: &Value) -> Result<Value> {
         let mut mask = LayerMask::reveal_all();
         mask.surface.write_region(bounds, &v);
         mask.surface.prune();
+        crate::extra_cmds::background_to_layer_for_mask(doc, id);
         doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = Some(mask);
         doc.selection = None;
         Ok(Value::Null)
