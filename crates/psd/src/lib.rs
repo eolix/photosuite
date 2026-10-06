@@ -49,6 +49,7 @@ pub mod error;
 pub mod file;
 pub mod filter_effects;
 pub mod grd;
+pub mod hdr;
 pub mod header;
 pub mod image_data;
 mod io;

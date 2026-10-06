@@ -102,9 +102,10 @@ pub(crate) fn document_to_psd(doc: &Document, force_psb: bool) -> (PsdFile, Vec<
         resources.push(ImageResource::new(ids::XMP, x.as_bytes().to_vec()));
     }
     resources.push(version_info_resource(true));
+    let color_mode_data = photosuite_psd::hdr::color_mode_data_for_depth(header.depth);
     let file = PsdFile {
         header,
-        color_mode_data: Vec::new(),
+        color_mode_data,
         resources,
         layer_info: None,
         layer_info_placement: LayerInfoPlacement::Section,
