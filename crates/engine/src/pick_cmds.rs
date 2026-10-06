@@ -15,6 +15,10 @@ fn has_doc(s: &Session) -> std::result::Result<(), String> {
 
 /// Layers with visible pixels at (x, y), topmost first (hidden layers and hidden groups skipped).
 pub fn layers_at(doc: &Document, x: i32, y: i32) -> Vec<LayerId> {
+    // A 1×1 read at i32::MAX would be an empty rect (huge `x` params saturate there).
+    if x.checked_add(1).is_none() || y.checked_add(1).is_none() {
+        return Vec::new();
+    }
     let rows = doc.walk();
     let mut out = Vec::new();
     for (path, _, l) in rows.iter().rev() {
@@ -67,7 +71,12 @@ fn pick(s: &mut Session, p: &Value) -> Result<Value> {
     let target = if p.get("target").and_then(Value::as_str) == Some("group") { top_group(&doc, hit) } else { hit };
     if p.get("select").and_then(Value::as_bool).unwrap_or(true) {
         let mode = p.get("mode").and_then(Value::as_str).unwrap_or("replace");
-        s.execute("layer.select", json!({"layer": target.0, "mode": mode}))?;
+        // Like Photoshop, a plain click on one of several selected layers keeps them all
+        // selected, so the drag that follows moves the whole selection.
+        let keeps = mode == "replace" && s.active().is_some_and(|st| st.is_layer_selected(target) && st.selected_layers().len() > 1);
+        if !keeps {
+            s.execute("layer.select", json!({"layer": target.0, "mode": mode}))?;
+        }
     }
     Ok(json!({ "layer": target.0 }))
 }
@@ -109,5 +118,70 @@ mod tests {
         // Hidden layers are ignored.
         s.execute("layer.setProps", json!({"layer": a.0, "visible": false})).unwrap();
         assert_eq!(s.execute("layer.pickAt", json!({"x": 5, "y": 5, "select": false})).unwrap()["layer"], bg.0);
+    }
+
+    /// Two filled squares: A at (0..10), B at (20..30), both in their own layers.
+    fn two_squares() -> (Session, LayerId, LayerId) {
+        let mut s = Session::new();
+        s.execute("file.new", json!({"width": 40, "height": 40})).unwrap();
+        let mut ids = Vec::new();
+        for (name, x) in [("A", 0), ("B", 20)] {
+            s.execute("layer.new.layer", json!({"name": name})).unwrap();
+            s.execute("select.rect", json!({"x": x, "y": x, "width": 10, "height": 10})).unwrap();
+            s.execute("edit.fill", json!({"color": "#00ff00"})).unwrap();
+            ids.push(s.active().unwrap().active_layer.unwrap());
+        }
+        s.execute("select.deselect", json!({})).unwrap();
+        (s, ids[0], ids[1])
+    }
+
+    #[test]
+    fn group_target_selects_the_outermost_group() {
+        let (mut s, a, _) = two_squares();
+        s.execute("layer.select", json!({"layer": a.0})).unwrap();
+        let inner = s.execute("layer.new.groupFromLayers", json!({"name": "Inner"})).unwrap()["layer"].as_u64().unwrap();
+        let outer = s.execute("layer.new.groupFromLayers", json!({"name": "Outer"})).unwrap()["layer"].as_u64().unwrap();
+        assert_ne!(inner, outer);
+        assert_eq!(s.execute("layer.pickAt", json!({"x": 5, "y": 5, "target": "group"})).unwrap()["layer"], outer);
+        assert_eq!(s.active().unwrap().active_layer, Some(LayerId(outer)));
+        // Layer mode reaches through the groups to the pixels.
+        assert_eq!(s.execute("layer.pickAt", json!({"x": 5, "y": 5, "target": "layer"})).unwrap()["layer"], a.0);
+        // Hiding the outer group hides its layers from the pick.
+        s.execute("layer.setProps", json!({"layer": outer, "visible": false})).unwrap();
+        let bg = s.active().unwrap().doc.layers[0].id;
+        assert_eq!(s.execute("layer.pickAt", json!({"x": 5, "y": 5, "select": false})).unwrap()["layer"], bg.0);
+    }
+
+    #[test]
+    fn a_click_on_a_selected_layer_keeps_the_multi_selection() {
+        let (mut s, a, b) = two_squares();
+        s.execute("layer.select", json!({"layer": a.0})).unwrap();
+        s.execute("layer.select", json!({"layer": b.0, "mode": "add"})).unwrap();
+        assert_eq!(s.active().unwrap().selected_layers().len(), 2);
+        // Clicking A (selected) keeps both so the drag moves both.
+        s.execute("layer.pickAt", json!({"x": 5, "y": 5})).unwrap();
+        let st = s.active().unwrap();
+        assert!(st.is_layer_selected(a) && st.is_layer_selected(b));
+        // Clicking the Background (not selected) replaces the selection.
+        s.execute("layer.pickAt", json!({"x": 35, "y": 5})).unwrap();
+        assert_eq!(s.active().unwrap().selected_layers().len(), 1);
+        assert!(!s.active().unwrap().is_layer_selected(a));
+        // Shift-click (add) builds a selection up again.
+        s.execute("layer.pickAt", json!({"x": 5, "y": 5})).unwrap();
+        s.execute("layer.pickAt", json!({"x": 25, "y": 25, "mode": "add"})).unwrap();
+        let st = s.active().unwrap();
+        assert!(st.is_layer_selected(a) && st.is_layer_selected(b));
+    }
+
+    #[test]
+    fn hostile_params_are_errors_or_misses_not_panics() {
+        let (mut s, _, _) = two_squares();
+        assert!(s.execute("layer.pickAt", json!({})).is_err());
+        assert!(s.execute("layer.pickAt", json!({"x": "5", "y": 5})).is_err());
+        for (x, y) in [(-1e12, 5.0), (1e12, 1e12), (-0.5, -0.5), (40.0, 40.0)] {
+            assert_eq!(s.execute("layer.pickAt", json!({"x": x, "y": y})).unwrap()["layer"], Value::Null, "({x}, {y})");
+        }
+        let mut empty = Session::new();
+        assert!(empty.execute("layer.pickAt", json!({"x": 1, "y": 1})).is_err());
     }
 }

@@ -372,7 +372,8 @@ pub struct ToolOptions {
     #[serde(default = "one")]
     pub marquee_height: f32,
     /// Move tool: Auto-Select (with "layer" or "group" target) and Show Transform Controls.
-    #[serde(default)]
+    /// Auto-Select is on by default, as in current Photoshop; ⌘/Ctrl-click inverts it.
+    #[serde(default = "yes")]
     pub move_auto_select: bool,
     #[serde(default = "default_move_target")]
     pub move_target: String,
@@ -460,7 +461,7 @@ impl Default for ToolOptions {
             marquee_style: default_marquee_style(),
             marquee_width: 1.0,
             marquee_height: 1.0,
-            move_auto_select: false,
+            move_auto_select: true,
             move_target: default_move_target(),
             move_show_transform: false,
             crop_ratio: String::new(),

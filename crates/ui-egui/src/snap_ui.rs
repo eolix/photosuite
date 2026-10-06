@@ -350,6 +350,8 @@ mod tests {
         app.ui.tool = Tool::Move;
         app.ui.view.show.smart_guides = false;
         app.ui.extras.snap = false;
+        // The presses land beside the moved layer: keep moving it (no Auto-Select pick).
+        app.ui.tool_options.move_auto_select = false;
         let m = egui::Modifiers::NONE;
         crate::canvas::tool_event(&mut app, ToolEvent::Down { x: 60.0, y: 60.0, pressure: 1.0 }, m);
         crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 323.0, y: 100.0 }, m);

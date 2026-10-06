@@ -293,7 +293,7 @@ fn main() {
         (ms(t) + frame(&mut h)).max(frame(&mut h))
     });
 
-    // Move tool drags. Auto-Select off (Photoshop's default): the selected layer moves.
+    // Move tool drags. Auto-Select off: the selected layer moves.
     h.state_mut().ui.tool = Tool::Move;
     h.state_mut().ui.tool_options.move_auto_select = false;
     settle(&mut h, 3);
