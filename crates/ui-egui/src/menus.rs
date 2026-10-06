@@ -201,6 +201,9 @@ pub(crate) fn invoke_unguarded(app: &mut PhotosuiteApp, ctx: &egui::Context, id:
         return Ok(json!({"workspace": app.ui.workspace}));
     }
     match id {
+        // ⌘↩ / Ctrl+Enter (#306): load the path selected in the Paths panel (or the one being
+        // drawn) as a selection.
+        "path.toSelection" if params.get("name").is_none() => crate::vector_ui::path_to_selection(app, params),
         // Layer › Rename Layer from a menu starts in-place renaming in the Layers panel.
         "layer.renameLayer" if params.get("name").is_none() => {
             let st = app.session.active().ok_or("no document")?;

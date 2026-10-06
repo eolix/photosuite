@@ -182,6 +182,37 @@ pub fn pen_commit(app: &mut PhotosuiteApp, closed: bool) {
     }
 }
 
+/// The path that path commands act on without a name: the one selected in the Paths panel, else
+/// the work path, else the selected layer's shape path or vector mask; `None` when there's none.
+pub fn active_path_name(app: &PhotosuiteApp) -> Option<String> {
+    let st = app.session.active()?;
+    let rows = path_rows(&st.doc, st.active_layer);
+    let key = |r: &PathEntry| match r.kind {
+        PathRow::Work => "work".to_string(),
+        PathRow::Layer => "layer".to_string(),
+        PathRow::Saved => r.name.clone(),
+    };
+    let selected = app.ui.selected_path.as_deref().filter(|s| rows.iter().any(|r| key(r) == *s)).map(str::to_string);
+    selected.or_else(|| rows.iter().find(|r| r.kind == PathRow::Work).map(key)).or_else(|| rows.iter().find(|r| r.kind == PathRow::Layer).map(key))
+}
+
+/// ⌘↩ / Ctrl+Enter (#306): load a path as a selection, like Photoshop with a Pen or Path
+/// Selection tool or a path selected in the Paths panel. A path being drawn with the Pen is
+/// finished first and loads; otherwise [`active_path_name`]. `params` may set feather, mode…
+pub fn path_to_selection(app: &mut PhotosuiteApp, params: Value) -> Result<Value, String> {
+    if app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2) {
+        // The finished path becomes the work path, or a shape layer's path or a vector mask.
+        let on_layer = app.ui.tool_options.vector_mode == "shape" || targeted_vector_mask(app).is_some();
+        pen_commit(app, false);
+        app.ui.selected_path = Some(if on_layer { "layer" } else { "work" }.into());
+    }
+    let name = active_path_name(app)
+        .ok_or_else(|| tl!("No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.").to_string())?;
+    let mut p = params.as_object().cloned().unwrap_or_default();
+    p.insert("name".into(), json!(name));
+    app.run("path.toSelection", Value::Object(p))
+}
+
 // ---------------------------------------------------------------------------------------------
 // Path Selection
 
@@ -816,3 +847,7 @@ mod tests {
         assert_eq!((wp.subpaths[0].knots[0].anchor.x, wp.subpaths[0].knots[0].anchor.y), (30.0, 25.0));
     }
 }
+
+#[cfg(test)]
+#[path = "path_selection_tests.rs"]
+mod path_selection_tests;

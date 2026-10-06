@@ -1155,14 +1155,17 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         spec!("path.delete", "Delete Path", [], r##"{"name":str|"work"="work"}"##, has_doc, path_delete),
         spec!("path.rename", "Rename Path", [], r##"{"name":str|"work"="work","to":str} (renaming the work path saves it)"##, has_doc, path_rename),
-        spec!(
-            "path.toSelection",
-            "Make Selection from Path",
-            [],
-            r##"{"name":str|"work"|"layer"="work","feather":px=0,"antiAlias":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
-            has_doc,
-            path_to_selection
-        ),
+        // ⌘↩ / Ctrl+Enter, as in Photoshop (the UI loads the path selected in the Paths panel, #306).
+        CommandSpec {
+            id: "path.toSelection",
+            label: "Make Selection from Path",
+            menu: &[],
+            shortcut: Some("Cmd+Enter"),
+            params: r##"{"name":str|"work"|"layer"="work","feather":px=0,"antiAlias":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
+            enabled: has_doc,
+            run: path_to_selection,
+            journal: true,
+        },
         spec!("select.toWorkPath", "Make Work Path", [], r##"{"tolerance":0.5..10 px=2} → {subpaths,knots}"##, has_selection, select_to_work_path),
         spec!(
             "path.fill",
