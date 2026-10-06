@@ -383,9 +383,11 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     } else {
         Vec::new()
     };
+    // TIFF writes no Orientation tag (= 1): keep the XMP from contradicting it.
+    let xmp = if opts.embed_metadata { img.meta.xmp.as_deref().map(crate::orientation::upright_xmp) } else { None };
     let tags = TagSet {
         icc: if opts.embed_icc { img.icc.as_deref() } else { None },
-        xmp: if opts.embed_metadata { img.meta.xmp.as_deref().map(str::as_bytes) } else { None },
+        xmp: xmp.as_deref().map(str::as_bytes),
         dpi: if opts.embed_metadata { img.meta.dpi.filter(|d| d.0 > 0.0 && d.1 > 0.0) } else { None },
         text,
         alpha: img.layout().has_alpha(),

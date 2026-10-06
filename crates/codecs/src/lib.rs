@@ -19,6 +19,7 @@ mod fidelity;
 mod format;
 mod image;
 mod options;
+pub mod orientation;
 pub mod web;
 
 pub use crate::codecs::png::encode_indexed as encode_png_indexed;
@@ -30,6 +31,7 @@ pub use crate::fidelity::{FidelityWarning, fidelity_warnings, fidelity_warnings_
 pub use crate::format::{ASYMMETRIC_EXCEPTIONS, Format, FormatCaps, caps, detect, from_extension};
 pub use crate::image::{ChannelLayout, Image, Metadata, SampleType};
 pub use crate::options::{DecodeOptions, EncodeOptions, ExrCompression, Limits, PngCompression, TiffCompression};
+pub use crate::orientation::{exif_orientation, upright_exif, upright_xmp};
 pub use half::f16;
 
 use crate::codecs::{exr, heic, jpeg, png, pnm, tiff, via_image, webp};
@@ -68,7 +70,32 @@ pub fn decode_as_with(format: Format, bytes: &[u8], opts: &DecodeOptions) -> Res
     }?;
     // Final guard for decoders whose header we could not pre-inspect.
     l.check(img.width(), img.height(), img.layout(), img.sample_type())?;
-    Ok(img)
+    if opts.keep_orientation {
+        return Ok(img);
+    }
+    // Turn the pixels upright, like Photoshop: a TIFF records it in its own IFD0, the others
+    // in their EXIF block. The metadata is rewritten to Orientation = 1 on the way.
+    let o = match format {
+        // HEIF orients by its `irot`/`imir` properties, which the decoder has already applied;
+        // the EXIF tag is not to be applied again, only reset so an export does not repeat it.
+        Format::Heic => {
+            let mut img = img;
+            if let Some(e) = &mut img.meta.exif
+                && let std::borrow::Cow::Owned(fixed) = upright_exif(e)
+            {
+                *e = fixed;
+            }
+            if let Some(x) = &mut img.meta.xmp
+                && let std::borrow::Cow::Owned(fixed) = upright_xmp(x)
+            {
+                *x = fixed;
+            }
+            return Ok(img);
+        }
+        Format::Tiff => exif_orientation(bytes),
+        _ => img.meta.exif.as_deref().map_or(1, exif_orientation),
+    };
+    img.oriented(o)
 }
 
 /// Encode `image` as `format`. Conversions follow the same plan that

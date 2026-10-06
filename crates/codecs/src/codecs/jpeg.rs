@@ -12,6 +12,7 @@ use crate::error::CodecError;
 use crate::fidelity::Plan;
 use crate::image::{ChannelLayout, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits};
+use crate::orientation::{upright_exif, upright_xmp};
 
 const F: Format = Format::Jpeg;
 const EXIF_HEADER: &[u8] = b"Exif\0\0";
@@ -241,13 +242,14 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
             enc.set_density(jpeg_encoder::Density::Inch { x: x.round().min(65535.0) as u16, y: y.round().min(65535.0) as u16 });
         }
         if let Some(exif) = &img.meta.exif {
+            // The pixels are written as they are shown: never let a viewer rotate them again.
             let mut seg = EXIF_HEADER.to_vec();
-            seg.extend_from_slice(exif);
+            seg.extend_from_slice(&upright_exif(exif));
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
         if let Some(xmp) = &img.meta.xmp {
             let mut seg = XMP_HEADER.to_vec();
-            seg.extend_from_slice(xmp.as_bytes());
+            seg.extend_from_slice(upright_xmp(xmp).as_bytes());
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
     }

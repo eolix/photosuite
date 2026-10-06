@@ -295,8 +295,10 @@ impl PhotosuiteMcp {
 
 fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, AutomationError> {
     // A compressed reply's byte limit does not bound its decoded pixel allocation.
-    let opts =
-        photosuite_codecs::DecodeOptions { limits: photosuite_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 } };
+    let opts = photosuite_codecs::DecodeOptions {
+        limits: photosuite_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 },
+        ..Default::default()
+    };
     let img = photosuite_codecs::decode_as_with(photosuite_codecs::Format::Png, png, &opts).map_err(|error| AutomationError::Other(error.to_string()))?;
     let (w, h) = img.dimensions();
     if max_side == 0 || w.max(h) <= max_side {

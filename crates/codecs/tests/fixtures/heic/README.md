@@ -10,5 +10,6 @@ The source PNGs were written pixel by pixel by a short script, then encoded with
 | `rgba.heic` | 8-bit RGBA, the 16 left columns transparent | `sips -s format heic` |
 | `rgb16.heic` | 16-bit RGB | `sips -s format heic` (10-bit HEVC) |
 | `icc.heic` | 8-bit RGB with PhotoSuite's own Display P3 profile (`photosuite-cms` `Builtin::DisplayP3`) embedded | `sips --embedProfile`, then `sips -s format heic` |
+| `exif-orientation.heic` | `rgb.heic` as a JPEG (`sips -s format jpeg`) with a hand-written EXIF block, Orientation = 6 | `sips -s format heic`: ImageIO stores the turn as `irot` and keeps the EXIF tag |
 
 Licensed MIT OR Apache-2.0, like the rest of PhotoSuite.

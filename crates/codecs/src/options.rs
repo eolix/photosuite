@@ -67,6 +67,10 @@ impl Limits {
 #[derive(Debug, Clone, Default)]
 pub struct DecodeOptions {
     pub limits: Limits,
+    /// Keep the pixels as stored instead of applying the EXIF / TIFF
+    /// orientation (by default they are turned upright and the metadata's
+    /// orientation is rewritten to 1).
+    pub keep_orientation: bool,
 }
 
 /// PNG zlib effort.

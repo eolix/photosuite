@@ -85,8 +85,21 @@ fn brands_are_told_apart() {
 
 #[test]
 fn limits_are_enforced_before_decoding() {
-    let tight = DecodeOptions { limits: Limits { max_pixels: 1000, ..Limits::default() } };
+    let tight = DecodeOptions { limits: Limits { max_pixels: 1000, ..Limits::default() }, ..Default::default() };
     assert!(matches!(decode_with(&fixture("rgb"), &tight), Err(CodecError::LimitExceeded(_))));
+}
+
+/// `irot`/`imir` orient a HEIF image and the decoder applies them; the EXIF Orientation tag the
+/// file also carries must not turn it a second time, and comes out reset to 1.
+#[test]
+fn exif_orientation_is_not_applied_on_top_of_irot() {
+    let b = fixture("exif-orientation");
+    let kept = decode_with(&b, &DecodeOptions { keep_orientation: true, ..Default::default() }).unwrap();
+    assert_eq!(kept.meta.exif.as_deref().map(exif_orientation), Some(6));
+    let img = decode(&b).unwrap();
+    assert_eq!(img.dimensions(), kept.dimensions());
+    assert_eq!(img.data(), kept.data());
+    assert_eq!(img.meta.exif.as_deref().map(exif_orientation), Some(1));
 }
 
 #[test]

@@ -158,6 +158,37 @@ fn place_embedded_centres_fits_and_embeds() {
     }
 }
 
+/// A 40×20 JPEG (left half red, right half blue) tagged EXIF Orientation = 6: shown upright it
+/// is 20×40, red on top.
+fn rotated_jpeg(dir: &str) -> String {
+    let px: Vec<u8> = (0..20).flat_map(|_| (0..40).flat_map(|x| if x < 20 { [230, 20, 20] } else { [20, 20, 230] })).collect();
+    let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgb, px).unwrap();
+    let jpeg = photosuite_codecs::encode(&img, photosuite_codecs::Format::Jpeg, &Default::default()).unwrap();
+    let mut seg = b"Exif\0\0II*\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0".to_vec();
+    let mut file = vec![0xFF, 0xD8, 0xFF, 0xE1];
+    file.extend_from_slice(&((seg.len() + 2) as u16).to_be_bytes());
+    file.append(&mut seg);
+    file.extend_from_slice(&jpeg[2..]);
+    let path = join(dir, "IMG_0001.jpg");
+    std::fs::write(&path, file).unwrap();
+    path
+}
+
+#[test]
+fn rotated_jpegs_open_and_place_upright() {
+    let dir = tmp("orientation");
+    let path = rotated_jpeg(&dir);
+    let mut s = Session::new();
+    s.execute("file.openAs", json!({"path": path, "as": "jpg"})).unwrap();
+    assert_eq!((doc(&s).size.width, doc(&s).size.height), (20, 40));
+    assert!(composite(&s, 10, 5)[0] > 0.8 && composite(&s, 10, 35)[2] > 0.8, "red on top, blue below");
+    // Placed as a smart object: upright too, and it renders upright from its embedded bytes.
+    let mut s = session(100, 100, 8);
+    let r = s.execute("file.placeEmbedded", json!({"path": path})).unwrap();
+    assert_eq!(r["bounds"], json!([40.0, 30.0, 60.0, 70.0]));
+    assert!(composite(&s, 50, 35)[0] > 0.8 && composite(&s, 50, 65)[2] > 0.8);
+}
+
 #[test]
 fn file_info_round_trips_through_xmp_and_psd() {
     let mut s = session(8, 8, 8);

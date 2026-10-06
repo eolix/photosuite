@@ -75,7 +75,12 @@ the same.
   containers that can hold more frames.
 * **EXIF in TIFF** is stored as a sub-IFD rather than a blob, so it is not preserved yet.
   `caps.exif = false` for TIFF, and a warning is raised.
-* **EXIF orientation** is preserved as data but not applied to the pixels.
+* **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the IFD0 tag in TIFF) is applied on
+  decode, like Photoshop: the pixels come back upright and the EXIF/XMP orientation is rewritten
+  to 1 (`DecodeOptions::keep_orientation` opts out). Encoders always write Orientation = 1
+  (`upright_exif`, `upright_xmp`), so upright pixels are never rotated twice. Malformed or
+  out-of-range values read as 1. `Image::oriented` turns any layout and depth in parallel bands
+  (about 10 ms for 24 MP RGB8 in release).
 * **JPEG**
   * 8-bit only. Neither decoder backend supports 12-bit.
   * CMYK is always written 4:4:4 (subsampled CMYK is not portable) as Adobe-inverted CMYK with an
@@ -101,7 +106,7 @@ the same.
 
 ## Limits (decompression bombs)
 
-`DecodeOptions { limits: Limits { max_width, max_height, max_pixels, max_alloc } }` guards
+`DecodeOptions { limits: Limits { max_width, max_height, max_pixels, max_alloc }, .. }` guards
 decoding. Header dimensions are checked before the pixel buffer is allocated, and the budget is
 also passed to the underlying decoders. A violation returns `CodecError::LimitExceeded`. The
 defaults are 262144 px per side, 2^30 pixels and 8 GiB (2 GiB on 32-bit targets such as wasm).

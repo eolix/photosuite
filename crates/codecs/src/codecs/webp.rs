@@ -55,10 +55,11 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     }
     if opts.embed_metadata {
         if let Some(exif) = &img.meta.exif {
-            enc.set_exif_metadata(exif.clone());
+            // The pixels are written as they are shown: never let a viewer rotate them again.
+            enc.set_exif_metadata(crate::orientation::upright_exif(exif).into_owned());
         }
         if let Some(xmp) = &img.meta.xmp {
-            enc.set_xmp_metadata(xmp.as_bytes().to_vec());
+            enc.set_xmp_metadata(crate::orientation::upright_xmp(xmp).as_bytes().to_vec());
         }
     }
     enc.encode(img.data(), img.width(), img.height(), ct).map_err(|e| CodecError::encode(F, e))?;
