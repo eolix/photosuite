@@ -53,6 +53,8 @@ pub(crate) struct Ctx<'a> {
     pub dpi: f32,
     /// The parsed `Txt2` block (type settings EngineData lacks, e.g. optical kerning).
     pub txt2: Option<photosuite_text::engine_data::Value>,
+    /// Smart-filter caches from the global `FEid`/`FXid` blocks (filter masks, by placed id).
+    pub filter_effects: Vec<photosuite_psd::filter_effects::FilterEffectsItem>,
 }
 
 fn doc_mode(m: PsdMode) -> Option<ColorMode> {
@@ -163,6 +165,20 @@ impl Ctx<'_> {
         })
     }
 
+    /// The filter mask of the smart object whose `placed` id is `placed`, from the `FEid` cache:
+    /// document coordinates, white beyond its bounds (`filterMaskExtendWithWhite`). An all-white
+    /// mask is no mask.
+    fn filter_mask(&mut self, placed: &str, stack: &crate::smart_map::FilterStack, name: &str) -> Option<LayerMask> {
+        let item = self.filter_effects.iter().find(|i| i.id == placed)?;
+        match crate::smart_map::mask_from_item(item, self.mask_fmt.sample, stack) {
+            Ok(m) => m,
+            Err(e) => {
+                self.warn(format!("layer \"{name}\": {e}; the filter mask was ignored"));
+                None
+            }
+        }
+    }
+
     fn apply_common(&mut self, l: &mut Layer, rec: &LayerRecord, blend_override: Option<photosuite_psd::BlendMode>) {
         l.visible = rec.is_visible();
         l.opacity = f32::from(rec.opacity) / 255.0;
@@ -261,14 +277,21 @@ impl Ctx<'_> {
             LayerContent::Text(t)
         } else if let Some(k) = smart_key {
             let (id, transform) = rec.block(k).map(|b| blocks::parse_smart(k, &b.data)).unwrap_or_default();
+            // Smart filters (`filterFX` in the placed-layer data) and their mask (`FEid`).
+            let placed = rec.block(b"SoLd").or_else(|| rec.block(b"SoLE")).and_then(|b| crate::smart_map::parse_sold(&b.data));
+            let stack = placed.as_ref().and_then(|p| p.stack.clone()).unwrap_or_default();
+            let filter_mask = match &placed {
+                Some(p) if !stack.filters.is_empty() => self.filter_mask(&p.placed, &stack, &name),
+                _ => None,
+            };
             LayerContent::Smart(SmartObject {
                 source: SmartSource::Linked { path: id },
                 transform,
-                smart_filters: Vec::new(),
+                smart_filters: stack.filters,
                 cache: Some(self.record_surface(rec, &name)),
                 psd_raw: principal(k),
-                filters_enabled: true,
-                filter_mask: None,
+                filters_enabled: stack.enabled,
+                filter_mask,
                 warp: rec.block(k).and_then(|b| blocks::parse_placed_warp(k, &b.data)),
                 stack_mode: None,
             })
@@ -496,7 +519,14 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
         warnings,
         dpi: doc.resolution_dpi,
         txt2: file.global_blocks.iter().find(|b| &b.key == b"Txt2").and_then(|b| photosuite_text::psd::parse_txt2(&b.data)),
+        filter_effects: Vec::new(),
     };
+    for b in file.global_blocks.iter().filter(|b| matches!(&b.key, b"FEid" | b"FXid")) {
+        match photosuite_psd::filter_effects::FilterEffects::parse(&b.data) {
+            Ok(fx) => cx.filter_effects.extend(fx.items),
+            Err(e) => cx.warn(format!("smart filter masks ({}) could not be read: {e}", b.key_str())),
+        }
+    }
 
     let (w, hh) = (h.width as usize, h.height as usize);
     let n = w * hh;

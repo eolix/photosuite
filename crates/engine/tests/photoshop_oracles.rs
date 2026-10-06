@@ -20,8 +20,8 @@ use photosuite_psd::PsdFile;
 
 /// Within two 8-bit steps of Photoshop (same tolerance as the io corpus).
 const PASS_TOL: f32 = 2.0 / 255.0;
-/// Re-rendered files that match Photoshop's merged composite (of 84 with smart objects or type).
-const PASS_FLOOR: usize = 1;
+/// Re-rendered files that match Photoshop's merged composite (of 86 with smart objects or type).
+const PASS_FLOOR: usize = 5;
 
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = std::fs::read_dir(dir) else { return };

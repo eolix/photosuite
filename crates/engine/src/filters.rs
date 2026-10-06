@@ -149,6 +149,10 @@ pub fn apply_filter_to_surface(
     if let Some(out) = crate::lens_cmds::apply_to_surface(id, params, surf, canvas) {
         return Some(out);
     }
+    // Image › Adjustments recorded as smart filters (Levels, Curves, Shadows/Highlights… from PSD).
+    if let Some(kind) = id.strip_prefix("image.adjustments.") {
+        return crate::adjust_cmds::adjust_as_filter(kind, params, surf);
+    }
     // WebAssembly plug-in smart filters (plugin_cmds).
     if id == crate::plugin_cmds::RUN {
         return crate::plugin_cmds::apply_to_surface(id, params, surf, selection, canvas);

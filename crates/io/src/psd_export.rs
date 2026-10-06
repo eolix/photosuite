@@ -42,6 +42,166 @@ struct Ex {
     guides: photosuite_doc::Guides,
     /// Layer comps to regenerate into each layer's `cmls`; None = preserved data still matches.
     comps: Option<(Vec<photosuite_doc::LayerComp>, Option<photosuite_doc::LayerComp>)>,
+    /// Smart objects: embedded files and filter caches for the global blocks.
+    smart: SmartOut,
+}
+
+/// How deep embedded documents are exported inside each other before a smart object is written
+/// as pixels instead.
+const MAX_NESTING: u32 = 8;
+
+/// An embedded smart-object source as written to `lnk2`.
+#[derive(Clone, Debug)]
+struct Source {
+    uuid: String,
+    /// Pixel size of the source document.
+    size: (f64, f64),
+    dpi: f64,
+}
+
+/// Smart-object state collected while emitting layers, written into the global blocks at the end.
+#[derive(Default)]
+struct SmartOut {
+    /// Nesting depth of this export (embedded documents are exported recursively).
+    depth: u32,
+    /// The document's preserved global blocks (embedded files and filter caches from PSD import).
+    globals: Vec<photosuite_doc::PsdGlobalBlock>,
+    /// uuids of the files in the preserved linked-layer blocks.
+    known: std::collections::HashSet<String>,
+    /// uuids the layers reference.
+    used: std::collections::HashSet<String>,
+    /// Unreferenced preserved files may be dropped (every smart layer's file id is known).
+    prune_ok: bool,
+    /// Files to embed.
+    add: Vec<crate::linked::LinkedFile>,
+    /// Sources converted so far, by content hash (`Err` = can't be embedded).
+    converted: std::collections::HashMap<[u8; 32], Result<Source, String>>,
+    /// Embedded documents decoded while converting them, by uuid (for the filter caches).
+    docs: std::collections::HashMap<String, Document>,
+    /// Source composites (document pixel format, source space) by uuid; `None` = unreadable.
+    composites: std::collections::HashMap<String, Option<(std::sync::Arc<Surface>, photosuite_geom::Rect)>>,
+    /// Preserved `FEid` items (by placed id).
+    old_fx: Vec<photosuite_psd::filter_effects::FilterEffectsItem>,
+    /// Placed ids whose preserved `FEid` item stays.
+    keep_fx: std::collections::HashSet<String>,
+    /// Regenerated `FEid` items.
+    new_fx: Vec<photosuite_psd::filter_effects::FilterEffectsItem>,
+}
+
+/// `FEid` data padded to 4 bytes inside the block length: Photoshop counts the padding in the
+/// length and can't open a file whose `FEid` is padded outside it.
+fn padded_fx(fx: &photosuite_psd::filter_effects::FilterEffects) -> Vec<u8> {
+    let mut d = fx.to_bytes();
+    d.resize(d.len().next_multiple_of(4), 0);
+    d
+}
+
+const LINK_KEYS: [&[u8; 4]; 4] = [b"lnk2", b"lnk3", b"lnkD", b"lnkE"];
+const FX_KEYS: [&[u8; 4]; 2] = [b"FEid", b"FXid"];
+
+impl SmartOut {
+    fn new(doc: &Document, depth: u32) -> Self {
+        let globals = doc.metadata.psd_global_blocks.clone();
+        let known = globals.iter().filter(|(_, k, _)| LINK_KEYS.contains(&k)).flat_map(|(_, _, d)| crate::linked::block_uuids(d)).collect();
+        let old_fx = globals
+            .iter()
+            .filter(|(_, k, _)| FX_KEYS.contains(&k))
+            .filter_map(|(_, _, d)| photosuite_psd::filter_effects::FilterEffects::parse(d).ok())
+            .flat_map(|fx| fx.items)
+            .collect();
+        SmartOut { depth, globals, known, prune_ok: true, old_fx, ..Default::default() }
+    }
+
+    /// The document's global blocks with the linked-layer files and filter caches brought up to
+    /// date: unreferenced files dropped (when every reference is known), new files appended,
+    /// filter caches kept or regenerated per smart object. Unchanged blocks stay byte-identical.
+    fn finish(&self, blocks: Vec<photosuite_doc::PsdGlobalBlock>) -> Vec<photosuite_doc::PsdGlobalBlock> {
+        use std::sync::Arc;
+        let keep = |u: &str| !self.prune_ok || self.used.contains(u);
+        let mut out = Vec::with_capacity(blocks.len() + 2);
+        let mut added = false;
+        let mut fx_placed = false;
+        for (sig, key, data) in blocks {
+            if LINK_KEYS.contains(&&key) {
+                let add: &[crate::linked::LinkedFile] = if !added && &key == b"lnk2" { &self.add } else { &[] };
+                added |= &key == b"lnk2";
+                match crate::linked::rebuild_block(&data, &keep, add) {
+                    None => out.push((sig, key, data)),
+                    Some(d) if d.is_empty() => {}
+                    Some(d) => out.push((sig, key, Arc::new(d))),
+                }
+            } else if FX_KEYS.contains(&&key) {
+                let Ok(mut fx) = photosuite_psd::filter_effects::FilterEffects::parse(&data) else {
+                    out.push((sig, key, data));
+                    continue;
+                };
+                let before = fx.items.len();
+                fx.items.retain(|i| self.keep_fx.contains(&i.id));
+                let fresh = !fx_placed && !self.new_fx.is_empty();
+                if fresh {
+                    fx.items.extend(self.new_fx.iter().cloned());
+                    fx_placed = true;
+                }
+                if fx.items.len() == before && !fresh {
+                    out.push((sig, key, data));
+                } else if !fx.items.is_empty() {
+                    out.push((sig, key, Arc::new(padded_fx(&fx))));
+                }
+            } else {
+                out.push((sig, key, data));
+            }
+        }
+        if !added && !self.add.is_empty() {
+            let data: Vec<u8> = self.add.iter().flat_map(crate::linked::encode_linked_file).collect();
+            out.push((*b"8BIM", *b"lnk2", Arc::new(data)));
+        }
+        if !fx_placed && !self.new_fx.is_empty() {
+            let fx = photosuite_psd::filter_effects::FilterEffects { version: 3, items: self.new_fx.clone() };
+            out.push((*b"8BIM", *b"FEid", Arc::new(padded_fx(&fx))));
+            if !out.iter().any(|(_, k, _)| k == b"FMsk") {
+                // Filter mask overlay: RGB red at 50 %, Photoshop's default.
+                out.push((*b"8BIM", *b"FMsk", Arc::new(vec![0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 0, 50])));
+            }
+        }
+        out
+    }
+}
+
+/// Size and resolution of a smart-object source file (PSD/PSB header, `.pcraft`, or any image).
+fn source_geometry(name: &str, bytes: &[u8]) -> Result<((f64, f64), f64), String> {
+    if crate::is_psd(bytes) {
+        let rd = |at: usize| bytes.get(at..at + 4).map(|b| f64::from(u32::from_be_bytes([b[0], b[1], b[2], b[3]])));
+        let (h, w) = rd(14).zip(rd(18)).ok_or("truncated PSD header")?;
+        return Ok(((w, h), 72.0));
+    }
+    let doc = crate::import(name, bytes).map_err(|e| e.to_string())?.document;
+    Ok(((f64::from(doc.size.width), f64::from(doc.size.height)), f64::from(doc.resolution_dpi)))
+}
+
+/// The source size of a smart object whose file we can't decode: its rendered bounds taken back
+/// through the inverse transform (the source's top-left is the origin).
+fn size_from_layer(sm: &photosuite_doc::SmartObject) -> (f64, f64) {
+    let r = sm.cache.as_ref().map(Surface::content_bounds).filter(|r| !r.is_empty());
+    let (Some(r), Some(inv)) = (r, sm.transform.inverse()) else { return (1.0, 1.0) };
+    let [a, b, c, d, e, f] = inv.m;
+    let (mut w, mut h) = (1.0f64, 1.0f64);
+    for (x, y) in [(r.x0, r.y0), (r.x1, r.y0), (r.x1, r.y1), (r.x0, r.y1)] {
+        let (x, y) = (f64::from(x), f64::from(y));
+        w = w.max((a * x + c * y + e).round());
+        h = h.max((b * x + d * y + f).round());
+    }
+    (w, h)
+}
+
+fn upsert(raw: &mut Vec<([u8; 4], Vec<u8>)>, key: &[u8; 4], data: Vec<u8>, before: Option<&[u8; 4]>) {
+    if let Some(e) = raw.iter_mut().find(|(k, _)| k == key) {
+        e.1 = data;
+        return;
+    }
+    match before.and_then(|b| raw.iter().position(|(k, _)| k == b)) {
+        Some(i) => raw.insert(i, (*key, data)),
+        None => raw.push((*key, data)),
+    }
 }
 
 fn psd_mode(m: ColorMode) -> PsdMode {
@@ -287,9 +447,13 @@ impl Ex {
                 }
             }
             LayerContent::Smart(sm) => {
-                set_principal(&mut raw, smart_keys(sm.psd_raw.as_deref().map(Vec::as_slice)), sm.psd_raw.as_ref());
-                if !raw.iter().any(|(k, _)| matches!(k, b"SoLd" | b"PlLd" | b"SoLE")) {
-                    self.warnings.push(format!("layer \"{}\": smart object written as pixels", l.name));
+                let parsed = sm.psd_raw.as_deref().and_then(|d| crate::smart_map::parse_sold(d));
+                if sm.psd_raw.is_some() && parsed.is_none() {
+                    // Placed-layer data we don't parse (`PlLd` only): kept verbatim.
+                    self.smart.prune_ok = false;
+                    set_principal(&mut raw, smart_keys(sm.psd_raw.as_deref().map(Vec::as_slice)), sm.psd_raw.as_ref());
+                } else {
+                    self.smart_blocks(l, sm, parsed, &mut raw);
                 }
             }
             LayerContent::Raster(_) | LayerContent::Group(_) => {}
@@ -341,6 +505,203 @@ impl Ex {
                 }
             }
         }
+    }
+
+    /// Placed-layer blocks (`PlLd` + `SoLd`) of a smart object, its embedded file (`lnk2`) and
+    /// filter cache (`FEid`). An imported placed layer that nothing changed is written verbatim;
+    /// otherwise the blocks are regenerated (from the imported descriptor where the source is
+    /// the same). Without a source that can be embedded the layer is written as pixels.
+    fn smart_blocks(&mut self, l: &Layer, sm: &photosuite_doc::SmartObject, template: Option<crate::smart_map::Placed>, raw: &mut Vec<([u8; 4], Vec<u8>)>) {
+        use crate::smart_map::{FilterStack, PlacedSpec, filter_fx, plld_bytes, sold_bytes, uuid_from};
+        let src = match self.smart_source(sm, template.as_ref()) {
+            Ok(s) => s,
+            Err(e) => {
+                raw.retain(|(k, _)| !matches!(k, b"SoLd" | b"PlLd" | b"SoLE"));
+                self.warnings.push(format!("layer \"{}\": smart object written as pixels ({e})", l.name));
+                return;
+            }
+        };
+        self.smart.used.insert(src.uuid.clone());
+        let stack = FilterStack {
+            enabled: sm.filters_enabled,
+            filters: sm.smart_filters.clone(),
+            mask_enabled: sm.filter_mask.as_ref().is_none_or(|m| m.enabled),
+            mask_linked: sm.filter_mask.as_ref().is_some_and(|m| m.linked),
+        };
+        let same_source = template.as_ref().filter(|t| t.idnt == src.uuid);
+        if let (Some(t), Some(data)) = (same_source, sm.psd_raw.as_ref())
+            && self.placed_unchanged(t, data, sm, &stack)
+        {
+            let keys: &[&[u8; 4]] = if raw.iter().any(|(k, _)| k == b"SoLd") { &[b"SoLd"] } else { &[b"SoLE", b"SoLd"] };
+            match keys.iter().find_map(|k| raw.iter().position(|(rk, _)| rk == *k)) {
+                Some(i) => raw[i].1 = data.to_vec(),
+                None => raw.push((*b"SoLd", data.to_vec())),
+            }
+            if !stack.filters.is_empty() {
+                self.smart.keep_fx.insert(t.placed.clone());
+            }
+            return;
+        }
+        let placed = match same_source {
+            Some(t) if !t.placed.is_empty() => t.placed.clone(),
+            _ => uuid_from(format!("{}:{}", src.uuid, l.id.0).as_bytes()),
+        };
+        let size = same_source.and_then(|t| crate::smart_map::stored_size(&t.descriptor)).unwrap_or(src.size);
+        let size = if size.0 > 0.0 && size.1 > 0.0 { size } else { size_from_layer(sm) };
+        let mut warnings = Vec::new();
+        let fx = (!stack.filters.is_empty()).then(|| filter_fx(&stack, &l.name, &mut warnings));
+        let spec = PlacedSpec { idnt: &src.uuid, placed: &placed, transform: sm.transform, size, dpi: src.dpi, warp: sm.warp.as_ref(), filter_fx: fx };
+        let sold = sold_bytes(same_source.map(|t| &t.descriptor), &spec, &mut warnings);
+        let plld = plld_bytes(&spec, &mut warnings);
+        warnings.dedup();
+        let key = if same_source.is_some() && raw.iter().any(|(k, _)| k == b"SoLE") && !raw.iter().any(|(k, _)| k == b"SoLd") { *b"SoLE" } else { *b"SoLd" };
+        raw.retain(|(k, _)| k == &key || !matches!(k, b"SoLd" | b"SoLE"));
+        upsert(raw, b"PlLd", plld, Some(&key));
+        upsert(raw, &key, sold, None);
+        if !stack.filters.is_empty() {
+            let bounds = sm.cache.as_ref().map_or(self.canvas, |c| c.content_bounds().union(&self.canvas));
+            let item = match (sm.stack_mode, self.source_composite(&src.uuid)) {
+                (None, Some((img, img_bounds))) => {
+                    let unfiltered = photosuite_algo::warp::place_source(&img, img_bounds, &sm.transform, sm.warp.as_ref());
+                    crate::smart_map::feid_item(&placed, &unfiltered, sm.filter_mask.as_ref(), bounds, self.fmt)
+                }
+                _ => None,
+            };
+            match item {
+                Some(i) => self.smart.new_fx.push(i),
+                // Without the unfiltered pixels Photoshop re-renders from the source itself; only
+                // the filter mask has nowhere to go.
+                None if sm.filter_mask.is_some() => self.warnings.push(format!("layer \"{}\": the smart filter mask was not written to PSD", l.name)),
+                None => {}
+            }
+        }
+        self.warnings.extend(warnings.into_iter().map(|w| if w.starts_with("layer ") { w } else { format!("layer \"{}\": {w}", l.name) }));
+    }
+
+    /// Whether an imported placed layer still says what the smart object is: transform, warp,
+    /// filter stack and filter mask as stored.
+    fn placed_unchanged(&self, t: &crate::smart_map::Placed, data: &[u8], sm: &photosuite_doc::SmartObject, stack: &crate::smart_map::FilterStack) -> bool {
+        if t.transform != sm.transform || blocks::parse_placed_warp(b"SoLd", data) != sm.warp || t.stack.clone().unwrap_or_default() != *stack {
+            return false;
+        }
+        if stack.filters.is_empty() {
+            return true;
+        }
+        let old = self.smart.old_fx.iter().find(|i| i.id == t.placed);
+        let mask = old.map(|i| crate::smart_map::mask_from_item(i, self.mask_fmt.sample, stack));
+        match mask {
+            Some(Ok(m)) => m == sm.filter_mask,
+            Some(Err(_)) => false,
+            None => sm.filter_mask.is_none(),
+        }
+    }
+
+    /// The `lnk2` file a smart object's source is written as: a preserved embedded file, or a new
+    /// one (a `.pcraft` source becomes a PSB of the nested document; image files are embedded as
+    /// they are; a linked file is read and embedded).
+    fn smart_source(&mut self, sm: &photosuite_doc::SmartObject, template: Option<&crate::smart_map::Placed>) -> Result<Source, String> {
+        use photosuite_doc::SmartSource;
+        match &sm.source {
+            // A file of the imported document, or one its placed-layer data names (a missing
+            // link stays a smart object, as in Photoshop).
+            SmartSource::Linked { path } if self.smart.known.contains(path) || template.is_some_and(|t| t.idnt == *path) => {
+                let stored = template.filter(|t| t.idnt == *path).and_then(|t| crate::smart_map::stored_size(&t.descriptor));
+                let geometry = stored.map(|size| (size, f64::from(self.dpi))).or_else(|| {
+                    let meta = photosuite_doc::Metadata { psd_global_blocks: self.smart.globals.clone(), ..Default::default() };
+                    let f = crate::linked::find_linked_file(&meta, path)?;
+                    source_geometry(&f.file_name, &f.bytes).ok()
+                });
+                let (size, dpi) = geometry.unwrap_or((size_from_layer(sm), f64::from(self.dpi)));
+                Ok(Source { uuid: path.clone(), size, dpi })
+            }
+            SmartSource::Linked { path } => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let bytes = std::fs::read(path).map_err(|e| format!("the linked file {path} can't be read: {e}"))?;
+                    let name = path.rsplit(['/', '\\']).next().unwrap_or(path).to_string();
+                    self.warnings.push(format!("the linked smart object {name} was embedded (PSD export keeps no external links)"));
+                    self.embed(&name, &bytes)
+                }
+                #[cfg(target_arch = "wasm32")]
+                Err(format!("the linked file {path} can't be read here"))
+            }
+            SmartSource::Embedded { file_name, bytes } => self.embed(file_name, bytes),
+        }
+    }
+
+    /// The composite of the source `uuid` (an embedded file of this export or of the imported
+    /// document) in the document's pixel format, its top-left at the origin; decoded once.
+    fn source_composite(&mut self, uuid: &str) -> Option<(std::sync::Arc<Surface>, photosuite_geom::Rect)> {
+        if let Some(c) = self.smart.composites.get(uuid) {
+            return c.clone();
+        }
+        let doc = match self.smart.docs.get(uuid) {
+            Some(d) => Some(d.clone()),
+            None => {
+                let file = self.smart.add.iter().find(|f| f.uuid == uuid).cloned().or_else(|| {
+                    let meta = photosuite_doc::Metadata { psd_global_blocks: self.smart.globals.clone(), ..Default::default() };
+                    crate::linked::find_linked_file(&meta, uuid)
+                });
+                file.and_then(|f| crate::import(&f.file_name, &f.bytes).ok()).map(|r| r.document)
+            }
+        };
+        let c = doc.map(|d| {
+            let mut s = Surface::new(self.fmt);
+            let fmt = self.fmt;
+            let _ = photosuite_compose::render_bands(&d, d.bounds(), 0, |band| -> Result<(), ()> {
+                let mut vals = Vec::with_capacity(band.px.len() * fmt.channels());
+                let mut v = [0.0f32; 5];
+                for p in &band.px {
+                    let n = photosuite_raster::from_rgba_into(&fmt, *p, &mut v);
+                    vals.extend_from_slice(&v[..n]);
+                }
+                s.write_region(band.rect, &vals);
+                Ok(())
+            });
+            s.prune();
+            (std::sync::Arc::new(s), d.bounds())
+        });
+        self.smart.composites.insert(uuid.to_string(), c.clone());
+        c
+    }
+
+    /// Adds `bytes` as an embedded file (converted to PSB when it is a `.pcraft` bundle), once
+    /// per distinct content.
+    fn embed(&mut self, file_name: &str, bytes: &[u8]) -> Result<Source, String> {
+        let key = *blake3::hash(bytes).as_bytes();
+        if let Some(r) = self.smart.converted.get(&key) {
+            return r.clone();
+        }
+        let r = self.convert_source(file_name, bytes);
+        self.smart.converted.insert(key, r.clone());
+        r
+    }
+
+    fn convert_source(&mut self, file_name: &str, bytes: &[u8]) -> Result<Source, String> {
+        let (name, data, size, dpi, nested) = if photosuite_format::is_pcraft(bytes) {
+            if self.smart.depth >= MAX_NESTING {
+                return Err(format!("smart objects nest more than {MAX_NESTING} deep"));
+            }
+            let doc = photosuite_format::load_from_bytes(bytes).map_err(|e| format!("its contents can't be read: {e}"))?;
+            let (file, warnings) = document_to_psd_nested(&doc, &PsdExportOptions { force_psb: true }, self.smart.depth + 1);
+            let data = file.to_bytes().map_err(|e| format!("its contents can't be written: {e}"))?;
+            let stem = file_name.rsplit_once('.').map_or(file_name, |(a, _)| a);
+            self.warnings.extend(warnings.into_iter().map(|w| format!("smart object {stem}: {w}")));
+            let size = (f64::from(doc.size.width), f64::from(doc.size.height));
+            (format!("{stem}.psb"), data, size, f64::from(doc.resolution_dpi), Some(doc))
+        } else {
+            // Formats we can't decode (vector PDF/AI…) are still embedded; their size comes from the layer.
+            let (size, dpi) = source_geometry(file_name, bytes).unwrap_or(((0.0, 0.0), f64::from(self.dpi)));
+            (file_name.to_string(), bytes.to_vec(), size, dpi, None)
+        };
+        let uuid = crate::smart_map::uuid_from(&data);
+        if let Some(d) = nested {
+            self.smart.docs.insert(uuid.clone(), d);
+        }
+        if !self.smart.known.contains(&uuid) && !self.smart.add.iter().any(|f| f.uuid == uuid) {
+            self.smart.add.push(crate::linked::LinkedFile { uuid: uuid.clone(), file_name: name, bytes: data });
+        }
+        Ok(Source { uuid, size, dpi })
     }
 
     /// Pixels for a fill layer: Photoshop's cached rendering while valid,
@@ -578,6 +939,11 @@ pub fn document_to_psd(doc: &Document) -> PsdFile {
 /// anything that could not be represented. The merged composite is rendered
 /// with `photosuite_compose::flatten`.
 pub fn document_to_psd_with(doc: &Document, opts: &PsdExportOptions) -> (PsdFile, Vec<String>) {
+    document_to_psd_nested(doc, opts, 0)
+}
+
+/// [`document_to_psd_with`] for a document embedded `depth` smart objects deep.
+fn document_to_psd_nested(doc: &Document, opts: &PsdExportOptions, depth: u32) -> (PsdFile, Vec<String>) {
     if doc.mode == ColorMode::Multichannel {
         return crate::multichannel_map::document_to_psd(doc, opts.force_psb);
     }
@@ -601,6 +967,7 @@ pub fn document_to_psd_with(doc: &Document, opts: &PsdExportOptions) -> (PsdFile
         warnings: Vec::new(),
         guides: doc.guides.clone(),
         comps: (!crate::comps_map::comps_unchanged(doc)).then(|| (doc.layer_comps.clone(), doc.last_document_state.clone())),
+        smart: SmartOut::new(doc, depth),
     };
     if big && !opts.force_psb {
         ex.warnings.push("document exceeds 30000 px; written as PSB".into());
@@ -746,7 +1113,7 @@ pub fn document_to_psd_with(doc: &Document, opts: &PsdExportOptions) -> (PsdFile
         resources.push(ImageResource::new(ids::EXIF, e.to_vec()));
     }
     let mut global_blocks = Vec::new();
-    for (sig, key, data) in &crate::annotations_map::export_blocks(doc, crate::pattern_map::export_global_blocks(doc)) {
+    for (sig, key, data) in &ex.smart.finish(crate::annotations_map::export_blocks(doc, crate::pattern_map::export_global_blocks(doc))) {
         let mut tb = TaggedBlock::new(*key, data.to_vec());
         tb.signature = *sig;
         // Photoshop pads document-level (global) blocks to a multiple of 4, and readers such as

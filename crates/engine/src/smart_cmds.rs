@@ -16,12 +16,13 @@
 //! Converting a layer embeds it as an in-memory `.pcraft` bundle of a nested document (exactly
 //! lossless, layered, any depth/model). PSD placed layers keep their source in the preserved
 //! global `lnk2` block (found by uuid), and keep Photoshop's rendering until something changes,
-//! so an unedited PSD still round-trips byte for byte.
+//! so an unedited PSD still round-trips byte for byte. PSD export (`photosuite_io::smart_map`)
+//! writes every smart object back as one: its source embedded in `lnk2` (a `.pcraft` source as a
+//! PSB), its smart filters in `filterFX` and its filter mask in `FEid`.
 
 use std::sync::{Arc, Mutex};
 
 use photosuite_algo::resample::translate_surface;
-use photosuite_algo::transform::{Homography, Interp, warp_surface};
 use photosuite_color::{BlendMode, PixelFormat};
 use photosuite_doc::{DocId, Document, Layer, LayerContent, LayerId, LayerMask, Metadata, SmartObject, SmartSource};
 use photosuite_geom::{Affine, Rect, Size};
@@ -41,6 +42,9 @@ pub struct SmartLink {
 
 /// PSD placed-layer keys that describe the smart object's source; stale once we change it.
 const PLACED_KEYS: [&[u8; 4]; 3] = [b"SoLd", b"PlLd", b"SoLE"];
+
+/// Command id of a Photoshop smart filter PhotoSuite does not implement (kept verbatim from PSD).
+pub use photosuite_io::smart_map::UNSUPPORTED_FILTER;
 
 fn other(msg: impl Into<String>) -> EngineError {
     EngineError::Other(msg.into())
@@ -210,28 +214,6 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photos
 
 // ---------- rendering ----------
 
-/// Places the source image in the document: an exact shift for whole-pixel translations
-/// (conversion and re-render are then lossless), a bicubic warp otherwise.
-fn place(img: &SourceImage, t: &Affine) -> Surface {
-    let [a, b, c, d, e, f] = t.m;
-    let near = |x: f64, y: f64| (x - y).abs() < 1e-9;
-    if near(a, 1.0) && near(b, 0.0) && near(c, 0.0) && near(d, 1.0) && near(e, e.round()) && near(f, f.round()) {
-        return translate_surface(&img.surface, e.round() as i32, f.round() as i32);
-    }
-    warp_surface(&img.surface, img.bounds, &Homography([a, c, e, b, d, f, 0.0, 0.0, 1.0]), Interp::Bicubic)
-}
-
-/// Places the source image through its warp (source space) and then its transform, in one
-/// resampling pass (Edit › Transform › Warp on a smart object stays lossless).
-fn place_warped(img: &SourceImage, w: &photosuite_geom::warp::Warp, t: &Affine) -> Surface {
-    let [a, b, c, d, e, f] = t.m;
-    let map = |x: f64, y: f64| {
-        let (u, v) = w.map(x, y);
-        (a * u + c * v + e, b * u + d * v + f)
-    };
-    photosuite_algo::warp::warp_mesh_surface(&img.surface, img.bounds, &map, Interp::Bicubic)
-}
-
 /// `top` blended over `base` with `mode` at `opacity` (a smart filter's blending options).
 fn blend_surfaces(base: &Surface, top: &Surface, mode: BlendMode, opacity: f32) -> Surface {
     let fmt = base.format();
@@ -313,10 +295,8 @@ pub fn render(doc: &Document, sm: &SmartObject) -> Result<Option<Surface>> {
         Some(mode) => stack_image(&name, &bytes, doc.pixel_format(), mode)?,
         None => source_image(&name, &bytes, doc.pixel_format())?,
     };
-    let placed = match sm.warp.as_ref().filter(|w| !w.is_identity()) {
-        Some(w) => place_warped(&img, w, &sm.transform),
-        None => place(&img, &sm.transform),
-    };
+    // Through the warp (source space) and the transform in one pass; whole-pixel moves are exact.
+    let placed = photosuite_algo::warp::place_source(&img.surface, img.bounds, &sm.transform, sm.warp.as_ref());
     Ok(Some(apply_smart_filters(&placed, sm, doc.bounds())))
 }
 
@@ -410,8 +390,8 @@ pub(crate) fn shift_smart(sm: &mut SmartObject, dx: i32, dy: i32) {
     }
 }
 
-/// Forget PSD placed-layer data that no longer describes the smart object (PSD export then
-/// writes the rendered pixels).
+/// Forget PSD placed-layer data that no longer describes the smart object (its source changed):
+/// PSD export then writes fresh placed-layer blocks and embeds the new source.
 fn detach_psd(l: &mut Layer) {
     if let LayerContent::Smart(sm) = &mut l.content {
         sm.psd_raw = None;
@@ -729,6 +709,9 @@ fn set_filter_params(s: &mut Session, p: &Value) -> Result<Value> {
     edit_filters(s, p, "Edit Smart Filter", |sm| {
         let i = filter_index(CMD, p, sm)?;
         let f = &mut sm.smart_filters[i];
+        if f.command == photosuite_io::smart_map::UNSUPPORTED_FILTER {
+            return Err(bad(CMD, "this Photoshop filter isn't implemented in PhotoSuite: it is kept as is (it can be hidden, moved or deleted)"));
+        }
         match (&mut f.params, new) {
             (Value::Object(old), Value::Object(n)) => old.extend(n),
             (slot, n) => *slot = n,

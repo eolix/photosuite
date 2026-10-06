@@ -20,8 +20,14 @@ pub fn thumb_badge(ui: &egui::Ui, l: &Layer, thumb: Rect) {
     icons::paint(ui, r, "app-window", 9.0, t.icon);
 }
 
-/// The display name of a smart filter (its command's label without the ellipsis).
-fn filter_label(command: &str) -> String {
+/// The display name of a smart filter (its command's label without the ellipsis). A Photoshop
+/// filter PhotoSuite doesn't implement shows its own name and is marked as kept as is.
+fn filter_label(f: &photosuite_doc::SmartFilter) -> String {
+    let command = f.command.as_str();
+    if command == photosuite_engine::smart_cmds::UNSUPPORTED_FILTER {
+        let name = f.params.get("name").and_then(Value::as_str).unwrap_or("Photoshop filter");
+        return format!("{} (kept, not editable)", name.trim_end_matches("...").trim_end_matches('…'));
+    }
     photosuite_engine::commands::find(command)
         .map_or_else(|| command.rsplit('.').next().unwrap_or(command).to_string(), |c| c.label.trim_end_matches('…').to_string())
 }
@@ -46,7 +52,7 @@ pub fn filter_rows(app: &mut PhotosuiteApp, ui: &mut egui::Ui, l: &Layer, depth:
         }
         let (name, on) = match index {
             None => ("Smart Filters".to_string(), sm.filters_enabled),
-            Some(i) => (filter_label(&sm.smart_filters[i].command), sm.smart_filters[i].visible && sm.filters_enabled),
+            Some(i) => (filter_label(&sm.smart_filters[i]), sm.smart_filters[i].visible && sm.filters_enabled),
         };
         let eye = Rect::from_min_size(pos2(rect.left() + 6.0, rect.center().y - 9.0), vec2(18.0, 18.0));
         let eye_resp = ui.interact(eye, ui.id().with(("sf-eye", l.id.0, index)), Sense::click());

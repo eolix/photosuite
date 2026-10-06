@@ -37,7 +37,10 @@ fn plld(uuid: &str) -> Vec<u8> {
 fn sold(uuid: &str) -> Vec<u8> {
     let mut d = b"soLD".to_vec();
     d.extend(4u32.to_be_bytes());
-    let desc = Descriptor::new("null").with("Idnt", photosuite_psd::descriptor::Value::Text(photosuite_psd::descriptor::UnicodeString::new_nul(uuid)));
+    use photosuite_psd::descriptor::Value;
+    // The strict check wants what Photoshop needs to place the layer: its file id and transform.
+    let quad = [0.0, 0.0, 4.0, 0.0, 4.0, 4.0, 0.0, 4.0].map(Value::Double).to_vec();
+    let desc = Descriptor::new("null").with("Idnt", Value::Text(photosuite_psd::descriptor::UnicodeString::new_nul(uuid))).with("Trnf", Value::List(quad));
     d.extend(VersionedDescriptor::new(desc).to_bytes());
     while !d.len().is_multiple_of(4) {
         d.push(0);

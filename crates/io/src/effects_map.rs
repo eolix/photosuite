@@ -70,12 +70,19 @@ const BLEND_LONG_NAMES: [(BlendMode, &str); 17] = [
 ];
 
 /// A blend-mode enum from either its four-character code or its long string ID.
-fn blend_from_id(v: &[u8]) -> Option<BlendMode> {
+pub(crate) fn blend_from_id(v: &[u8]) -> Option<BlendMode> {
     BLEND_NAMES.iter().chain(&BLEND_LONG_NAMES).find(|(_, n)| n.as_bytes() == v).map(|(m, _)| *m)
 }
 
 fn blend_of(d: &Descriptor, key: &str, default: BlendMode) -> BlendMode {
     enum_of(d, key).and_then(blend_from_id).unwrap_or(default)
+}
+
+/// A `BlnM` enum with the long string ID where the mode has one (`multiply`, `overlay`), as
+/// Photoshop writes smart-filter blend options; the four-character code otherwise.
+pub(crate) fn blend_long_value(m: BlendMode) -> Value {
+    let n = BLEND_LONG_NAMES.iter().chain(&BLEND_NAMES).find(|(b, _)| *b == m).map_or("normal", |(_, n)| n);
+    Value::Enumerated { type_id: Id::new("BlnM"), value: Id::new(n) }
 }
 
 fn blend_value(m: BlendMode) -> Value {

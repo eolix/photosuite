@@ -26,6 +26,26 @@ const CELL: f64 = 4.0;
 /// Most cells along one axis (bounds memory and time on huge layers).
 const MAX_CELLS: usize = 512;
 
+/// Places a smart object's source image (`src`, its pixels in `src_rect`) in the document:
+/// through `warp` (source space) and then the affine `t` (source → document) in one resampling
+/// pass, an exact shift for whole-pixel translations (so conversions and re-renders are
+/// lossless), bicubic otherwise. Shared by the engine's re-render and PSD export's filter cache.
+pub fn place_source(src: &Surface, src_rect: Rect, t: &photosuite_geom::Affine, warp: Option<&photosuite_geom::warp::Warp>) -> Surface {
+    let [a, b, c, d, e, f] = t.m;
+    if let Some(w) = warp.filter(|w| !w.is_identity()) {
+        let map = |x: f64, y: f64| {
+            let (u, v) = w.map(x, y);
+            (a * u + c * v + e, b * u + d * v + f)
+        };
+        return warp_mesh_surface(src, src_rect, &map, Interp::Bicubic);
+    }
+    let near = |x: f64, y: f64| (x - y).abs() < 1e-9;
+    if near(a, 1.0) && near(b, 0.0) && near(c, 0.0) && near(d, 1.0) && near(e, e.round()) && near(f, f.round()) {
+        return crate::resample::translate_surface(src, e.round() as i32, f.round() as i32);
+    }
+    crate::transform::warp_surface(src, src_rect, &crate::transform::Homography([a, c, e, b, d, f, 0.0, 0.0, 1.0]), Interp::Bicubic)
+}
+
 /// Warps the content of `src` inside `src_rect` through the forward map `f` (source document
 /// coordinates → destination document coordinates). Output has `src`'s format with alpha
 /// added; pixels outside the warped area are transparent.

@@ -1,6 +1,6 @@
 # Scorecard checklist: file compatibility (#215 formats, #216 measurement).
 # Corpus numbers come from crates/io/tests/corpus.rs, not from here.
-# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05.
+# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05 (smart objects: #215 PR).
 area = "file"
 title = "File compatibility"
 order = 2
@@ -8,16 +8,16 @@ order = 2
 [[item]]
 id = "FILE-215-1"
 target = "Smart Objects export as embedded Smart Objects (SoLd + lnk2), not flat pixels"
-status = "missing"
+status = "done"
 issue = 215
-note = "smart_cmds.rs:415 detach_psd drops SoLd; psd_export.rs:276 re-emits imported raw only"
+note = "psd_export.rs smart_blocks: PlLd + SoLd, source in lnk2 (.pcraft -> PSB); engine tests/smart_psd.rs; Photoshop 2026 opens 8/16-bit exports as live smart objects. Linked files are embedded"
 
 [[item]]
 id = "FILE-215-2"
 target = "Smart Filters survive PSD save and re-open (filterFX descriptor read and written)"
-status = "missing"
+status = "partial"
 issue = 215
-note = "psd_import.rs:259 smart_filters: Vec::new(); no filterFX in crates"
+note = "smart_map.rs: 14 filters mapped both ways, others kept verbatim, mask in FEid; io tests/smart_corpus.rs. PhotoSuite-only filters (Twirl, Liquify…) are left out of filterFX with a warning"
 
 [[item]]
 id = "FILE-215-3"
@@ -29,9 +29,9 @@ note = "smart_cmds.rs:382 mask only from the selection"
 [[item]]
 id = "FILE-215-4"
 target = "Adjustments (Hue/Sat + Colorize, Curves, Levels, Shadows/Highlights) apply as Smart Filters"
-status = "missing"
+status = "partial"
 issue = 215
-note = "add_smart_filter callers: filters, lens, distort, plug-ins only"
+note = "PSD Levels/Curves/Shadows-Highlights smart filters render (adjust_cmds.rs adjust_as_filter); Image › Adjustments on a smart object doesn't add one yet"
 
 [[item]]
 id = "FILE-215-5"

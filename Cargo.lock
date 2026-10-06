@@ -4166,6 +4166,7 @@ dependencies = [
 name = "photosuite-io"
 version = "0.9.18"
 dependencies = [
+ "blake3",
  "hayro",
  "photosuite-algo",
  "photosuite-cms",
@@ -4182,6 +4183,7 @@ dependencies = [
  "photosuite-text",
  "photosuite-vector",
  "proptest",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 

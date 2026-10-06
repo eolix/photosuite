@@ -47,6 +47,7 @@ pub mod compression;
 pub mod descriptor;
 pub mod error;
 pub mod file;
+pub mod filter_effects;
 pub mod grd;
 pub mod header;
 pub mod image_data;
