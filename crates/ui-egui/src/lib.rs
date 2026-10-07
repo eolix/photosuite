@@ -54,6 +54,7 @@ pub mod file_open;
 pub mod file_ui;
 pub mod fill_ui;
 pub mod filter_dialog;
+pub mod gallery_thumbs;
 pub mod gallery_ui;
 pub mod gpu_canvas;
 pub mod gpu_status;
@@ -205,6 +206,9 @@ pub struct Services {
     pub user_resources_dir: Option<std::path::PathBuf>,
     /// Home-screen thumbnails of the recent files: `…/app.photosuite/recent-thumbs`.
     pub recent_thumbs_dir: Option<std::path::PathBuf>,
+    /// The Filter Gallery's thumbnails, rendered once per display density:
+    /// `…/app.photosuite/filter-gallery-thumbnails.json`.
+    pub gallery_thumbs_file: Option<std::path::PathBuf>,
     /// Write bytes to a path (native) or trigger a download (web).
     pub write: Option<WriteFn>,
     /// File access used only by control/MCP requests. Interactive dialogs keep
@@ -315,6 +319,8 @@ pub struct PhotosuiteApp {
     pub(crate) move_mods: move_mods::MoveDrag,
     /// Live Layer Style dialog preview: (key over revision + style fields, document with the style applied).
     pub(crate) style_preview: Option<(u64, Option<std::sync::Arc<Document>>)>,
+    /// The Filter Gallery's thumbnails, kept across openings (see `gallery_thumbs`).
+    pub(crate) gallery_thumbs: Option<gallery_thumbs::ThumbSet>,
     /// Liquify dialog, Puppet Warp and Perspective Warp sessions (distort_ui).
     pub(crate) distort: distort_ui::Distort,
     /// Gradient tool live-mode drags and previews (gradient_ui).
@@ -427,6 +433,7 @@ impl PhotosuiteApp {
             transform_preview: None,
             move_mods: Default::default(),
             style_preview: None,
+            gallery_thumbs: None,
             distort: Default::default(),
             gradient: Default::default(),
             camera_raw: None,

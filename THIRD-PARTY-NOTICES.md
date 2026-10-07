@@ -146,6 +146,7 @@ the public domain.
 | `assets/ico/**/*.svg`, most | Tabler Icons | Paweł Kuna | MIT |
 | `assets/ico/tools/{blur,brush,camove,corner,crepl,fpen,gradient,hbrush,mlasso,oselect,patch,pen,plasso,qselect,redeye,shbrush,sponge}.svg` | Tool glyphs drawn for this app | The PhotoSuite authors | MIT OR Apache-2.0 |
 | `assets/img/icon_full.{svg,png}` | PhotoSuite logo | The PhotoSuite authors | MIT OR Apache-2.0 |
+| `assets/img/beach.jpg` | The Filter Gallery thumbnails' picture (a sailboat on a beach) | The PhotoSuite authors | MIT OR Apache-2.0 |
 | `resources/luts/*.CUBE` (45) | Color Lookup presets | Fresh LUTs uploaders | CC0 |
 | `resources/lensfun/lens-database.json` | Lens profiles (adapted from the Lensfun database) | The Lensfun contributors | CC BY-SA 3.0 |
 | `resources/gradients/uigradients.grd` | Gradient library (the Gradients panel's uiGradients group) | uiGradients contributors | MIT |

@@ -26,7 +26,7 @@ use crate::widgets;
 
 const MID_W: f32 = 300.0;
 const RIGHT_W: f32 = 290.0;
-const THUMB: [usize; 2] = [80, 56];
+const THUMB: [usize; 2] = crate::gallery_thumbs::THUMB_PT;
 
 /// One effect layer of the stack.
 #[derive(Clone, Debug, PartialEq)]
@@ -78,8 +78,9 @@ pub struct GalleryDialog {
     shown: Option<(u64, ERect)>,
     /// The whole layer filtered (one-piece stacks such as Cutout), keyed by the stack.
     full: Option<(u64, Surface)>,
-    thumb_src: Surface,
+    /// Textures of the shared thumbnail set ([`crate::gallery_thumbs`]) and the set's signature.
     thumbs: Vec<Option<TextureHandle>>,
+    thumb_sig: String,
     pub preview_ms: f64,
 }
 
@@ -157,14 +158,14 @@ fn sample(surf: &Surface, r: Rect, k: u32) -> Surface {
 }
 
 /// Runs a stack on a small surface (the preview and thumbnails).
-fn render(src: &Surface, params: &Value) -> Surface {
+pub(crate) fn render(src: &Surface, params: &Value) -> Surface {
     let effects = photosuite_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
     let b = src.content_bounds().union(&Rect::new(0, 0, 1, 1));
     let b = Rect::new(0, 0, b.x1, b.y1);
     photosuite_algo::apply_in(src, &FilterParams::FilterGallery { effects }, b, b, None, b)
 }
 
-fn image(surf: &Surface, w: usize, h: usize) -> egui::ColorImage {
+pub(crate) fn image(surf: &Surface, w: usize, h: usize) -> egui::ColorImage {
     let mut px = vec![[0u8; 4]; w * h];
     for y in 0..h {
         surf.read_rgba8_into(Rect::new(0, y as i32, w as i32, y as i32 + 1), &mut px[y * w..(y + 1) * w]);
@@ -246,13 +247,6 @@ pub fn open(app: &mut PhotosuiteApp) -> Result<(), String> {
     if effects.is_empty() {
         effects.push(EffectLayer::new(GalleryFilter::ColoredPencil));
     }
-    // Thumbnail source: the middle of the layer, about 4× the thumbnail size.
-    let cb = src.content_bounds().intersect(&canvas);
-    let cb = if cb.is_empty() { canvas } else { cb };
-    let k = ((cb.width() as usize / (THUMB[0] * 4)).min(cb.height() as usize / (THUMB[1] * 4))).max(1) as u32;
-    let (tw, th) = (THUMB[0] as i32 * k as i32, THUMB[1] as i32 * k as i32);
-    let (cx, cy) = ((cb.x0 + cb.x1) / 2, (cb.y0 + cb.y1) / 2);
-    let thumb_src = sample(&src, Rect::new(cx - tw / 2, cy - th / 2, cx - tw / 2 + tw, cy - th / 2 + th), k);
     let sel = effects.len() - 1;
     let open_cats = std::array::from_fn(|i| effects[sel].filter.category() == GALLERY_CATEGORIES[i]);
     app.distort.gallery = Some(GalleryDialog {
@@ -270,8 +264,8 @@ pub fn open(app: &mut PhotosuiteApp) -> Result<(), String> {
         tex: None,
         shown: None,
         full: None,
-        thumb_src,
         thumbs: vec![None; GalleryFilter::ALL.len()],
+        thumb_sig: String::new(),
         preview_ms: 0.0,
     });
     Ok(())
@@ -373,24 +367,43 @@ fn update_preview(d: &mut GalleryDialog, ctx: &egui::Context, area: ERect) {
     d.shown = Some((key, screen));
 }
 
-/// Renders up to `budget` missing thumbnails (spread over frames so opening stays instant).
-fn update_thumbs(d: &mut GalleryDialog, ctx: &egui::Context, budget: usize) {
-    let mut done = 0;
-    for (i, f) in GalleryFilter::ALL.iter().enumerate() {
-        if d.thumbs[i].is_some() || !d.open[GALLERY_CATEGORIES.iter().position(|c| *c == f.category()).unwrap_or(0)] {
-            continue;
-        }
-        if done == budget {
-            ctx.request_repaint();
-            return;
-        }
-        let p = json!({"effects": [{"filter": f.key()}], "foreground": d.foreground, "background": d.background});
-        let out = render(&d.thumb_src, &p);
-        let b = d.thumb_src.content_bounds();
-        let img = image(&out, b.x1.max(1) as usize, b.y1.max(1) as usize);
-        d.thumbs[i] = Some(ctx.load_texture(format!("gallery-thumb-{}", f.key()), img, egui::TextureOptions::LINEAR));
-        done += 1;
+/// Brings the thumbnails up to date: the shared set for this display density (from memory or
+/// disk, else rendered `budget` per frame, open categories first, and stored once complete),
+/// then a texture for each image the dialog doesn't have yet.
+fn update_thumbs(
+    d: &mut GalleryDialog,
+    cache: &mut Option<crate::gallery_thumbs::ThumbSet>,
+    file: Option<&std::path::Path>,
+    ctx: &egui::Context,
+    budget: usize,
+) {
+    use crate::gallery_thumbs as gt;
+    let px = gt::size_px(ctx.pixels_per_point());
+    let sig = gt::signature(px);
+    let mut set = gt::take(cache.take(), &sig, file);
+    if d.thumb_sig != sig {
+        d.thumbs = vec![None; GalleryFilter::ALL.len()];
+        d.thumb_sig = sig;
     }
+    let first: Vec<usize> = GalleryFilter::ALL
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| GALLERY_CATEGORIES.iter().position(|c| *c == f.category()).and_then(|ci| d.open.get(ci)).copied().unwrap_or(false))
+        .map(|(i, _)| i)
+        .collect();
+    if !set.complete() {
+        gt::render_some(&mut set, px, &first, budget);
+        ctx.request_repaint();
+    }
+    gt::store(&mut set, file);
+    for ((tex, img), f) in d.thumbs.iter_mut().zip(&set.images).zip(GalleryFilter::ALL) {
+        if tex.is_none()
+            && let Some(img) = img
+        {
+            *tex = Some(ctx.load_texture(format!("gallery-thumb-{}", f.key()), (**img).clone(), egui::TextureOptions::LINEAR));
+        }
+    }
+    *cache = Some(set);
 }
 
 /// Draws the dialog (a full-window layer over the app).
@@ -450,7 +463,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         // ---- Category folders with thumbnails ----
         painter.rect_filled(mid, 0.0, t.dock);
         painter.line_segment([mid.left_top(), mid.left_bottom()], Stroke::new(1.0, t.separator));
-        update_thumbs(d, ctx, 6);
+        update_thumbs(d, &mut app.gallery_thumbs, app.services.gallery_thumbs_file.as_deref(), ctx, 6);
         let mut mu = ui.new_child(egui::UiBuilder::new().max_rect(mid.shrink2(vec2(8.0, 8.0))));
         egui::ScrollArea::vertical().id_salt("gallery-tree").show(&mut mu, |ui| {
             for (ci, cat) in GALLERY_CATEGORIES.iter().enumerate() {
@@ -738,8 +751,10 @@ mod tests {
         update_preview(d, &ctx, ERect::from_min_size(pos2(0.0, 0.0), vec2(400.0, 300.0)));
         assert!(d.tex.is_some() && d.shown.is_some());
         d.open = [true; 6];
-        update_thumbs(d, &ctx, 100);
+        let mut cache = None;
+        update_thumbs(d, &mut cache, None, &ctx, 100);
         assert!(d.thumbs.iter().all(Option::is_some));
+        assert!(cache.as_ref().is_some_and(crate::gallery_thumbs::ThumbSet::complete), "kept for the next opening");
         // Preview equals the engine's algorithm on the sampled pixels.
         let src = sample(&d.src, d.canvas, 1);
         let a = render(&src, &d.params());

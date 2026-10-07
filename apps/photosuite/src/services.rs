@@ -164,6 +164,7 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         resources_dir: resources_dir(),
         user_resources_dir: config_dir().map(|d| d.join("libraries")),
         recent_thumbs_dir: config_dir().map(|d| d.join("recent-thumbs")),
+        gallery_thumbs_file: config_dir().map(|d| d.join("filter-gallery-thumbnails.json")),
         pick_save: Some(Box::new(|suggested: &str| {
             let p = std::path::Path::new(suggested);
             let mut d = rfd::FileDialog::new();
