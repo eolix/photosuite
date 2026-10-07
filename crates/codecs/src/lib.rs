@@ -26,6 +26,7 @@ pub use crate::codecs::png::encode_indexed as encode_png_indexed;
 pub use crate::codecs::jpeg::estimate_quality as jpeg_quality;
 pub use crate::codecs::jpeg::exif as jpeg_exif;
 pub use crate::codecs::webp::is_lossless as webp_is_lossless;
+pub use crate::codecs::tiff::{PhotoshopTags as TiffPhotoshopTags, photoshop_tags as tiff_photoshop_tags, writes_little_endian as tiff_writes_little_endian};
 pub use crate::error::CodecError;
 pub use crate::fidelity::{FidelityWarning, fidelity_warnings, fidelity_warnings_with};
 pub use crate::format::{ASYMMETRIC_EXCEPTIONS, Format, FormatCaps, caps, detect, from_extension};

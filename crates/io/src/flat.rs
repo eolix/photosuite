@@ -13,8 +13,23 @@ use crate::{ExportOptions, ExportResult, ImportResult, IoError};
 /// Bytes per band when converting or exporting a band of rows at a time.
 const BAND_BYTES: usize = 32 << 20;
 
-/// Decodes a flat image into a single-layer document.
+/// Decodes a flat image into a single-layer document; a TIFF with Photoshop layer data opens
+/// layered (see [`crate::tiff_layers`]).
 pub fn import_flat(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
+    if codecs::detect(bytes) == Some(Format::Tiff) {
+        // The orientation is applied after the layer check: rotating the composite but not the
+        // layers would misalign them, so a layered TIFF keeps its stored orientation.
+        let orientation = codecs::exif_orientation(bytes);
+        let img = codecs::decode_with(bytes, &codecs::DecodeOptions { keep_orientation: true, ..Default::default() })?;
+        if let Some(layers) = img.meta.photoshop_layers.as_deref().filter(|l| !l.is_empty()) {
+            let mut r = crate::tiff_layers::import_layered(name, &img, layers)?;
+            if orientation != 1 {
+                r.warnings.push("the TIFF's orientation tag was ignored so the layers stay aligned with the image".to_string());
+            }
+            return Ok(r);
+        }
+        return image_to_document(name, &img.oriented(orientation)?);
+    }
     let img = codecs::decode(bytes)?;
     let mut r = image_to_document(name, &img)?;
     // OpenEXR and Radiance HDR hold linear, scene-referred values (Rec. 709 primaries unless
@@ -83,7 +98,7 @@ pub(crate) fn image_to_document(name: &str, img: &Image) -> Result<ImportResult,
 /// `Some(surface)` when the document is exactly one visible, unmasked,
 /// normal, fully opaque raster layer: its pixels can be written natively
 /// (keeping CMYK / depth exactly) instead of going through the compositor.
-fn single_layer(doc: &Document) -> Option<&Surface> {
+pub(crate) fn single_layer(doc: &Document) -> Option<&Surface> {
     let [l] = &doc.layers[..] else { return None };
     let ok = l.visible
         && l.opacity >= 1.0
@@ -101,7 +116,7 @@ fn single_layer(doc: &Document) -> Option<&Surface> {
     }
 }
 
-fn layout_for(mode: ColorMode, alpha: bool) -> ChannelLayout {
+pub(crate) fn layout_for(mode: ColorMode, alpha: bool) -> ChannelLayout {
     match (mode, alpha) {
         (ColorMode::Grayscale, false) => ChannelLayout::Gray,
         (ColorMode::Grayscale, true) => ChannelLayout::GrayA,
@@ -112,7 +127,7 @@ fn layout_for(mode: ColorMode, alpha: bool) -> ChannelLayout {
     }
 }
 
-fn csample(s: SampleType) -> CSample {
+pub(crate) fn csample(s: SampleType) -> CSample {
     match s {
         SampleType::U8 => CSample::U8,
         SampleType::U16 => CSample::U16,
@@ -209,14 +224,14 @@ pub fn document_to_image(doc: &Document, warnings: &mut Vec<String>) -> Result<I
         exif: doc.metadata.exif.as_ref().map(|e| e.to_vec()),
         xmp: doc.metadata.xmp.clone(),
         dpi: Some((doc.resolution_dpi, doc.resolution_dpi)),
-        text: Vec::new(),
+        ..Default::default()
     };
     Ok(img.with_icc(icc).with_meta(meta))
 }
 
 /// An empty buffer with room for `pixels × bytes_per_pixel` bytes, or an error (not an abort)
 /// when that much memory can't be had.
-fn try_buffer(pixels: usize, bytes_per_pixel: usize) -> Result<Vec<u8>, IoError> {
+pub(crate) fn try_buffer(pixels: usize, bytes_per_pixel: usize) -> Result<Vec<u8>, IoError> {
     let len = pixels.checked_mul(bytes_per_pixel).ok_or_else(|| IoError::Unsupported("image too large".into()))?;
     let mut v = Vec::new();
     v.try_reserve_exact(len).map_err(|_| IoError::Unsupported(format!("not enough memory for a {} MB image", len >> 20)))?;

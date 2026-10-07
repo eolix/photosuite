@@ -13,6 +13,8 @@
 //! * Camera raws (DNG, CR2, uncompressed / lossless TIFF-EP raws) via
 //!   `photosuite-raw`, developed into a 16-bit ProPhoto RGB "Background"
 //!   layer; unsupported raw variants fall back to the embedded JPEG preview.
+//! * Layered TIFFs (Photoshop layer data in tags 37724 and 34377) open with their
+//!   layers through the PSD path and are written back the same way; see `tiff_layers`.
 //! * Every other format goes through `photosuite-codecs` as a single
 //!   "Background" layer (depth and Gray/RGB/CMYK model preserved).
 //!
@@ -41,6 +43,7 @@ pub mod raw;
 pub mod slices_map;
 pub mod smart_map;
 pub mod text_styles_map;
+pub mod tiff_layers;
 pub mod vector_map;
 
 use photosuite_codecs::{CodecError, EncodeOptions};
@@ -97,12 +100,21 @@ pub struct ExportResult {
 }
 
 /// Export options.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ExportOptions {
     /// Codec options for flat formats.
     pub encode: EncodeOptions,
     /// Write PSB even for `.psd` names when the document is small.
     pub force_psb: bool,
+    /// TIFF: keep the layers (Photoshop layer data in tag 37724). `false` is Photoshop's
+    /// "Discard Layers and Save a Copy": a flat TIFF.
+    pub tiff_layers: bool,
+}
+
+impl Default for ExportOptions {
+    fn default() -> Self {
+        ExportOptions { encode: EncodeOptions::default(), force_psb: false, tiff_layers: true }
+    }
 }
 
 /// `true` if `bytes` start with the PSD/PSB signature.
@@ -168,7 +180,7 @@ pub fn export(doc: &Document, name_or_ext: &str, opts: &ExportOptions) -> Result
         return Ok(ExportResult { bytes: photosuite_format::save_to_bytes(doc, &previews)?, warnings: Vec::new() });
     }
     if ext == "psd" || ext == "psb" {
-        let o = PsdExportOptions { force_psb: opts.force_psb || ext == "psb" };
+        let o = PsdExportOptions { force_psb: opts.force_psb || ext == "psb", ..Default::default() };
         let (file, warnings) = document_to_psd_with(doc, &o);
         // Never write a header the reader would refuse (e.g. a zero-sized canvas).
         file.header.validate()?;
@@ -179,6 +191,9 @@ pub fn export(doc: &Document, name_or_ext: &str, opts: &ExportOptions) -> Result
         return pdf::export(doc, opts.encode.jpeg_quality);
     }
     let format = photosuite_codecs::from_extension(&ext).ok_or_else(|| IoError::UnknownFormat(name_or_ext.to_string()))?;
+    if format == photosuite_codecs::Format::Tiff && opts.tiff_layers && tiff_layers::would_write_layers(doc) {
+        return tiff_layers::export_layered(doc, opts);
+    }
     flat::export_flat(doc, format, opts)
 }
 

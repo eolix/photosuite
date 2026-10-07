@@ -50,9 +50,9 @@ note = "doc lib.rs:312 SmartObject.transform is an Affine"
 [[item]]
 id = "FILE-215-7"
 target = "Layered TIFF read and write (tag 37724), honouring the ask-before-saving pref"
-status = "missing"
+status = "done"
 issue = 215
-note = "No 37724 / ImageSourceData in crates"
+note = "psd tiff.rs (ImageSourceData, both byte orders), io tiff_layers.rs, ui tiff_options_ui.rs (Discard Layers and Save a Copy); extra alpha channels are not written (one transparency sample)"
 
 [[item]]
 id = "FILE-215-8"

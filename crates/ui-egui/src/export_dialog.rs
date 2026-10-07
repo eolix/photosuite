@@ -104,7 +104,7 @@ fn s_fmt(f: &Map<String, Value>) -> String {
 fn settings(f: &Map<String, Value>) -> ExportSettings {
     let fmt = s_fmt(f);
     let q = n(f, "quality", 85.0).clamp(1.0, 100.0) as u8;
-    ExportSettings { jpeg_quality: (fmt == "jpg").then_some(q), webp_quality: (fmt == "webp").then_some(q) }
+    ExportSettings { jpeg_quality: (fmt == "jpg").then_some(q), webp_quality: (fmt == "webp").then_some(q), ..Default::default() }
 }
 
 /// Estimated size (bytes) from a ≤512 px proxy encode, scaled by pixel count.

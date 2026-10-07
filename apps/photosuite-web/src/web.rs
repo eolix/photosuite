@@ -148,6 +148,7 @@ fn services(inbox: Inbox, ctx: egui::Context) -> Services {
                 opts.encode.webp_lossless = false;
                 opts.encode.webp_quality = q;
             }
+            opts.tiff_layers = settings.tiff_layers;
             photosuite_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
         })),
         pick_open: Some(Box::new(move || {

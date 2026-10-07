@@ -65,6 +65,7 @@ pub mod tagged;
 // Test-data generator (tests and fuzz seeds only): failing loudly is the point.
 #[allow(clippy::expect_used)]
 pub mod testgen;
+pub mod tiff;
 pub mod tree;
 
 pub use blend::BlendMode;

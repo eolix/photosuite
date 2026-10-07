@@ -65,9 +65,9 @@ note = "prefs.rs:163,166,229; no reader outside prefs.rs"
 [[item]]
 id = "BUG-204-3"
 target = "RAW prefs and ask_before_saving_layered_tiff read, or hidden"
-status = "missing"
+status = "partial"
 issue = 204
-note = "raw_defaults (prefs.rs:712), ask_before_saving_layered_tiff (prefs.rs:312) have no readers"
+note = "ask_before_saving_layered_tiff drives the TIFF Options prompt (ui-egui tiff_options_ui.rs); raw_defaults (prefs.rs:712) still has no readers"
 
 [[item]]
 id = "BUG-204-4"

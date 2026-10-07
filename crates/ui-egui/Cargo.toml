@@ -17,6 +17,7 @@ photosuite-doc = { workspace = true }
 photosuite-compose = { workspace = true }
 photosuite-gpu = { workspace = true }
 photosuite-engine = { workspace = true }
+photosuite-io = { workspace = true }
 photosuite-plugins = { workspace = true }
 photosuite-algo = { workspace = true }
 photosuite-text = { workspace = true }
@@ -37,7 +38,6 @@ rayon = { workspace = true }
 [dev-dependencies]
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot", "eframe"] }
 # Only for examples/snapshot.rs (offscreen UI renders of real files).
-photosuite-io = { workspace = true }
 # Only for examples/interactive_bench.rs (JPEG encode, .pcraft saves).
 photosuite-codecs = { workspace = true }
 # Benchmark helpers for the `--json` benches `cargo xtask perf` runs (in-process RSS, percentiles).

@@ -12,6 +12,7 @@ fn rich_image(layout: ChannelLayout) -> Image {
         xmp: Some(SAMPLE_XMP.to_owned()),
         dpi: Some((300.0, 150.0)),
         text: vec![("Description".into(), "synthetic test image".into()), ("Software".into(), "photosuite".into())],
+        ..Default::default()
     };
     img
 }

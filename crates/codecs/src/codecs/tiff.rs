@@ -2,6 +2,13 @@
 //! CMYK with optional (unassociated) alpha, ICC (34675), XMP (700), DPI and
 //! a few ASCII text tags. Only the first IFD is read; further pages are counted and reported
 //! as a [`DecodeWarning::MorePages`].
+//!
+//! Photoshop's private tags are carried as opaque bytes in [`Metadata`]: 34377 (image
+//! resources) and 37724 (`ImageSourceData`, the layers of a layered TIFF). They are read with
+//! a bounds-checked walk of the first directory ([`photoshop_tags`]) rather than through the
+//! decoder, which would materialize a multi-megabyte layer block as one `Value` per byte, and
+//! written back as BYTE / UNDEFINED tags. The encoder writes files in the native byte order
+//! (see [`writes_little_endian`]), which the layer data must match.
 
 use std::borrow::Cow;
 use std::io::Cursor;
@@ -19,6 +26,87 @@ use crate::options::{EncodeOptions, Limits, TiffCompression};
 
 const F: Format = Format::Tiff;
 const TAG_XMP: u16 = 700;
+/// Photoshop image resources (`8BIM` blocks).
+const TAG_PHOTOSHOP: u16 = 34377;
+/// Photoshop `ImageSourceData`: the layers of a layered TIFF.
+const TAG_IMAGE_SOURCE_DATA: u16 = 37724;
+
+/// `true` when [`encode`] writes little-endian (`II`) files: the `tiff` encoder writes the
+/// running target's byte order, and every target PhotoSuite builds for is little-endian.
+/// Byte-order-sensitive payloads (Photoshop layer data) must be produced to match.
+pub fn writes_little_endian() -> bool {
+    cfg!(target_endian = "little")
+}
+
+/// `(34377 image resources, 37724 image source data)` payloads, each absent when the tag is.
+pub type PhotoshopTags<'a> = (Option<&'a [u8]>, Option<&'a [u8]>);
+
+/// The raw payloads of the Photoshop private tags in the first directory: `(34377 image
+/// resources, 37724 image source data)`. Classic and BigTIFF, either byte order; only
+/// header bytes and the two payloads are touched, and nothing is allocated. Anything malformed
+/// reads as "absent".
+pub fn photoshop_tags(b: &[u8]) -> PhotoshopTags<'_> {
+    fn walk(b: &[u8]) -> Option<PhotoshopTags<'_>> {
+        let le = match b.get(0..2)? {
+            b"II" => true,
+            b"MM" => false,
+            _ => return None,
+        };
+        let u16_at = |o: u64| -> Option<u16> {
+            let o = usize::try_from(o).ok()?;
+            let s = b.get(o..o.checked_add(2)?)?;
+            Some(if le { u16::from_le_bytes([s[0], s[1]]) } else { u16::from_be_bytes([s[0], s[1]]) })
+        };
+        let u32_at = |o: u64| -> Option<u32> {
+            let o = usize::try_from(o).ok()?;
+            let s: [u8; 4] = b.get(o..o.checked_add(4)?)?.try_into().ok()?;
+            Some(if le { u32::from_le_bytes(s) } else { u32::from_be_bytes(s) })
+        };
+        let u64_at = |o: u64| -> Option<u64> {
+            let o = usize::try_from(o).ok()?;
+            let s: [u8; 8] = b.get(o..o.checked_add(8)?)?.try_into().ok()?;
+            Some(if le { u64::from_le_bytes(s) } else { u64::from_be_bytes(s) })
+        };
+        let (big, ifd) = match u16_at(2)? {
+            42 => (false, u64::from(u32_at(4)?)),
+            43 => (true, u64_at(8)?),
+            _ => return None,
+        };
+        let n = if big { u64_at(ifd)? } else { u64::from(u16_at(ifd)?) }.min(4096);
+        let (entry, first, inline) = if big { (20u64, ifd.checked_add(8)?, 8u64) } else { (12, ifd.checked_add(2)?, 4) };
+        let mut resources = None;
+        let mut layers = None;
+        for i in 0..n {
+            let e = first.checked_add(i.checked_mul(entry)?)?;
+            let tag = u16_at(e)?;
+            if tag != TAG_PHOTOSHOP && tag != TAG_IMAGE_SOURCE_DATA {
+                continue;
+            }
+            // BYTE, ASCII, SBYTE or UNDEFINED: one byte per element.
+            if !matches!(u16_at(e + 2)?, 1 | 2 | 6 | 7) {
+                continue;
+            }
+            let count = if big { u64_at(e + 4)? } else { u64::from(u32_at(e + 4)?) };
+            let value_at = e + if big { 12 } else { 8 };
+            let start = if count <= inline {
+                value_at
+            } else if big {
+                u64_at(value_at)?
+            } else {
+                u64::from(u32_at(value_at)?)
+            };
+            let start = usize::try_from(start).ok()?;
+            let data = b.get(start..start.checked_add(usize::try_from(count).ok()?)?)?;
+            if tag == TAG_PHOTOSHOP {
+                resources = Some(data);
+            } else {
+                layers = Some(data);
+            }
+        }
+        Some((resources, layers))
+    }
+    walk(b).unwrap_or((None, None))
+}
 
 /// ASCII tags mapped to `Metadata::text` keys.
 const TEXT_TAGS: &[(Tag, &str)] = &[
@@ -215,6 +303,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
             }
         }
     }
+    let (resources, layers) = photoshop_tags(bytes);
+    meta.photoshop_resources = resources.map(<[u8]>::to_vec);
+    meta.photoshop_layers = layers.map(<[u8]>::to_vec);
     img.meta = meta;
     img.warnings.extend(more_pages(&mut dec));
     Ok(img)
@@ -342,6 +433,8 @@ struct TagSet<'a> {
     dpi: Option<(f32, f32)>,
     text: Vec<(Tag, &'a str)>,
     alpha: bool,
+    photoshop_resources: Option<&'a [u8]>,
+    photoshop_layers: Option<&'a [u8]>,
 }
 
 fn write_one<C>(enc: &mut TiffEncoder<&mut Cursor<Vec<u8>>>, w: u32, h: u32, data: &[C::Inner], tags: &TagSet<'_>) -> tiff::TiffResult<()>
@@ -368,6 +461,12 @@ where
     }
     for (tag, s) in &tags.text {
         d.write_tag(*tag, *s)?;
+    }
+    if let Some(r) = tags.photoshop_resources {
+        d.write_tag(Tag::Unknown(TAG_PHOTOSHOP), r)?;
+    }
+    if let Some(l) = tags.photoshop_layers {
+        d.write_tag(Tag::Unknown(TAG_IMAGE_SOURCE_DATA), Undefined(l))?;
     }
     im.write_data(data)
 }
@@ -404,6 +503,9 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
         dpi: if opts.embed_metadata { img.meta.dpi.filter(|d| d.0 > 0.0 && d.1 > 0.0) } else { None },
         text,
         alpha: img.layout().has_alpha(),
+        // Document content, not metadata: written whenever present.
+        photoshop_resources: img.meta.photoshop_resources.as_deref().filter(|r| !r.is_empty()),
+        photoshop_layers: img.meta.photoshop_layers.as_deref().filter(|l| !l.is_empty()),
     };
 
     let mut cursor = Cursor::new(Vec::new());

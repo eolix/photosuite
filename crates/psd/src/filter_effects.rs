@@ -27,7 +27,7 @@ use crate::io::{Reader, WriteExt, read_pascal, write_pascal};
 use crate::layer::Rect;
 
 /// Most slots an item may declare (Photoshop writes 24 channels + 2).
-const MAX_SLOTS: u32 = 64;
+pub(crate) const MAX_SLOTS: u32 = 64;
 
 /// One compressed plane of a filter-effects item.
 #[derive(Debug, Clone, PartialEq, Eq)]
