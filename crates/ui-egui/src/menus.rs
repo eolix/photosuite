@@ -381,7 +381,17 @@ pub(crate) fn invoke_unguarded(app: &mut PhotosuiteApp, ctx: &egui::Context, id:
         | "edit.transform.rotate"
         | "edit.transform.skew"
         | "edit.transform.distort"
-        | "edit.transform.perspective" => crate::transform_tool::begin(app, ctx).map(|_| json!({"transform": app.ui.transform})),
+        | "edit.transform.perspective" => {
+            // While a box is up, Scale / Rotate / Skew / Distort / Perspective (and Free Transform)
+            // switch its mode; otherwise they start one in that mode.
+            if app.ui.transform.is_none() {
+                crate::transform_tool::begin(app, ctx)?;
+            }
+            if let Some(t) = app.ui.transform.as_mut() {
+                t.mode = crate::state::TransformMode::for_command(id);
+            }
+            Ok(json!({"transform": app.ui.transform}))
+        }
         "edit.freeTransformCopy" => crate::transform_tool::begin_copy(app, ctx).map(|_| json!({"transform": app.ui.transform})),
         // Edit › Transform › Warp from the menu: interactive Warp mode (with params: the engine).
         "edit.transform.warp" | "layer.smartObjects.warp" if params.as_object().is_none_or(|o| o.is_empty()) => {
@@ -519,13 +529,16 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
         i if (i.starts_with("view.zoom") || i == "view.fitOnScreen" || i == "view.actualPixels") || i == "window.newWindowForDocument" => {
             app.session.active().is_some()
         }
+        "edit.freeTransformCopy" => app.ui.transform.is_none() && app.session.active().and_then(|s| s.active_layer).is_some(),
         "edit.freeTransform"
-        | "edit.freeTransformCopy"
         | "edit.transform.scale"
         | "edit.transform.rotate"
         | "edit.transform.skew"
         | "edit.transform.distort"
-        | "edit.transform.perspective" => app.ui.transform.is_none() && app.session.active().and_then(|s| s.active_layer).is_some(),
+        | "edit.transform.perspective" => match &app.ui.transform {
+            Some(t) => t.warp.is_none(),
+            None => app.session.active().and_then(|s| s.active_layer).is_some(),
+        },
         i => app.session.is_enabled(i),
     }
 }

@@ -491,6 +491,34 @@ impl Default for ToolOptions {
     }
 }
 
+/// Edit › Transform's mode: what a handle drag does with no modifier keys held.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransformMode {
+    /// Free Transform, Scale and Rotate.
+    #[default]
+    Free,
+    /// Edge handles skew.
+    Skew,
+    /// Corner handles move freely, one at a time; nothing else moves them (no rotating, no
+    /// edges) and nothing snaps.
+    Distort,
+    /// Corner handles move in pairs, mirrored (one-point perspective).
+    Perspective,
+}
+
+impl TransformMode {
+    /// The mode an `edit.transform.*` / `edit.freeTransform` menu id starts.
+    pub fn for_command(id: &str) -> Self {
+        match id {
+            "edit.transform.skew" => Self::Skew,
+            "edit.transform.distort" => Self::Distort,
+            "edit.transform.perspective" => Self::Perspective,
+            _ => Self::Free,
+        }
+    }
+}
+
 /// Free Transform in progress: the source frame `rect` and where its corners currently are.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TransformSession {
@@ -516,6 +544,9 @@ pub struct TransformSession {
     /// and OK folds it into the transform's history step (#352).
     #[serde(default)]
     pub copy: bool,
+    /// Edit › Transform › Skew / Distort / Perspective (`Free` for Free Transform).
+    #[serde(default)]
+    pub mode: TransformMode,
 }
 
 /// In-progress inline type editing (Type tool). Offsets are character indices.

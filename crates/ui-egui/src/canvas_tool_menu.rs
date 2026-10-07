@@ -16,7 +16,20 @@ pub struct CanvasToolMenu {
     pub has_path: bool,
     #[serde(default)]
     pub path_name: Option<String>,
+    /// Opened over a Free Transform box: its modes instead of the tool's actions.
+    #[serde(default)]
+    pub transform: bool,
 }
+
+/// Right-click while transforming: what the box's handles do.
+pub const TRANSFORM_MENU: &[(&str, &str)] = &[
+    ("Free Transform", "edit.freeTransform"),
+    ("Scale", "edit.transform.scale"),
+    ("Rotate", "edit.transform.rotate"),
+    ("Skew", "edit.transform.skew"),
+    ("Distort", "edit.transform.distort"),
+    ("Perspective", "edit.transform.perspective"),
+];
 
 /// Photoshop's Pen context menu order. `None` is a separator. Rows whose operation is not
 /// applicable to the current path or layer stay visible and disabled.
@@ -73,11 +86,36 @@ pub fn entries(has_selection: bool) -> &'static [(&'static str, &'static str)] {
 }
 
 pub fn menu_entries(menu: &CanvasToolMenu) -> &'static [(&'static str, &'static str)] {
-    if menu.tool == Tool::Pen { &[] } else { entries(menu.has_selection) }
+    if menu.transform {
+        TRANSFORM_MENU
+    } else if menu.tool == Tool::Pen {
+        &[]
+    } else {
+        entries(menu.has_selection)
+    }
+}
+
+/// Is `command` the transform box's current mode (checked in the transform menu)?
+/// Scale and Rotate are Free Transform's mode, so only Free Transform shows it checked.
+fn mode_checked(app: &PhotosuiteApp, menu: &CanvasToolMenu, command: &str) -> bool {
+    menu.transform
+        && !matches!(command, "edit.transform.scale" | "edit.transform.rotate")
+        && app.ui.transform.as_ref().is_some_and(|t| t.mode == crate::state::TransformMode::for_command(command))
+}
+
+/// Right-click over a Free Transform box: its modes.
+pub fn open_transform(app: &mut PhotosuiteApp, pos: [f32; 2]) -> bool {
+    if !pos.iter().all(|v| v.is_finite()) {
+        return false;
+    }
+    app.ui.brush_picker = None;
+    app.ui.layer_menu = None;
+    app.ui.canvas_tool_menu = Some(CanvasToolMenu { pos, tool: app.ui.tool, has_selection: false, has_path: false, path_name: None, transform: true });
+    true
 }
 
 pub fn entry_enabled(app: &PhotosuiteApp, menu: &CanvasToolMenu, command: &str) -> bool {
-    if menu.tool != Tool::Pen {
+    if menu.transform || menu.tool != Tool::Pen {
         return crate::menus::is_enabled(app, command);
     }
     let Some(st) = app.session.active() else { return false };
@@ -123,13 +161,13 @@ pub fn open(app: &mut PhotosuiteApp, tool: Tool, pos: [f32; 2]) -> bool {
     let has_selection = app.session.active().is_some_and(|s| s.doc.selection.is_some());
     let has_path = crate::vector_ui::active_path_name(app).is_some() || app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2);
     let path_name = crate::vector_ui::active_path_name(app);
-    app.ui.canvas_tool_menu = Some(CanvasToolMenu { pos, tool, has_selection, has_path, path_name });
+    app.ui.canvas_tool_menu = Some(CanvasToolMenu { pos, tool, has_selection, has_path, path_name, transform: false });
     true
 }
 
 pub fn choose(app: &mut PhotosuiteApp, ctx: &Context, command: &str) {
     let Some(menu) = app.ui.canvas_tool_menu.take() else { return };
-    if menu.tool == Tool::Pen {
+    if menu.tool == Tool::Pen && !menu.transform {
         if !PEN_MENU.iter().flatten().any(|(_, id)| *id == command) || !entry_enabled(app, &menu, command) {
             return;
         }
@@ -139,7 +177,7 @@ pub fn choose(app: &mut PhotosuiteApp, ctx: &Context, command: &str) {
         }
         return;
     }
-    if !entries(menu.has_selection).iter().any(|&(_, id)| id == command) || !crate::menus::is_enabled(app, command) {
+    if !menu_entries(&menu).iter().any(|&(_, id)| id == command) || !crate::menus::is_enabled(app, command) {
         return;
     }
     if let Err(e) = crate::menus::invoke(app, ctx, command, json!({})) {
@@ -211,7 +249,7 @@ fn choose_pen(app: &mut PhotosuiteApp, ctx: &Context, menu: &CanvasToolMenu, com
 
 pub fn show(app: &mut PhotosuiteApp, ctx: &Context) {
     let Some(menu) = app.ui.canvas_tool_menu.clone() else { return };
-    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) || app.ui.tool != menu.tool {
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) || app.ui.tool != menu.tool || (menu.transform && app.ui.transform.is_none()) {
         app.ui.canvas_tool_menu = None;
         return;
     }
@@ -233,7 +271,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &Context) {
             v.widgets.hovered.corner_radius = egui::CornerRadius::same(3);
             ui.spacing_mut().item_spacing.y = 0.0;
             ui.set_width(200.0);
-            if menu.tool == Tool::Pen {
+            if menu.tool == Tool::Pen && !menu.transform {
                 for row in PEN_MENU {
                     if let Some((label, command)) = row {
                         let item = egui::Button::selectable(false, tl!(label)).min_size(egui::vec2(200.0, 20.0));
@@ -246,7 +284,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &Context) {
                 }
             } else {
                 for &(label, command) in menu_entries(&menu) {
-                    let item = egui::Button::selectable(false, tl!(&label)).min_size(egui::vec2(200.0, 22.0));
+                    let item = egui::Button::selectable(mode_checked(app, &menu, command), tl!(&label)).min_size(egui::vec2(200.0, 22.0));
                     if ui.add_enabled(entry_enabled(app, &menu, command), item).clicked() {
                         selected = Some(command);
                     }

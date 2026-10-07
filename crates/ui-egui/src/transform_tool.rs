@@ -18,7 +18,7 @@ use serde_json::json;
 
 use crate::PhotosuiteApp;
 use crate::canvas::{ToolEvent, ViewXform};
-use crate::state::{Tool, TransformSession};
+use crate::state::{Tool, TransformMode, TransformSession};
 
 /// Which Split button is armed. The guide follows the pointer and the split is added on release.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -191,6 +191,7 @@ pub fn begin(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String>
         selection: false,
         target: None,
         copy: false,
+        mode: Default::default(),
     });
     start_steps(app);
     Ok(())
@@ -290,6 +291,7 @@ fn begin_lone(
         selection: false,
         target: Some(target),
         copy: false,
+        mode: Default::default(),
     });
     start_steps(app);
     Ok(())
@@ -348,6 +350,7 @@ pub fn begin_selection(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(
         selection: true,
         target: None,
         copy: false,
+        mode: Default::default(),
     });
     start_steps(app);
     Ok(())
@@ -658,19 +661,50 @@ pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) ->
                 s.pivot = [x, y];
                 h = Hit::Pivot;
             }
-            pv.gesture = Some(Gesture { hit: h, start: [x, y], quad0: t.quad, pivot0: t.pivot });
+            // Distort only moves corners (and the whole box from inside): no rotating, no edges.
+            pv.gesture = distort_allows(t.mode, h).then_some(Gesture { hit: h, start: [x, y], quad0: t.quad, pivot0: t.pivot });
         }
         ToolEvent::Move { x, y, .. } | ToolEvent::Up { x, y } => {
             let g = pv.gesture;
             if matches!(ev, ToolEvent::Up { .. }) {
                 pv.gesture = None;
             }
+            let legacy = app.session.prefs().general.use_legacy_free_transform;
             if let (Some(g), Some(s)) = (g, app.ui.transform.as_mut()) {
-                apply_drag(s, g, [x, y], mods);
+                apply_drag(s, g, [x, y], mode_mods(t.mode, g.hit, corner_mods(legacy, g.hit, mods)));
             }
         }
     }
     true
+}
+
+/// Preferences › General › Use Legacy Free Transform: corner drags stretch freely and ⇧ keeps
+/// the proportions, the reverse of the default (proportional, ⇧ frees them).
+fn corner_mods(legacy: bool, hit: Hit, mut mods: egui::Modifiers) -> egui::Modifiers {
+    if legacy && matches!(hit, Hit::Corner(_)) && !mods.command {
+        mods.shift = !mods.shift;
+    }
+    mods
+}
+
+/// Skew / Distort / Perspective modes: a handle drag acts as if that gesture's keys were held
+/// (⌘-drag an edge skews, ⌘-drag a corner distorts, ⌘⌥⇧-drag a corner adds perspective).
+fn mode_mods(mode: TransformMode, hit: Hit, mut mods: egui::Modifiers) -> egui::Modifiers {
+    match (mode, hit) {
+        (TransformMode::Skew, Hit::Edge(_)) | (TransformMode::Distort, Hit::Corner(_)) => mods.command = true,
+        (TransformMode::Perspective, Hit::Corner(_)) => {
+            mods.command = true;
+            mods.alt = true;
+            mods.shift = true;
+        }
+        _ => {}
+    }
+    mods
+}
+
+/// In Distort mode only corner drags (and moving the box from inside) do anything.
+fn distort_allows(mode: TransformMode, h: Hit) -> bool {
+    mode != TransformMode::Distort || !matches!(h, Hit::Outside | Hit::Edge(_))
 }
 
 fn apply_drag(s: &mut TransformSession, g: Gesture, p: [f64; 2], mods: egui::Modifiers) {
@@ -797,7 +831,8 @@ fn apply_drag(s: &mut TransformSession, g: Gesture, p: [f64; 2], mods: egui::Mod
                     r[1] = 2.0 * pv - r[3];
                 }
             }
-            // Corners scale proportionally by default (Photoshop CC); ⇧ frees them.
+            // Corners scale proportionally by default; ⇧ frees them (the legacy preference swaps
+            // the two, `corner_mods`).
             let corner = matches!(g.hit, Hit::Corner(_));
             if corner && !mods.shift {
                 let (sx, sy) = (r[2] - r[0], r[3] - r[1]);
@@ -1013,7 +1048,11 @@ pub fn cursor(app: &PhotosuiteApp, p: [f64; 2], alt: bool) -> Option<CursorIcon>
         }
         return Some(if w.style != WarpStyle::Custom || warp_hit(w, p, tol).is_some() { CursorIcon::Crosshair } else { CursorIcon::Default });
     }
-    Some(match hit(t, p, tol) {
+    let h = hit(t, p, tol);
+    if !distort_allows(t.mode, h) {
+        return Some(CursorIcon::Default);
+    }
+    Some(match h {
         Hit::Corner(0 | 2) => CursorIcon::ResizeNwSe,
         Hit::Corner(_) => CursorIcon::ResizeNeSw,
         Hit::Edge(0 | 2) => CursorIcon::ResizeVertical,
@@ -1493,6 +1532,7 @@ mod tests {
             selection: false,
             target: None,
             copy: false,
+            mode: Default::default(),
         }
     }
 
@@ -1813,6 +1853,72 @@ mod tests {
         assert_eq!(st.history.past_len(), steps + 2, "the transform, then the stroke");
         let b = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
         assert!(b.x0 < 8 && b.x1 >= 44 && b.y0 == 8 && b.y1 > 50, "moved square and stroke: {b:?}");
+    }
+
+    /// Drags with real pointer events (snapping off so the drops land exactly).
+    fn press_drag(app: &mut PhotosuiteApp, from: [f64; 2], to: [f64; 2], m: egui::Modifiers) {
+        crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
+        crate::canvas::tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
+    }
+
+    #[test]
+    fn distort_mode_moves_one_corner_and_ignores_rotate_and_edges() {
+        let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 24, 24));
+        app.ui.extras.snap = false;
+        let ctx = egui::Context::default();
+        crate::menus::invoke(&mut app, &ctx, "edit.transform.distort", json!({})).unwrap();
+        let q0 = app.ui.transform.as_ref().unwrap().quad;
+        assert_eq!(app.ui.transform.as_ref().unwrap().mode, TransformMode::Distort);
+        // Outside (rotate) and an edge handle do nothing in Distort.
+        press_drag(&mut app, [44.0, 44.0], [54.0, 10.0], egui::Modifiers::NONE);
+        press_drag(&mut app, [24.0, 16.0], [34.0, 16.0], egui::Modifiers::NONE);
+        assert_eq!(app.ui.transform.as_ref().unwrap().quad, q0);
+        // A corner moves alone, with no keys held.
+        press_drag(&mut app, q0[1], [q0[1][0] + 7.0, q0[1][1] - 5.0], egui::Modifiers::NONE);
+        let q = app.ui.transform.as_ref().unwrap().quad;
+        assert_eq!(q[1], [q0[1][0] + 7.0, q0[1][1] - 5.0]);
+        assert_eq!([q[0], q[2], q[3]], [q0[0], q0[2], q0[3]]);
+        // Free Transform from the menu switches the live box back.
+        crate::menus::invoke(&mut app, &ctx, "edit.freeTransform", json!({})).unwrap();
+        assert_eq!(app.ui.transform.as_ref().unwrap().mode, TransformMode::Free);
+    }
+
+    #[test]
+    fn the_legacy_preference_swaps_corner_proportions() {
+        let none = egui::Modifiers::NONE;
+        let corner = Hit::Corner(1);
+        // Default: proportional (⇧ frees), so the drag keeps its keys.
+        assert!(!corner_mods(false, corner, none).shift);
+        // Legacy: free by default, ⇧ keeps proportions; edges and ⌘ gestures are left alone.
+        assert!(corner_mods(true, corner, none).shift);
+        assert!(!corner_mods(true, corner, egui::Modifiers::SHIFT).shift);
+        assert!(!corner_mods(true, Hit::Edge(1), none).shift);
+        assert!(!corner_mods(true, corner, egui::Modifiers::COMMAND).shift);
+        // Through the box: a plain corner drag on a 16×16 square.
+        for (legacy, proportional) in [(false, true), (true, false)] {
+            let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 24, 24));
+            app.ui.extras.snap = false;
+            app.session.prefs.edit(|p| p.general.use_legacy_free_transform = legacy);
+            begin(&mut app, &egui::Context::default()).unwrap();
+            let q0 = app.ui.transform.as_ref().unwrap().quad;
+            press_drag(&mut app, q0[2], [q0[2][0] + 16.0, q0[2][1]], none);
+            let q = app.ui.transform.as_ref().unwrap().quad;
+            let (w, h) = (q[2][0] - q[0][0], q[2][1] - q[0][1]);
+            assert_eq!((w - h).abs() < 1e-6, proportional, "legacy {legacy}: {w} × {h}");
+        }
+    }
+
+    #[test]
+    fn right_click_while_transforming_switches_the_mode() {
+        let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 24, 24));
+        let ctx = egui::Context::default();
+        begin(&mut app, &ctx).unwrap();
+        assert!(crate::canvas_tool_menu::open_transform(&mut app, [10.0, 10.0]));
+        let menu = app.ui.canvas_tool_menu.clone().unwrap();
+        let ids: Vec<&str> = crate::canvas_tool_menu::menu_entries(&menu).iter().map(|e| e.1).collect();
+        assert!(ids.contains(&"edit.transform.distort") && ids.contains(&"edit.freeTransform"));
+        crate::canvas_tool_menu::choose(&mut app, &ctx, "edit.transform.distort");
+        assert_eq!(app.ui.transform.as_ref().unwrap().mode, TransformMode::Distort);
     }
 
     fn app_with_square(size: u32, fill: photosuite_geom::Rect) -> PhotosuiteApp {
