@@ -160,8 +160,6 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     };
     let bytes_per_sample = u64::from(bits.max(8) / 8);
     limits.check_bytes(w, h, layout.channels() as u64 * bytes_per_sample.max(1))?;
-    let white_is_zero = dec.find_tag_unsigned::<u16>(Tag::PhotometricInterpretation).ok().flatten() == Some(PhotometricInterpretation::WhiteIsZero.to_u16());
-
     let result = dec.read_image().map_err(map_err)?;
     let n = w as usize * h as usize * layout.channels();
     let mut img = match result {
@@ -185,19 +183,6 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     if img.sample_count() != n {
         return Err(err("sample count mismatch"));
     }
-    if white_is_zero && layout.is_gray() {
-        let v: Vec<f32> = img
-            .to_normalized()
-            .chunks(layout.channels())
-            .flat_map(|p| {
-                let mut p = p.to_vec();
-                p[0] = 1.0 - p[0];
-                p
-            })
-            .collect();
-        img = Image::from_normalized(w, h, layout, img.sample_type(), &v)?;
-    }
-
     img.icc = dec.find_tag(Tag::IccProfile).ok().flatten().and_then(value_bytes);
     let mut meta = Metadata {
         xmp: dec

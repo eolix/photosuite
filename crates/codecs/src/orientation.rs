@@ -30,6 +30,9 @@ const TYPE_LONG: u16 = 4;
 const ENTRY: usize = 12;
 /// The TIFF header is 8 bytes, so no IFD can start before it.
 const HEADER: usize = 8;
+/// BigTIFF uses a 16-byte header, 20-byte entries, and 8-byte offsets.
+const BIG_ENTRY: usize = 20;
+const BIG_HEADER: usize = 16;
 
 /// Byte order of a TIFF structure.
 #[derive(Clone, Copy)]
@@ -54,6 +57,14 @@ impl Order {
             Order::Big => u32::from_be_bytes(s),
         })
     }
+
+    fn u64(self, b: &[u8], at: usize) -> Option<u64> {
+        let s: [u8; 8] = b.get(at..at.checked_add(8)?)?.try_into().ok()?;
+        Some(match self {
+            Order::Little => u64::from_le_bytes(s),
+            Order::Big => u64::from_be_bytes(s),
+        })
+    }
 }
 
 /// The TIFF payload of an EXIF block (a JPEG-style `Exif\0\0` prefix is skipped).
@@ -61,29 +72,37 @@ fn tiff_body(b: &[u8]) -> &[u8] {
     b.strip_prefix(b"Exif\0\0").unwrap_or(b)
 }
 
-/// IFD0 of a TIFF structure: its byte order and the offsets of its entries.
+/// IFD0 of a TIFF structure: byte order, entry layout, and entry offsets.
 ///
-/// The whole table must be present, up to and including the 4-byte next-IFD
-/// pointer, and it must start after the 8-byte header; anything else is
-/// treated as unparseable.
-fn ifd0_entries(b: &[u8]) -> Option<(Order, impl Iterator<Item = usize>)> {
-    let order = match b.get(0..4)? {
-        [b'I', b'I', 42, 0] => Order::Little,
-        [b'M', b'M', 0, 42] => Order::Big,
+/// The full table and next-IFD pointer must be present, and IFD0 must start
+/// after the corresponding TIFF or BigTIFF header.
+fn ifd0_entries(b: &[u8]) -> Option<(Order, usize, usize, usize, bool)> {
+    let (order, big_tiff) = match b.get(0..4)? {
+        [b'I', b'I', 42, 0] => (Order::Little, false),
+        [b'M', b'M', 0, 42] => (Order::Big, false),
+        [b'I', b'I', 43, 0] => (Order::Little, true),
+        [b'M', b'M', 0, 43] => (Order::Big, true),
         _ => return None,
     };
-    let ifd = usize::try_from(order.u32(b, 4)?).ok()?;
-    if ifd < HEADER {
+    let (ifd, count_bytes, entry_bytes, next_ifd_bytes, header) = if big_tiff {
+        if order.u16(b, 4)? != 8 || order.u16(b, 6)? != 0 {
+            return None;
+        }
+        (usize::try_from(order.u64(b, 8)?).ok()?, 8usize, BIG_ENTRY, 8usize, BIG_HEADER)
+    } else {
+        (usize::try_from(order.u32(b, 4)?).ok()?, 2usize, ENTRY, 4usize, HEADER)
+    };
+    if ifd < header {
         return None;
     }
-    let count = usize::from(order.u16(b, ifd)?);
-    let first = ifd.checked_add(2)?;
-    let next_ifd = first.checked_add(count.checked_mul(ENTRY)?)?;
-    if next_ifd.checked_add(4)? > b.len() {
+    let count = if big_tiff { usize::try_from(order.u64(b, ifd)?).ok()? } else { usize::from(order.u16(b, ifd)?) };
+    let first = ifd.checked_add(count_bytes)?;
+    let next_ifd = first.checked_add(count.checked_mul(entry_bytes)?)?;
+    if next_ifd.checked_add(next_ifd_bytes)? > b.len() {
         return None;
     }
     // In bounds: every entry ends at or before `next_ifd`.
-    Some((order, (0..count).map(move |i| first + i * ENTRY)))
+    Some((order, first, count, entry_bytes, big_tiff))
 }
 
 /// A well-formed Orientation entry's value: where it sits and its field type.
@@ -115,12 +134,14 @@ impl Value {
 
 /// The value of the entry at `e` if it is a well-formed Orientation entry:
 /// exactly one SHORT or LONG.
-fn orientation_value(order: Order, b: &[u8], e: usize) -> Option<Value> {
-    if order.u16(b, e)? != TAG_ORIENTATION || order.u32(b, e.checked_add(4)?)? != 1 {
+fn orientation_value(order: Order, b: &[u8], e: usize, big_tiff: bool) -> Option<Value> {
+    let count = if big_tiff { order.u64(b, e.checked_add(4)?)? } else { u64::from(order.u32(b, e.checked_add(4)?)?) };
+    if order.u16(b, e)? != TAG_ORIENTATION || count != 1 {
         return None;
     }
     let ty = order.u16(b, e.checked_add(2)?)?;
-    matches!(ty, TYPE_SHORT | TYPE_LONG).then_some(Value { at: e.checked_add(8)?, ty })
+    let value_offset = if big_tiff { 12 } else { 8 };
+    matches!(ty, TYPE_SHORT | TYPE_LONG).then_some(Value { at: e.checked_add(value_offset)?, ty })
 }
 
 /// Locates the Orientation value in IFD0.
@@ -129,9 +150,9 @@ fn orientation_value(order: Order, b: &[u8], e: usize) -> Option<Value> {
 /// one is malformed (count ≠ 1, or neither SHORT nor LONG) the tag is ignored,
 /// even when a later duplicate is well formed.
 fn find_entry(b: &[u8]) -> Option<(Order, Value)> {
-    let (order, mut entries) = ifd0_entries(b)?;
-    let e = entries.find(|&e| order.u16(b, e) == Some(TAG_ORIENTATION))?;
-    Some((order, orientation_value(order, b, e)?))
+    let (order, first, count, entry_bytes, big_tiff) = ifd0_entries(b)?;
+    let e = (0..count).filter_map(|i| first.checked_add(i.checked_mul(entry_bytes)?)).find(|&e| order.u16(b, e) == Some(TAG_ORIENTATION))?;
+    Some((order, orientation_value(order, b, e, big_tiff)?))
 }
 
 /// The orientation (1–8) recorded in a TIFF-structured block: an EXIF payload
@@ -153,10 +174,11 @@ pub fn exif_orientation(exif: &[u8]) -> u16 {
 pub fn upright_exif(exif: &[u8]) -> Cow<'_, [u8]> {
     let body = tiff_body(exif);
     let prefix = exif.len() - body.len();
-    let Some((order, entries)) = ifd0_entries(body) else {
+    let Some((order, first, count, entry_bytes, big_tiff)) = ifd0_entries(body) else {
         return Cow::Borrowed(exif);
     };
-    let values: Vec<Value> = entries.filter_map(|e| orientation_value(order, body, e)).collect();
+    let values: Vec<Value> =
+        (0..count).filter_map(|i| first.checked_add(i.checked_mul(entry_bytes)?)).filter_map(|e| orientation_value(order, body, e, big_tiff)).collect();
     if values.iter().all(|v| v.read(order, body) == Some(1)) {
         return Cow::Borrowed(exif);
     }
