@@ -255,17 +255,33 @@ fn opaque_surface(s: &Surface, r: Rect) -> bool {
 
 /// Flattens and encodes as `format`.
 pub fn export_flat(doc: &Document, format: Format, opts: &ExportOptions) -> Result<ExportResult, IoError> {
+    use photosuite_cms::{Builtin, Intent};
     if let Some(r) = export_mode_specific(doc, format, opts)? {
         return Ok(r);
     }
     let mut warnings = Vec::new();
     let mut img = document_to_image(doc, &mut warnings)?;
+    if img.layout().has_alpha() && !format.caps().alpha {
+        // Flattened over white, as saving a transparent document without transparency does.
+        img = matte_over_white(&img)?;
+        warnings.push(format!("transparency composited over white for {format:?}"));
+    }
     if img.layout().is_cmyk() && !format.caps().layouts.iter().any(|l| l.is_cmyk()) {
         img = cmyk_image_to_srgb(&img)?;
         warnings.push(format!("CMYK converted to sRGB for {format:?} through the document's colour profile"));
     }
     if matches!(format, Format::OpenExr | Format::Hdr) {
-        img = rgb_image_to_linear(img)?;
+        // OpenEXR and Radiance HDR store linear light (read back as linear sRGB, see [`import_flat`]).
+        if let Some(linear) = convert_rgb(&img, Builtin::LinearSrgb.profile(), Intent::RelativeColorimetric, false, CSample::F32)? {
+            img = linear;
+        }
+    } else if !format.caps().icc {
+        // Untagged files read back as sRGB: convert to it (as Quick Export does) rather than
+        // write values that only mean something under the dropped profile.
+        if let Some(srgb) = convert_rgb(&img, Builtin::Srgb.profile(), Intent::Perceptual, true, img.sample_type())? {
+            img = srgb;
+            warnings.push(format!("colours converted to sRGB; {format:?} can't embed the document's colour profile"));
+        }
     }
     for w in codecs::fidelity_warnings_with(&img, format, &opts.encode) {
         if w.is_fatal() {
@@ -275,6 +291,59 @@ pub fn export_flat(doc: &Document, format: Format, opts: &ExportOptions) -> Resu
     }
     let bytes = codecs::encode(&img, format, &opts.encode)?;
     Ok(ExportResult { bytes, warnings })
+}
+
+/// `img` with every band of rows mapped by `f` (normalized samples in, normalized `layout`
+/// samples out) and stored as `sample`, so no full-size float copy is made. Profile and metadata
+/// are kept.
+fn map_bands(img: &Image, layout: ChannelLayout, sample: CSample, f: impl Fn(Vec<f32>) -> Vec<f32>) -> Result<Image, IoError> {
+    let (w, h) = img.dimensions();
+    let row = img.data().len() / (h.max(1) as usize);
+    let band = row.max(1) * (BAND_BYTES / row.max(1)).max(1);
+    let mut data = try_buffer(img.pixel_count(), layout.channels() * sample.bytes())?;
+    for rows in img.data().chunks(band) {
+        let n = (rows.len() / row.max(1)) as u32;
+        let vals = f(Image::from_raw(w, n, img.layout(), img.sample_type(), rows.to_vec())?.to_normalized());
+        data.extend_from_slice(Image::from_normalized(w, n, layout, sample, &vals)?.data());
+    }
+    Ok(Image::from_raw(w, h, layout, sample, data)?.with_icc(img.icc.clone()).with_meta(img.meta.clone()))
+}
+
+/// Straight-alpha pixels composited over white (no ink for CMYK), without the alpha channel.
+fn matte_over_white(img: &Image) -> Result<Image, IoError> {
+    let layout = img.layout();
+    let white = if layout.is_cmyk() { 0.0 } else { 1.0 };
+    map_bands(img, layout.without_alpha(), img.sample_type(), |vals| {
+        let mut out = Vec::with_capacity(vals.len() / layout.channels() * layout.color_channels());
+        for px in vals.chunks_exact(layout.channels()) {
+            if let Some((&a, color)) = px.split_last() {
+                let a = a.clamp(0.0, 1.0);
+                out.extend(color.iter().map(|&c| c * a + white * (1.0 - a)));
+            }
+        }
+        out
+    })
+}
+
+/// RGB pixels converted from their profile (sRGB when untagged) to `dst`, unclamped, untagged and
+/// stored as `sample`. `None` when the image isn't RGB or already holds `dst`'s colours.
+fn convert_rgb(img: &Image, dst: &photosuite_cms::Profile, intent: photosuite_cms::Intent, bpc: bool, sample: CSample) -> Result<Option<Image>, IoError> {
+    use photosuite_cms::{Builtin, ColorSpace, Profile, Transform};
+    if !img.layout().is_rgb() {
+        return Ok(None);
+    }
+    let src =
+        img.icc.as_ref().and_then(|b| Profile::parse(b).ok()).filter(|p| p.color_space == ColorSpace::Rgb).unwrap_or_else(|| Builtin::Srgb.profile().clone());
+    if src.same_colors(dst) {
+        return Ok(None);
+    }
+    let t = Transform::new(&src, dst, intent, bpc).map_err(|e| IoError::Unsupported(e.to_string()))?;
+    let stride = img.layout().channels();
+    let out = map_bands(img, img.layout(), sample, |mut vals| {
+        t.apply(&mut vals, stride);
+        vals
+    })?;
+    Ok(Some(out.with_icc(None)))
 }
 
 /// Colour-managed CMYK → sRGB for formats that cannot store CMYK (the document's embedded
@@ -301,27 +370,6 @@ pub(crate) fn cmyk_image_to_srgb(img: &Image) -> Result<Image, IoError> {
         s => s,
     };
     Ok(Image::from_normalized(w, h, layout, sample, &out)?.with_icc(Some(dst.to_bytes().to_vec())).with_meta(img.meta.clone()))
-}
-
-/// OpenEXR and Radiance HDR store linear light (read back as linear sRGB, see [`import_flat`]):
-/// RGB pixels in another profile (sRGB when untagged) are converted to linear sRGB, unclamped.
-fn rgb_image_to_linear(img: Image) -> Result<Image, IoError> {
-    use photosuite_cms::{Builtin, ColorSpace, Intent, Profile, Transform};
-    if !matches!(img.layout(), ChannelLayout::Rgb | ChannelLayout::Rgba) {
-        return Ok(img);
-    }
-    let linear = Builtin::LinearSrgb.profile();
-    let src =
-        img.icc.as_ref().and_then(|b| Profile::parse(b).ok()).filter(|p| p.color_space == ColorSpace::Rgb).unwrap_or_else(|| Builtin::Srgb.profile().clone());
-    if src.content_hash() == linear.content_hash() {
-        return Ok(img);
-    }
-    let t = Transform::new(&src, linear, Intent::RelativeColorimetric, false).map_err(|e| IoError::Unsupported(e.to_string()))?;
-    let stride = img.layout().channels();
-    let mut vals = img.to_normalized();
-    t.apply(&mut vals, stride);
-    let (w, h) = img.dimensions();
-    Ok(Image::from_normalized(w, h, img.layout(), CSample::F32, &vals)?.with_icc(None).with_meta(img.meta.clone()))
 }
 
 /// Indexed Color → PNG-8 with its colour table; Duotone → the inks rendered as RGB.

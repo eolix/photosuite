@@ -375,7 +375,7 @@ pub fn all_cases() -> Vec<Case> {
         for c in Compression::ALL {
             v.push(Case { name: format!("small {version:?} {c:?}"), file: small(version, c) });
         }
-        v.push(Case { name: format!("empty canvas {version:?}"), file: merged_only(version, ColorMode::Rgb, 8, Compression::Rle, 0, 0) });
+        v.push(Case { name: format!("1x1 canvas {version:?}"), file: merged_only(version, ColorMode::Rgb, 8, Compression::Rle, 1, 1) });
     }
     v
 }

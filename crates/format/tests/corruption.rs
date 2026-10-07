@@ -77,6 +77,22 @@ fn bad_manifest_json() {
     assert!(matches!(load_from_bytes(&b), Err(FormatError::Json(_))));
 }
 
+/// Hostile nesting fails with an error instead of overflowing the stack; nesting as deep as the
+/// deepest groups a bundle may hold (three JSON levels each) parses, and is then rejected for
+/// lacking a format version.
+#[test]
+fn over_deep_manifest_fails_cleanly() {
+    let nested = |n: usize| format!("{}{}", "[".repeat(n), "]".repeat(n)).into_bytes();
+    let with_manifest = |m: Vec<u8>| rebuild(&sample(), |n, d| Some(if n == "manifest.json" { m.clone() } else { d }));
+    let e = load_from_bytes(&with_manifest(nested(100_000))).unwrap_err();
+    assert!(matches!(e, FormatError::LimitExceeded(_)), "{e}");
+    let e = load_from_bytes(&with_manifest(nested(3 * MAX_GROUP_DEPTH))).unwrap_err();
+    assert!(matches!(e, FormatError::Corrupt(_)), "{e}");
+    // Brackets inside strings (escaped quotes included) don't count.
+    let e = load_from_bytes(&with_manifest(format!(r#"{{"x":"{}\"{}"}}"#, "[".repeat(100_000), "{".repeat(10)).into_bytes())).unwrap_err();
+    assert!(matches!(e, FormatError::Corrupt(_)), "{e}");
+}
+
 #[test]
 fn too_new_version_rejected() {
     let b = rebuild(&sample(), |n, d| {

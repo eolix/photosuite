@@ -10,7 +10,7 @@ use photosuite_doc::Document;
 use photosuite_raster::{Rgba8Image, Tile};
 
 use crate::convert::{self, Fetch, Loader, Sink, is_valid_hash, swap_to_le};
-use crate::manifest::{FORMAT_VERSION, Hash, Manifest};
+use crate::manifest::{ContentM, FORMAT_VERSION, Hash, LayerM, Manifest};
 use crate::zip::{ZipReader, ZipWriter};
 use crate::{FormatError, LoadOptions, Result, SaveOptions};
 
@@ -92,11 +92,82 @@ impl Source for DirSource {
 // Loading
 // ---------------------------------------------------------------------------
 
+/// Deepest JSON nesting a manifest may have: each group level adds three (the layer object, its
+/// content object and the `children` array), with headroom for the document and leaf layer fields.
+/// The saver checks the same bound, so every bundle it writes loads again.
+const MAX_MANIFEST_DEPTH: usize = 3 * (convert::MAX_GROUP_DEPTH + 1) + 64;
+
+/// Rejects JSON nested deeper than [`MAX_MANIFEST_DEPTH`] with a linear scan (no recursion), so
+/// parsing with serde_json's recursion limit disabled can't exhaust the stack on hostile input.
+fn check_manifest_depth(json: &[u8]) -> Result<()> {
+    let (mut depth, mut in_str, mut escaped) = (0usize, false, false);
+    for &b in json {
+        if in_str {
+            match b {
+                _ if escaped => escaped = false,
+                b'\\' => escaped = true,
+                b'"' => in_str = false,
+                _ => {}
+            }
+            continue;
+        }
+        match b {
+            b'"' => in_str = true,
+            b'[' | b'{' => {
+                depth += 1;
+                if depth > MAX_MANIFEST_DEPTH {
+                    return Err(FormatError::LimitExceeded(format!("manifest JSON nested deeper than {MAX_MANIFEST_DEPTH} levels")));
+                }
+            }
+            b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn read_manifest(src: &dyn Source, opts: &LoadOptions) -> Result<Manifest> {
     let raw = src.get(MANIFEST, opts.max_manifest_bytes)?;
-    let mut v: serde_json::Value = serde_json::from_slice(&raw)?;
+    // serde_json stops at 128 levels (about 40 nested groups); the bounded check replaces that limit.
+    check_manifest_depth(&raw)?;
+    let mut de = serde_json::Deserializer::from_slice(&raw);
+    de.disable_recursion_limit();
+    let mut v = <serde_json::Value as serde::Deserialize>::deserialize(&mut de)?;
+    de.end()?;
     crate::migrate::migrate(&mut v)?;
-    Ok(serde_json::from_value(v)?)
+    let layers = take_array(&mut v, "/document/layers");
+    let mut m: Manifest = serde_json::from_value(v)?;
+    m.document.layers = layers_from_json(layers)?;
+    Ok(m)
+}
+
+/// Decodes layers one at a time, group children first. Decoding the whole tree in one go costs
+/// kilobytes of stack per nesting level; here each level only holds a few pointers.
+fn layers_from_json(values: Vec<serde_json::Value>) -> Result<Vec<LayerM>> {
+    let mut out = Vec::with_capacity(values.len());
+    for mut v in values {
+        let children = layers_from_json(take_array(&mut v, "/content/children"))?;
+        out.push(layer_from_json(v, children)?);
+    }
+    Ok(out)
+}
+
+/// One layer without its children (kept out of line so its large locals stay off the recursion).
+#[inline(never)]
+fn layer_from_json(v: serde_json::Value, children: Vec<LayerM>) -> Result<LayerM> {
+    let mut layer: LayerM = serde_json::from_value(v)?;
+    if let ContentM::Group { children: c, .. } = &mut layer.content {
+        *c = children;
+    }
+    Ok(layer)
+}
+
+/// Takes the array at JSON `pointer` out of `v`, leaving an empty one (nothing if absent).
+fn take_array(v: &mut serde_json::Value, pointer: &str) -> Vec<serde_json::Value> {
+    match v.pointer_mut(pointer) {
+        Some(serde_json::Value::Array(a)) => std::mem::take(a),
+        _ => Vec::new(),
+    }
 }
 
 struct LoadFetch<'a> {
@@ -314,6 +385,7 @@ impl PcraftWriter {
 
     fn prepare(&mut self, doc: &Document, opts: &SaveOptions) -> Result<Prepared> {
         self.hash_cache.retain(|_, (w, _)| w.strong_count() > 0);
+        convert::check_nesting(&doc.layers)?;
         let mut c = Collect { hash_cache: Some(&mut self.hash_cache), ..Default::default() };
         let document = convert::doc_m(doc, &mut c);
         let mut previews = Vec::new();
@@ -331,6 +403,7 @@ impl PcraftWriter {
             composite: opts.composite.as_ref().map(|_| COMPOSITE.to_owned()),
         };
         let manifest = serde_json::to_vec_pretty(&manifest)?;
+        check_manifest_depth(&manifest)?;
         let stats = SaveStats { tiles_total: c.tiles.len(), blobs_total: c.blobs.len(), manifest_bytes: manifest.len(), ..Default::default() };
         let mut objects = BTreeMap::new();
         for (h, (t, s)) in c.tiles {

@@ -71,7 +71,7 @@ proptest! {
 
     #[test]
     fn merged_only_random_sizes_roundtrip(
-        w in 0u32..30, h in 0u32..10, v in version(), c in compression(), mode_ix in 0usize..8, depth_ix in 0usize..3,
+        w in 1u32..30, h in 1u32..10, v in version(), c in compression(), mode_ix in 0usize..8, depth_ix in 0usize..3,
     ) {
         let mode = testgen::MODES[mode_ix];
         let depths = testgen::mode_depths(mode);

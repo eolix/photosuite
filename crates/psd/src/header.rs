@@ -153,6 +153,9 @@ impl Header {
         if self.channels == 0 || self.channels > MAX_CHANNELS {
             return Err(PsdError::invalid(format!("channel count {} out of range 1..=56", self.channels)));
         }
+        if self.width == 0 || self.height == 0 {
+            return Err(PsdError::invalid(format!("image dimensions {}x{} must be at least 1x1", self.width, self.height)));
+        }
         if self.width > MAX_DIMENSION || self.height > MAX_DIMENSION {
             return Err(PsdError::LimitExceeded("image dimensions exceed 300000"));
         }
@@ -218,6 +221,9 @@ mod tests {
     fn limits() {
         for h in [
             Header::new(Version::Psd, 300_001, 1, 1, 8, ColorMode::Rgb),
+            Header::new(Version::Psd, 0, 1, 1, 8, ColorMode::Rgb),
+            Header::new(Version::Psd, 1, 0, 1, 8, ColorMode::Rgb),
+            Header::new(Version::Psb, 0, 0, 1, 8, ColorMode::Rgb),
             Header::new(Version::Psd, 1, 1, 0, 8, ColorMode::Rgb),
             Header::new(Version::Psd, 1, 1, 57, 8, ColorMode::Rgb),
             Header::new(Version::Psd, 1, 1, 3, 12, ColorMode::Rgb),
