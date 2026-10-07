@@ -67,7 +67,11 @@ pub fn split(sh: &ShapeLayer, canvas: Rect) -> Option<(Surface, Surface)> {
 
 /// Fits the stroke part to the shape's own pixels: where they reach past the fill, the stroke
 /// covers what the fill doesn't (`(pixels - fill) / (1 - fill)`), in the pixels' colour where we
-/// drew no stroke.
+/// drew no stroke, and elsewhere in the colour that, drawn over the fill, gives back the pixels'
+/// colour. Our stroke's own colour would be wrong where the file's fill covers more of the pixel
+/// than ours (shapes snapped to whole pixels with a stroke thinner than a pixel): the fitted
+/// stroke is then mostly the file's fill, and an edge drawn in the stroke's full colour is far
+/// too dark.
 fn fit_stroke(fill: &Surface, stroke: &mut Surface, cache: &Surface, canvas: Rect) {
     // Where either has pixels (the stroke may reach past the shape's pixels, and vice versa).
     let (cb, sb) = (crate::bounds::content_bounds(cache), crate::bounds::content_bounds(stroke));
@@ -92,7 +96,16 @@ fn fit_stroke(fill: &Surface, stroke: &mut Surface, cache: &Surface, canvas: Rec
         let mut p = *sp;
         if fp[3] < 1.0 - 1e-3 {
             let a = ((cp[3] - fp[3]) / (1.0 - fp[3])).clamp(0.0, 1.0);
-            p = if sp[3] <= 0.0 { [cp[0], cp[1], cp[2], a] } else { [sp[0], sp[1], sp[2], a] };
+            p = if sp[3] <= 0.0 {
+                [cp[0], cp[1], cp[2], a]
+            } else if a > 1e-3 {
+                // Normal over the fill: a·p + f·(1 - a)·fill = pixels (premultiplied).
+                let k = fp[3] * (1.0 - a);
+                let un = |i: usize| ((cp[3] * cp[i] - k * fp[i]) / a).clamp(0.0, 1.0);
+                [un(0), un(1), un(2), a]
+            } else {
+                [sp[0], sp[1], sp[2], a]
+            };
         }
         out.extend_from_slice(&p);
     }
