@@ -266,6 +266,19 @@ fn locks_and_labels_from_psd() {
 }
 
 #[test]
+fn artboard_lock_round_trips_byte_for_byte() {
+    // Reference files write a Background layer's locks as lspf = 0x0D (transparency + position +
+    // the bit-3 lock). PhotoSuite read the artboard lock at bit 4, so 0x0D came back as 0x05
+    // and the lock bytes drifted on every re-save.
+    use photosuite_psd::TaggedBlock;
+    let mut f = testgen::small(Version::Psd, Compression::Raw);
+    f.layers_mut()[0].blocks.push(TaggedBlock::protection(0x0D));
+    let g = via_doc(&f);
+    let lspf = g.layers().iter().find_map(|l| l.block(b"lspf")).expect("exported layer should carry an lspf block");
+    assert_eq!(lspf.data, 0x0Du32.to_be_bytes());
+}
+
+#[test]
 fn adjustment_and_fill_layers_from_psd() {
     use photosuite_psd::{LayerRecord, TaggedBlock};
     let mut f = testgen::small(Version::Psd, Compression::Raw);
