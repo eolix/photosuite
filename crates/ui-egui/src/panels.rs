@@ -1263,7 +1263,11 @@ fn swatches(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
 
 fn color_picker(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let fg = app.session.tools.foreground;
-    let hsva0 = srgb_hsva(fg);
+    // Keep the last edited HSB while it still gives the foreground: black and greys have no hue or
+    // saturation of their own, so recomputing them from RGB would reset what was just typed to 0.
+    let key = egui::Id::new("color-picker-hsva");
+    let stored: Option<egui::ecolor::Hsva> = ui.data(|d| d.get_temp(key));
+    let hsva0 = stored.filter(|h| h.to_srgb() == srgb_bytes(fg)).unwrap_or_else(|| srgb_hsva(fg));
     let mut h = hsva0.h * 360.0;
     let mut s = hsva0.s * 100.0;
     let mut v = hsva0.v * 100.0;
@@ -1277,6 +1281,7 @@ fn color_picker(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let hsva = egui::ecolor::Hsva::new(h / 360.0, s / 100.0, v / 100.0, 1.0);
     if hsva != hsva0 {
         app.session.tools.foreground = hsva_srgb(hsva);
+        ui.data_mut(|d| d.insert_temp(key, hsva));
     }
     let [r, g, b, _] = hsva.to_srgba_unmultiplied();
     let t = Tokens::get(ui.ctx());
@@ -2228,9 +2233,13 @@ fn color_field(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
 
 /// Tool colours are sRGB-encoded floats; egui's Hsva works on sRGB bytes via these helpers
 /// (its `from_rgba_unmultiplied` expects *linear* RGB, which gave wrong readouts).
-fn srgb_hsva(c: [f32; 4]) -> egui::ecolor::Hsva {
+fn srgb_bytes(c: [f32; 4]) -> [u8; 3] {
     let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-    egui::ecolor::Hsva::from_srgb([q(c[0]), q(c[1]), q(c[2])])
+    [q(c[0]), q(c[1]), q(c[2])]
+}
+
+fn srgb_hsva(c: [f32; 4]) -> egui::ecolor::Hsva {
+    egui::ecolor::Hsva::from_srgb(srgb_bytes(c))
 }
 
 fn hsva_srgb(h: egui::ecolor::Hsva) -> [f32; 4] {
@@ -2443,6 +2452,36 @@ mod color_tests {
                 assert!((back[i] - c[i]).abs() <= 1.0 / 255.0, "{c:?} -> {back:?}");
             }
         }
+    }
+
+    #[test]
+    fn hue_and_saturation_fields_take_values_on_black() {
+        use egui_kittest::kittest::Queryable;
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.tools.foreground = [0.0, 0.0, 0.0, 1.0];
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(300.0, 300.0)).build_ui_state(
+            |ui, app: &mut PhotosuiteApp| {
+                if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    color_picker(app, ui);
+                }
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Anthracite);
+        h.run_steps(2);
+        // Hue, Saturation, Brightness, typed one key per frame. Black has no hue or saturation of its
+        // own, so the first two used to reset to 0 and this ended on white.
+        for (field, typed) in [(0, "120"), (1, "100"), (2, "100")] {
+            h.query_all_by_role(egui::accesskit::Role::SpinButton).nth(field).unwrap().click();
+            h.run_steps(1);
+            for ch in typed.chars() {
+                h.event(egui::Event::Text(ch.to_string()));
+                h.run_steps(1);
+            }
+            h.key_press(egui::Key::Tab);
+            h.run_steps(2);
+        }
+        assert_eq!(srgb_bytes(h.state().session.tools.foreground), [0, 255, 0]);
     }
 }
 

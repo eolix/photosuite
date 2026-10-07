@@ -55,7 +55,8 @@ pub fn parse_hex(s: &str) -> Option<[f32; 3]> {
     if h.len() != 6 {
         return None;
     }
-    let c = |i: usize| u8::from_str_radix(&h[i..i + 2], 16).ok().map(|v| f32::from(v) / 255.0);
+    // `get`, not `[..]`: typed text may be multi-byte, and a byte range can split a character.
+    let c = |i: usize| u8::from_str_radix(h.get(i..i + 2)?, 16).ok().map(|v| f32::from(v) / 255.0);
     Some([c(0)?, c(2)?, c(4)?])
 }
 
@@ -139,22 +140,63 @@ pub fn owns(f: &Map<String, Value>) -> bool {
     f.contains_key("__colorPicker")
 }
 
-/// Current colour as (rgb, hsv), keeping the stored hue/saturation when they still match `color`.
-pub fn current(f: &Map<String, Value>) -> ([f32; 3], [f32; 3]) {
-    let rgb = f.get("color").and_then(Value::as_str).and_then(parse_hex).unwrap_or([0.0; 3]);
-    let stored: Option<[f32; 3]> = f.get("__hsv").and_then(|v| serde_json::from_value(v.clone()).ok());
-    let hsv = match stored {
-        Some(h) if hex(hsv_to_rgb(h[0], h[1], h[2])) == hex(rgb) => h,
-        _ => rgb_to_hsv(rgb),
-    };
-    (rgb, hsv)
+/// The colour in every model the dialog shows.
+pub struct Components {
+    pub rgb: [f32; 3],
+    pub hsv: [f32; 3],
+    pub lab: [f32; 3],
+    pub cmyk: [f32; 4],
 }
 
-fn set_rgb(f: &mut Map<String, Value>, rgb: [f32; 3], hsv: Option<[f32; 3]>) {
+/// Component values an edit stores next to the new `color`. sRGB alone loses them: greys have no
+/// hue, and Lab or CMYK values outside sRGB are clamped. Typing "60" into L passes through L = 6
+/// first; without the stored Lab the clamped colour would change `a` and `b` under the user.
+enum Keep {
+    Nothing,
+    Hsv([f32; 3]),
+    Lab([f32; 3]),
+    Cmyk([f32; 4]),
+}
+
+/// The stored `key` components, if they still produce `rgb`.
+fn kept<const N: usize>(f: &Map<String, Value>, key: &str, rgb: [f32; 3], to_rgb: impl Fn([f32; N]) -> [f32; 3]) -> Option<[f32; N]>
+where
+    [f32; N]: serde::de::DeserializeOwned,
+{
+    let v: [f32; N] = f.get(key).and_then(|v| serde_json::from_value(v.clone()).ok())?;
+    (hex(to_rgb(v)) == hex(rgb)).then_some(v)
+}
+
+/// Current colour, keeping the stored HSB, Lab or CMYK values while they still match `color`.
+pub fn current(f: &Map<String, Value>) -> Components {
+    let rgb = f.get("color").and_then(Value::as_str).and_then(parse_hex).unwrap_or([0.0; 3]);
+    Components {
+        rgb,
+        hsv: kept(f, "__hsv", rgb, |h| hsv_to_rgb(h[0], h[1], h[2])).unwrap_or_else(|| rgb_to_hsv(rgb)),
+        lab: kept(f, "__lab", rgb, photosuite_color::convert::lab_to_srgb).unwrap_or_else(|| photosuite_color::convert::srgb_to_lab(rgb)),
+        cmyk: kept(f, "__cmyk", rgb, photosuite_color::convert::cmyk_to_rgb).unwrap_or_else(|| photosuite_color::convert::rgb_to_cmyk(rgb)),
+    }
+}
+
+fn set_rgb(f: &mut Map<String, Value>, rgb: [f32; 3], keep: Keep) {
     let web = f.get("__webOnly").and_then(Value::as_bool).unwrap_or(false);
-    let rgb = if web { rgb.map(|v| (v * 5.0).round() / 5.0) } else { rgb };
+    let (rgb, keep) = if web { (rgb.map(|v| (v * 5.0).round() / 5.0), Keep::Nothing) } else { (rgb, keep) };
     f.insert("color".into(), json!(hex(rgb)));
-    f.insert("__hsv".into(), json!(hsv.filter(|_| !web).unwrap_or_else(|| rgb_to_hsv(rgb))));
+    for key in ["__hsv", "__lab", "__cmyk"] {
+        f.remove(key);
+    }
+    match keep {
+        Keep::Nothing => {}
+        Keep::Hsv(h) => {
+            f.insert("__hsv".into(), json!(h));
+        }
+        Keep::Lab(l) => {
+            f.insert("__lab".into(), json!(l));
+        }
+        Keep::Cmyk(k) => {
+            f.insert("__cmyk".into(), json!(k));
+        }
+    }
 }
 
 fn grid_mesh(rect: Rect, n: usize, color: impl Fn(f32, f32) -> [f32; 3]) -> Mesh {
@@ -179,7 +221,8 @@ fn grid_mesh(rect: Rect, n: usize, color: impl Fn(f32, f32) -> [f32; 3]) -> Mesh
 pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let mode = f.get("__mode").and_then(Value::as_str).unwrap_or("h").to_string();
-    let (rgb, hsv) = current(f);
+    let now = current(f);
+    let (rgb, hsv) = (now.rgb, now.hsv);
     let (fx, fy, fz) = locate(&mode, hsv, rgb);
     ui.horizontal_top(|ui| {
         // Colour field.
@@ -191,13 +234,13 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
         if let Some(p) = resp.interact_pointer_pos().filter(|_| resp.dragged() || resp.clicked()) {
             let (x, y) = (((p.x - field.left()) / field.width()).clamp(0.0, 1.0), ((p.y - field.top()) / field.height()).clamp(0.0, 1.0));
             let c = field_color(&mode, fz, x, y);
-            let h = match mode.as_str() {
-                "h" => Some([fz * 360.0, x, 1.0 - y]),
-                "s" => Some([x * 360.0, fz, 1.0 - y]),
-                "v" => Some([x * 360.0, 1.0 - y, fz]),
-                _ => None,
+            let keep = match mode.as_str() {
+                "h" => Keep::Hsv([fz * 360.0, x, 1.0 - y]),
+                "s" => Keep::Hsv([x * 360.0, fz, 1.0 - y]),
+                "v" => Keep::Hsv([x * 360.0, 1.0 - y, fz]),
+                _ => Keep::Nothing,
             };
-            set_rgb(f, c, h);
+            set_rgb(f, c, keep);
         }
         ui.add_space(6.0);
         // Component slider (hue runs 360° at the top to 0° at the bottom, like Photoshop).
@@ -216,8 +259,10 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
                 "v" => Some([hsv[0], hsv[1], z]),
                 _ => None,
             };
-            let c = h.map_or_else(|| slider_color(&mode, z, hsv, rgb), |h| hsv_to_rgb(h[0], h[1], h[2]));
-            set_rgb(f, c, h);
+            match h {
+                Some(h) => set_rgb(f, hsv_to_rgb(h[0], h[1], h[2]), Keep::Hsv(h)),
+                None => set_rgb(f, slider_color(&mode, z, hsv, rgb), Keep::Nothing),
+            }
         }
         ui.add_space(14.0);
         ui.vertical(|ui| {
@@ -231,27 +276,26 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
             ui.painter().rect_stroke(sw, 0.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
             let click_cur = ui.interact(cur, ui.id().with("cp-current"), Sense::click());
             if click_cur.on_hover_text(tl!("Click to restore the current colour")).clicked() {
-                set_rgb(f, orig, None);
+                set_rgb(f, orig, Keep::Nothing);
             }
             ui.label(egui::RichText::new(tl!("current")).size(11.0).color(t.text_dim));
             ui.add_space(10.0);
             let mut web = f.get("__webOnly").and_then(Value::as_bool).unwrap_or(false);
             if widgets::checkbox(ui, &mut web, tl!("Only Web Colors")).changed() {
                 f.insert("__webOnly".into(), json!(web));
-                set_rgb(f, rgb, None);
+                set_rgb(f, rgb, Keep::Nothing);
             }
         });
         ui.add_space(10.0);
-        ui.vertical(|ui| fields(ui, f, &mode, rgb, hsv));
+        ui.vertical(|ui| fields(ui, f, &mode, &now));
     });
 }
 
 /// Component radios and numeric fields: HSB, RGB, Lab, CMYK and hex.
-fn fields(ui: &mut egui::Ui, f: &mut Map<String, Value>, mode: &str, rgb: [f32; 3], hsv: [f32; 3]) {
+fn fields(ui: &mut egui::Ui, f: &mut Map<String, Value>, mode: &str, now: &Components) {
     let t = Tokens::get(ui.ctx());
-    let lab = photosuite_color::convert::srgb_to_lab(rgb);
-    let cmyk = photosuite_color::convert::rgb_to_cmyk(rgb);
-    let mut edit: Option<([f32; 3], Option<[f32; 3]>)> = None;
+    let &Components { rgb, hsv, lab, cmyk } = now;
+    let mut edit: Option<([f32; 3], Keep)> = None;
     let mut new_mode: Option<&str> = None;
     egui::Grid::new("cp-fields").num_columns(4).spacing([6.0, 4.0]).show(ui, |ui| {
         let vals = [hsv[0], hsv[1] * 100.0, hsv[2] * 100.0, rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0];
@@ -275,10 +319,10 @@ fn fields(ui: &mut egui::Ui, f: &mut Map<String, Value>, mode: &str, rgb: [f32; 
                 if i < 3 {
                     h[i] = if i == 0 { v } else { v / 100.0 };
                     c = hsv_to_rgb(h[0], h[1], h[2]);
-                    edit = Some((c, Some(h)));
+                    edit = Some((c, Keep::Hsv(h)));
                 } else {
                     c[i - 3] = v / 255.0;
-                    edit = Some((c, None));
+                    edit = Some((c, Keep::Nothing));
                 }
             }
             ui.label(egui::RichText::new(units[i]).color(t.text_faint));
@@ -291,7 +335,7 @@ fn fields(ui: &mut egui::Ui, f: &mut Map<String, Value>, mode: &str, rgb: [f32; 
             if widgets::value_field(ui, &mut x, range, "", 54.0).changed() {
                 let mut l = lab;
                 l[i] = x;
-                edit = Some((photosuite_color::convert::lab_to_srgb(l).map(|c| c.clamp(0.0, 1.0)), None));
+                edit = Some((photosuite_color::convert::lab_to_srgb(l).map(|c| c.clamp(0.0, 1.0)), Keep::Lab(l)));
             }
             ui.label("");
             ui.end_row();
@@ -303,27 +347,36 @@ fn fields(ui: &mut egui::Ui, f: &mut Map<String, Value>, mode: &str, rgb: [f32; 
             if widgets::value_field(ui, &mut x, 0.0..=100.0, "", 54.0).changed() {
                 let mut k = cmyk;
                 k[i] = x / 100.0;
-                edit = Some((photosuite_color::convert::cmyk_to_rgb(k).map(|c| c.clamp(0.0, 1.0)), None));
+                edit = Some((photosuite_color::convert::cmyk_to_rgb(k).map(|c| c.clamp(0.0, 1.0)), Keep::Cmyk(k)));
             }
             ui.label(egui::RichText::new("%").color(t.text_faint));
             ui.end_row();
         }
         ui.label("");
         ui.label(egui::RichText::new("#").color(t.text_dim));
-        let mut h = hex(rgb).trim_start_matches('#').to_string();
-        let r = ui.add(egui::TextEdit::singleline(&mut h).desired_width(54.0).font(crate::theme::mono(12.0)));
+        // While the field has focus it shows what is being typed, not the colour: rebuilding it from
+        // the colour every frame would throw away every keystroke until six valid digits were in.
+        let id = ui.id().with("cp-hex");
+        let typing = if ui.memory(|m| m.has_focus(id)) { ui.data(|d| d.get_temp::<String>(id)) } else { None };
+        let mut h = typing.unwrap_or_else(|| hex(rgb).trim_start_matches('#').to_string());
+        let r = ui.add(egui::TextEdit::singleline(&mut h).id(id).char_limit(6).desired_width(54.0).font(crate::theme::mono(12.0)));
+        if r.has_focus() {
+            ui.data_mut(|d| d.insert_temp(id, h.clone()));
+        } else {
+            ui.data_mut(|d| d.remove::<String>(id));
+        }
         if r.changed()
             && let Some(c) = parse_hex(&h)
         {
-            edit = Some((c, None));
+            edit = Some((c, Keep::Nothing));
         }
         ui.end_row();
     });
     if let Some(m) = new_mode {
         f.insert("__mode".into(), json!(m));
     }
-    if let Some((c, h)) = edit {
-        set_rgb(f, c, h);
+    if let Some((c, keep)) = edit {
+        set_rgb(f, c, keep);
     }
 }
 
@@ -341,7 +394,86 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
 
 #[cfg(test)]
 mod tests {
+    use egui::accesskit::Role;
+    use egui_kittest::Harness;
+    use egui_kittest::kittest::Queryable;
+
     use super::*;
+
+    fn picker(color: &str) -> Harness<'static, Map<String, Value>> {
+        let mut f = Map::new();
+        f.insert("__colorPicker".into(), json!("foreground"));
+        f.insert("color".into(), json!(color));
+        let mut h = Harness::builder().with_size(vec2(700.0, 500.0)).build_ui_state(
+            |ui, f: &mut Map<String, Value>| {
+                if ui.ctx().fonts(|fonts| fonts.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    body(ui, f);
+                }
+            },
+            f,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        h.run_steps(2);
+        h
+    }
+
+    /// Type `text` into the focused field one key per frame, like a person typing.
+    fn type_keys(h: &mut Harness<'static, Map<String, Value>>, text: &str) {
+        for ch in text.chars() {
+            h.event(egui::Event::Text(ch.to_string()));
+            h.run_steps(1);
+        }
+    }
+
+    fn color(h: &Harness<'static, Map<String, Value>>) -> String {
+        h.state().get("color").and_then(Value::as_str).unwrap().to_string()
+    }
+
+    #[test]
+    fn hex_field_takes_typed_digits() {
+        let mut h = picker("#000000");
+        h.get_by_role(Role::TextInput).click();
+        h.run_steps(1);
+        h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+        h.run_steps(1);
+        type_keys(&mut h, "ff88");
+        // Partial input stays in the field instead of snapping back to the colour.
+        assert_eq!(h.get_by_role(Role::TextInput).value().as_deref(), Some("ff88"));
+        assert_eq!(color(&h), "#000000");
+        type_keys(&mut h, "00");
+        assert_eq!(color(&h), "#ff8800");
+        h.key_press(egui::Key::Tab);
+        h.run_steps(2);
+        assert_eq!(color(&h), "#ff8800");
+    }
+
+    #[test]
+    fn lab_and_cmyk_fields_take_multi_digit_values() {
+        let base = parse_hex("#336699").unwrap();
+        let lab = photosuite_color::convert::srgb_to_lab(base);
+        let cmyk = photosuite_color::convert::rgb_to_cmyk(base);
+        // Fields in order: H S B R G B, L a b, C M Y K.
+        for (field, typed, want) in [
+            (6, "60", photosuite_color::convert::lab_to_srgb([60.0, lab[1], lab[2]])),
+            (7, "30", photosuite_color::convert::lab_to_srgb([lab[0], 30.0, lab[2]])),
+            (9, "40", photosuite_color::convert::cmyk_to_rgb([0.4, cmyk[1], cmyk[2], cmyk[3]])),
+        ] {
+            let mut h = picker("#336699");
+            h.query_all_by_role(Role::SpinButton).nth(field).unwrap().click();
+            h.run_steps(1);
+            type_keys(&mut h, typed);
+            h.key_press(egui::Key::Tab);
+            h.run_steps(2);
+            assert_eq!(color(&h), hex(want), "field {field} <- {typed}");
+        }
+    }
+
+    #[test]
+    fn parse_hex_rejects_multibyte_text() {
+        // Six bytes, three characters: the byte range 0..2 splits "é", which used to panic.
+        assert_eq!(parse_hex("aé€"), None);
+        assert_eq!(parse_hex("#ff880"), None);
+    }
 
     #[test]
     fn hsv_round_trips() {
@@ -372,7 +504,7 @@ mod tests {
         let mut f = Map::new();
         f.insert("color".into(), json!("#808080"));
         f.insert("__hsv".into(), json!([200.0, 0.0, 128.0 / 255.0]));
-        assert_eq!(current(&f).1[0], 200.0);
+        assert_eq!(current(&f).hsv[0], 200.0);
         let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
         let id = open(&mut app, "background");
         let d = app.ui.dialog_mut(id).unwrap();
