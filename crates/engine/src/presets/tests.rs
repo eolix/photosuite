@@ -18,6 +18,34 @@ fn layer_px(s: &Session, x: i32, y: i32) -> Vec<f32> {
     d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().pixel(x, y)
 }
 
+// ------------------------------------------------------------------ styles
+
+#[test]
+fn style_preset_new_from_an_explicit_effect_list() {
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
+    s.execute("layer.new.layer", json!({})).unwrap();
+    // The Layer Style dialog's "New Style…" saves its pending state, not the layer.
+    let r = s
+        .execute(
+            "style.presets.new",
+            json!({"name": "Pending", "effects": [["stroke", {"size": 6, "color": "#123456"}]], "blend": "Multiply", "fillOpacity": 40}),
+        )
+        .unwrap();
+    assert_eq!(r["name"], json!("Pending"));
+    s.execute("layer.new.layer", json!({})).unwrap();
+    s.execute("style.presets.apply", json!({"preset": "Pending"})).unwrap();
+    let d = s.active().unwrap();
+    let l = d.doc.layer(d.active_layer.unwrap()).unwrap();
+    assert_eq!(l.effects.items.len(), 1);
+    assert!(matches!(&l.effects.items[0], photosuite_doc::Effect::Stroke(st) if st.size == 6.0));
+    assert_eq!(l.blend, photosuite_color::BlendMode::Multiply);
+    assert!((l.fill_opacity - 0.4).abs() < 1e-6);
+    // Malformed lists are graceful errors.
+    assert!(s.execute("style.presets.new", json!({"effects": [["nope", {}]]})).is_err());
+    assert!(s.execute("style.presets.new", json!({"effects": ["stroke"]})).is_err());
+}
+
 // ------------------------------------------------------------------ gradients
 
 #[test]

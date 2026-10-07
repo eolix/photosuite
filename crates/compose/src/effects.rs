@@ -394,6 +394,35 @@ fn apply_lut(m: Map, l: Option<Vec<f32>>) -> Map {
     }
 }
 
+/// Deterministic per-pixel value in 0..=1, hashed from document coordinates
+/// (the same hash as the GPU's `dissolve_noise`), so the speckle is stable
+/// across renders, frames and tiles.
+pub fn hash_noise(x: i64, y: i64) -> f32 {
+    let mut h = (x as i32 as u32).wrapping_mul(0x8da6_b343) ^ (y as i32 as u32).wrapping_mul(0xd816_3841) ^ 0x9e37_79b9;
+    h ^= h >> 15;
+    h = h.wrapping_mul(0x2c1b_3c6d);
+    h ^= h >> 12;
+    (h & 0xffff) as f32 / 65536.0
+}
+
+/// Effect noise (Photoshop's Noise slider): monochrome speckle in the coverage,
+/// applied after the contour. `amount` is 0..=1; 0 leaves the map untouched.
+fn noise(m: &mut Map, amount: f32, x0: i32, y0: i32) {
+    if !amount.is_finite() || amount <= 0.0 {
+        return;
+    }
+    for y in 0..m.h {
+        for x in 0..m.w {
+            let v = &mut m.v[y * m.w + x];
+            if *v <= 0.0 {
+                continue;
+            }
+            let n = hash_noise(i64::from(x0 + x as i32), i64::from(y0 + y as i32));
+            *v = (*v + (n - 0.5) * 2.0 * amount).clamp(0.0, 1.0);
+        }
+    }
+}
+
 fn apply_contour(m: Map, c: &Contour) -> Map {
     match contour_lut(c) {
         None => m,
@@ -528,7 +557,7 @@ pub fn spread_split(size: f32, spread: f32) -> (f32, f32) {
     ((size * spread).round(), size * (1.0 - spread))
 }
 
-fn shadow_map(shape: &Map, s: &Shadow, light: &GlobalLight, inner: bool) -> Map {
+fn shadow_map(shape: &Map, s: &Shadow, light: &GlobalLight, inner: bool, origin: (i32, i32)) -> Map {
     let angle = if s.use_global_light { light.angle } else { s.angle };
     let (dx, dy) = offset(angle, s.distance);
     let src = if inner { shape.clone().map(|a| 1.0 - a) } else { shape.clone() };
@@ -537,6 +566,7 @@ fn shadow_map(shape: &Map, s: &Shadow, light: &GlobalLight, inner: bool) -> Map 
     m = dilate(&m, r);
     blur(&mut m, bw);
     let mut m = apply_contour(m, &s.contour);
+    noise(&mut m, s.noise, origin.0, origin.1);
     if inner {
         for (v, a) in m.v.iter_mut().zip(&shape.v) {
             *v *= a;
@@ -545,7 +575,7 @@ fn shadow_map(shape: &Map, s: &Shadow, light: &GlobalLight, inner: bool) -> Map 
     m
 }
 
-fn glow_map(shape: &Map, g: &Glow, inner: bool) -> Map {
+fn glow_map(shape: &Map, g: &Glow, inner: bool, origin: (i32, i32)) -> Map {
     let src = if inner {
         match g.source {
             GlowSource::Edge => shape.clone().map(|a| 1.0 - a),
@@ -582,6 +612,7 @@ fn glow_map(shape: &Map, g: &Glow, inner: bool) -> Map {
         }
     };
     m = apply_lut(m, glow_lut(g));
+    noise(&mut m, g.noise, origin.0, origin.1);
     if inner {
         for (v, a) in m.v.iter_mut().zip(&shape.v) {
             *v *= a;
@@ -1095,10 +1126,10 @@ pub(crate) fn build_maps_prepared(
         .iter()
         .enumerate()
         .map(|(i, e)| match e {
-            Effect::DropShadow(s) => vec![shadow_map(&shape, s, light, false)],
-            Effect::InnerShadow(s) => vec![shadow_map(&shape, s, light, true)],
-            Effect::OuterGlow(g) => vec![glow_map(&shape, g, false)],
-            Effect::InnerGlow(g) => vec![glow_map(&shape, g, true)],
+            Effect::DropShadow(s) => vec![shadow_map(&shape, s, light, false, (rect.x0, rect.y0))],
+            Effect::InnerShadow(s) => vec![shadow_map(&shape, s, light, true, (rect.x0, rect.y0))],
+            Effect::OuterGlow(g) => vec![glow_map(&shape, g, false, (rect.x0, rect.y0))],
+            Effect::InnerGlow(g) => vec![glow_map(&shape, g, true, (rect.x0, rect.y0))],
             Effect::Satin(s) => vec![satin_map(&shape, s)],
             Effect::BevelEmboss(b) => {
                 let (maps, paint) = bevel_maps(&shape, b, light, tex, patterns);
@@ -1789,5 +1820,77 @@ mod tests {
     fn offsets_follow_light() {
         let (dx, dy) = offset(120.0, 10.0);
         assert_eq!((dx, dy), (5.0, 9.0));
+    }
+
+    fn square_shape(n: usize) -> Map {
+        let mut m = Map::new(n, n, 0.0);
+        for y in 5..n - 5 {
+            for x in 5..n - 5 {
+                m.v[y * n + x] = 1.0;
+            }
+        }
+        m
+    }
+
+    fn shadow(noise: f32, origin: (i32, i32)) -> Map {
+        let s = Shadow {
+            common: photosuite_doc::FxCommon::new(BlendMode::Multiply, 1.0),
+            color: photosuite_color::Color::BLACK,
+            angle: 0.0,
+            use_global_light: false,
+            distance: 0.0,
+            spread: 0.0,
+            size: 6.0,
+            contour: Contour::Linear,
+            anti_alias: false,
+            noise,
+            knocks_out: true,
+        };
+        shadow_map(&square_shape(40), &s, &GlobalLight::default(), false, origin)
+    }
+
+    #[test]
+    fn shadow_noise_speckles_soft_coverage_deterministically() {
+        let plain = shadow(0.0, (0, 0));
+        let noisy = shadow(0.5, (0, 0));
+        let again = shadow(0.5, (0, 0));
+        let (mut diff, mut identical) = (0.0f32, true);
+        for i in 0..plain.v.len() {
+            diff += (plain.v[i] - noisy.v[i]).abs();
+            if noisy.v[i] != again.v[i] {
+                identical = false;
+            }
+        }
+        assert!(diff > 5.0, "noise changes the soft band: {diff}");
+        assert!(identical, "same coords, same speckle");
+        // Every value stays a coverage.
+        assert!(noisy.v.iter().all(|v| (0.0..=1.0).contains(v)));
+        // The speckle moves with the document origin, not the tile.
+        let moved = shadow(0.5, (100, 100));
+        assert_ne!(noisy.v, moved.v, "hashed from document coordinates");
+        // Full noise can punch holes even in the solid part.
+        let heavy = shadow(1.0, (0, 0));
+        assert!(heavy.v.iter().any(|v| *v < 0.5) && heavy.v.iter().any(|v| *v > 0.5), "heavy noise spans the range",);
+    }
+
+    #[test]
+    fn glow_noise_follows_the_contour_and_range() {
+        let g = |noise: f32| Glow {
+            common: photosuite_doc::FxCommon::new(BlendMode::Screen, 1.0),
+            paint: FxPaint::Color(photosuite_color::Color::WHITE),
+            technique: GlowTechnique::Softer,
+            spread: 0.0,
+            size: 6.0,
+            contour: Contour::Linear,
+            anti_alias: false,
+            range: 0.5,
+            jitter: 0.0,
+            noise,
+            source: GlowSource::Edge,
+        };
+        let plain = glow_map(&square_shape(40), &g(0.0), false, (0, 0));
+        let noisy = glow_map(&square_shape(40), &g(0.6), false, (0, 0));
+        let diff: f32 = plain.v.iter().zip(&noisy.v).map(|(a, b)| (a - b).abs()).sum();
+        assert!(diff > 5.0, "glow noise changes the coverage: {diff}");
     }
 }

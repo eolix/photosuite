@@ -185,7 +185,7 @@ fn pattern_texture(ctx: &egui::Context, pat: &photosuite_doc::Pattern) -> Textur
     })
 }
 
-fn style_texture(app: &PhotosuiteApp, ctx: &egui::Context, st: &photosuite_engine::presets::styles::StylePreset) -> TextureHandle {
+pub(crate) fn style_texture(app: &PhotosuiteApp, ctx: &egui::Context, st: &photosuite_engine::presets::styles::StylePreset) -> TextureHandle {
     let key = ("style", st.name.clone(), st.effects.len(), format!("{:?}{:?}", st.blend, st.fill_opacity));
     cached_texture(ctx, key, || {
         const S: u32 = 64;
