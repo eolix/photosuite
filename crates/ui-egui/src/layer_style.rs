@@ -352,13 +352,30 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
     apply(f, |id, p| app.run(id, p))
 }
 
+/// Every parameter group is edited as an object. Validate before preview or confirmation so
+/// malformed values supplied through `ui.dialog.set` are reported before any command runs.
+fn validate_params(f: &Map<String, Value>) -> Result<(), String> {
+    for kind in std::iter::once(BLENDING).chain(KINDS.iter().map(|(kind, _)| *kind)) {
+        let key = format!("p:{kind}");
+        if let Some(value) = f.get(&key)
+            && !value.is_object()
+        {
+            return Err(format!("invalid layer style parameters: `{key}` must be an object"));
+        }
+    }
+    Ok(())
+}
+
 /// Runs the dialog's commands through `run`: blending options, clear, then each enabled effect.
 fn apply(f: &Map<String, Value>, mut run: impl FnMut(&str, Value) -> Result<Value, String>) -> Result<Value, String> {
+    validate_params(f)?;
     let layer = f.get("layer").cloned().unwrap_or(Value::Null);
     let initial_light_angle = f.get("globalLight").and_then(Value::as_f64);
-    if let Some(Value::Object(bo)) = f.get(&format!("p:{BLENDING}")) {
+    if let Some(bo) = f.get(&format!("p:{BLENDING}")).and_then(Value::as_object) {
         let mut p = Value::Object(bo.clone());
-        p["layer"] = layer.clone();
+        if let Some(params) = p.as_object_mut() {
+            params.insert("layer".into(), layer.clone());
+        }
         run("layer.layerStyle.blendingOptions", p)?;
     }
     let _ = run("layer.layerStyle.clear", json!({"layer": layer}));
@@ -368,7 +385,9 @@ fn apply(f: &Map<String, Value>, mut run: impl FnMut(&str, Value) -> Result<Valu
     for &(kind, _) in KINDS {
         if f.get(&format!("on:{kind}")).and_then(Value::as_bool) == Some(true) {
             let mut p = f.get(&format!("p:{kind}")).cloned().unwrap_or_else(|| json!({}));
-            p["layer"] = layer.clone();
+            if let Some(params) = p.as_object_mut() {
+                params.insert("layer".into(), layer.clone());
+            }
             if p.get("useGlobalLight").and_then(Value::as_bool) == Some(true)
                 && let Some(angle) = p.get("angle").and_then(Value::as_f64)
                 && initial_light_angle.is_none_or(|initial| angle != initial)
@@ -397,18 +416,19 @@ pub fn preview_document(
     doc: &photosuite_doc::Document,
     patterns: &photosuite_engine::pattern_cmds::PatternLibrary,
     f: &Map<String, Value>,
-) -> Option<photosuite_doc::Document> {
+) -> Result<photosuite_doc::Document, String> {
     let mut s = photosuite_engine::Session::new();
     s.patterns = patterns.clone();
     s.add_document(doc.clone(), None);
-    apply(f, |id, p| s.execute(id, p).map_err(|e| e.to_string())).ok()?;
-    s.active().map(|d| (*d.doc).clone())
+    apply(f, |id, p| s.execute(id, p).map_err(|e| e.to_string()))?;
+    s.active().map(|d| (*d.doc).clone()).ok_or_else(|| "no preview document".into())
 }
 
 /// Dialog body (left list, right parameters).
 pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, patterns: &photosuite_engine::pattern_cmds::PatternLibrary) {
     let t = Tokens::get(ui.ctx());
     let selected = f.get("selected").and_then(Value::as_str).unwrap_or("dropShadow").to_string();
+    let invalid = validate_params(f).err();
     // Column separators: gaps laid out with the columns, drawn afterwards over the row's full height.
     let mut seps = Vec::new();
     let gap = |ui: &mut egui::Ui| ui.allocate_exact_size(vec2(17.0, 1.0), Sense::hover()).0.center().x;
@@ -471,87 +491,94 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, patterns: &photosuite
             ui.label(RichText::new(tl!(&label)).font(crate::theme::semibold(14.0)).color(t.text));
             ui.add_space(6.0);
             let pkey = format!("p:{selected}");
-            let mut p = f.get(&pkey).cloned().unwrap_or_else(|| defaults(&selected));
-            for &(key, label, kind) in spec(&selected) {
-                match (selected.as_str(), key) {
-                    (BLENDING, "blend") => group(ui, "General Blending", false),
-                    (BLENDING, "fillOpacity") => group(ui, "Advanced Blending", true),
-                    _ => {}
-                }
-                match kind {
-                    P::Slider(min, max, unit) => {
-                        let mut v = p.get(key).and_then(Value::as_f64).unwrap_or(min as f64) as f32;
-                        if widgets::slider_row(ui, label, &mut v, min..=max, unit, None).changed() {
-                            p[key] = json!(v.round());
+            // Only reachable through `ui.dialog.set`: say what is wrong once, keep the bad value.
+            if let Some(error) = &invalid {
+                ui.colored_label(t.danger, error);
+            }
+            let params = f.get(&pkey).cloned().unwrap_or_else(|| defaults(&selected));
+            // A group that isn't an object keeps its value and draws no controls.
+            if let Some(mut p) = params.as_object().map(|o| Value::Object(o.clone())) {
+                for &(key, label, kind) in spec(&selected) {
+                    match (selected.as_str(), key) {
+                        (BLENDING, "blend") => group(ui, "General Blending", false),
+                        (BLENDING, "fillOpacity") => group(ui, "Advanced Blending", true),
+                        _ => {}
+                    }
+                    match kind {
+                        P::Slider(min, max, unit) => {
+                            let mut v = p.get(key).and_then(Value::as_f64).unwrap_or(min as f64) as f32;
+                            if widgets::slider_row(ui, label, &mut v, min..=max, unit, None).changed() {
+                                p[key] = json!(v.round());
+                            }
                         }
-                    }
-                    P::Color => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let hexs = p.get(key).and_then(Value::as_str).unwrap_or("#000000").to_string();
-                            let mut c = parse_hex(&hexs);
-                            if ui.color_edit_button_srgba(&mut c).changed() {
-                                p[key] = json!(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
-                            }
-                        });
-                    }
-                    P::Blend => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p.get(key).and_then(Value::as_str).unwrap_or("Normal").to_string();
-                            let opts: Vec<(String, &str)> =
-                                photosuite_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
-                            if widgets::dropdown(ui, &format!("fx-blend-{selected}"), &mut cur, &opts, 150.0) {
-                                p[key] = json!(cur);
-                            }
-                        });
-                    }
-                    P::Choice(options) => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p.get(key).and_then(Value::as_str).unwrap_or(options[0].0).to_string();
-                            let opts: Vec<(String, &str)> = options.iter().map(|(v, l)| (v.to_string(), *l)).collect();
-                            if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 150.0) {
-                                p[key] = json!(cur);
-                            }
-                        });
-                    }
-                    P::Pattern => {
-                        let list: Vec<(String, String)> = f
-                            .get("patternList")
-                            .and_then(Value::as_array)
-                            .map(|a| a.iter().filter_map(|e| Some((e.get(0)?.as_str()?.to_string(), e.get(1)?.as_str()?.to_string()))).collect())
-                            .unwrap_or_default();
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p
-                                .get(key)
-                                .and_then(Value::as_str)
-                                .filter(|c| !c.is_empty())
-                                .map(str::to_string)
-                                .or_else(|| list.first().map(|l| l.0.clone()))
+                        P::Color => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let hexs = p.get(key).and_then(Value::as_str).unwrap_or("#000000").to_string();
+                                let mut c = parse_hex(&hexs);
+                                if ui.color_edit_button_srgba(&mut c).changed() {
+                                    p[key] = json!(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
+                                }
+                            });
+                        }
+                        P::Blend => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p.get(key).and_then(Value::as_str).unwrap_or("Normal").to_string();
+                                let opts: Vec<(String, &str)> =
+                                    photosuite_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
+                                if widgets::dropdown(ui, &format!("fx-blend-{selected}"), &mut cur, &opts, 150.0) {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Choice(options) => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p.get(key).and_then(Value::as_str).unwrap_or(options[0].0).to_string();
+                                let opts: Vec<(String, &str)> = options.iter().map(|(v, l)| (v.to_string(), *l)).collect();
+                                if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 150.0) {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Pattern => {
+                            let list: Vec<(String, String)> = f
+                                .get("patternList")
+                                .and_then(Value::as_array)
+                                .map(|a| a.iter().filter_map(|e| Some((e.get(0)?.as_str()?.to_string(), e.get(1)?.as_str()?.to_string()))).collect())
                                 .unwrap_or_default();
-                            let opts: Vec<(String, &str)> = list.iter().map(|(id, n)| (id.clone(), n.as_str())).collect();
-                            if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 180.0)
-                                || p.get(key).and_then(Value::as_str).is_none_or(str::is_empty)
-                            {
-                                p[key] = json!(cur);
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p
+                                    .get(key)
+                                    .and_then(Value::as_str)
+                                    .filter(|c| !c.is_empty())
+                                    .map(str::to_string)
+                                    .or_else(|| list.first().map(|l| l.0.clone()))
+                                    .unwrap_or_default();
+                                let opts: Vec<(String, &str)> = list.iter().map(|(id, n)| (id.clone(), n.as_str())).collect();
+                                if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 180.0)
+                                    || p.get(key).and_then(Value::as_str).is_none_or(str::is_empty)
+                                {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Check => {
+                            let mut b = p.get(key).and_then(Value::as_bool).unwrap_or(false);
+                            if widgets::checkbox(ui, &mut b, label).changed() {
+                                p[key] = json!(b);
                             }
-                        });
-                    }
-                    P::Check => {
-                        let mut b = p.get(key).and_then(Value::as_bool).unwrap_or(false);
-                        if widgets::checkbox(ui, &mut b, label).changed() {
-                            p[key] = json!(b);
                         }
                     }
+                    ui.add_space(2.0);
                 }
-                ui.add_space(2.0);
+                if selected == BLENDING {
+                    advanced_blending(ui, f, &mut p);
+                }
+                f.insert(pkey, p);
             }
-            if selected == BLENDING {
-                advanced_blending(ui, f, &mut p);
-            }
-            f.insert(pkey, p);
         });
         seps.push(gap(ui));
         // Preview: the live canvas preview, and a swatch of the style on a grey square.
@@ -629,7 +656,7 @@ fn swatch_image(f: &Map<String, Value>, patterns: &photosuite_engine::pattern_cm
             bo.remove(k);
         }
     }
-    let shown = preview_document(&doc, patterns, &sf)?;
+    let shown = preview_document(&doc, patterns, &sf).ok()?;
     Some(crate::canvas::buffer_to_image(&photosuite_compose::flatten(&shown)))
 }
 
@@ -653,7 +680,8 @@ fn advanced_blending(ui: &mut egui::Ui, f: &mut Map<String, Value>, p: &mut Valu
     widgets::hairline(ui);
     ui.add_space(8.0);
     // Dropdown entries: (position in the `blendIf` list, label). Gray documents edit entry 1.
-    let opts: Vec<(usize, &str)> = if mode == "gray" { vec![(1, "Gray")] } else { std::iter::once((0, "Gray")).chain(names.iter().enumerate().map(|(i, n)| (i + 1, n.1))).collect() };
+    let opts: Vec<(usize, &str)> =
+        if mode == "gray" { vec![(1, "Gray")] } else { std::iter::once((0, "Gray")).chain(names.iter().enumerate().map(|(i, n)| (i + 1, n.1))).collect() };
     let mut ch = f.get("__blendIfChannel").and_then(Value::as_u64).and_then(|c| usize::try_from(c).ok()).unwrap_or(0);
     ui.horizontal(|ui| {
         ui.label(RichText::new(tl!("Blend If:")).color(t.text_dim));
@@ -925,6 +953,65 @@ mod tests {
         let c = img.pixels[img.width() * img.height() / 2 + img.width() / 2];
         assert_eq!((c.r(), c.g(), c.b()), (255, 0, 0), "the red overlay on the square");
         assert_eq!(img.pixels[0].a(), 0, "transparent around it");
+    }
+
+    #[test]
+    fn preview_rejects_non_object_effect_params() {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let st = s.active().unwrap();
+        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"), st.doc.global_light.angle);
+        f.insert("p:colorOverlay".into(), json!("invalid"));
+
+        assert!(preview_document(&st.doc, &s.patterns, &f).is_err());
+    }
+
+    #[test]
+    fn apply_rejects_non_object_params_before_running_commands() {
+        let mut f = Map::new();
+        f.insert("p:stroke".into(), json!([1, 2]));
+        f.insert("on:stroke".into(), json!(true));
+        let mut calls = 0;
+
+        let result = apply(&f, |_, _| {
+            calls += 1;
+            Ok(Value::Null)
+        });
+
+        assert!(result.is_err());
+        assert_eq!(calls, 0, "invalid params must not partially apply the style");
+    }
+
+    #[test]
+    fn body_keeps_invalid_params_and_renders_without_panicking() {
+        let ctx = egui::Context::default();
+        PhotosuiteApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut fields = Map::new();
+        fields.insert("selected".into(), json!("dropShadow"));
+        fields.insert("p:dropShadow".into(), json!(7));
+
+        let patterns = photosuite_engine::pattern_cmds::PatternLibrary::default();
+        let mut out = ctx.run_ui(Default::default(), |ui| body(ui, &mut fields, &patterns));
+        out.textures_delta.clear();
+
+        assert_eq!(fields.get("p:dropShadow"), Some(&json!(7)));
+    }
+
+    #[test]
+    fn confirm_rejects_invalid_params_and_applies_valid_effects() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
+        app.run("layer.new.layer", json!({})).unwrap();
+        let layer = app.session.active().unwrap().doc.layer(app.session.active().unwrap().active_layer.unwrap()).unwrap().clone();
+        let mut invalid = initial_fields(&layer, ColorMode::Rgb, Some("colorOverlay"), 0.0);
+        invalid.insert("p:colorOverlay".into(), json!(null));
+        assert!(confirm(&mut app, &invalid).is_err());
+        assert!(app.session.active().unwrap().doc.layer(layer.id).unwrap().effects.items.is_empty());
+
+        let valid = initial_fields(&layer, ColorMode::Rgb, Some("colorOverlay"), 0.0);
+        confirm(&mut app, &valid).unwrap();
+        assert_eq!(app.session.active().unwrap().doc.layer(layer.id).unwrap().effects.items.len(), 1);
     }
 
     #[test]

@@ -478,9 +478,12 @@ fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> (std::sync::Arc<Document>
         let key = (crate::layer_style::preview_hash(&d.fields) ^ st.revision.wrapping_mul(0x9e37_79b9_7f4a_7c15)) | 1 << 63;
         if app.style_preview.as_ref().map(|p| p.0) != Some(key) {
             let shown = crate::layer_style::preview_document(&st.doc, &app.session.patterns, &d.fields).map(std::sync::Arc::new);
+            if let Err(error) = &shown {
+                log::warn!("Layer Style preview: {error}");
+            }
             app.style_preview = Some((key, shown));
         }
-        if let Some((_, Some(doc))) = &app.style_preview {
+        if let Some((_, Ok(doc))) = &app.style_preview {
             return (doc.clone(), key);
         }
     }
