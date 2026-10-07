@@ -571,6 +571,14 @@ pub struct DockTabs {
     pub character: usize,
 }
 
+/// Color panel state.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ColorPanelState {
+    /// The panel edits the background colour (its chip was clicked), not the foreground.
+    pub background: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
     pub tool: Tool,
@@ -660,6 +668,9 @@ pub struct UiState {
     /// Right-dock group order, heights and collapsed groups (see `dock`).
     #[serde(default)]
     pub dock: crate::dock::DockLayout,
+    /// Which chip the Color panel edits.
+    #[serde(default)]
+    pub color_panel: ColorPanelState,
     /// Brush Settings: selected section (0 = Brush Tip Shape) and tab (0 settings, 1 Brushes).
     #[serde(default)]
     pub brush_section: usize,
@@ -738,6 +749,7 @@ impl Default for UiState {
             palette_open: false,
             dock_tabs: DockTabs::default(),
             dock: Default::default(),
+            color_panel: Default::default(),
             brush_section: 0,
             brush_tab: 0,
             brushes_panel: Default::default(),

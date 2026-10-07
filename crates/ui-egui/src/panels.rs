@@ -2181,12 +2181,41 @@ fn adjustments_grid(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     }
 }
 
+/// The Color panel's foreground and background chips. A click picks the colour the field edits,
+/// framed; a double-click opens the Color Picker on it.
+fn field_chips(app: &mut PhotosuiteApp, ui: &mut egui::Ui, chips: Rect) {
+    let t = Tokens::get(ui.ctx());
+    let bgr = Rect::from_min_size(chips.min + vec2(13.0, 13.0), vec2(22.0, 22.0));
+    let fgr = Rect::from_min_size(chips.min + vec2(3.0, 3.0), vec2(22.0, 22.0));
+    let frame = Stroke::new(1.0, t.text_dim);
+    let bg_active = app.ui.color_panel.background;
+    let p = ui.painter();
+    p.rect_filled(bgr, 2.0, c32(app.session.tools.background));
+    p.rect_stroke(bgr, 2.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
+    if bg_active {
+        p.rect_stroke(bgr.expand(2.0), 2.0, frame, StrokeKind::Outside);
+    }
+    p.rect_filled(fgr, 2.0, c32(app.session.tools.foreground));
+    p.rect_stroke(fgr, 2.0, Stroke::new(1.0, Color32::from_gray(210)), StrokeKind::Outside);
+    if !bg_active {
+        p.rect_stroke(fgr.expand(2.0), 2.0, frame, StrokeKind::Outside);
+    }
+    // The foreground is on top, so it takes the clicks where the two overlap.
+    let bg_resp = ui.interact(bgr, ui.id().with("field-bg"), Sense::click());
+    let fg_resp = ui.interact(fgr, ui.id().with("field-fg"), Sense::click());
+    let picked = if fg_resp.clicked() { false } else { bg_resp.clicked() || bg_active };
+    app.ui.color_panel.background = picked;
+    if fg_resp.double_clicked() || bg_resp.double_clicked() {
+        crate::color_picker_ui::open(app, if picked { "background" } else { "foreground" });
+    }
+}
+
 /// Photoshop Color panel: saturation/brightness field + hue strip, drawn as shaded meshes.
 fn color_field(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
-    let fg = app.session.tools.foreground;
-    let key = egui::Id::new("color-field-hue");
-    let mut hsva = srgb_hsva(fg);
+    let bg_active = app.ui.color_panel.background;
+    let key = egui::Id::new(("color-field-hue", bg_active));
+    let mut hsva = srgb_hsva(if bg_active { app.session.tools.background } else { app.session.tools.foreground });
     // Keep hue stable for greys (where RGB->HSV hue is undefined).
     let remembered: f32 = ui.data(|d| d.get_temp(key)).unwrap_or(hsva.h);
     if hsva.s < 0.01 || hsva.v < 0.01 {
@@ -2197,16 +2226,10 @@ fn color_field(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let h = 120.0;
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
-        // Colour chips (fg/bg) at left, Photoshop style.
-        let (chips, _) = ui.allocate_exact_size(vec2(34.0, h), Sense::hover());
-        let bgr = Rect::from_min_size(chips.min + vec2(10.0, 10.0), vec2(22.0, 22.0));
-        let fgr = Rect::from_min_size(chips.min, vec2(22.0, 22.0));
-        ui.painter().rect_filled(bgr, 2.0, c32(app.session.tools.background));
-        ui.painter().rect_stroke(bgr, 2.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
-        ui.painter().rect_filled(fgr, 2.0, c32(fg));
-        ui.painter().rect_stroke(fgr, 2.0, Stroke::new(1.0, Color32::from_gray(210)), StrokeKind::Outside);
+        let (chips, _) = ui.allocate_exact_size(vec2(38.0, h), Sense::hover());
+        field_chips(app, ui, chips);
         // SV field.
-        let field_w = w - 34.0 - strip_w - 16.0;
+        let field_w = w - 38.0 - strip_w - 16.0;
         let (field, fresp) = ui.allocate_exact_size(vec2(field_w, h), Sense::click_and_drag());
         let mut mesh = egui::Mesh::default();
         let n = 16;
@@ -2263,8 +2286,12 @@ fn color_field(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         let tri = vec![pos2(strip.right() + 1.0, y), pos2(strip.right() + 6.0, y - 4.0), pos2(strip.right() + 6.0, y + 4.0)];
         ui.painter().add(egui::Shape::convex_polygon(tri, t.text, Stroke::NONE));
         if fresp.dragged() || fresp.clicked() || sresp.dragged() || sresp.clicked() {
-            app.session.tools.foreground = hsva_srgb(hsva);
-            crate::type_tool::foreground_changed(app);
+            if bg_active {
+                app.session.tools.background = hsva_srgb(hsva);
+            } else {
+                app.session.tools.foreground = hsva_srgb(hsva);
+                crate::type_tool::foreground_changed(app);
+            }
             ui.data_mut(|d| d.insert_temp(key, hsva.h));
         }
     });
@@ -2527,6 +2554,86 @@ mod color_tests {
             h.run_steps(2);
         }
         assert_eq!(srgb_bytes(h.state().session.tools.foreground), [0, 255, 0]);
+    }
+
+    fn field_harness(app: PhotosuiteApp) -> egui_kittest::Harness<'static, PhotosuiteApp> {
+        // 60 fps steps, so two clicks a frame apart are a double-click.
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(300.0, 200.0)).with_step_dt(1.0 / 60.0).build_ui_state(
+            |ui, app: &mut PhotosuiteApp| {
+                if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    color_field(app, ui);
+                }
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Anthracite);
+        h.run_steps(2);
+        h
+    }
+
+    fn click(h: &mut egui_kittest::Harness<'_, PhotosuiteApp>, p: egui::Pos2) {
+        h.hover_at(p);
+        h.run_steps(1);
+        for pressed in [true, false] {
+            h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+            h.run_steps(1);
+        }
+    }
+
+    /// A click on the background chip makes the field edit the background, not the foreground.
+    #[test]
+    fn background_chip_retargets_the_color_field() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.tools.foreground = [0.2, 0.4, 0.6, 1.0];
+        app.session.tools.background = [0.0, 0.0, 0.0, 1.0];
+        let mut h = field_harness(app);
+        let min = h.ctx.input(|i| i.viewport_rect()).min;
+        // The background chip's corner that the foreground chip doesn't cover.
+        click(&mut h, min + vec2(40.0, 40.0));
+        // The field's top-left: no saturation, full brightness.
+        click(&mut h, min + vec2(60.0, 10.0));
+        assert!(h.state().ui.color_panel.background);
+        let tools = &h.state().session.tools;
+        assert_eq!(tools.foreground, [0.2, 0.4, 0.6, 1.0]);
+        assert!(tools.background[..3].iter().all(|&v| v > 0.9), "{:?}", tools.background);
+    }
+
+    #[test]
+    fn double_clicking_a_chip_opens_its_color_picker() {
+        let app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let mut h = field_harness(app);
+        let min = h.ctx.input(|i| i.viewport_rect()).min;
+        // The foreground point is where the chips overlap: the foreground is on top there.
+        for (p, target) in [(vec2(40.0, 40.0), "background"), (vec2(30.0, 30.0), "foreground")] {
+            h.state_mut().ui.dialogs.clear();
+            // Past the last double-click, so this one isn't counted as a triple-click.
+            h.run_steps(40);
+            click(&mut h, min + p);
+            assert!(h.state().ui.dialogs.is_empty(), "a single click only picks the chip");
+            click(&mut h, min + p);
+            let [d] = h.state().ui.dialogs.as_slice() else { panic!("one Color Picker") };
+            assert_eq!(d.fields.get("__colorPicker").and_then(Value::as_str), Some(target));
+        }
+    }
+
+    /// Black has no hue of its own, so each chip remembers the hue last picked for it.
+    #[test]
+    fn each_chip_keeps_its_own_hue_on_black() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.tools.foreground = [0.0, 0.0, 0.0, 1.0];
+        app.session.tools.background = [0.0, 0.0, 0.0, 1.0];
+        let mut h = field_harness(app);
+        let min = h.ctx.input(|i| i.viewport_rect()).min;
+        // The hue strip runs from red at the top through blue (a third down) and green (two thirds).
+        let (strip_x, green, blue) = (285.0, 88.0, 48.0);
+        click(&mut h, min + vec2(strip_x, green));
+        click(&mut h, min + vec2(40.0, 40.0));
+        click(&mut h, min + vec2(strip_x, blue));
+        click(&mut h, min + vec2(16.0, 16.0));
+        // Near the field's top-right: high saturation and brightness.
+        click(&mut h, min + vec2(265.0, 10.0));
+        let [r, g, b] = srgb_bytes(h.state().session.tools.foreground);
+        assert!(g > 200 && r < 64 && b < 64, "the foreground's green, not the background's blue: {:?}", [r, g, b]);
     }
 }
 
