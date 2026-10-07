@@ -175,6 +175,77 @@ fn directory_bundle_resave_repairs_tampered_objects() {
     std::fs::remove_dir_all(dir).unwrap();
 }
 
+/// Damages one object in place without changing its length or modification time, the case a
+/// size-and-mtime cache alone would trust. Returns the damaged file's path.
+fn damage_in_place_keeping_size_and_mtime(dir: &std::path::Path) -> std::path::PathBuf {
+    let object = std::fs::read_dir(dir.join("tiles")).unwrap().next().unwrap().unwrap().path();
+    let original = std::fs::read(&object).unwrap();
+    let mtime = std::fs::metadata(&object).unwrap().modified().unwrap();
+    // Flip one byte of the compressed payload; try positions until the bundle no longer loads.
+    for at in (original.len() / 2..original.len()).chain(0..original.len() / 2) {
+        let mut damaged = original.clone();
+        damaged[at] ^= 0x5a;
+        std::fs::write(&object, &damaged).unwrap();
+        std::fs::File::options().write(true).open(&object).unwrap().set_modified(mtime).unwrap();
+        if load_path(dir).is_err() {
+            assert_eq!(std::fs::metadata(&object).unwrap().len(), original.len() as u64);
+            assert_eq!(std::fs::metadata(&object).unwrap().modified().unwrap(), mtime);
+            return object;
+        }
+    }
+    panic!("no single-byte change made the bundle fail to load");
+}
+
+#[test]
+fn same_size_same_mtime_tamper_is_repaired_on_the_next_save() {
+    let doc = rich_doc(ColorMode::Rgb, SampleType::U8);
+    let dir = temp_dir("tamper-same-size");
+    let mut writer = PcraftWriter::new();
+    writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+    // A second save trusts every object it verified in the first one.
+    writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+
+    damage_in_place_keeping_size_and_mtime(&dir);
+    // The sample bundle is far below DEFAULT_REVERIFY_BUDGET, so the rolling re-check reads
+    // every cached object again (and on Unix the change time differs as well).
+    let stats = writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+    assert_eq!(stats.tiles_written, 1);
+    assert_eq!(load_path(&dir).unwrap(), doc);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn rolling_reverify_reaches_every_object_with_a_tiny_budget() {
+    let doc = rich_doc(ColorMode::Rgb, SampleType::U8);
+    let dir = temp_dir("tamper-rolling");
+    let mut writer = PcraftWriter::new();
+    writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+    let objects = ["tiles", "blobs"].iter().map(|d| std::fs::read_dir(dir.join(d)).unwrap().count()).sum::<usize>();
+
+    // One object per save: the oldest-checked one.
+    writer.set_reverify_budget(1);
+    damage_in_place_keeping_size_and_mtime(&dir);
+    let mut repaired = false;
+    for _ in 0..=objects {
+        let stats = writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+        if stats.tiles_written == 1 {
+            repaired = true;
+            break;
+        }
+    }
+    assert!(repaired, "a damaged object was not re-verified within {objects} saves");
+    assert_eq!(load_path(&dir).unwrap(), doc);
+
+    // A zero budget re-reads nothing whose signature is unchanged; a fresh writer still verifies
+    // everything on its first save.
+    let mut fresh = PcraftWriter::new();
+    fresh.set_reverify_budget(0);
+    damage_in_place_keeping_size_and_mtime(&dir);
+    assert_eq!(fresh.save_dir(&doc, &dir, &SaveOptions::default()).unwrap().tiles_written, 1);
+    assert_eq!(load_path(&dir).unwrap(), doc);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 #[test]
 fn deflated_zip_entries_are_readable() {
     // Re-zip with DEFLATE (as a user's zip tool might) — must still load.

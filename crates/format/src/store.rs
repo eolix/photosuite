@@ -313,27 +313,60 @@ fn tile_le(t: &Tile, sample: SampleType) -> std::borrow::Cow<'_, [u8]> {
     }
 }
 
+/// Default for [`PcraftWriter::set_reverify_budget`]: compressed bytes of already-verified
+/// objects re-read per directory save.
+pub const DEFAULT_REVERIFY_BUDGET: u64 = 16 * 1024 * 1024;
+
 /// Incremental `.pcraft` writer. Keep one per open document: it remembers
 /// tile hashes (by `Arc` identity), compressed objects, and objects it has
 /// verified in the current directory, so repeated saves stay cheap.
-#[derive(Default)]
+///
+/// **What the directory cache trusts.** A directory save reuses an existing object file only
+/// after decompressing it and checking its content hash. After that, the writer remembers the
+/// file's signature (length and modification time, plus inode, device and change time on Unix)
+/// and skips the full check on later saves while the signature is unchanged. A file damaged in
+/// place without changing its signature (bit rot, or a tool that restores timestamps where
+/// there is no change time) would be trusted, so each save also re-verifies a rolling share of
+/// the cached objects, oldest-checked first, up to [`DEFAULT_REVERIFY_BUDGET`] bytes (see
+/// [`Self::set_reverify_budget`]). Over enough saves every object is read again, and a damaged
+/// one is rewritten.
 pub struct PcraftWriter {
     hash_cache: HashMap<usize, (Weak<Tile>, Hash)>,
     /// Compressed objects by bundle path (ZIP mode).
     compressed: HashMap<String, Arc<Vec<u8>>>,
     verified_directory: Option<DirectoryVerificationCache>,
+    reverify_budget: u64,
+}
+
+impl Default for PcraftWriter {
+    fn default() -> Self {
+        Self { hash_cache: HashMap::new(), compressed: HashMap::new(), verified_directory: None, reverify_budget: DEFAULT_REVERIFY_BUDGET }
+    }
 }
 
 #[derive(Default)]
 struct DirectoryVerificationCache {
     directory: PathBuf,
-    objects: HashMap<String, FileSignature>,
+    /// Directory saves so far; an object's `checked_at` is the save that last read it fully.
+    generation: u64,
+    objects: HashMap<String, Verified>,
 }
 
+#[derive(Clone, Copy)]
+struct Verified {
+    signature: FileSignature,
+    checked_at: u64,
+}
+
+/// What a file looked like when it was verified. Any change means "verify again".
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct FileSignature {
     len: u64,
     modified: SystemTime,
+    /// Inode, device and status-change time (s, ns): an in-place rewrite changes the change
+    /// time even when a tool restores the modification time.
+    #[cfg(unix)]
+    unix: (u64, u64, i64, i64),
 }
 
 struct Prepared {
@@ -366,7 +399,17 @@ impl Object {
 }
 
 fn file_signature(metadata: &std::fs::Metadata) -> Option<FileSignature> {
-    Some(FileSignature { len: metadata.len(), modified: metadata.modified().ok()? })
+    #[cfg(unix)]
+    let unix = {
+        use std::os::unix::fs::MetadataExt;
+        (metadata.ino(), metadata.dev(), metadata.ctime(), metadata.ctime_nsec())
+    };
+    Some(FileSignature {
+        len: metadata.len(),
+        modified: metadata.modified().ok()?,
+        #[cfg(unix)]
+        unix,
+    })
 }
 
 fn path_signature(path: &Path) -> Result<Option<FileSignature>> {
@@ -450,6 +493,13 @@ impl PcraftWriter {
         Self::default()
     }
 
+    /// How many compressed bytes of already-verified objects each directory save re-reads and
+    /// re-checks (oldest-checked first; at least one object when the budget is non-zero). `0`
+    /// trusts unchanged signatures entirely; `u64::MAX` re-verifies everything on every save.
+    pub fn set_reverify_budget(&mut self, bytes: u64) {
+        self.reverify_budget = bytes;
+    }
+
     fn prepare(&mut self, doc: &Document, opts: &SaveOptions) -> Result<Prepared> {
         self.hash_cache.retain(|_, (w, _)| w.strong_count() > 0);
         convert::check_nesting(&doc.layers)?;
@@ -529,14 +579,24 @@ impl PcraftWriter {
         }
         let canonical_dir = std::fs::canonicalize(dir)?;
         if self.verified_directory.as_ref().is_none_or(|cache| cache.directory != canonical_dir) {
-            self.verified_directory = Some(DirectoryVerificationCache { directory: canonical_dir, objects: HashMap::new() });
+            self.verified_directory = Some(DirectoryVerificationCache { directory: canonical_dir, ..Default::default() });
         }
         let existing = list_objects(dir)?;
+        let generation = match &mut self.verified_directory {
+            Some(cache) => {
+                cache.generation = cache.generation.saturating_add(1);
+                cache.generation
+            }
+            None => 0,
+        };
+        let recheck = self.rolling_recheck(&p.objects);
         for (path, obj) in &p.objects {
             let object_path = dir.join(path);
             let signature = path_signature(&object_path)?;
-            let already_verified =
-                signature.is_some_and(|signature| self.verified_directory.as_ref().is_some_and(|cache| cache.objects.get(path) == Some(&signature)));
+            let already_verified = !recheck.contains(path)
+                && signature.is_some_and(|signature| {
+                    self.verified_directory.as_ref().is_some_and(|cache| cache.objects.get(path).is_some_and(|v| v.signature == signature))
+                });
             if existing.contains(path) && already_verified {
                 if matches!(obj, Object::Tile(..)) {
                     stats.tiles_reused += 1;
@@ -549,7 +609,7 @@ impl PcraftWriter {
                     if let Some(signature) = signature
                         && let Some(cache) = &mut self.verified_directory
                     {
-                        cache.objects.insert(path.clone(), signature);
+                        cache.objects.insert(path.clone(), Verified { signature, checked_at: generation });
                     }
                     if matches!(obj, Object::Tile(..)) {
                         stats.tiles_reused += 1;
@@ -562,10 +622,16 @@ impl PcraftWriter {
                 Object::Blob(_) => stats.blobs_written += 1,
             }
             write_atomic(&object_path, &obj.compressed())?;
-            if let Some(signature) = path_signature(&object_path)?
-                && let Some(cache) = &mut self.verified_directory
-            {
-                cache.objects.insert(path.clone(), signature);
+            let written = path_signature(&object_path)?;
+            if let Some(cache) = &mut self.verified_directory {
+                match written {
+                    Some(signature) => {
+                        cache.objects.insert(path.clone(), Verified { signature, checked_at: generation });
+                    }
+                    None => {
+                        cache.objects.remove(path);
+                    }
+                }
             }
         }
         for (name, data) in &p.previews {
@@ -587,6 +653,29 @@ impl PcraftWriter {
             }
         }
         Ok(stats)
+    }
+
+    /// The cached objects this save re-verifies even though their signature is unchanged:
+    /// oldest-checked first, until their recorded sizes reach the re-verify budget (always at
+    /// least one, so an object larger than the budget is still reached in turn).
+    fn rolling_recheck(&self, objects: &BTreeMap<String, Object>) -> HashSet<String> {
+        let mut out = HashSet::new();
+        let Some(cache) = &self.verified_directory else { return out };
+        if self.reverify_budget == 0 {
+            return out;
+        }
+        let mut candidates: Vec<(&String, &Verified)> = cache.objects.iter().filter(|(path, _)| objects.contains_key(*path)).collect();
+        candidates.sort_by(|a, b| a.1.checked_at.cmp(&b.1.checked_at).then_with(|| a.0.cmp(b.0)));
+        let mut spent = 0u64;
+        for (path, verified) in candidates {
+            let next = spent.saturating_add(verified.signature.len);
+            if !out.is_empty() && next > self.reverify_budget {
+                break;
+            }
+            spent = next;
+            out.insert(path.clone());
+        }
+        out
     }
 
     /// Save to `path`: a directory bundle if `path` is an existing directory
