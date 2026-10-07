@@ -52,6 +52,30 @@ fn stroke_accepts_full_points_brush_and_preset() {
 }
 
 #[test]
+fn paint_commands_bound_hostile_time_and_reject_oversized_brushes() {
+    let mut s = session(32, 32);
+    let timed = s.execute(
+        "paint.stroke",
+        json!({
+            "points": [[16, 16, 1, 0, 0, 0, 0], [16, 16, 1, 0, 0, 0, 1.7976931348623157e308]],
+            "brush": {"buildUp": true, "buildUpRate": 1000, "size": 4, "pressureSize": false}
+        }),
+    );
+    assert!(timed.is_ok(), "the bounded airbrush catch-up should still commit: {timed:?}");
+
+    for command in ["paint.stroke", "paint.pencil"] {
+        let result = s.execute(command, json!({"points": [[8, 8]], "size": 1e30}));
+        assert!(result.is_err(), "{command} must reject an oversized brush before rasterizing");
+    }
+    let result = s.execute("paint.stroke", json!({"points": [[8, 8]], "brush": {"dualBrush": {"enabled": true, "size": 1e30}}}));
+    assert!(result.is_err(), "enabled dual brush dimensions are bounded too");
+
+    s.execute("tools.setBrush", json!({"size": 5000})).expect("the shared brush limit is accepted");
+    assert!(s.execute("tools.setBrush", json!({"size": 5001})).is_err(), "tools.setBrush must reject sizes above the shared limit");
+    assert_eq!(s.tools.brush.size, 5000.0, "a rejected brush update must not change the session brush");
+}
+
+#[test]
 fn replay_is_deterministic() {
     let params = json!({"points": [[10, 50], [60, 30, 0.7], [120, 60, 0.9], [180, 40]], "preset": "Spatter", "color": "#ff8800"});
     let run = || {

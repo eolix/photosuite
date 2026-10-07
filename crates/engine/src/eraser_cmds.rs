@@ -129,9 +129,6 @@ fn background_eraser(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(CMD, "`points` must be finite canvas coordinates"));
     }
     let brush = crate::brush_cmds::resolve_brush(s, p, CMD)?;
-    if !(brush.size.is_finite() && brush.size <= 5000.0) {
-        return Err(bad(CMD, "`size` must be at most 5000 px"));
-    }
     let bs = BgEraseSettings {
         sampling: enum_param(p, CMD, "sampling", Sampling::Continuous, "continuous|once|backgroundSwatch")?,
         limits: enum_param(p, CMD, "limits", Limits::Contiguous, "discontiguous|contiguous|findEdges")?,

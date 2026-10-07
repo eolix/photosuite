@@ -7,7 +7,7 @@
 //! command, so it is journaled, drivable, and persisted by the preset store.
 
 use egui::{Color32, RichText, Sense, Stroke, pos2, vec2};
-use photosuite_engine::paint::BrushPreset;
+use photosuite_engine::paint::{BrushPreset, MAX_BRUSH_SIZE};
 use serde_json::json;
 
 use crate::brush_panel::{BrushesView, Renaming, UNGROUPED, WIDTH, commit_gesture, full_uv, grouped_presets, is_current, new_preset_name, run_or_status};
@@ -293,15 +293,15 @@ pub fn show(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         ui.label(RichText::new(tl!("Size")).color(t.text_dim));
         let mut lv = b.size.max(1.0).ln();
         ui.add_sized(vec2(WIDTH - 140.0, 18.0), |ui: &mut egui::Ui| {
-            let r = widgets::slider(ui, &mut lv, 0.0..=5000f32.ln(), None);
+            let r = widgets::slider(ui, &mut lv, 0.0..=MAX_BRUSH_SIZE.ln(), None);
             if r.changed() {
-                b.size = lv.exp().round().clamp(1.0, 5000.0);
+                b.size = lv.exp().round().clamp(1.0, MAX_BRUSH_SIZE);
             }
             r
         });
         let mut s = b.size;
-        if widgets::value_field(ui, &mut s, 1.0..=5000.0, "px", 74.0).changed() {
-            b.size = s.round().clamp(1.0, 5000.0);
+        if widgets::value_field(ui, &mut s, 1.0..=MAX_BRUSH_SIZE, "px", 74.0).changed() {
+            b.size = s.round().clamp(1.0, MAX_BRUSH_SIZE);
         }
     });
     commit_gesture(app, ui.ctx(), &before, &b);

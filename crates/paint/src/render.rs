@@ -111,6 +111,7 @@ fn prepare_pattern(b: &BrushSettings) -> Option<Arc<PatternImage>> {
 
 impl BrushContext {
     pub fn new(brush: &BrushSettings) -> Self {
+        let brush = brush.bounded_for_render();
         let mips = |t: &TipShape| match t {
             TipShape::Sampled(g) if g.is_valid() => Some(Arc::new(Mips::new(g))),
             _ => None,
@@ -118,8 +119,8 @@ impl BrushContext {
         Self {
             tip: mips(&brush.tip),
             dual_tip: if brush.dual_brush.enabled { mips(&brush.dual_brush.tip) } else { None },
-            texture: prepare_pattern(brush),
-            brush: brush.clone(),
+            texture: prepare_pattern(&brush),
+            brush,
         }
     }
 

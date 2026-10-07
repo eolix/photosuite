@@ -462,3 +462,11 @@ fn all_vector_commands_are_registered() {
     ids.dedup();
     assert_eq!(ids.len(), n, "duplicate command ids");
 }
+
+#[test]
+fn path_stroke_rejects_oversized_brush_before_rendering() {
+    let mut s = session(32, 32, 8);
+    s.execute("path.set", json!({"name": "work", "path": {"subpaths": [{"closed": false, "knots": [[2, 2], [20, 20]]}]}})).unwrap();
+    let result = s.execute("path.stroke", json!({"size": 1e30}));
+    assert!(result.is_err(), "path strokes share the bounded paint renderer");
+}

@@ -396,6 +396,33 @@ fn build_up_accumulates_over_time() {
 }
 
 #[test]
+fn huge_airbrush_time_gap_emits_bounded_catch_up() {
+    let b = BrushSettings { build_up: true, build_up_rate: 1000.0, ..brush() };
+    let a = StrokePoint { time: 0.0, ..StrokePoint::new(20.0, 20.0, 1.0) };
+    let brief_pause = StrokePoint { time: 200.0, ..a };
+    assert_eq!(dabs_of(&b, &[a, brief_pause]).len(), 201, "a 200 ms pause should retain its airbrush build-up");
+
+    let z = StrokePoint { time: f64::MAX, ..a };
+    let d = dabs_of(&b, &[a, z]);
+    assert!(d.len() <= 2, "a huge pause should resume with one dab, not replay its time backlog: {}", d.len());
+    assert_eq!(d.last().map(|dab| dab.center), Some(Point::new(20.0, 20.0)));
+
+    let infinite = StrokePoint { time: f64::INFINITY, ..a };
+    assert!(dabs_of(&b, &[a, infinite]).len() <= 1);
+}
+
+#[test]
+fn unbounded_brush_dimensions_are_safe_in_the_public_renderer() {
+    let brush = BrushSettings { size: f32::MAX, dual_brush: DualBrush { enabled: true, size: f32::INFINITY, ..Default::default() }, ..brush() };
+    let ctx = BrushContext::new(&brush);
+    assert_eq!(ctx.brush.size, crate::MAX_BRUSH_SIZE);
+    assert_eq!(ctx.brush.dual_brush.size, 0.5);
+
+    let d = dabs_of(&brush, &[StrokePoint::new(10.0, 10.0, 1.0)]);
+    assert!(d.iter().all(|dab| dab.radius <= crate::MAX_BRUSH_SIZE / 2.0));
+}
+
+#[test]
 fn texture_modulates_coverage() {
     let tile = GrayTile::from_fn(8, 8, |x, _| if x < 4 { 1.0 } else { 0.0 });
     let tex = |mode: MaskMode, depth: f32, each_tip: bool| BrushSettings {

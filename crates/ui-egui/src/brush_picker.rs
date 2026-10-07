@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 
 use egui::{Color32, RichText, Sense, Stroke, pos2, vec2};
 use photosuite_engine::BrushSettings;
-use photosuite_engine::paint::BrushPreset;
+use photosuite_engine::paint::{BrushPreset, MAX_BRUSH_SIZE};
 use serde_json::json;
 
 use crate::brush_panel::{full_uv, grouped_presets, is_current, new_preset_name, run_or_status};
@@ -97,14 +97,14 @@ pub fn body(ui: &mut egui::Ui, b: &mut BrushSettings, presets: &[BrushPreset]) -
         ui.label(RichText::new(tl!("Size")).color(t.text_dim));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             let mut size = b.size;
-            if widgets::value_field(ui, &mut size, 1.0..=5000.0, "px", 72.0).changed() {
-                b.size = size.round().clamp(1.0, 5000.0);
+            if widgets::value_field(ui, &mut size, 1.0..=MAX_BRUSH_SIZE, "px", 72.0).changed() {
+                b.size = size.round().clamp(1.0, MAX_BRUSH_SIZE);
             }
         });
     });
     let mut lv = b.size.max(1.0).ln();
-    if widgets::slider(ui, &mut lv, 0.0..=5000f32.ln(), None).changed() {
-        b.size = lv.exp().round().clamp(1.0, 5000.0);
+    if widgets::slider(ui, &mut lv, 0.0..=MAX_BRUSH_SIZE.ln(), None).changed() {
+        b.size = lv.exp().round().clamp(1.0, MAX_BRUSH_SIZE);
     }
     let mut hard = b.hardness * 100.0;
     if widgets::slider_row(ui, "Hardness", &mut hard, 0.0..=100.0, "%", None).changed() {

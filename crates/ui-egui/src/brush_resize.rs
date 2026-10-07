@@ -12,6 +12,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use egui::{Color32, Pos2, Stroke, vec2};
+use photosuite_engine::paint::MAX_BRUSH_SIZE;
 use serde_json::json;
 
 use crate::PhotosuiteApp;
@@ -21,7 +22,7 @@ use crate::state::Tool;
 /// Screen points of vertical drag that take the hardness from 0 % to 100 %.
 pub const HARDNESS_TRAVEL: f32 = 200.0;
 /// The brush size range (`tools.setBrush` accepts the same).
-const SIZE: std::ops::RangeInclusive<f32> = 1.0..=5000.0;
+const SIZE: std::ops::RangeInclusive<f32> = 1.0..=MAX_BRUSH_SIZE;
 
 /// A resize drag in progress.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -200,7 +201,7 @@ mod tests {
         assert_eq!(resized((40.0, 0.5), 10.0, 0.0, 1.0), (60.0, 0.5), "the edge follows the pointer");
         assert_eq!(resized((40.0, 0.5), 0.0, 50.0, 2.0), (40.0, 1.0), "down is harder, in screen points");
         assert_eq!(resized((40.0, 0.5), -1e9, -1e9, 1.0), (1.0, 0.0));
-        assert_eq!(resized((40.0, 0.5), 1e9, 1e9, 1.0), (5000.0, 1.0));
+        assert_eq!(resized((40.0, 0.5), 1e9, 1e9, 1.0), (MAX_BRUSH_SIZE, 1.0));
         assert_eq!(resized((40.0, 0.5), f64::NAN, f64::INFINITY, f32::NAN), (40.0, 0.5));
         assert!(is_gesture(CTRL_ALT) && !is_gesture(Modifiers::ALT) && !is_gesture(Modifiers::CTRL) && !is_gesture(Modifiers::SHIFT));
     }

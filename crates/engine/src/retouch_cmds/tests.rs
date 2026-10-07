@@ -66,6 +66,13 @@ fn clone_stamp_copies_exactly_at_all_depths() {
 }
 
 #[test]
+fn retouch_rejects_brushes_larger_than_the_raster_budget() {
+    let mut s = session(32, 32, 8, "rgb");
+    let result = s.execute("paint.dodge", json!({"points": [[10, 10]], "size": 1e30}));
+    assert!(result.is_err(), "retouch must reject an oversized brush before footprint allocation");
+}
+
+#[test]
 fn clone_stamp_samples_pre_stroke_state_and_non_aligned_returns_source() {
     let mut s = session(80, 20, 16, "rgb");
     paint_layer(&mut s, |x, _| [x as f32 / 80.0, 0.0, 0.0, 1.0]);
