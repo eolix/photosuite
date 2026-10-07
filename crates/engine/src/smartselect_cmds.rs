@@ -6,7 +6,7 @@
 use photosuite_algo::matting::{self, RefineParams};
 use photosuite_algo::segment::{Sampler, SurfaceSampler, focus, grabcut, quick, subject};
 use photosuite_algo::selection::{Region, SelectionMode, combine_region};
-use photosuite_doc::{Document, Layer, LayerContent, LayerMask};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
 use photosuite_geom::Rect;
 use serde_json::{Value, json};
 
@@ -47,12 +47,16 @@ impl Sampler for CompositeSampler<'_> {
 /// active layer has no pixels).
 fn with_sampler<R>(s: &Session, all_layers: bool, f: impl FnOnce(&dyn Sampler, &Document) -> R) -> Result<R> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
-    let doc = d.doc.clone();
-    let layer = d.active_layer.and_then(|id| doc.layer(id)).and_then(|l| l.surface());
-    Ok(match (all_layers, layer) {
-        (false, Some(surf)) => f(&SurfaceSampler(surf), &doc),
-        _ => f(&CompositeSampler(&doc), &doc),
-    })
+    Ok(with_doc_sampler(&d.doc, d.active_layer, all_layers, f))
+}
+
+/// Runs `f` with a sampler over `layer`'s pixels in `doc` (or the composite with `all_layers`, or
+/// when the layer has no pixels).
+pub(crate) fn with_doc_sampler<R>(doc: &Document, layer: Option<LayerId>, all_layers: bool, f: impl FnOnce(&dyn Sampler, &Document) -> R) -> R {
+    match (all_layers, layer.and_then(|id| doc.layer(id)).and_then(Layer::surface)) {
+        (false, Some(surf)) => f(&SurfaceSampler(surf), doc),
+        _ => f(&CompositeSampler(doc), doc),
+    }
 }
 
 /// Stores `region` combined with the current selection by `m` as one history step.

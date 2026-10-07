@@ -650,11 +650,7 @@ pub fn is_live(id: &str) -> bool {
 }
 
 /// Commands outside the catalogue that belong right after a catalogue item: `(id, after)`.
-const PLACE_AFTER: &[(&str, &str)] = &[
-    ("file.newFromClipboard", "file.new"),
-    ("layer.removeBackground", "layer.layerMask.fromTransparency"),
-    ("filter.render.relight", "filter.render.lightingEffects"),
-];
+const PLACE_AFTER: &[(&str, &str)] = &[("file.newFromClipboard", "file.new"), ("filter.render.relight", "filter.render.lightingEffects")];
 
 pub fn menu_items(app: &PhotosuiteApp) -> Vec<MenuItem> {
     // 1) Photoshop's full menu tree, in Photoshop order; live where we implement the command.

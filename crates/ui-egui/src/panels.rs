@@ -1609,6 +1609,46 @@ fn select_mode(m: egui::Modifiers) -> &'static str {
     }
 }
 
+/// A drag down the Layers panel's eye column (Photoshop): the first eye toggles and every row
+/// swept over gets the same visibility, once per row, all in one history step.
+#[derive(Clone)]
+struct EyeSweep {
+    visible: bool,
+    /// The `coalesce` key shared by the drag's `layer.setProps` calls.
+    key: u64,
+    swept: Vec<u64>,
+}
+
+/// Starts an eye-column sweep from `eye`, or applies a running one to the row `row` of `l`.
+fn eye_sweep(ctx: &egui::Context, l: &Layer, row: Rect, eye: &egui::Response, actions: &mut Vec<(String, Value)>) {
+    let id = egui::Id::new("layer-eye-sweep");
+    let set =
+        |visible: bool, key: u64| ("layer.setProps".to_string(), json!({"layer": l.id.0, "visible": visible, "coalesce": format!("layer-eye-sweep:{key}")}));
+    if eye.drag_started() {
+        let sweep = EyeSweep { visible: !l.visible, key: ctx.cumulative_pass_nr(), swept: vec![l.id.0] };
+        actions.push(set(sweep.visible, sweep.key));
+        ctx.data_mut(|d| d.insert_temp(id, sweep));
+        return;
+    }
+    let Some(mut sweep) = ctx.data(|d| d.get_temp::<EyeSweep>(id)) else { return };
+    let (down, pos, delta) = ctx.input(|i| (i.pointer.primary_down(), i.pointer.interact_pos(), i.pointer.delta()));
+    if !down {
+        ctx.data_mut(|d| d.remove::<EyeSweep>(id));
+        return;
+    }
+    // Everything the pointer passed since the last frame, so a fast drag skips no row.
+    let Some(p) = pos else { return };
+    let (y0, y1) = ((p.y - delta.y).min(p.y), (p.y - delta.y).max(p.y));
+    if y1 < row.top() || y0 >= row.bottom() || sweep.swept.contains(&l.id.0) {
+        return;
+    }
+    if l.visible != sweep.visible {
+        actions.push(set(sweep.visible, sweep.key));
+    }
+    sweep.swept.push(l.id.0);
+    ctx.data_mut(|d| d.insert_temp(id, sweep));
+}
+
 #[allow(clippy::too_many_arguments)]
 fn layer_row(
     app: &mut PhotosuiteApp,
@@ -1659,26 +1699,7 @@ fn layer_row(
     if l.visible {
         icons::paint(ui, eye, "eye", 15.0, t.icon);
     }
-    let sweep_id = egui::Id::new("layer-eye-sweep");
-    if eye_resp.drag_started() {
-        let visible = !l.visible;
-        ctx.data_mut(|d| d.insert_temp(sweep_id, (visible, vec![l.id.0])));
-        actions.push(("layer.setProps".into(), json!({"layer": l.id.0, "visible": visible})));
-    } else if let Some((visible, mut swept)) = ctx.data(|d| d.get_temp::<(bool, Vec<u64>)>(sweep_id)) {
-        if !ctx.input(|i| i.pointer.primary_down()) {
-            ctx.data_mut(|d| d.remove::<(bool, Vec<u64>)>(sweep_id));
-        } else if let Some(p) = ctx.input(|i| i.pointer.interact_pos())
-            && p.y >= rect.top()
-            && p.y < rect.bottom()
-            && !swept.contains(&l.id.0)
-        {
-            if l.visible != visible {
-                actions.push(("layer.setProps".into(), json!({"layer": l.id.0, "visible": visible})));
-            }
-            swept.push(l.id.0);
-            ctx.data_mut(|d| d.insert_temp(sweep_id, (visible, swept)));
-        }
-    }
+    eye_sweep(ctx, l, rect, &eye_resp, actions);
     if eye_resp.clicked() {
         // ⌥-click shows only this layer; ⌥-click it again to restore the others.
         if ui.input(|i| i.modifiers.alt) {
@@ -2442,7 +2463,9 @@ fn effect_rows(app: &mut PhotosuiteApp, ui: &mut egui::Ui, l: &Layer, depth: usi
             ui.painter().line_segment([pos2(rect.left() + 30.0, rect.top()), pos2(rect.left() + 30.0, rect.bottom())], Stroke::new(1.0, t.separator));
         }
         let eye = Rect::from_min_size(pos2(rect.left() + 6.0, rect.center().y - 9.0), vec2(18.0, 18.0));
-        icons::paint(ui, eye, if on { "eye" } else { "eye-off" }, 12.0, if on { t.icon } else { t.text_faint });
+        if on {
+            icons::paint(ui, eye, "eye", 12.0, t.icon);
+        }
         let x = rect.left() + indent + if i == 0 { 0.0 } else { 16.0 };
         if i == 0 {
             icons::paint(ui, Rect::from_center_size(pos2(x - 12.0, rect.center().y), vec2(14.0, 14.0)), "sparkles", 11.0, t.text_dim);

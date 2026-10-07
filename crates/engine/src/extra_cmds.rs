@@ -1,7 +1,8 @@
 //! Everyday Photoshop commands that build on the core ones: Edit › Stroke, the fixed Transform
 //! presets (Rotate 180°/90°, Flip), Paste Into, Reselect, Equalize, Reveal All, Layer from
 //! Background, Copy/Paste Layer Style, Hide All Effects, layer-mask toggles, Rasterize variants,
-//! Delete Hidden / Empty Layers, Ungroup, Hide/Show Layers, Average and Clouds.
+//! Delete Hidden / Empty Layers, Ungroup, Hide/Show Layers, Show Only This Layer (⌥-click an eye),
+//! Average and Clouds.
 
 use photosuite_algo::selection as sel;
 use photosuite_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
@@ -454,61 +455,48 @@ fn set_visible(s: &mut Session, p: &Value, visible: bool) -> Result<Value> {
     Ok(Value::Null)
 }
 
-/// Is `id` shown alone: it and its enclosing groups visible, every layer outside it hidden?
-fn shown_alone(doc: &Document, id: LayerId) -> bool {
-    let Some(path) = doc.path_of(id) else { return false };
-    doc.walk().iter().all(|(p, _, l)| match () {
-        _ if path.starts_with(p) => l.visible,
-        _ if p.starts_with(&path) => true,
-        _ => !l.visible,
-    })
+/// Is the layer at `path` shown alone: it and its enclosing groups visible, every layer outside
+/// it hidden (the layers inside a group keep their own visibility)?
+fn shown_alone(doc: &Document, path: &[usize]) -> bool {
+    doc.walk().iter().all(|(p, _, l)| if path.starts_with(p) { l.visible } else { p.starts_with(path) || !l.visible })
 }
 
-/// ⌥-click on a layer's eye: show only that layer, or, when it already is shown
-/// alone, restore every layer's visibility from before (all layers shown if that was lost).
-/// ⌥-clicking another eye while one layer is shown alone moves the solo and keeps the snapshot.
+/// ⌥-click on a layer's eye: show only that layer (and its enclosing groups), or, when it already
+/// is shown alone, restore every layer's visibility from before (every layer shown when there is
+/// no snapshot). ⌥-clicking another eye while one layer is shown alone moves the solo and keeps
+/// the snapshot. One history step either way; the snapshot is view state.
 fn show_only(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_param(s, p)?;
     let st = s.active().ok_or(EngineError::NoDocument)?;
-    let doc = st.doc.clone();
+    let doc = &st.doc;
     let path = doc.path_of(id).ok_or(EngineError::NoLayer(id))?;
-    let saved = st.show_only.clone().filter(|(prev, _)| shown_alone(&doc, *prev));
-    if shown_alone(&doc, id) {
-        let before: Vec<(LayerId, bool)> = match saved {
-            Some((_, v)) => v,
-            None => doc.walk().iter().map(|(_, _, l)| (l.id, true)).collect(),
-        };
-        s.edit("Show Layers", |doc, _| {
-            for (lid, visible) in &before {
-                if let Some(l) = doc.layer_mut(*lid) {
-                    l.visible = *visible;
-                }
-            }
-            Ok(())
-        })?;
-        if let Some(st) = s.active_mut() {
-            st.show_only = None;
-        }
-        return Ok(json!({"shownAlone": false}));
-    }
-    let snapshot = match saved {
-        Some((_, v)) => v,
-        None => doc.walk().iter().map(|(_, _, l)| (l.id, l.visible)).collect(),
+    // The snapshot only counts while its solo is still in effect (an undo or a plain eye click ends it).
+    let saved = st.show_only.as_ref().filter(|(prev, _)| doc.path_of(*prev).is_some_and(|pp| shown_alone(doc, &pp)));
+    let walk = doc.walk();
+    let solo = !shown_alone(doc, &path);
+    let (label, rows, next): (_, Vec<(Vec<usize>, bool)>, _) = if solo {
+        let snapshot = saved.map_or_else(|| walk.iter().map(|(_, _, l)| (l.id, l.visible)).collect(), |(_, v)| v.clone());
+        // Layers inside the shown layer keep their visibility.
+        let rows = walk.iter().filter(|(p, _, _)| p.len() <= path.len() || !p.starts_with(&path)).map(|(p, _, _)| (p.clone(), path.starts_with(p))).collect();
+        ("Show Only This Layer", rows, Some((id, snapshot)))
+    } else {
+        let before: Option<std::collections::HashMap<LayerId, bool>> = saved.map(|(_, v)| v.iter().copied().collect());
+        // Layers added since the snapshot keep their current visibility.
+        let rows = walk.iter().map(|(p, _, l)| (p.clone(), before.as_ref().is_none_or(|b| b.get(&l.id).copied().unwrap_or(l.visible)))).collect();
+        ("Show Layers", rows, None)
     };
-    let rows: Vec<(LayerId, bool)> =
-        doc.walk().iter().filter(|(p, _, _)| !(p.starts_with(&path) && p.len() > path.len())).map(|(p, _, l)| (l.id, path.starts_with(p))).collect();
-    s.edit("Show Only This Layer", |doc, _| {
-        for (lid, visible) in &rows {
-            if let Some(l) = doc.layer_mut(*lid) {
+    s.edit(label, |doc, _| {
+        for (p, visible) in &rows {
+            if let Some(l) = doc.layer_at_mut(p) {
                 l.visible = *visible;
             }
         }
         Ok(())
     })?;
     if let Some(st) = s.active_mut() {
-        st.show_only = Some((id, snapshot));
+        st.show_only = next;
     }
-    Ok(json!({"shownAlone": true}))
+    Ok(json!({ "shownAlone": solo }))
 }
 
 /// Pixels of a fill or smart-object layer's content alone (no mask, effects or opacity).
@@ -911,6 +899,43 @@ mod tests {
         assert_eq!(vis(&s), [false, false, true]);
         assert_eq!(s.execute("layer.showOnly", json!({"layer": ids[2].0})).unwrap()["shownAlone"], false);
         assert_eq!(vis(&s), [true, false, true], "restored, with Layer 1 still hidden");
+        // One history step each way.
+        s.execute("edit.undo", json!({})).unwrap();
+        assert_eq!(vis(&s), [false, false, true]);
+    }
+
+    #[test]
+    fn show_only_keeps_groups_and_their_contents() {
+        let mut s = session(8);
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let inner = active(&s).id;
+        let group = s.execute("layer.groupLayers", json!({"layer": inner.0})).unwrap()["layer"].as_u64().map(LayerId).unwrap();
+        let shown = |s: &Session| doc(s).walk().iter().map(|(_, _, l)| l.visible).collect::<Vec<_>>();
+        // Background, Layer 1, Group 1, Layer 2 (inside the group).
+        s.execute("layer.showOnly", json!({"layer": inner.0})).unwrap();
+        assert_eq!(shown(&s), [false, false, true, true], "the enclosing group stays visible");
+        // An undo ends the solo, so the next ⌥-click solos again from the current state.
+        s.execute("edit.undo", json!({})).unwrap();
+        assert_eq!(s.execute("layer.showOnly", json!({"layer": inner.0})).unwrap()["shownAlone"], true);
+        s.execute("edit.undo", json!({})).unwrap();
+        // Showing a group alone leaves its contents as they are.
+        s.execute("layer.setProps", json!({"layer": inner.0, "visible": false})).unwrap();
+        s.execute("layer.showOnly", json!({"layer": group.0})).unwrap();
+        assert_eq!(shown(&s), [false, false, true, false]);
+        s.execute("layer.showOnly", json!({"layer": group.0})).unwrap();
+        assert_eq!(shown(&s), [true, true, true, false]);
+    }
+
+    #[test]
+    fn show_only_without_a_snapshot_shows_every_layer() {
+        let mut s = session(16);
+        let bg = doc(&s).layers[0].id;
+        s.execute("layer.hideLayers", json!({"layer": bg.0})).unwrap();
+        // Layer 1 is already the only visible layer: ⌥-clicking it shows everything.
+        assert_eq!(s.execute("layer.showOnly", json!({})).unwrap()["shownAlone"], false);
+        assert!(doc(&s).layers.iter().all(|l| l.visible));
+        assert!(s.execute("layer.showOnly", json!({"layer": 9999})).is_err());
+        assert!(Session::new().execute("layer.showOnly", json!({})).is_err());
     }
 
     #[test]
