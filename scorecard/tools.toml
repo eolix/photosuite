@@ -211,6 +211,6 @@ note = "Engine sampling auto, rect, custom (edit_menu_cmds.rs:324); generic dial
 [[item]]
 id = "TOOL-214-16"
 target = "Liquify: redo (Cmd+Shift+Z)"
-status = "missing"
+status = "done"
 issue = 214
-note = "liquify_ui.rs has undo only"
+note = "liquify_ui.rs supports bounded redo through Cmd+Shift+Z and the control channel; new strokes clear redo"

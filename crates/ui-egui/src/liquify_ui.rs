@@ -23,6 +23,7 @@ use crate::widgets;
 const PROXY_SIDE: usize = 1600;
 const LEFT_W: f32 = 48.0;
 const RIGHT_W: f32 = 292.0;
+const REDO_STACK_LIMIT: usize = 100;
 
 /// Options shown in the properties panel (and settable over the control channel).
 #[derive(Clone, Debug)]
@@ -123,6 +124,7 @@ pub struct LiquifyDialog {
     cell: f64,
     pub field: LiquifyField,
     pub strokes: Vec<LiquifyStroke>,
+    redo: Vec<LiquifyStroke>,
     /// The stroke being drawn and its last point.
     cur: Option<(LiquifyStroke, [f64; 3])>,
     proxy: ProxyImage,
@@ -160,6 +162,7 @@ impl LiquifyDialog {
             "tool": self.opts.tool,
             "size": self.opts.size,
             "strokes": self.strokes.len() + usize::from(self.cur.is_some()),
+            "redo": self.redo.len(),
             "meshSize": self.cell,
             "maxDisplacement": self.field.max_displacement(),
             "proxy": [self.proxy.w, self.proxy.h],
@@ -189,6 +192,7 @@ impl LiquifyDialog {
     }
 
     fn begin(&mut self, p: [f64; 3], now: f64) {
+        self.redo.clear();
         let mut s = self.template();
         s.points.push(p.to_vec());
         let t0 = crate::gpu_canvas::now_ms();
@@ -221,6 +225,7 @@ impl LiquifyDialog {
     /// Applies a whole-field operation (Reconstruct…, mask buttons) as a stroke.
     fn global(&mut self, tool: LiquifyTool, amount: Option<f64>) {
         self.end();
+        self.redo.clear();
         let mut s = LiquifyStroke::new(tool, 1.0);
         s.amount = amount;
         let d = self.field.apply_stroke(&s);
@@ -238,14 +243,29 @@ impl LiquifyDialog {
 
     fn undo(&mut self) {
         self.end();
-        if self.strokes.pop().is_some() {
+        if let Some(stroke) = self.strokes.pop() {
+            if self.redo.len() == REDO_STACK_LIMIT {
+                self.redo.remove(0);
+            }
+            self.redo.push(stroke);
             self.rebuild();
+        }
+    }
+
+    fn redo(&mut self) {
+        self.end();
+        if let Some(stroke) = self.redo.pop() {
+            let d = self.field.apply_stroke(&stroke);
+            self.strokes.push(stroke);
+            self.mark(d, true);
+            self.render_dirty();
         }
     }
 
     fn restore_all(&mut self) {
         self.cur = None;
         self.strokes.clear();
+        self.redo.clear();
         self.rebuild();
     }
 
@@ -308,6 +328,7 @@ pub fn open(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> 
         cell,
         field: LiquifyField::new(canvas, cell),
         strokes: Vec::new(),
+        redo: Vec::new(),
         cur: None,
         proxy,
         out,
@@ -377,6 +398,9 @@ pub fn control(app: &mut PhotosuiteApp, ui: &Value) -> Result<Value, String> {
     if flag("undo") == Some(true) {
         d.undo();
     }
+    if flag("redo") == Some(true) {
+        d.redo();
+    }
     if flag("restoreAll") == Some(true) {
         d.restore_all();
     }
@@ -416,7 +440,10 @@ pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, _mods: egui::Modifiers) {
 
 pub fn keys(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let Some(d) = app.distort.liquify.as_mut() else { return };
-    if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::Z)) {
+    let cmd_shift = egui::Modifiers::COMMAND | egui::Modifiers::SHIFT;
+    if ctx.input_mut(|i| i.consume_key(cmd_shift, egui::Key::Z)) {
+        d.redo();
+    } else if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::Z)) {
         d.undo();
     }
     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::OpenBracket)) {
@@ -826,6 +853,7 @@ mod tests {
         }
         let d = app.distort.liquify.as_ref().unwrap();
         assert_eq!(d.strokes.len(), 2);
+        assert_eq!(d.redo.len(), 0);
         // Replaying the recorded strokes gives exactly the interactive field.
         let replay = LiquifyField::from_strokes(d.canvas, d.cell, &d.strokes);
         assert_eq!(replay, d.field);
@@ -833,6 +861,11 @@ mod tests {
         // Undo inside the dialog drops the last stroke.
         control(&mut app, &json!({"undo": true})).unwrap();
         assert_eq!(app.distort.liquify.as_ref().unwrap().strokes.len(), 1);
+        assert_eq!(app.distort.liquify.as_ref().unwrap().redo.len(), 1);
+        control(&mut app, &json!({"redo": true})).unwrap();
+        assert_eq!(app.distort.liquify.as_ref().unwrap().strokes.len(), 2);
+        assert_eq!(app.distort.liquify.as_ref().unwrap().redo.len(), 0);
+        control(&mut app, &json!({"undo": true})).unwrap();
         let before = app.session.active().unwrap().history.past_len();
         control(&mut app, &json!({"commit": true})).unwrap();
         assert!(app.distort.liquify.is_none());
@@ -868,6 +901,52 @@ mod tests {
     }
 
     #[test]
+    fn liquify_redo_restores_undone_stroke_and_a_new_stroke_clears_redo() {
+        let ctx = egui::Context::default();
+        let mut app = app_with_layer();
+        open(&mut app, &ctx).unwrap();
+        control(&mut app, &json!({"tool": "forwardWarp", "size": 40})).unwrap();
+        let draw = |app: &mut PhotosuiteApp, x: f64| {
+            for ev in
+                [ToolEvent::Down { x, y: 40.0, pressure: 1.0 }, ToolEvent::Move { x: x + 14.0, y: 40.0, pressure: 1.0 }, ToolEvent::Up { x: x + 14.0, y: 40.0 }]
+            {
+                pointer(app, ev, egui::Modifiers::NONE);
+            }
+        };
+
+        draw(&mut app, 30.0);
+        draw(&mut app, 70.0);
+        control(&mut app, &json!({"undo": true})).unwrap();
+        let d = app.distort.liquify.as_ref().unwrap();
+        assert_eq!((d.strokes.len(), d.redo.len()), (1, 1));
+
+        control(&mut app, &json!({"redo": true})).unwrap();
+        let d = app.distort.liquify.as_ref().unwrap();
+        assert_eq!((d.strokes.len(), d.redo.len()), (2, 0));
+        assert_eq!(LiquifyField::from_strokes(d.canvas, d.cell, &d.strokes), d.field);
+
+        control(&mut app, &json!({"undo": true})).unwrap();
+        draw(&mut app, 50.0);
+        let d = app.distort.liquify.as_ref().unwrap();
+        assert_eq!((d.strokes.len(), d.redo.len()), (2, 0));
+        control(&mut app, &json!({"redo": true})).unwrap();
+        assert_eq!(app.distort.liquify.as_ref().unwrap().strokes.len(), 2, "redo after a new stroke is a no-op");
+    }
+
+    #[test]
+    fn liquify_redo_stack_is_bounded() {
+        let ctx = egui::Context::default();
+        let mut app = app_with_layer();
+        open(&mut app, &ctx).unwrap();
+        let d = app.distort.liquify.as_mut().unwrap();
+        d.strokes = (0..=REDO_STACK_LIMIT).map(|_| LiquifyStroke::new(LiquifyTool::ForwardWarp, 1.0)).collect();
+        for _ in 0..=REDO_STACK_LIMIT {
+            d.undo();
+        }
+        assert_eq!(d.redo.len(), REDO_STACK_LIMIT);
+    }
+
+    #[test]
     fn shortcut_handler_undoes_liquify_even_when_egui_owns_keyboard_focus() {
         let ctx = egui::Context::default();
         let mut app = app_with_layer();
@@ -890,6 +969,20 @@ mod tests {
         });
         out.textures_delta.clear();
         assert_eq!(app.distort.liquify.as_ref().unwrap().strokes.len(), 0);
+        let raw = egui::RawInput {
+            events: vec![egui::Event::Key {
+                key: egui::Key::Z,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+            }],
+            ..Default::default()
+        };
+        let _ = ctx.run_ui(raw, |ui| {
+            crate::shortcuts::handle(&mut app, ui.ctx());
+        });
+        assert_eq!(app.distort.liquify.as_ref().unwrap().strokes.len(), 1, "Cmd+Shift+Z redoes the last stroke");
     }
 
     #[test]
