@@ -50,6 +50,10 @@ pub struct CameraRawDialog {
     pub opened_file: Option<photosuite_doc::DocId>,
     /// The one expanded panel (an accordion), by its shown title; Basic to begin with.
     pub open_section: Option<String>,
+    /// The developed preview's red, green and blue histograms (alpha-weighted, display levels).
+    hist: Box<[[f32; 256]; 3]>,
+    /// The histogram's Channel menu: 0 RGB, 1 Red, 2 Green, 3 Blue, 4 Colours (the three overlaid).
+    pub hist_channel: usize,
 }
 
 /// Camera file extensions (the raw formats File › Open reads).
@@ -62,7 +66,7 @@ pub fn is_raw_name(name: &str) -> bool {
 
 impl CameraRawDialog {
     pub fn describe(&self) -> Value {
-        json!({"layer": self.layer.0, "params": serde_json::to_value(&self.params).unwrap_or(Value::Null), "proxy": [self.pw, self.ph], "renderMs": self.render_ms, "before": self.show_before, "openSection": self.open_section})
+        json!({"layer": self.layer.0, "params": serde_json::to_value(&self.params).unwrap_or(Value::Null), "proxy": [self.pw, self.ph], "renderMs": self.render_ms, "before": self.show_before, "openSection": self.open_section, "histogramChannel": self.hist_channel})
     }
 
     /// Params for the engine: only the settings that differ from the defaults.
@@ -114,6 +118,7 @@ impl CameraRawDialog {
         p.pixel_scale = (self.pw as f32 / self.full_w.max(1) as f32).min(1.0);
         photosuite_algo::camera_raw::develop(&mut px, self.pw, self.ph, &p, self.float);
         let img = Self::image(&px, self.pw, self.ph);
+        *self.hist = colour_histogram(&px);
         match &mut self.tex {
             Some(t) => t.set(img, egui::TextureOptions::LINEAR),
             None => self.tex = Some(ctx.load_texture("camera-raw-after", img, egui::TextureOptions::LINEAR)),
@@ -229,6 +234,8 @@ pub fn open(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> 
         wb_pick: false,
         opened_file: None,
         open_section: Some(tl!("Basic").to_string()),
+        hist: Box::new([[0.0; 256]; 3]),
+        hist_channel: HIST_COLOURS,
     };
     d.render(ctx);
     app.camera_raw = Some(d);
@@ -474,7 +481,13 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         let right = ERect::from_min_max(pos2(body.right() - PANEL_W, body.top()), body.max);
         painter.rect_filled(right, 0.0, t.dock);
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
-        let mut props = ui.new_child(egui::UiBuilder::new().max_rect(right.shrink2(vec2(14.0, 10.0))));
+        let inner = right.shrink2(vec2(14.0, 10.0));
+        // Histogram at the top, the panels scrolling below it.
+        let head = ERect::from_min_size(inner.min, vec2(inner.width(), HIST_HEADER));
+        let mut hu = ui.new_child(egui::UiBuilder::new().max_rect(head));
+        histogram(&mut hu, d);
+        painter.line_segment([pos2(right.left(), head.bottom() + 5.0), pos2(right.right(), head.bottom() + 5.0)], Stroke::new(1.0, t.separator));
+        let mut props = ui.new_child(egui::UiBuilder::new().max_rect(ERect::from_min_max(pos2(inner.left(), head.bottom() + 12.0), inner.max)));
         let mut dirty = false;
         let (mut pick, mut auto) = (d.wb_pick, false);
         let mut open = d.open_section.clone();
@@ -647,6 +660,108 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         Some("cancel") => cancel(app, ctx),
         _ => {}
+    }
+}
+
+/// The Channel menu's Colours entry: red, green and blue overlaid.
+const HIST_COLOURS: usize = 4;
+/// Height of the histogram header (Channel menu and plot) above the panels.
+const HIST_HEADER: f32 = 132.0;
+/// The plot's height, and a bin holding this share of the pixels reaches its top.
+const HIST_HEIGHT: f32 = 100.0;
+const HIST_PEAK_SHARE: f32 = 1.0 / 60.0;
+/// The develop output is 8-bit for display, so the bins comb; the plot smooths them over ±2.
+const HIST_SMOOTH: usize = 2;
+
+/// Red, green and blue histograms of straight-alpha pixels, at the 8-bit levels the preview
+/// shows, each pixel counted by its alpha.
+fn colour_histogram(px: &[[f32; 4]]) -> [[f32; 256]; 3] {
+    let mut h = [[0.0f32; 256]; 3];
+    let bin = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as usize;
+    for q in px {
+        let a = q[3].clamp(0.0, 1.0);
+        if a <= 0.0 {
+            continue;
+        }
+        for (c, hc) in h.iter_mut().enumerate() {
+            if let Some(b) = hc.get_mut(bin(q[c])) {
+                *b += a;
+            }
+        }
+    }
+    h
+}
+
+/// A triangular blur over ±`radius` bins (display only).
+fn smooth_bins(bins: &[f32; 256], radius: usize) -> [f32; 256] {
+    let r = radius as i64;
+    let total: f32 = (-r..=r).map(|o| (r + 1 - o.abs()) as f32).sum();
+    let mut out = [0.0f32; 256];
+    for (i, o) in out.iter_mut().enumerate() {
+        let sum: f32 = (-r..=r)
+            .filter_map(|off| {
+                let j = usize::try_from(i as i64 + off).ok()?;
+                Some(bins.get(j)? * (r + 1 - off.abs()) as f32)
+            })
+            .sum();
+        *o = sum / total.max(1.0);
+    }
+    out
+}
+
+/// One filled band: bin `i`'s height is `bins[i] * scale` of the plot, at most all of it.
+/// Drawn with zero alpha (premultiplied), so bands add up: red and green overlap as yellow,
+/// all three as white.
+fn draw_band(p: &egui::Painter, r: ERect, bins: &[f32; 256], scale: f32, color: Color32) {
+    let add = Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 0);
+    let mut mesh = egui::Mesh::default();
+    let x = |i: usize| r.left() + i as f32 / 255.0 * r.width();
+    let y = |v: f32| r.bottom() - (v * scale).clamp(0.0, 1.0) * r.height();
+    for i in 0..255 {
+        let (a, b) = (bins[i], bins[i + 1]);
+        let n = mesh.vertices.len() as u32;
+        for q in [pos2(x(i), r.bottom()), pos2(x(i), y(a)), pos2(x(i + 1), y(b)), pos2(x(i + 1), r.bottom())] {
+            mesh.colored_vertex(q, add);
+        }
+        mesh.add_triangle(n, n + 1, n + 2);
+        mesh.add_triangle(n, n + 2, n + 3);
+    }
+    p.add(mesh);
+}
+
+/// The histogram header: Channel menu, then the plot of the developed preview.
+fn histogram(ui: &mut egui::Ui, d: &mut CameraRawDialog) {
+    let t = Tokens::get(ui.ctx());
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(tl!("Channel:")).color(t.text_dim));
+        let opts = [(0usize, "RGB"), (1, "Red"), (2, "Green"), (3, "Blue"), (HIST_COLOURS, "Colours")];
+        widgets::dropdown(ui, "camera-raw-hist-channel", &mut d.hist_channel, &opts, ui.available_width().min(220.0));
+    });
+    ui.add_space(4.0);
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), HIST_HEIGHT), Sense::hover());
+    let p = ui.painter_at(r);
+    // The bands add light, so the plot is dark and the bands light on every theme.
+    p.rect_filled(r, t.radius_sm, Color32::from_gray(18));
+    let fill = Color32::from_gray(205);
+    let plot = r.shrink2(vec2(2.0, 1.0));
+    let n = (d.pw * d.ph).max(1) as f32;
+    let scale = 1.0 / (HIST_PEAK_SHARE * n);
+    let h = d.hist.as_ref().map(|c| smooth_bins(&c, HIST_SMOOTH));
+    match d.hist_channel {
+        // RGB: the three channels' sum, at a third of the scale.
+        0 => {
+            let mut sum = [0.0f32; 256];
+            for (i, v) in sum.iter_mut().enumerate() {
+                *v = h[0][i] + h[1][i] + h[2][i];
+            }
+            draw_band(&p, plot, &sum, scale / 3.0, fill);
+        }
+        c @ 1..=3 => draw_band(&p, plot, &h[c - 1], scale, fill),
+        _ => {
+            for (c, color) in [Color32::from_rgb(255, 0, 0), Color32::from_rgb(0, 255, 0), Color32::from_rgb(0, 0, 255)].into_iter().enumerate() {
+                draw_band(&p, plot, &h[c], scale, color);
+            }
+        }
     }
 }
 
@@ -829,6 +944,22 @@ mod tests {
         let c = curve(&h);
         assert_eq!(c.len(), 3, "no point added beside it: {c:?}");
         assert!(c[1][0] < first[0] - 10.0 && c[1][1] < first[1] - 20.0, "{first:?} → {:?}", c[1]);
+    }
+
+    #[test]
+    fn histogram_counts_the_preview_by_alpha_and_smooths_for_display() {
+        let px = [[1.0, 0.0, 0.5, 1.0], [1.0, 0.0, 0.5, 0.5], [0.2, 0.2, 0.2, 0.0], [f32::NAN, 2.0, -1.0, 1.0]];
+        let h = colour_histogram(&px);
+        assert_eq!((h[0][255], h[1][0], h[2][128]), (1.5, 1.5, 1.5), "half-transparent pixels count half");
+        assert_eq!(h[0][51], 0.0, "fully transparent pixels don't count");
+        assert_eq!((h[0][0], h[1][255], h[2][0]), (1.0, 1.0, 1.0), "out-of-range and NaN values land in the end bins");
+        let mut spike = [0.0; 256];
+        spike[100] = 9.0;
+        let sm = smooth_bins(&spike, 2);
+        assert_eq!((sm[100], sm[99], sm[98], sm[97]), (3.0, 2.0, 1.0, 0.0));
+        assert!((sm.iter().sum::<f32>() - 9.0).abs() < 1e-4, "smoothing keeps the total away from the ends");
+        assert_eq!(smooth_bins(&spike, 0), spike);
+        smooth_bins(&[1.0; 256], 300);
     }
 
     #[test]
