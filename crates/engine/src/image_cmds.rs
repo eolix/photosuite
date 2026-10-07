@@ -1,7 +1,7 @@
 //! Image menu: Image Size, Canvas Size, Crop, Trim, Mode (colour model and
 //! bit depth) conversions, Duplicate.
 
-use photosuite_algo::resample::{Resample, crop_surface, resize_surface, translate_surface};
+use photosuite_algo::resample::{Resample, crop_surface, resize_surface_in_canvas, translate_surface};
 use photosuite_color::{ColorMode, SampleType};
 use photosuite_doc::{Document, Effect, Effects, FxPaint, Layer, LayerContent, Size};
 use photosuite_geom::Rect;
@@ -125,16 +125,18 @@ fn image_size(s: &mut Session, p: &Value) -> Result<Value> {
         if (sx - 1.0).abs() < 1e-12 && (sy - 1.0).abs() < 1e-12 {
             return Ok(());
         }
+        // Content that reaches the canvas edge keeps it: a Background stays opaque to the border.
+        let canvas = Rect::new(0, 0, ow as i32, oh as i32);
         for_each_surface(&mut doc.layers, true, &mut |surf, is_mask| {
-            *surf = resize_surface(surf, sx, sy, if is_mask { Resample::Bilinear } else { filter });
+            *surf = resize_surface_in_canvas(surf, sx, sy, if is_mask { Resample::Bilinear } else { filter }, canvas);
         });
         let k = ((sx + sy) / 2.0) as f32;
         for_each_layer(&mut doc.layers, &mut |l| scale_effects(&mut l.effects, k));
         for ch in doc.channels.iter_mut().chain(doc.quick_mask.as_mut()) {
-            ch.surface = resize_surface(&ch.surface, sx, sy, Resample::Bilinear);
+            ch.surface = resize_surface_in_canvas(&ch.surface, sx, sy, Resample::Bilinear, canvas);
         }
         if let Some(sel) = &doc.selection {
-            doc.selection = Some(resize_surface(sel, sx, sy, Resample::Bilinear));
+            doc.selection = Some(resize_surface_in_canvas(sel, sx, sy, Resample::Bilinear, canvas));
         }
         // Vector geometry, guides and marks scale with the pixels; vectors re-render sharp.
         crate::canvas_geom::transform_geometry(doc, &photosuite_geom::Affine { m: [sx, 0.0, 0.0, sy, 0.0, 0.0] });
@@ -464,6 +466,34 @@ mod tests {
             let Effect::DropShadow(sh) = &l.effects.items[0] else { panic!() };
             assert_eq!(sh.distance, 10.0);
             assert_eq!(l.mask.as_ref().unwrap().surface.default_pixel(), vec![1.0]);
+        }
+    }
+
+    /// The canvas border stays opaque after Image Size (it used to fade into transparency, so a
+    /// Background or a 200 % export got a translucent frame), and a full selection stays full.
+    #[test]
+    fn image_size_keeps_canvas_edges_opaque() {
+        for depth in [8, 16, 32] {
+            for (w, resample) in [(60, "bicubic"), (41, "lanczos"), (15, "bilinear"), (77, "preserveDetails")] {
+                let mut s = Session::new();
+                s.execute("file.new", json!({"width": 30, "height": 20, "depth": depth, "background": "#336699"})).unwrap();
+                s.execute("select.all", json!({})).unwrap();
+                s.execute("image.imageSize", json!({"width": w, "resample": resample})).unwrap();
+                let d = doc(&s);
+                let flat = photosuite_compose::flatten(d);
+                let (w, h) = (flat.rect.width() as usize, flat.rect.height() as usize);
+                let mid = flat.px[(h / 2) * w + w / 2];
+                assert!((mid[3] - 1.0).abs() < 1e-3, "{depth} {resample}: {mid:?}");
+                for p in &flat.px {
+                    let off = p.iter().zip(mid).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+                    assert!(off < 0.01, "{depth} {resample} {w}: {p:?} vs {mid:?}");
+                }
+                let sel = d.selection.as_ref().unwrap();
+                let (x1, y1) = (d.size.width as i32 - 1, d.size.height as i32 - 1);
+                for (x, y) in [(0, 0), (x1, 0), (0, y1), (x1, y1)] {
+                    assert!(sel.pixel(x, y)[0] > 0.99, "{depth} {resample}: selection at ({x},{y})");
+                }
+            }
         }
     }
 

@@ -71,15 +71,17 @@ struct Taps {
 }
 
 /// Taps for mapping output coordinate `o` (in `[dst0, dst1)`) to the source
-/// via `u = (o + 0.5) / scale - 0.5`.
-fn taps(dst0: i32, dst1: i32, scale: f64, filter: Resample) -> Vec<Taps> {
+/// via `u = (o + 0.5) / scale - 0.5`. With `edge` (`[first, last]` source index), taps outside it
+/// read the nearest sample inside it: the image repeats its edge instead of fading out.
+fn taps(dst0: i32, dst1: i32, scale: f64, filter: Resample, edge: Option<(i32, i32)>) -> Vec<Taps> {
     let stretch = if scale < 1.0 { 1.0 / scale } else { 1.0 };
     let support = filter.support() * stretch;
+    let clamp = |i: i32| edge.map_or(i, |(a, b)| i.clamp(a, b));
     (dst0..dst1)
         .map(|o| {
             let u = (o as f64 + 0.5) / scale - 0.5;
             if filter == Resample::Nearest && scale >= 1.0 {
-                return Taps { start: (u + 0.5).floor() as i32, weights: vec![1.0] };
+                return Taps { start: clamp((u + 0.5).floor() as i32), weights: vec![1.0] };
             }
             let lo = (u - support).ceil() as i32;
             let hi = (u + support).floor() as i32;
@@ -90,7 +92,15 @@ fn taps(dst0: i32, dst1: i32, scale: f64, filter: Resample) -> Vec<Taps> {
                     *v /= s;
                 }
             }
-            Taps { start: lo, weights: w.into_iter().map(|v| v as f32).collect() }
+            // Fold the weights of taps beyond the edge onto the edge sample.
+            let start = clamp(lo);
+            let mut folded = vec![0.0f32; (clamp(hi) - start + 1).max(1) as usize];
+            for (i, v) in (lo..=hi).zip(w) {
+                if let Some(slot) = folded.get_mut((clamp(i) - start) as usize) {
+                    *slot += v as f32;
+                }
+            }
+            Taps { start, weights: folded }
         })
         .collect()
 }
@@ -106,6 +116,19 @@ pub fn scaled_rect(r: Rect, sx: f64, sy: f64) -> Rect {
 /// Resizes a surface by `(sx, sy)` about the document origin. The surface's
 /// default pixel is kept (masks keep their "reveal all" background).
 pub fn resize_surface(s: &Surface, sx: f64, sy: f64, filter: Resample) -> Surface {
+    resize(s, sx, sy, filter, None)
+}
+
+/// [`resize_surface`] for a layer, mask or channel of a document whose canvas is `canvas`
+/// (Image Size): at the canvas edges the pixels repeat outwards, so content that reaches an edge
+/// keeps it (an opaque layer stays opaque to the border) instead of fading into the default pixel.
+/// Pixels beyond the canvas count as the surface's own, and inside the canvas nothing changes.
+pub fn resize_surface_in_canvas(s: &Surface, sx: f64, sy: f64, filter: Resample, canvas: Rect) -> Surface {
+    let area = s.content_bounds().union(&canvas);
+    resize(s, sx, sy, filter, (!area.is_empty()).then_some(area))
+}
+
+fn resize(s: &Surface, sx: f64, sy: f64, filter: Resample, edge: Option<Rect>) -> Surface {
     let fmt = s.format();
     let mut out = Surface::with_default(fmt, &s.default_pixel());
     let src = s.content_bounds();
@@ -115,8 +138,8 @@ pub fn resize_surface(s: &Surface, sx: f64, sy: f64, filter: Resample) -> Surfac
     }
     let n = fmt.channels();
     let alpha = fmt.alpha;
-    let hx = taps(dst.x0, dst.x1, sx, filter);
-    let vy = taps(dst.y0, dst.y1, sy, filter);
+    let hx = taps(dst.x0, dst.x1, sx, filter, edge.map(|r| (r.x0, r.x1 - 1)));
+    let vy = taps(dst.y0, dst.y1, sy, filter, edge.map(|r| (r.y0, r.y1 - 1)));
     let x_lo = hx.iter().map(|t| t.start).min().unwrap_or(0);
     let x_hi = hx.iter().map(|t| t.start + t.weights.len() as i32).max().unwrap_or(0);
     let dw = dst.width() as usize;
@@ -266,6 +289,38 @@ mod tests {
         let o = resize_surface(&s, 1.7, 1.7, Resample::Lanczos);
         let edge = o.pixel(17, 25);
         assert!(edge[3] > 0.0 && (edge[0] - 1.0).abs() < 0.05 && edge[1].abs() < 0.05, "{edge:?}");
+    }
+
+    /// Image Size of a layer that fills the canvas: its edges stay opaque and keep their colour,
+    /// up or down, at every depth; a layer away from the edges keeps its soft border.
+    #[test]
+    fn canvas_edges_repeat_instead_of_fading() {
+        let canvas = Rect::new(0, 0, 30, 20);
+        let colour = [0.2, 0.6, 1.0, 1.0];
+        let filters = [Resample::Nearest, Resample::Bilinear, Resample::Bicubic, Resample::Lanczos, Resample::PreserveDetails];
+        for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
+            let fmt = PixelFormat::new(ColorMode::Rgb, sample, true);
+            let mut s = Surface::new(fmt);
+            s.fill_rect(canvas, &colour);
+            for f in filters {
+                for k in [2.0, 1.37, 0.5] {
+                    let o = resize_surface_in_canvas(&s, k, k, f, canvas);
+                    let dst = scaled_rect(canvas, k, k);
+                    assert_eq!(o.content_bounds(), dst, "{sample:?} {f:?} {k}");
+                    for (x, y) in [(0, 0), (dst.x1 - 1, 0), (0, dst.y1 - 1), (dst.x1 - 1, dst.y1 - 1), (dst.x1 / 2, 0), (0, dst.y1 / 2)] {
+                        let p = o.pixel(x, y);
+                        let off = p.iter().zip(colour).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+                        assert!(off < 0.01, "{sample:?} {f:?} {k} ({x},{y}): {p:?}");
+                    }
+                }
+            }
+            // Inside the canvas the default pixel is still what lies around a layer.
+            let mut inner = Surface::new(fmt);
+            inner.fill_rect(Rect::new(10, 5, 20, 15), &[1.0, 0.0, 0.0, 1.0]);
+            let r = Rect::new(0, 0, 60, 40);
+            let a = resize_surface_in_canvas(&inner, 1.7, 1.7, Resample::Lanczos, canvas);
+            assert_eq!(a.read_region(r), resize_surface(&inner, 1.7, 1.7, Resample::Lanczos).read_region(r), "{sample:?}");
+        }
     }
 
     #[test]
