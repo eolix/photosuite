@@ -59,7 +59,8 @@ fn drag_offset(app: &PhotosuiteApp) -> Option<(i32, i32)> {
 /// the pointer. `None` without a drag (or when the layers can't move: locked, say; the drag then
 /// shows its arrow and the release reports why).
 pub(crate) fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> Option<(Arc<Document>, u64)> {
-    if app.session.active_index() != Some(idx) {
+    // Preferences › Interface › Show bounding box when dragging layer: outline and arrow only.
+    if app.session.active_index() != Some(idx) || app.session.prefs().interface.show_bounding_box_when_dragging_layer {
         return None;
     }
     let Some(offset) = drag_offset(app) else {
@@ -182,5 +183,30 @@ mod tests {
         // From +10 to +20 the strip x 0..10 shows pixels that were off the canvas a frame ago.
         let r = super::damage(&app, st.doc.id, st.revision, keys[0], keys[1]).unwrap();
         assert_eq!(r, Rect::new(0, 0, 64, 64));
+    }
+
+    /// Mid-drag on a painted layer: is the layer shown at the pointer?
+    fn live(outline: bool) -> bool {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        app.sync_views();
+        app.session.execute("layer.new.layer", json!({})).unwrap();
+        app.session.execute("select.rect", json!({"x": 8, "y": 8, "width": 16, "height": 16})).unwrap();
+        app.session.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
+        app.session.execute("select.deselect", json!({})).unwrap();
+        app.session.edit_prefs(|p| p.interface.show_bounding_box_when_dragging_layer = outline);
+        app.ui.tool = Tool::Move;
+        let m = egui::Modifiers::NONE;
+        crate::canvas::tool_event(&mut app, ToolEvent::Down { x: 16.0, y: 16.0, pressure: 1.0 }, m);
+        crate::canvas::tool_event(&mut app, ToolEvent::Move { x: 30.0, y: 20.0, pressure: 1.0 }, m);
+        let shown = super::display_doc(&mut app, 0).is_some();
+        assert_eq!(shown, super::showing(&app));
+        shown
+    }
+
+    #[test]
+    fn bounding_box_preference_turns_the_live_drag_off() {
+        assert!(live(false), "by default the layer follows the pointer");
+        assert!(!live(true), "with the preference on, only the outline and arrow move");
     }
 }
