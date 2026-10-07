@@ -335,6 +335,8 @@ pub struct ToolOptions {
     /// Gradient tool mode: false = "Gradient" (live: a Gradient Fill layer, editable on canvas),
     /// true = "Classic gradient" (paints the pixels).
     pub gradient_classic: bool,
+    /// Blend mode used by both live and classic gradient drags.
+    pub gradient_blend_mode: photosuite_color::BlendMode,
     pub fill_opacity: f32,
     /// Paint Bucket fill source: false = Foreground colour, true = Pattern (Patterns panel selection).
     pub bucket_fill_pattern: bool,
@@ -443,6 +445,7 @@ impl Default for ToolOptions {
             gradient_reverse: false,
             gradient_dither: true,
             gradient_classic: false,
+            gradient_blend_mode: photosuite_color::BlendMode::Normal,
             fill_opacity: 100.0,
             bucket_fill_pattern: false,
             type_font: "Inter".into(),

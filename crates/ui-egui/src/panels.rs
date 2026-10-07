@@ -718,6 +718,9 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                         }
                         ui.spacing_mut().item_spacing.x = 8.0;
                         widgets::vline(ui, 22.0);
+                        opt_label(ui, tl!("Mode"));
+                        let opts: Vec<(BlendMode, &str)> = BlendMode::LAYER_MODES.iter().map(|m| (*m, m.label())).collect();
+                        widgets::dropdown(ui, "gradient-blend-mode", &mut app.ui.tool_options.gradient_blend_mode, &opts, 96.0);
                         opt_label(ui, tl!("Opacity"));
                         widgets::value_field(ui, &mut app.ui.tool_options.fill_opacity, 1.0..=100.0, "%", 62.0);
                         widgets::checkbox(ui, &mut app.ui.tool_options.gradient_reverse, tl!("Reverse"));

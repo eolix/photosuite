@@ -2498,7 +2498,7 @@ fn finish_gesture(app: &mut PhotosuiteApp, d: Drag) {
                 // picker, the Gradients panel's selection), as in live mode.
                 let _ = app.run(
                     "paint.gradient",
-                    json!({"from": [d.start[0], d.start[1]], "to": [end[0], end[1]], "style": o.gradient_style, "reverse": o.gradient_reverse, "dither": o.gradient_dither, "opacity": o.fill_opacity, "target": paint_target(app)}),
+                    json!({"from": [d.start[0], d.start[1]], "to": [end[0], end[1]], "style": o.gradient_style, "reverse": o.gradient_reverse, "dither": o.gradient_dither, "opacity": o.fill_opacity, "mode": o.gradient_blend_mode.label(), "target": paint_target(app)}),
                 );
             }
         }

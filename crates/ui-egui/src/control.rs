@@ -70,7 +70,7 @@ pub enum Outcome {
 
 /// The fields `ui.set` reads. Anything else is rejected before a field is applied, so a typo or
 /// a field the method doesn't have can't reply with success while nothing changes (#412).
-pub const UI_SET_FIELDS: [&str; 16] = [
+pub const UI_SET_FIELDS: [&str; 18] = [
     "tool",
     "panels",
     "dock",
@@ -87,6 +87,8 @@ pub const UI_SET_FIELDS: [&str; 16] = [
     "brushTab",
     "brushesView",
     "brushSize",
+    "gradientBlendMode",
+    "gradientClassic",
 ];
 
 fn ok(v: Value) -> Outcome {
@@ -180,11 +182,35 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
             if let Some(field) = p.as_object().and_then(|o| o.keys().find(|k| !UI_SET_FIELDS.contains(&k.as_str()))) {
                 return err(format!("unknown field `{field}` (fields: {})", UI_SET_FIELDS.join(", ")));
             }
+            let gradient_blend = if let Some(value) = p.get("gradientBlendMode") {
+                let Some(name) = value.as_str() else { return err("gradientBlendMode must be a blend mode name") };
+                let Some(mode) = photosuite_engine::commands::blend_from_str(name).filter(|m| photosuite_color::BlendMode::LAYER_MODES.contains(m)) else {
+                    return err(format!("unknown gradient blend mode `{name}`"));
+                };
+                Some(mode)
+            } else {
+                None
+            };
+            if let Some(value) = p.get("gradientClassic")
+                && !value.is_boolean()
+            {
+                return err("gradientClassic must be a boolean");
+            }
             if let Some(t) = s("tool") {
                 match Tool::from_name(t) {
                     Some(t) => app.ui.tool = t,
                     None => return err(format!("unknown tool `{t}`")),
                 }
+            }
+            let gradient_before = app.ui.tool_options.clone();
+            if let Some(mode) = gradient_blend {
+                app.ui.tool_options.gradient_blend_mode = mode;
+            }
+            if let Some(classic) = p.get("gradientClassic").and_then(Value::as_bool) {
+                app.ui.tool_options.gradient_classic = classic;
+            }
+            if gradient_blend.is_some() {
+                crate::gradient_ui::options_changed(app, &gradient_before);
             }
             if let Some(panels) = p.get("panels") {
                 let mut cur = serde_json::to_value(&app.ui.panels).unwrap_or_default();
@@ -535,6 +561,7 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
     json!({
         "window": {"width": screen.width(), "height": screen.height(), "pixelsPerPoint": ctx.pixels_per_point()},
         "tool": app.ui.tool,
+        "toolOptions": app.ui.tool_options,
         "textEdit": app.ui.text_edit,
         "layerMenu": app.ui.layer_menu,
         "panels": app.ui.panels,
@@ -635,6 +662,19 @@ mod tests {
             assert!(!r.to_string().contains("unknown field"), "{field}: {r}");
         }
         assert_eq!(call(&mut app, &ctx, "ui.set", Value::Null)["ok"], true);
+    }
+
+    #[test]
+    fn ui_set_gradient_blend_mode_validates_and_updates_options() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        let good = call(&mut app, &ctx, "ui.set", json!({"tool": "gradient", "gradientBlendMode": "Difference", "gradientClassic": true}));
+        assert_eq!(good["ok"], true, "{good}");
+        assert_eq!(app.ui.tool_options.gradient_blend_mode, photosuite_color::BlendMode::Difference);
+        assert!(app.ui.tool_options.gradient_classic);
+        let bad = call(&mut app, &ctx, "ui.set", json!({"gradientBlendMode": "nonsense", "gradientClassic": false}));
+        assert_eq!(bad["ok"], false, "{bad}");
+        assert!(app.ui.tool_options.gradient_classic, "invalid mode must not change options");
     }
 
     #[test]
