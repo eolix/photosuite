@@ -161,3 +161,41 @@ fn collapse_all_groups_from_the_panel_menu_and_it_is_saved() {
         assert!(groups_open(&s).iter().all(|o| !o), "{name}: groups stay closed");
     }
 }
+
+/// Dragging down the eye column hides (or shows) every layer swept over and never reorders the
+/// layers; a hidden layer's eye box is empty and a click shows it again.
+#[test]
+fn dragging_down_the_eyes_sweeps_visibility_without_reordering() {
+    let mut s = photosuite_engine::Session::new();
+    s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
+    for i in 0..4 {
+        s.execute("layer.new.layer", json!({"name": format!("L{i}")})).unwrap();
+    }
+    let mut h = harness(s, 1.0, "slate", 290.0);
+    let order = |h: &Harness<'_, PhotosuiteApp>| h.state().session.active().unwrap().doc.layers.iter().map(|l| l.id).collect::<Vec<_>>();
+    let visible = |h: &Harness<'_, PhotosuiteApp>, id: u64| h.state().session.active().unwrap().doc.layer(photosuite_doc::LayerId(id)).unwrap().visible;
+    let before = order(&h);
+    // Rows top to bottom: L3, L2, L1, L0, Background.
+    let rows = recorded(&h.ctx);
+    let eye = |r: &RowRects| pos2(r.row.left() + 17.0, r.row.center().y);
+    let (first, last) = (eye(&rows[0]), eye(&rows[2]));
+    h.event(egui::Event::PointerMoved(first));
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton { pos: first, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+    for k in 1..=10 {
+        h.event(egui::Event::PointerMoved(first + (last - first) * (k as f32 / 10.0)));
+        h.run_steps(1);
+    }
+    h.event(egui::Event::PointerButton { pos: last, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+    for r in &rows[..3] {
+        assert!(!visible(&h, r.layer), "layer {} swept hidden", r.layer);
+    }
+    assert!(visible(&h, rows[3].layer), "rows past the sweep are untouched");
+    assert_eq!(order(&h), before, "an eye drag never reorders the layers");
+    // A click on the (empty) eye box of a hidden layer shows it again.
+    let p = eye(&recorded(&h.ctx)[1]);
+    click(&mut h, p);
+    assert!(visible(&h, rows[1].layer));
+}
