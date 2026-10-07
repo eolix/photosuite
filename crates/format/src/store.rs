@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
+use std::time::SystemTime;
 
 use photosuite_color::{PixelFormat, SampleType};
 use photosuite_doc::Document;
@@ -313,13 +314,26 @@ fn tile_le(t: &Tile, sample: SampleType) -> std::borrow::Cow<'_, [u8]> {
 }
 
 /// Incremental `.pcraft` writer. Keep one per open document: it remembers
-/// tile hashes (by `Arc` identity) and compressed objects, so re-saving only
-/// hashes and compresses tiles that changed.
+/// tile hashes (by `Arc` identity), compressed objects, and objects it has
+/// verified in the current directory, so repeated saves stay cheap.
 #[derive(Default)]
 pub struct PcraftWriter {
     hash_cache: HashMap<usize, (Weak<Tile>, Hash)>,
     /// Compressed objects by bundle path (ZIP mode).
     compressed: HashMap<String, Arc<Vec<u8>>>,
+    verified_directory: Option<DirectoryVerificationCache>,
+}
+
+#[derive(Default)]
+struct DirectoryVerificationCache {
+    directory: PathBuf,
+    objects: HashMap<String, FileSignature>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct FileSignature {
+    len: u64,
+    modified: SystemTime,
 }
 
 struct Prepared {
@@ -341,6 +355,59 @@ impl Object {
             Object::Blob(b) => compress(b),
         }
     }
+
+    fn matches_content_hash(&self, compressed: &[u8], what: &str) -> bool {
+        let expected = match self {
+            Object::Tile(tile, sample) => tile_le(tile, *sample),
+            Object::Blob(blob) => std::borrow::Cow::Borrowed(blob.as_slice()),
+        };
+        decompress(compressed, expected.len(), what).is_ok_and(|actual| hash_bytes(&actual) == hash_bytes(&expected))
+    }
+}
+
+fn file_signature(metadata: &std::fs::Metadata) -> Option<FileSignature> {
+    Some(FileSignature { len: metadata.len(), modified: metadata.modified().ok()? })
+}
+
+fn path_signature(path: &Path) -> Result<Option<FileSignature>> {
+    match std::fs::metadata(path) {
+        Ok(metadata) if metadata.is_file() => Ok(file_signature(&metadata)),
+        Ok(_) => Ok(None),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn existing_object_is_valid(path: &Path, object: &Object, what: &str) -> Result<(bool, Option<FileSignature>)> {
+    let mut file = match std::fs::File::open(path) {
+        Ok(file) => file,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((false, None)),
+        Err(e) => return Err(e.into()),
+    };
+    let metadata = file.metadata()?;
+    if !metadata.is_file() {
+        return Ok((false, None));
+    }
+    let signature = file_signature(&metadata);
+
+    let expected_len = match object {
+        Object::Tile(tile, sample) => tile_le(tile, *sample).len(),
+        Object::Blob(blob) => blob.len(),
+    };
+    // This is the same bound used by the tile loader. It comfortably includes
+    // zstd framing overhead while keeping damaged files bounded when inspected.
+    let max_compressed_len = expected_len.saturating_add(expected_len / 8).saturating_add(4096);
+    let max_compressed_len_u64 = u64::try_from(max_compressed_len).unwrap_or(u64::MAX);
+    if metadata.len() > max_compressed_len_u64 {
+        return Ok((false, None));
+    }
+
+    let mut compressed = Vec::new();
+    (&mut file).take(max_compressed_len_u64.saturating_add(1)).read_to_end(&mut compressed)?;
+    if compressed.len() > max_compressed_len {
+        return Ok((false, None));
+    }
+    Ok((object.matches_content_hash(&compressed, what), signature))
 }
 
 /// A bundle path and its compressed bytes.
@@ -451,27 +518,55 @@ impl PcraftWriter {
         Ok((z.finish()?, stats))
     }
 
-    /// Save into a directory bundle: writes only missing objects, then the
-    /// manifest (atomically), then removes unreferenced objects.
+    /// Save into a directory bundle: reuses only valid existing objects,
+    /// rewrites missing or damaged objects, then writes the manifest
+    /// atomically and removes unreferenced objects.
     pub fn save_dir(&mut self, doc: &Document, dir: &Path, opts: &SaveOptions) -> Result<SaveStats> {
         let p = self.prepare(doc, opts)?;
         let mut stats = p.stats;
         for sub in ["tiles", "blobs", "composite"] {
             std::fs::create_dir_all(dir.join(sub))?;
         }
+        let canonical_dir = std::fs::canonicalize(dir)?;
+        if self.verified_directory.as_ref().is_none_or(|cache| cache.directory != canonical_dir) {
+            self.verified_directory = Some(DirectoryVerificationCache { directory: canonical_dir, objects: HashMap::new() });
+        }
         let existing = list_objects(dir)?;
         for (path, obj) in &p.objects {
-            if existing.contains(path) {
+            let object_path = dir.join(path);
+            let signature = path_signature(&object_path)?;
+            let already_verified =
+                signature.is_some_and(|signature| self.verified_directory.as_ref().is_some_and(|cache| cache.objects.get(path) == Some(&signature)));
+            if existing.contains(path) && already_verified {
                 if matches!(obj, Object::Tile(..)) {
                     stats.tiles_reused += 1;
                 }
                 continue;
             }
+            if existing.contains(path) {
+                let (valid, signature) = existing_object_is_valid(&object_path, obj, path)?;
+                if valid {
+                    if let Some(signature) = signature
+                        && let Some(cache) = &mut self.verified_directory
+                    {
+                        cache.objects.insert(path.clone(), signature);
+                    }
+                    if matches!(obj, Object::Tile(..)) {
+                        stats.tiles_reused += 1;
+                    }
+                    continue;
+                }
+            }
             match obj {
                 Object::Tile(..) => stats.tiles_written += 1,
                 Object::Blob(_) => stats.blobs_written += 1,
             }
-            write_atomic(&dir.join(path), &obj.compressed())?;
+            write_atomic(&object_path, &obj.compressed())?;
+            if let Some(signature) = path_signature(&object_path)?
+                && let Some(cache) = &mut self.verified_directory
+            {
+                cache.objects.insert(path.clone(), signature);
+            }
         }
         for (name, data) in &p.previews {
             write_atomic(&dir.join(name), data)?;
@@ -486,6 +581,9 @@ impl PcraftWriter {
             if !p.objects.contains_key(&path) {
                 std::fs::remove_file(dir.join(&path))?;
                 stats.objects_removed += 1;
+                if let Some(cache) = &mut self.verified_directory {
+                    cache.objects.remove(&path);
+                }
             }
         }
         Ok(stats)
@@ -508,10 +606,9 @@ impl PcraftWriter {
 fn list_objects(dir: &Path) -> Result<HashSet<String>> {
     let mut out = HashSet::new();
     for sub in ["tiles", "blobs"] {
-        let Ok(rd) = std::fs::read_dir(dir.join(sub)) else {
-            continue;
-        };
-        for e in rd.flatten() {
+        let rd = std::fs::read_dir(dir.join(sub))?;
+        for e in rd {
+            let e = e?;
             let name = e.file_name().to_string_lossy().into_owned();
             if name.ends_with(".zst") {
                 out.insert(format!("{sub}/{name}"));

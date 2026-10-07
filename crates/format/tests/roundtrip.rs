@@ -161,6 +161,9 @@ fn directory_incremental_and_gc() {
     let mut w = PcraftWriter::new();
     let s1 = w.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
     assert_eq!(s1.tiles_written, s1.tiles_total);
+    let s2_same_writer = w.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+    assert_eq!(s2_same_writer.tiles_written, 0);
+    assert_eq!(s2_same_writer.tiles_reused, s2_same_writer.tiles_total);
     // A fresh writer still skips files already on disk.
     let s2 = PcraftWriter::new().save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
     assert_eq!(s2.tiles_written, 0);

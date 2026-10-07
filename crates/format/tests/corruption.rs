@@ -5,6 +5,7 @@ use common::*;
 use photosuite_color::{ColorMode, SampleType};
 use photosuite_format::*;
 use proptest::prelude::*;
+use std::io::Read;
 
 fn sample() -> Vec<u8> {
     save_to_bytes(&rich_doc(ColorMode::Rgb, SampleType::U8), &SaveOptions::default()).unwrap()
@@ -138,13 +139,39 @@ fn total_size_limit() {
 }
 
 #[test]
-fn directory_bundle_tampered_tile() {
+fn directory_bundle_resave_repairs_tampered_objects() {
     let doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let dir = temp_dir("tamper");
-    PcraftWriter::new().save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
-    let tile = std::fs::read_dir(dir.join("tiles")).unwrap().next().unwrap().unwrap().path();
-    std::fs::write(&tile, b"garbage").unwrap();
-    assert!(load_path(&dir).is_err());
+    let mut writer = PcraftWriter::new();
+    writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+
+    for object_dir in ["tiles", "blobs"] {
+        let object = std::fs::read_dir(dir.join(object_dir)).unwrap().next().unwrap().unwrap().path();
+        let original = std::fs::read(&object).unwrap();
+        let mut decoder = ruzstd::decoding::StreamingDecoder::new(&original[..]).unwrap();
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
+        if let Some(first) = decoded.first_mut() {
+            *first ^= 1;
+        } else {
+            decoded.push(1);
+        }
+        let hash_mismatched = ruzstd::encoding::compress_to_vec(decoded.as_slice(), ruzstd::encoding::CompressionLevel::Fastest);
+
+        for damaged in [hash_mismatched, b"garbage".to_vec()] {
+            std::fs::write(&object, damaged).unwrap();
+            assert!(load_path(&dir).is_err());
+
+            let stats = writer.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+            if object_dir == "tiles" {
+                assert_eq!(stats.tiles_written, 1);
+            } else {
+                assert_eq!(stats.blobs_written, 1);
+            }
+            assert_eq!(load_path(&dir).unwrap(), doc);
+        }
+    }
+
     std::fs::remove_dir_all(dir).unwrap();
 }
 
