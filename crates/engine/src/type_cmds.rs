@@ -409,6 +409,7 @@ fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&m
     let (r, damage) = s.edit(label, |doc, _| {
         let snapshot = doc.clone();
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+        let auto_named = is_auto_named(l);
         let LayerContent::Text(t) = &mut l.content else {
             return Err(EngineError::Other(format!("layer {} is a {} layer, not a type layer", id.0, l.content.kind_name())));
         };
@@ -418,6 +419,10 @@ fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&m
         // Only this layer's pixels changed: the canvas recomposites their old and new area
         // instead of the whole document (#124). Unknown old pixels mean a full refresh.
         let damage = before.zip(t.cache.as_ref().map(|c| c.tile_bounds())).map(|(a, b)| a.union(&b));
+        let name = auto_named.then(|| layer_name(&t.text));
+        if let Some(n) = name {
+            l.name = n;
+        }
         Ok((r, damage))
     })?;
     if let Some(st) = s.active_mut() {
@@ -426,8 +431,16 @@ fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&m
     Ok(r)
 }
 
-fn layer_name(text: &str) -> String {
-    let first = text.lines().next().unwrap_or("").trim();
+/// Whether a type layer still has the name it got from its text, so the name follows edits to
+/// the text. A layer renamed to anything else keeps its name (#483).
+pub(crate) fn is_auto_named(l: &Layer) -> bool {
+    matches!(&l.content, LayerContent::Text(t) if l.name == layer_name(&t.text))
+}
+
+/// The name a type layer gets from its text: its first non-empty line, at most 40 characters.
+/// The Type tool names new layers with this too, so `is_auto_named` recognises them.
+pub fn layer_name(text: &str) -> String {
+    let first = text.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
     let name: String = first.chars().take(40).collect();
     if name.is_empty() { "Type Layer".into() } else { name }
 }
@@ -835,6 +848,54 @@ mod tests {
         assert_eq!(back.char_runs()[0].style.postscript_name.as_deref(), Some("Inter-Regular"));
         assert!(s.undo());
         assert!(s.active().unwrap().doc.layer(LayerId(id)).is_none());
+    }
+
+    fn layer_name_of(s: &Session, id: u64) -> String {
+        s.active().unwrap().doc.layer(LayerId(id)).unwrap().name.clone()
+    }
+
+    #[test]
+    fn auto_name_follows_the_text() {
+        // The Type tool's flow (#483): a placeholder, selected, then replaced by typing.
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Lorem Ipsum", "coalesce": "k"})).unwrap()["layer"].as_u64().unwrap();
+        assert_eq!(layer_name_of(&s, id), "Lorem Ipsum");
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "H"}, "coalesce": "k"})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 1, "end": 1, "text": "eading\nsecond line"}, "coalesce": "k"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Heading");
+        // Emptied, the name is the default one and keeps following.
+        s.execute("type.edit", json!({"layer": id, "text": ""})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Type Layer");
+        s.execute("type.edit", json!({"layer": id, "text": "Title"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Title");
+        assert!(s.undo());
+        assert_eq!(layer_name_of(&s, id), "Type Layer");
+    }
+
+    #[test]
+    fn auto_name_skips_leading_blank_lines() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "\n  \nHello\nworld"})).unwrap()["layer"].as_u64().unwrap();
+        assert_eq!(layer_name_of(&s, id), "Hello");
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 0, "text": "\n"}})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "\n\nGoodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Goodbye");
+    }
+
+    #[test]
+    fn custom_name_survives_text_edits() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Hello", "name": "Logo"})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "Goodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Logo");
+        // Renamed after creation: kept too.
+        let id = s.execute("type.create", json!({"x": 0, "y": 80, "text": "Hello"})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.renameLayer", json!({"layer": id, "name": "Caption"})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "Goodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Caption");
+        // A name given with the edit wins over the text.
+        s.execute("type.edit", json!({"layer": id, "text": "Again", "name": "Footer"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Footer");
     }
 
     #[test]

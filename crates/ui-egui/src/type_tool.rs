@@ -553,7 +553,7 @@ pub fn commit(app: &mut PhotosuiteApp) {
     if text.trim().is_empty() && ed.created {
         let _ = app.run("layer.delete", json!({"layer": ed.layer}));
     } else if ed.created {
-        let name: String = text.lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim().chars().take(40).collect();
+        let name = photosuite_engine::type_cmds::layer_name(&text);
         let _ = app.run("type.edit", json!({"layer": ed.layer, "name": name, "coalesce": ed.session}));
     }
 }
@@ -1383,6 +1383,20 @@ mod tests {
         let doc = &app.session.active().unwrap().doc;
         assert_eq!(doc.layers.last().unwrap().name, "Héllo world");
         assert!(app.ui.text_edit.is_none());
+    }
+
+    #[test]
+    fn a_name_from_text_after_blank_lines_keeps_following_the_text() {
+        let mut app = app();
+        pointer_up(&mut app, [50.0, 100.0], [50.0, 100.0]);
+        insert(&mut app, "\n\nTitle");
+        let id = app.ui.text_edit.as_ref().unwrap().layer;
+        commit(&mut app);
+        let name = |app: &PhotosuiteApp| app.session.active().unwrap().doc.layers.last().unwrap().name.clone();
+        assert_eq!(name(&app), "Title");
+        // Edited later, outside the session that created it (#483).
+        app.run("type.edit", json!({"layer": id, "text": "\nSubtitle"})).unwrap();
+        assert_eq!(name(&app), "Subtitle");
     }
 
     #[test]
