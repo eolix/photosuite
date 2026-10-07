@@ -34,6 +34,13 @@ rfd = { workspace = true }
 arboard = { version = "3", features = ["wayland-data-control"] }
 open = "5"
 
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+# Wayland compositors that leave window decorations to the app (GNOME) get winit's own. eframe
+# turns winit's default features off, which leaves its most basic frame, with no title; this is
+# the Adwaita-style one, showing the window title. KDE, Sway and others draw their own, and X11
+# window managers always do.
+winit = { version = "0.30", default-features = false, features = ["wayland-csd-adwaita"] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 # Finder double-click / Open With / Dock drops arrive as Apple events; this small audited crate
 # registers the handler (Objective-C interop needs unsafe, which our workspace forbids) behind a

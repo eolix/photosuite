@@ -327,6 +327,13 @@ pub fn mono(size: f32) -> FontId {
 pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
     let t = Tokens::for_kind(kind);
     ctx.data_mut(|d| d.insert_temp(egui::Id::new("photosuite-theme"), t));
+    // The system title bar follows: dark under the dark themes on Windows, and the Adwaita frame
+    // winit draws on GNOME's Wayland. Not on macOS, where the title bar is the app's own and an
+    // app-wide appearance would also restyle the native menus and file dialogs.
+    if !cfg!(target_os = "macos") {
+        let theme = if t.dark() { egui::SystemTheme::Dark } else { egui::SystemTheme::Light };
+        ctx.send_viewport_cmd(egui::ViewportCommand::SetTheme(theme));
+    }
     let mut v = if t.dark() { Visuals::dark() } else { Visuals::light() };
     v.panel_fill = t.chrome;
     v.window_fill = t.card;
@@ -407,6 +414,20 @@ pub fn canvas_bg(t: &Tokens) -> Color32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The system title bar is told the theme's light or dark (Windows' title bar, the Adwaita
+    /// frame on GNOME's Wayland); never on macOS, where the title bar is the app's own.
+    #[test]
+    fn applying_a_theme_sets_the_window_theme_outside_macos() {
+        for (kind, want) in [(ThemeKind::Slate, egui::SystemTheme::Dark), (ThemeKind::Pearl, egui::SystemTheme::Light)] {
+            let ctx = egui::Context::default();
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| apply(ui.ctx(), kind));
+            out.textures_delta.clear();
+            let cmds = out.viewport_output.get(&egui::ViewportId::ROOT).map(|v| v.commands.clone()).unwrap_or_default();
+            let sent = cmds.iter().any(|c| *c == egui::ViewportCommand::SetTheme(want));
+            assert_eq!(sent, !cfg!(target_os = "macos"), "{kind:?}: {cmds:?}");
+        }
+    }
 
     #[test]
     fn theme_names_parse() {

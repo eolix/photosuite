@@ -5,10 +5,12 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 `packaging/notices/generate.sh` (cargo-about); don't edit it by hand. Other bundled material
 (fonts, icons, lens data, presets) is listed in `THIRD-PARTY-NOTICES.md`.
 
-## Crates (495)
+## Crates (500)
 
 | Crate | Version | Licence |
 |:---|:---|:---|
+| [ab_glyph](https://crates.io/crates/ab_glyph) | 0.2.32 | Apache-2.0 |
+| [ab_glyph_rasterizer](https://crates.io/crates/ab_glyph_rasterizer) | 0.1.10 | Apache-2.0 |
 | [accesskit](https://crates.io/crates/accesskit) | 0.24.1 | MIT OR Apache-2.0 |
 | [accesskit_atspi_common](https://crates.io/crates/accesskit_atspi_common) | 0.18.1 | MIT OR Apache-2.0 |
 | [accesskit_consumer](https://crates.io/crates/accesskit_consumer) | 0.35.0 | MIT OR Apache-2.0 |
@@ -266,6 +268,7 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 | [ordered-float](https://crates.io/crates/ordered-float) | 5.5.0 | MIT |
 | [ordered-stream](https://crates.io/crates/ordered-stream) | 0.2.0 | MIT OR Apache-2.0 |
 | [os_pipe](https://crates.io/crates/os_pipe) | 1.2.3 | MIT |
+| [owned_ttf_parser](https://crates.io/crates/owned_ttf_parser) | 0.25.1 | Apache-2.0 |
 | [pango](https://crates.io/crates/pango) | 0.18.3 | MIT |
 | [pango-sys](https://crates.io/crates/pango-sys) | 0.18.0 | MIT |
 | [parking](https://crates.io/crates/parking) | 2.2.1 | Apache-2.0 OR MIT |
@@ -340,6 +343,7 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 | [schemars_derive](https://crates.io/crates/schemars_derive) | 1.2.2 | MIT |
 | [scoped-tls](https://crates.io/crates/scoped-tls) | 1.0.1 | MIT OR Apache-2.0 |
 | [scopeguard](https://crates.io/crates/scopeguard) | 1.2.0 | MIT OR Apache-2.0 |
+| [sctk-adwaita](https://crates.io/crates/sctk-adwaita) | 0.10.1 | MIT |
 | [self_cell](https://crates.io/crates/self_cell) | 1.3.0 | Apache-2.0 OR GPL-2.0-only |
 | [serde](https://crates.io/crates/serde) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_core](https://crates.io/crates/serde_core) | 1.0.229 | MIT OR Apache-2.0 |
@@ -397,6 +401,7 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 | [tracing-attributes](https://crates.io/crates/tracing-attributes) | 0.1.31 | MIT |
 | [tracing-core](https://crates.io/crates/tracing-core) | 0.1.36 | MIT |
 | [tree_magic_mini](https://crates.io/crates/tree_magic_mini) | 3.2.2 | MIT |
+| [ttf-parser](https://crates.io/crates/ttf-parser) | 0.25.1 | MIT OR Apache-2.0 |
 | [twox-hash](https://crates.io/crates/twox-hash) | 2.1.4 | MIT |
 | [type-map](https://crates.io/crates/type-map) | 0.5.1 | MIT OR Apache-2.0 |
 | [typeid](https://crates.io/crates/typeid) | 1.0.3 | MIT OR Apache-2.0 |
@@ -5301,7 +5306,7 @@ limitations under the License.
 
 ### Apache License 2.0
 
-Used by: ahash 0.8.12, ambient-authority 0.0.2, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.0, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cap-primitives 4.0.3, cap-std 4.0.3, cfg-if 1.0.5, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-deque 0.8.8, crossbeam-epoch 0.9.21, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, either 1.18.0, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, fontique 0.11.1, fs-set-times 0.20.3, futures-lite 2.6.1, gethostname 1.1.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, indexmap 2.14.2, io-extras 0.19.0, io-lifetimes 2.0.4, io-lifetimes 3.0.1, itertools 0.15.0, js-sys 0.3.106, khronos-egl 6.0.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.21.0, num-complex 0.4.6, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, parlance 0.1.0, parley 0.11.1, parley_data 0.11.1, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, png 0.17.16, png 0.18.1, polling 3.11.0, pollster 0.4.0, pollster 1.0.1, rayon 1.12.0, rayon-core 1.13.0, renderdoc-sys 1.1.0, ron 0.12.2, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.5, rustix-linux-procfs 0.1.1, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simplecss 0.2.2, smallvec 1.16.2, smol_str 0.2.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, unicode-segmentation 1.13.3, unicode-width 0.2.2, uuid 1.26.1, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, wl-clipboard-rs 0.9.4
+Used by: ahash 0.8.12, ambient-authority 0.0.2, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.0, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cap-primitives 4.0.3, cap-std 4.0.3, cfg-if 1.0.5, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-deque 0.8.8, crossbeam-epoch 0.9.21, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, either 1.18.0, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, fontique 0.11.1, fs-set-times 0.20.3, futures-lite 2.6.1, gethostname 1.1.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, indexmap 2.14.2, io-extras 0.19.0, io-lifetimes 2.0.4, io-lifetimes 3.0.1, itertools 0.15.0, js-sys 0.3.106, khronos-egl 6.0.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.21.0, num-complex 0.4.6, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, parlance 0.1.0, parley 0.11.1, parley_data 0.11.1, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, png 0.17.16, png 0.18.1, polling 3.11.0, pollster 0.4.0, pollster 1.0.1, rayon 1.12.0, rayon-core 1.13.0, renderdoc-sys 1.1.0, ron 0.12.2, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.5, rustix-linux-procfs 0.1.1, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simplecss 0.2.2, smallvec 1.16.2, smol_str 0.2.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, ttf-parser 0.25.1, unicode-segmentation 1.13.3, unicode-width 0.2.2, uuid 1.26.1, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, wl-clipboard-rs 0.9.4
 
 ```text
                               Apache License
@@ -7955,7 +7960,7 @@ limitations under the License.
 
 ### Apache License 2.0
 
-Used by: accesskit 0.24.1, accesskit_atspi_common 0.18.1, accesskit_consumer 0.35.0, accesskit_consumer 0.36.0, accesskit_consumer 0.38.0, accesskit_macos 0.26.3, accesskit_unix 0.21.1, accesskit_windows 0.32.1, accesskit_winit 0.32.2, allocator-api2 0.2.21, arboard 3.6.1, async-trait 0.1.92, blake3 1.8.7, color 0.3.3, constant_time_eq 0.4.2, dispatch2 0.3.1, document-features 0.2.12, dyn-clone 1.0.20, ecolor 0.36.2, eframe 0.36.2, egui 0.36.2, egui-wgpu 0.36.2, egui-winit 0.36.2, egui_extras 0.36.2, emath 0.36.2, enum-map 2.7.3, enum-map-derive 0.17.0, enumn 0.1.14, epaint 0.36.2, epaint_default_fonts 0.36.2, fdeflate 0.3.7, fearless_simd 0.4.1, fearless_simd 0.7.0, fearless_simd 1.0.0, field-offset 0.3.6, guillotiere 0.7.0, half 2.7.1, hayro 0.8.0, hayro-ccitt 0.4.0, hayro-cmap 0.1.0, hayro-interpret 0.8.0, hayro-jbig2 0.3.1, hayro-jpeg2000 0.4.1, hayro-postscript 0.1.0, hayro-syntax 0.8.0, ident_case 1.0.1, image 0.25.10, image-webp 0.2.4, itoa 1.0.18, libc 0.2.189, linebender_resource_handle 0.1.1, litrs 1.0.0, miniz_oxide 0.8.9, miniz_oxide 0.9.1, naga 30.0.1, naga-types 30.0.1, objc2-app-kit 0.3.2, objc2-core-foundation 0.3.2, objc2-core-graphics 0.3.2, objc2-metal 0.3.2, objc2-quartz-core 0.3.2, paste 1.0.15, pastey 0.2.3, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, proc-macro2 1.0.107, profiling 1.0.18, quote 1.0.47, range-alloc 0.1.5, raw-window-handle 0.6.2, ref-cast 1.0.27, ref-cast-impl 1.0.27, resvg 0.45.1, rmcp 3.5.0, rmcp-macros 3.5.0, rustc-hash 2.1.3, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_derive_internals 0.30.0, serde_json 1.0.151, serde_repr 0.1.21, spirv 0.4.0+sdk-1.4.341.0, syn 2.0.119, syn 3.0.6, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, type-map 0.5.1, typeid 1.0.3, unicode-ident 1.0.26, usvg 0.45.1, vello_common 0.1.0, vello_common 0.3.0, vello_cpu 0.1.0, vello_cpu 0.3.0, wasmi 2.0.0, wasmi_collections 2.0.0, wasmi_core 2.0.0, wasmi_ir 2.0.0, wasmparser 0.228.0, wgpu 30.0.1, wgpu-core 30.0.1, wgpu-core-deps-apple 30.0.1, wgpu-core-deps-wasm 30.0.1, wgpu-core-deps-windows-linux-android 30.0.1, wgpu-hal 30.0.1, wgpu-naga-bridge 30.0.1, wgpu-types 30.0.1, zune-inflate 0.2.54
+Used by: ab_glyph 0.2.32, ab_glyph_rasterizer 0.1.10, accesskit 0.24.1, accesskit_atspi_common 0.18.1, accesskit_consumer 0.35.0, accesskit_consumer 0.36.0, accesskit_consumer 0.38.0, accesskit_macos 0.26.3, accesskit_unix 0.21.1, accesskit_windows 0.32.1, accesskit_winit 0.32.2, allocator-api2 0.2.21, arboard 3.6.1, async-trait 0.1.92, blake3 1.8.7, color 0.3.3, constant_time_eq 0.4.2, dispatch2 0.3.1, document-features 0.2.12, dyn-clone 1.0.20, ecolor 0.36.2, eframe 0.36.2, egui 0.36.2, egui-wgpu 0.36.2, egui-winit 0.36.2, egui_extras 0.36.2, emath 0.36.2, enum-map 2.7.3, enum-map-derive 0.17.0, enumn 0.1.14, epaint 0.36.2, epaint_default_fonts 0.36.2, fdeflate 0.3.7, fearless_simd 0.4.1, fearless_simd 0.7.0, fearless_simd 1.0.0, field-offset 0.3.6, guillotiere 0.7.0, half 2.7.1, hayro 0.8.0, hayro-ccitt 0.4.0, hayro-cmap 0.1.0, hayro-interpret 0.8.0, hayro-jbig2 0.3.1, hayro-jpeg2000 0.4.1, hayro-postscript 0.1.0, hayro-syntax 0.8.0, ident_case 1.0.1, image 0.25.10, image-webp 0.2.4, itoa 1.0.18, libc 0.2.189, linebender_resource_handle 0.1.1, litrs 1.0.0, miniz_oxide 0.8.9, miniz_oxide 0.9.1, naga 30.0.1, naga-types 30.0.1, objc2-app-kit 0.3.2, objc2-core-foundation 0.3.2, objc2-core-graphics 0.3.2, objc2-metal 0.3.2, objc2-quartz-core 0.3.2, owned_ttf_parser 0.25.1, paste 1.0.15, pastey 0.2.3, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, proc-macro2 1.0.107, profiling 1.0.18, quote 1.0.47, range-alloc 0.1.5, raw-window-handle 0.6.2, ref-cast 1.0.27, ref-cast-impl 1.0.27, resvg 0.45.1, rmcp 3.5.0, rmcp-macros 3.5.0, rustc-hash 2.1.3, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_derive_internals 0.30.0, serde_json 1.0.151, serde_repr 0.1.21, spirv 0.4.0+sdk-1.4.341.0, syn 2.0.119, syn 3.0.6, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, type-map 0.5.1, typeid 1.0.3, unicode-ident 1.0.26, usvg 0.45.1, vello_common 0.1.0, vello_common 0.3.0, vello_cpu 0.1.0, vello_cpu 0.3.0, wasmi 2.0.0, wasmi_collections 2.0.0, wasmi_core 2.0.0, wasmi_ir 2.0.0, wasmparser 0.228.0, wgpu 30.0.1, wgpu-core 30.0.1, wgpu-core-deps-apple 30.0.1, wgpu-core-deps-wasm 30.0.1, wgpu-core-deps-windows-linux-android 30.0.1, wgpu-hal 30.0.1, wgpu-naga-bridge 30.0.1, wgpu-types 30.0.1, zune-inflate 0.2.54
 
 ```text
 Apache License
@@ -9510,7 +9515,7 @@ SOFTWARE.
 
 ### MIT License
 
-Used by: rfd 0.17.2
+Used by: rfd 0.17.2, sctk-adwaita 0.10.1
 
 ```text
 MIT License
