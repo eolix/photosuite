@@ -26,11 +26,7 @@ fn text_layer(doc: &Document, id: LayerId) -> Option<&TextLayer> {
 }
 
 fn byte_of(text: &str, ci: usize) -> usize {
-    text.char_indices().nth(ci).map_or(text.len(), |(b, _)| b)
-}
-
-fn char_of(text: &str, bi: usize) -> usize {
-    text[..bi.min(text.len())].chars().count()
+    photosuite_text::byte_index(text, ci)
 }
 
 /// Layout of a type layer (cached per document revision) and its text → document transform.
@@ -70,7 +66,7 @@ fn hit_layer(app: &mut PhotosuiteApp, x: f64, y: f64) -> Option<LayerId> {
         });
         let Some((l, aff, _)) = layout(app, *id) else { return shown };
         let (tx, ty) = to_text(&aff, x, y);
-        shown || l.bounds().is_some_and(|b| tx >= b[0] - slop && tx <= b[2] + slop && ty >= b[1] - slop && ty <= b[3] + slop)
+        shown || photosuite_text::text_point_inside(&l, tx, ty, slop)
     })
 }
 
@@ -123,7 +119,7 @@ pub fn edit_active(app: &mut PhotosuiteApp) -> Result<(), String> {
 fn hit_offset(app: &mut PhotosuiteApp, id: LayerId, x: f64, y: f64) -> usize {
     let Some((l, aff, text)) = layout(app, id) else { return 0 };
     let (tx, ty) = to_text(&aff, x, y);
-    char_of(&text, l.hit_test(tx, ty))
+    photosuite_text::hit_char(&l, &text, tx, ty).0
 }
 
 fn hex(c: [f32; 4]) -> String {
@@ -349,26 +345,9 @@ fn ime_update(app: &mut PhotosuiteApp, s: &str, commit: bool) {
     }
 }
 
-/// Character index of the previous / next word boundary.
+/// Character index of the previous / next word boundary (shared with `type.navigate`).
 fn word_boundary(text: &str, from: usize, forward: bool) -> usize {
-    let chars: Vec<char> = text.chars().collect();
-    let mut i = from.min(chars.len());
-    if forward {
-        while i < chars.len() && !chars[i].is_alphanumeric() {
-            i += 1;
-        }
-        while i < chars.len() && chars[i].is_alphanumeric() {
-            i += 1;
-        }
-    } else {
-        while i > 0 && !chars[i - 1].is_alphanumeric() {
-            i -= 1;
-        }
-        while i > 0 && chars[i - 1].is_alphanumeric() {
-            i -= 1;
-        }
-    }
-    i
+    photosuite_text::word_boundary(text, from, forward)
 }
 
 /// Double-click: select the word under the caret.
@@ -392,17 +371,8 @@ pub fn select_word(app: &mut PhotosuiteApp) {
 /// along the line. Works in line space, so it serves both orientations.
 fn line_step(app: &mut PhotosuiteApp, id: LayerId, caret: usize, dir: i32) -> usize {
     let Some((l, _, text)) = layout(app, id) else { return caret };
-    let (x, top, bottom) = l.caret(byte_of(&text, caret));
-    let h = (bottom - top).max(1.0);
-    let y = if dir < 0 { top - h * 0.5 } else { bottom + h * 0.5 };
-    let Some(b) = l.line_bounds() else { return caret };
-    if y < b[1] {
-        return 0;
-    }
-    if y > b[3] {
-        return text.chars().count();
-    }
-    char_of(&text, l.hit_test_line(x, y))
+    let x = l.caret(byte_of(&text, caret)).0;
+    photosuite_text::line_step(&l, &text, caret, x, dir)
 }
 
 fn is_vertical(app: &PhotosuiteApp, id: LayerId) -> bool {
@@ -429,9 +399,7 @@ pub(crate) fn flow_key(key: egui::Key, vertical: bool) -> egui::Key {
 /// Line start / end for the caret's line.
 fn line_edge(app: &mut PhotosuiteApp, id: LayerId, caret: usize, end: bool) -> usize {
     let Some((l, _, text)) = layout(app, id) else { return caret };
-    let b = byte_of(&text, caret);
-    let line = l.lines.iter().find(|ln| b >= ln.range.start && b <= ln.range.end).or(l.lines.last());
-    line.map_or(caret, |ln| char_of(&text, if end { ln.range.end } else { ln.range.start }))
+    photosuite_text::line_edge(&l, &text, caret, end)
 }
 
 /// Keyboard input while editing. Returns true when a type edit session is active (single-key

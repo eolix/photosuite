@@ -31,7 +31,9 @@ use photosuite_color::PixelFormat;
 use photosuite_doc::TextLayer;
 
 pub use fonts::{FaceInfo, FontDb, ResolvedFont};
-pub use layout::{ClusterInfo, LineInfo, PlacedGlyph, TextLayout};
+pub use layout::{
+    ClusterInfo, LineInfo, PlacedGlyph, TextLayout, byte_index, char_index, hit_char, line_edge, line_index, line_step, text_point_inside, word_boundary,
+};
 pub use render::Rendered;
 
 /// Font database + layout context. Create once and reuse (font loading and shaping caches).

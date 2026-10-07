@@ -70,9 +70,9 @@ note = "No such xtask check"
 [[item]]
 id = "AUTO-219-9"
 target = "Headless commands for in-canvas type editing, Liquify/Puppet strokes, transform handles"
-status = "partial"
+status = "done"
 issue = 219
-note = "filter.liquify strokes, edit.puppetWarp pins, type.edit, edit.transform; no caret API"
+note = "type.hitTest, type.caret, type.navigate; filter.liquify strokes, edit.puppetWarp pins, type.edit, edit.transform"
 
 [[item]]
 id = "AUTO-219-10"

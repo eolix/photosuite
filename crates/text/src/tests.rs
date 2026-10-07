@@ -1,6 +1,6 @@
 use photosuite_color::{Color, PixelFormat, SampleType};
 use photosuite_doc::TextLayer;
-use photosuite_doc::text::{CharStyle, FontFeature, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
+use photosuite_doc::text::{CharStyle, FontFeature, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
 use photosuite_geom::Affine;
 
 use crate::{TextEngine, fonts};
@@ -787,4 +787,60 @@ fn japanese_box_text_preserves_wrap_boundaries() {
         end = line.range.end;
     }
     assert_eq!(end, text.text.len());
+}
+
+#[test]
+fn word_and_line_navigation() {
+    use crate::layout::{byte_index, char_index, hit_char, line_edge, line_index, line_step, word_boundary};
+    assert_eq!(word_boundary("hello big world", 0, true), 5);
+    assert_eq!(word_boundary("hello big world", 7, false), 6);
+    assert_eq!(word_boundary("hello big world", 15, false), 10);
+    assert_eq!(word_boundary("hello", 0, false), 0);
+    assert_eq!(word_boundary("hello", 5, true), 5);
+    assert_eq!(word_boundary("", 4, true), 0);
+    assert_eq!(word_boundary("ab", 100, true), 2);
+    assert_eq!(word_boundary("ab, cd", 0, true), 2);
+    assert_eq!(word_boundary("ab, cd", 2, true), 6);
+    assert_eq!(word_boundary("Größe", 0, true), 5);
+
+    let mut e = TextEngine::new();
+    let text = "AäB\ncd";
+    for vertical in [false, true] {
+        let mut t = point(text, 20.0);
+        if vertical {
+            t.orientation = Orientation::Vertical;
+        }
+        let l = e.layout(&t, 72.0);
+        let n = text.chars().count();
+        for i in 0..=n {
+            let b = byte_index(text, i);
+            let [(x0, y0), (x1, y1)] = l.caret_segment(b);
+            let (idx, line) = hit_char(&l, text, (x0 + x1) / 2.0, (y0 + y1) / 2.0);
+            assert_eq!(idx, i, "vertical {vertical} index {i}");
+            assert_eq!(line, line_index(&l, b), "vertical {vertical} index {i}");
+        }
+        assert!(l.lines.len() >= 2, "vertical {vertical}");
+        let end0 = char_index(text, l.lines[0].range.end);
+        let start1 = char_index(text, l.lines[1].range.start);
+        assert_eq!(line_edge(&l, text, 1, true), end0, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, 1, false), 0, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, start1, false), start1, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, start1, true), n, "vertical {vertical}");
+        let x = l.caret(byte_index(text, 0)).0;
+        let next = line_step(&l, text, 0, x, 1);
+        assert!((start1..=n).contains(&next), "vertical {vertical} line_step -> {next}");
+        assert_eq!(line_step(&l, text, 0, x, -1), 0, "vertical {vertical}");
+        assert_eq!(line_step(&l, text, n, x, 1), n, "vertical {vertical}");
+    }
+
+    // A remembered column stays on the short line's start; the caret's own x falls off its end.
+    let text = "WWWWWW\nI";
+    let l = e.layout(&point(text, 30.0), 72.0);
+    let end0 = line_edge(&l, text, 0, true);
+    // end0 is the first line's end, which is not the second line. Step from there.
+    let kept = line_step(&l, text, end0, l.caret(0).0, 1);
+    let jumped = line_step(&l, text, end0, l.caret(byte_index(text, end0)).0, 1);
+    assert_eq!(kept, char_index(text, l.lines[1].range.start), "kept column");
+    assert_eq!(jumped, char_index(text, l.lines[1].range.end), "own column");
+    assert!(jumped > kept);
 }

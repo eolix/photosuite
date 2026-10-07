@@ -214,3 +214,54 @@ async fn agent_completes_ten_scripted_tasks() {
     c.cancel().await.unwrap();
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+/// Click just after "Big", insert a word, then bold through the end of the line. Geometry comes
+/// from `type.hitTest` / `type.caret` / `type.navigate`; the edit is the existing `type.edit`.
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_edits_text_by_position() {
+    let dir = tmp("type-caret");
+    let c = connect(&dir).await;
+    tool(&c, "doc_new", json!({"width": 480, "height": 200, "background": "white"})).await;
+    let listed = tool(&c, "command_list", json!({"filter": "type."})).await;
+    let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    for id in ["type.hitTest", "type.caret", "type.navigate"] {
+        assert!(ids.contains(&id), "command_list missing {id}: {ids:?}");
+    }
+
+    run(&c, "type.create", json!({"x": 40, "y": 90, "text": "Big Sale", "size": 48})).await;
+    let before = inspect(&c).await["history"].as_array().unwrap().len();
+    // The caret after "Big" and the caret after the following space. A quarter of the way is
+    // the left half of that space, which hit-tests as the caret after "Big".
+    let after_big = run(&c, "type.caret", json!({"index": 3})).await;
+    let after_space = run(&c, "type.caret", json!({"index": 4})).await;
+    let seg = after_big["segment"].as_array().unwrap();
+    let (x3, y0, y1) = (seg[0][0].as_f64().unwrap(), seg[0][1].as_f64().unwrap(), seg[1][1].as_f64().unwrap());
+    let x4 = after_space["segment"][0][0].as_f64().unwrap();
+    assert!(x4 > x3 + 0.5, "space should have width, caret x {x3} -> {x4}");
+    let hit = run(&c, "type.hitTest", json!({"x": x3 + 0.25 * (x4 - x3), "y": (y0 + y1) / 2.0})).await;
+    assert_eq!(hit["index"].as_u64(), Some(3), "{hit}");
+    assert_eq!(hit["inside"], true, "{hit}");
+    let quiet = inspect(&c).await["history"].as_array().unwrap().len();
+    assert_eq!(quiet, before, "caret queries are not history steps");
+
+    run(&c, "type.edit", json!({"replace": {"start": hit["index"], "end": hit["index"], "text": " Summer"}})).await;
+    let info = run(&c, "type.info", json!({})).await;
+    assert_eq!(info["text"], "Big Summer Sale", "{info}");
+
+    let end = run(&c, "type.navigate", json!({"index": 0, "move": "lineEnd"})).await;
+    let n = info["text"].as_str().unwrap().chars().count() as u64;
+    assert_eq!(end["index"].as_u64(), Some(n), "{end}");
+    // "Summer" starts one character after the insertion caret (the space in " Summer").
+    let summer = hit["index"].as_u64().unwrap() + 1;
+    run(&c, "type.setStyle", json!({"range": [summer, end["index"]], "fauxBold": true})).await;
+    let info = run(&c, "type.info", json!({})).await;
+    assert_eq!(info["text"], "Big Summer Sale");
+    let bold = info["runs"].as_array().unwrap().iter().find(|r| r["style"]["faux_bold"] == true);
+    let bold = bold.unwrap_or_else(|| panic!("no bold run in {info}"));
+    assert_eq!(bold["start"].as_u64(), Some(summer), "{bold}");
+    assert_eq!(bold["end"].as_u64(), end["index"].as_u64(), "{bold}");
+
+    tool(&c, "doc_close", json!({})).await;
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}
