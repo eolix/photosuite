@@ -114,7 +114,7 @@ pub struct ListParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct RunParams {
-    /// Command id, e.g. `layer.new.layer`, `filter.blur.gaussian`.
+    /// Command id, e.g. `layer.new.layer`, `filter.blur.gaussianBlur`.
     pub id: String,
     /// Command parameters as a JSON object (see the `params` doc in `command_list`).
     #[serde(default)]

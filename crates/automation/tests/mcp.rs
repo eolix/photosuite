@@ -169,6 +169,39 @@ async fn command_list_filters() {
     client.cancel().await.unwrap();
 }
 
+/// The backticked examples in every `id` property description of a schema.
+fn id_examples(schema: &Value, out: &mut Vec<String>) {
+    match schema {
+        Value::Object(m) => {
+            if let Some(d) = m.get("properties").and_then(|p| p["id"]["description"].as_str()) {
+                out.extend(d.split('`').skip(1).step_by(2).map(str::to_owned));
+            }
+            m.values().for_each(|v| id_examples(v, out));
+        }
+        Value::Array(a) => a.iter().for_each(|v| id_examples(v, out)),
+        _ => {}
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn command_ids_in_tool_schemas_exist() {
+    // Agents copy these examples verbatim (#378).
+    let client = connect(PhotosuiteMcp::headless()).await;
+    let all = json_of(&call(&client, "command_list", json!({})).await);
+    let ids: Vec<&str> = all.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    let tools = client.list_all_tools().await.unwrap();
+    for name in ["command_run", "command_batch"] {
+        let tool = tools.iter().find(|t| t.name == name).unwrap();
+        let mut examples = Vec::new();
+        id_examples(&Value::Object((*tool.input_schema).clone()), &mut examples);
+        assert!(!examples.is_empty(), "{name}: no example ids");
+        for id in examples {
+            assert!(ids.contains(&id.as_str()), "{name}: `{id}` is not a registered command");
+        }
+    }
+    client.cancel().await.unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn errors_are_tool_errors_not_crashes() {
     let client = connect(PhotosuiteMcp::headless()).await;
