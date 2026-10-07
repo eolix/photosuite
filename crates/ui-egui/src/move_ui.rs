@@ -27,6 +27,8 @@ pub(crate) struct MovePreview {
     offsets: Vec<(i32, i32)>,
     /// The document at the latest offset.
     shown: Option<Arc<Document>>,
+    /// Shows a floating selection (`select.float`): offsets are the piece's, from where it was cut.
+    floating: bool,
 }
 
 impl MovePreview {
@@ -59,6 +61,12 @@ fn drag_offset(app: &PhotosuiteApp) -> Option<(i32, i32)> {
 /// the pointer. `None` without a drag (or when the layers can't move: locked, say; the drag then
 /// shows its arrow and the release reports why).
 pub(crate) fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+    if app.session.active_index() == Some(idx)
+        && let Some(st) = app.session.documents().get(idx)
+        && photosuite_engine::float_cmds::floating(st).is_some()
+    {
+        return floating_doc(app, idx);
+    }
     // Preferences › Interface › Show bounding box when dragging layer: outline and arrow only.
     if app.session.active_index() != Some(idx) || app.session.prefs().interface.show_bounding_box_when_dragging_layer {
         return None;
@@ -78,7 +86,7 @@ pub(crate) fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> Option<(Arc<Do
         let all = Rect::new(i32::MIN / 2, i32::MIN / 2, i32::MAX / 2, i32::MAX / 2);
         let bounds = ids.iter().try_fold(Rect::EMPTY, |acc, id| Some(acc.union(&photosuite_compose::change_bounds(doc.layer(*id)?, all)?)));
         let canvas = doc.bounds();
-        app.move_preview = Some(MovePreview { doc: doc_id, revision, ids, bounds, canvas, offsets: Vec::new(), shown: None });
+        app.move_preview = Some(MovePreview { doc: doc_id, revision, ids, bounds, canvas, offsets: Vec::new(), shown: None, floating: false });
     }
     let p = app.move_preview.as_mut()?;
     if offset == (0, 0) && p.offsets.is_empty() {
@@ -99,6 +107,42 @@ pub(crate) fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> Option<(Arc<Do
             }
         }
         app.perf.span("move preview", crate::gpu_canvas::now_ms() - t0);
+    }
+    let p = app.move_preview.as_ref()?;
+    Some((p.shown.clone()?, p.key()))
+}
+
+/// A floating selection's offset plus a drag of it in progress (`canvas::selection_drag_delta`).
+pub(crate) fn floating_offset(app: &PhotosuiteApp) -> Option<(i32, i32)> {
+    let f = photosuite_engine::float_cmds::floating(app.session.active()?)?;
+    let d = crate::canvas::selection_drag_delta(app).unwrap_or((0, 0));
+    Some((f.offset.0 + d.0, f.offset.1 + d.1))
+}
+
+/// The document shown while a selection floats: the cut piece at its offset, over the cut-out
+/// layer. Only the piece's area changes between offsets, so each move costs the piece, not the
+/// layer.
+fn floating_doc(app: &mut PhotosuiteApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+    let offset = floating_offset(app)?;
+    let st = app.session.documents().get(idx)?;
+    let f = photosuite_engine::float_cmds::floating(st)?;
+    let (doc_id, revision) = (st.doc.id, st.revision);
+    let fresh = app.move_preview.as_ref().is_some_and(|p| p.doc == doc_id && p.revision == revision && p.floating);
+    if !fresh {
+        let bounds = st.doc.selection.as_ref().map(|s| s.content_bounds());
+        let canvas = st.doc.bounds();
+        app.move_preview = Some(MovePreview { doc: doc_id, revision, ids: vec![f.layer], bounds, canvas, offsets: Vec::new(), shown: None, floating: true });
+    }
+    let st = app.session.documents().get(idx)?;
+    let shown = app.move_preview.as_ref()?.offsets.last() != Some(&offset);
+    if shown {
+        let t0 = crate::gpu_canvas::now_ms();
+        let d = photosuite_engine::float_cmds::displayed(st, crate::canvas::selection_drag_delta(app).unwrap_or((0, 0)))?;
+        let d = photosuite_engine::mode_cmds::display_document(&d).unwrap_or(d);
+        let p = app.move_preview.as_mut()?;
+        p.shown = Some(Arc::new(d));
+        p.offsets.push(offset);
+        app.perf.span("floating preview", crate::gpu_canvas::now_ms() - t0);
     }
     let p = app.move_preview.as_ref()?;
     Some((p.shown.clone()?, p.key()))

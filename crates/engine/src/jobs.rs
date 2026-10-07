@@ -594,6 +594,10 @@ impl Session {
         if !(params.is_object() || params.is_null()) {
             return Err(EngineError::BadParams { cmd: id.to_string(), msg: "params must be a JSON object".into() });
         }
+        // A floating selection drops before any other command (Undo puts it back instead).
+        if let Some(v) = crate::float_cmds::before_command(self, id)? {
+            return Ok(Started::Done(v));
+        }
         if let Err(why) = crate::smart_cmds::target_enabled(self, spec, &params).unwrap_or_else(|| (spec.enabled)(self)) {
             return Err(EngineError::Disabled(id.to_string(), why));
         }

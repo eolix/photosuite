@@ -33,6 +33,7 @@ pub mod fill_cmds;
 pub mod fill_key_cmds;
 pub mod filters;
 pub mod filters_ext;
+pub mod float_cmds;
 mod frame_cmds;
 pub mod fx_view_cmds;
 pub mod gallery_cmds;
@@ -184,6 +185,9 @@ pub struct DocState {
     /// ⌥-click on a layer's eye (`layer.showOnly`): the layer shown alone and every layer's
     /// visibility before, so the next ⌥-click restores it (view state, not history).
     pub show_only: Option<(LayerId, Vec<(LayerId, bool)>)>,
+    /// A floating selection (`select.float`): the cut piece and where it floats, until dropped
+    /// (view state: the document is unchanged until `select.drop`).
+    pub floating: Option<float_cmds::Floating>,
 }
 
 impl DocState {
@@ -208,6 +212,7 @@ impl DocState {
             symmetry_path: None,
             fx_collapsed: Vec::new(),
             show_only: None,
+            floating: None,
         }
     }
     /// The selected layers in bottom-to-top document order, always including the active layer.

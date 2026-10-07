@@ -387,6 +387,8 @@ mod tests {
         assert_eq!((sel.x0, sel.y0, sel.x1), (0, 0, 120));
         // Zoomed in to 800%, 4 px is beyond the 1 px threshold: no snap.
         app.ui.views[0].zoom = 8.0;
+        // (Deselect first: a drag starting inside the selection would move it.)
+        app.run("select.deselect", json!({})).unwrap();
         crate::canvas::tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 }, m);
         crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 116.0, y: 50.0 }, m);
         let sel = app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();

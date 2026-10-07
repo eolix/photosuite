@@ -49,11 +49,14 @@ pub struct Drag {
     /// The reposition key (Space) is held: pointer moves move the whole gesture instead of
     /// sizing it (marquees, lasso, shapes; `hold_keys`).
     pub reposition: bool,
+    /// A marquee or lasso drag that started inside the selection moves it instead of drawing:
+    /// `Some(false)` moves the outline, `Some(true)` moves the floating piece (`select.float`).
+    pub sel_move: Option<bool>,
 }
 
 impl Drag {
     pub fn new(tool: Tool, start: [f64; 2], points: Vec<[f64; 3]>, modifiers: egui::Modifiers, erase: bool) -> Self {
-        Self { tool, start, points, modifiers, erase, constrain: None, live: modifiers, released: egui::Modifiers::NONE, reposition: false }
+        Self { tool, start, points, modifiers, erase, constrain: None, live: modifiers, released: egui::Modifiers::NONE, reposition: false, sel_move: None }
     }
 
     /// Reposition: move the start and every point so the last one lands on `to` (same size).
@@ -1660,7 +1663,12 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
         }
         if let Some((_, _, segs)) = &app.outline_cache {
             let time = ui.input(|i| i.time);
-            marching_ants_segments(&painter, &xf, segs, time);
+            // A floating piece (and a selection being dragged) draws its ants where it is shown.
+            let mut shown = xf;
+            if let Some((dx, dy)) = selection_shown_offset(app) {
+                shown.center = [xf.center[0] - dx as f32, xf.center[1] - dy as f32];
+            }
+            marching_ants_segments(&painter, &shown, segs, time);
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
     }
@@ -1916,6 +1924,11 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
             ui.ctx().set_cursor_icon(c);
         } else if let Some(c) = response.hover_pos().filter(|_| tool == Tool::Crop).and_then(|p| crate::crop_ui::cursor(app, xf.to_doc(p))) {
             ui.ctx().set_cursor_icon(c);
+        } else if app.drag.as_ref().is_some_and(|d| d.sel_move.is_some())
+            || response.hover_pos().is_some_and(|p| app.drag.is_none() && selection_drag_kind(app, tool, xf.to_doc(p), ui.input(|i| i.modifiers)).is_some())
+        {
+            // Over the ants with a marquee or lasso: a press drags the selection.
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Move);
         } else if let Some(p) = response.hover_pos() {
             let alt = ui.input(|i| i.modifiers.alt);
             let icon = match tool {
@@ -2218,6 +2231,10 @@ fn draw_drag_preview(app: &mut PhotosuiteApp, painter: &egui::Painter, xf: &View
         app.trail = None;
         return;
     };
+    // Dragging the selection: its own ants follow the pointer (`selection_shown_offset`).
+    if d.sel_move.is_some() {
+        return;
+    }
     let last = d.points.last().map(|p| [p[0], p[1]]).unwrap_or(d.start);
     let marquee = matches!(d.tool, Tool::RectMarquee | Tool::EllipseMarquee).then(|| marquee_corners(&app.ui.tool_options, d, last));
     if let Some((a, b)) = marquee {
@@ -2365,6 +2382,13 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     crate::transform_tool::end_if_left(app);
     // View › Snap / Snap To and smart guides (snap_ui.rs).
     let raw = ev;
+    // A press anywhere but on the floating piece (or with ⇧ / ⌥, to draw) drops it first.
+    if let ToolEvent::Down { x, y, .. } = raw
+        && app.session.active().is_some_and(|st| photosuite_engine::float_cmds::floating(st).is_some())
+        && selection_drag_kind(app, app.ui.tool, [x, y], mods) != Some(true)
+    {
+        let _ = app.run("select.drop", json!({}));
+    }
     let ev = crate::snap_ui::filter_event(app, ev, mods);
     // Free Transform picks the handle under the press where the user clicked: the snapped press
     // can land outside the corner's grab area and turn a corner drag into a move of the whole box.
@@ -2450,6 +2474,22 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
             // (⌥-click with the Clone Stamp or Healing Brush only sets the source).
             let sets_source = matches!(tool, Tool::CloneStamp | Tool::Healing) && mods.alt;
             if !sets_source && crate::rasterize_prompt::intercept(app, tool, x, y, pressure) {
+                return;
+            }
+            // Marquee / lasso inside the selection: drag the outline, or ⌘-drag to cut the selected
+            // pixels into a floating piece (`select.float`) and drag that.
+            if let Some(cut) = selection_drag_kind(app, tool, [x, y], mods) {
+                if cut
+                    && app.session.active().is_some_and(|st| photosuite_engine::float_cmds::floating(st).is_none())
+                    && let Err(e) = app.run("select.float", json!({"dx": 0, "dy": 0}))
+                {
+                    app.ui.status = e;
+                    app.ui.status_error = true;
+                    return;
+                }
+                let mut d = Drag::new(tool, [x, y], vec![[x, y, pressure as f64]], mods, false);
+                d.sel_move = Some(cut);
+                app.drag = Some(d);
                 return;
             }
             match tool {
@@ -2544,8 +2584,71 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     }
 }
 
+/// Is document point `p` inside the active document's selection?
+fn inside_selection(app: &PhotosuiteApp, p: [f64; 2]) -> bool {
+    let Some(sel) = app.session.active().and_then(|st| st.doc.selection.as_ref()) else { return false };
+    let mut v = [0.0f32];
+    sel.read_pixel(p[0].floor() as i32, p[1].floor() as i32, &mut v);
+    v[0] > 0.0
+}
+
+/// Does a press with `tool` at `p` drag the selection rather than draw a new one? `Some(true)`
+/// moves the floating piece (⌘ cuts one first; a floating piece moves with a plain drag),
+/// `Some(false)` just the outline (no ⇧ / ⌥ and the options bar on New Selection, so a combining
+/// drag still draws).
+pub fn selection_drag_kind(app: &PhotosuiteApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> Option<bool> {
+    if !matches!(tool, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso) {
+        return None;
+    }
+    if let Some(f) = app.session.active().and_then(photosuite_engine::float_cmds::floating) {
+        let on = inside_selection(app, [p[0] - f64::from(f.offset.0), p[1] - f64::from(f.offset.1)]);
+        return (on && !mods.shift && !mods.alt).then_some(true);
+    }
+    if !inside_selection(app, p) {
+        return None;
+    }
+    if mods.command && !mods.shift && !mods.alt {
+        return Some(true);
+    }
+    (!mods.command && selection_mode(app, mods) == "replace").then_some(false)
+}
+
+/// Whole-pixel offset of a selection drag in progress (`Drag::sel_move`).
+pub(crate) fn selection_drag_delta(app: &PhotosuiteApp) -> Option<(i32, i32)> {
+    let d = app.drag.as_ref().filter(|d| d.sel_move.is_some())?;
+    let end = d.points.last().map_or(d.start, |p| [p[0], p[1]]);
+    Some(((end[0] - d.start[0]).round().clamp(-1e7, 1e7) as i32, (end[1] - d.start[1]).round().clamp(-1e7, 1e7) as i32))
+}
+
+/// Where the selection is drawn relative to where it is: a floating piece's offset plus a drag
+/// in progress.
+fn selection_shown_offset(app: &PhotosuiteApp) -> Option<(i32, i32)> {
+    crate::move_ui::floating_offset(app).or_else(|| selection_drag_delta(app))
+}
+
+/// End of a selection drag: move the outline, or the floating piece. A click without moving
+/// deselects, like a marquee click (a click on a floating piece leaves it floating).
+fn finish_selection_drag(app: &mut PhotosuiteApp, floating: bool, start: [f64; 2], end: [f64; 2]) {
+    let (dx, dy) = ((end[0] - start[0]).round(), (end[1] - start[1]).round());
+    let r = match (floating, dx == 0.0 && dy == 0.0) {
+        (true, true) => return,
+        (false, true) if app.session.is_enabled("select.deselect") => app.run("select.deselect", json!({})),
+        (false, true) => return,
+        (true, false) => app.run("select.float", json!({"dx": dx, "dy": dy})),
+        (false, false) => app.run("select.transformSelection", json!({"dx": dx, "dy": dy})),
+    };
+    if let Err(e) = r {
+        app.ui.status = e;
+        app.ui.status_error = true;
+    }
+}
+
 fn finish_gesture(app: &mut PhotosuiteApp, d: Drag) {
     let end = d.points.last().copied().unwrap_or([d.start[0], d.start[1], 1.0]);
+    if let Some(floating) = d.sel_move {
+        finish_selection_drag(app, floating, d.start, [end[0], end[1]]);
+        return;
+    }
     // Where the next ⇧-click line starts.
     if crate::stroke_constraint::connects(d.tool)
         && let Some(st) = app.session.active()
