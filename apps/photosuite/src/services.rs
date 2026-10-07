@@ -23,7 +23,7 @@ const OPEN_EXTS: &[&str] = &[
 /// extension comes first; anything else defaults to Photoshop. The native .pcraft format isn't
 /// offered (it still opens, and an opened .pcraft file still saves in place).
 const SAVE_FILTERS: &[(&str, &[&str])] =
-    &[("Photoshop", &["psd", "psb"]), ("PNG", &["png"]), ("JPEG", &["jpg"]), ("TIFF", &["tif"]), ("OpenEXR", &["exr"]), ("PDF", &["pdf"])];
+    &[("Photoshop", &["psd", "psb"]), ("PNG", &["png"]), ("JPEG", &["jpg"]), ("TIFF", &["tif"]), ("Targa", &["tga"]), ("OpenEXR", &["exr"]), ("PDF", &["pdf"])];
 
 /// [`SAVE_FILTERS`] with the one for `suggested`'s extension first.
 fn save_filters(suggested: &str) -> Vec<(&'static str, &'static [&'static str])> {
