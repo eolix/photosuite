@@ -905,6 +905,23 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn arbitrary_rotation_starts_at_the_ruler_angle() {
+        let (mut app, ctx) = app();
+        let open = |app: &mut PhotosuiteApp| {
+            let r = crate::menus::invoke(app, &ctx, "image.rotation.arbitrary", json!({})).unwrap();
+            let f = &app.ui.dialog_mut(r["dialog"].as_u64().unwrap()).unwrap().fields;
+            (f["angle"].as_f64().unwrap(), f["direction"].clone())
+        };
+        assert_eq!(open(&mut app), (0.0, json!("cw")));
+        // A line falling to the right straightens counter-clockwise, a near-vertical one to the y axis.
+        for (end, dir) in [([150, 60], "ccw"), ([150, 40], "cw"), ([60, -50], "ccw")] {
+            app.run("image.analysis.rulerTool", json!({"start": [50, 50], "end": end})).unwrap();
+            let (a, d) = open(&mut app);
+            assert!((a - 5.7106).abs() < 1e-3 && d == json!(dir), "{end:?}: {a} {d}");
+        }
+    }
+
+    #[test]
     fn ruler_drag_protractor_and_clear() {
         let (mut app, _) = app();
         app.ui.tool = Tool::Ruler;

@@ -629,13 +629,17 @@ fn inscribed(w: f64, h: f64, a: f64) -> (f64, f64) {
     }
 }
 
+/// Clockwise rotation in degrees that turns the ruler line onto its nearest axis.
+pub fn straighten_angle(r: &Ruler) -> f64 {
+    let (dx, dy) = (r.end[0] - r.start[0], r.end[1] - r.start[1]);
+    let a = (-dy).atan2(dx).to_degrees();
+    a - 90.0 * (a / 90.0).round()
+}
+
 fn straighten(s: &mut Session, p: &Value) -> Result<Value> {
     let d = doc(s)?;
     let r = d.measurement.ruler.ok_or_else(|| EngineError::Other("no ruler line".into()))?;
-    let (dx, dy) = (r.end[0] - r.start[0], r.end[1] - r.start[1]);
-    let a = (-dy).atan2(dx).to_degrees();
-    // Straighten to the nearest axis: rotate clockwise by the remaining angle.
-    let rot = a - 90.0 * (a / 90.0).round();
+    let rot = straighten_angle(&r);
     if rot.abs() < 1e-9 {
         return Ok(json!({"angle": 0.0}));
     }

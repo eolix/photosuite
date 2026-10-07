@@ -199,6 +199,9 @@ pub fn open(app: &mut PhotosuiteApp, command: &str) -> Option<u64> {
     if command == "filter.lensCorrection" {
         lens_choices(app, &mut fields);
     }
+    if command == "image.rotation.arbitrary" {
+        straighten_defaults(app, &mut fields);
+    }
     if parse_spec(spec.params).iter().any(|p| p.kind == Kind::Document) {
         // The document picker lists every open document (params refer to them by index).
         let names: Vec<String> = app.session.documents().iter().map(|d| d.doc.name.clone()).collect();
@@ -223,6 +226,18 @@ fn lens_choices(app: &PhotosuiteApp, fields: &mut Map<String, Value>) {
         fields.insert("profile".into(), json!("measured"));
     }
     fields.insert("__choices".into(), json!({"lens": names}));
+}
+
+/// Arbitrary rotation starts at the angle that straightens the ruler line, when there is one.
+fn straighten_defaults(app: &PhotosuiteApp, fields: &mut Map<String, Value>) {
+    let Some(r) = app.session.active().and_then(|d| d.doc.measurement.ruler) else { return };
+    let rot = photosuite_engine::analysis_cmds::straighten_angle(&r);
+    // A ruler read from a damaged file could hold non-finite ends: keep the 0° default then.
+    if !rot.is_finite() {
+        return;
+    }
+    fields.insert("angle".into(), json!(rot.abs()));
+    fields.insert("direction".into(), json!(if rot < 0.0 { "ccw" } else { "cw" }));
 }
 
 /// A filter dialog with live preview for `command` whose parameters follow `spec` (registry
