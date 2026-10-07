@@ -22,8 +22,11 @@ USAGE:
   photosuite-cli run (<file> | --new <json>) --cmd <id> [--params <json>] [--cmd …] [--out <file>] [--format <ext>] [--quality <1-100>]
       Open a file, run engine commands in order, save the result. Each --params
       applies to the preceding --cmd. Prints each command's JSON result.
-  photosuite-cli batch --actions <actions.json> --in <dir> --out <dir> [--format <ext>] [--quality <1-100>]
-      Apply an action list ([{\"command\": id, \"params\": {…}}, …]) to every image in a directory.
+  photosuite-cli batch --actions <actions.json> --in <dir> --out <dir> [--format <ext>] [--quality <1-100>] [--in-place]
+      Apply an action list to every image in a directory. Steps are [id, params] pairs,
+      {\"command\": id, \"params\": {…}} objects or bare ids, as a recorded action or droplet stores them
+      (a list, or wrapped in {\"actions\": …}, {\"steps\": …} or a droplet). An --out folder that is the
+      --in folder is refused, as the results would replace the originals; --in-place allows it.
   photosuite-cli droplet <file.pcdroplet> <file-or-dir>… [--out <dir>]
       Run a droplet (File › Automate › Create Droplet) on images and folders.
   photosuite-cli commands [--json] [--filter <text>]
@@ -60,7 +63,7 @@ const SUBCOMMANDS: &[Subcommand] = &[
     Subcommand { name: "convert", values: &["--format", "--quality"], bare: &[], run: convert },
     Subcommand { name: "info", values: &[], bare: &["--compact"], run: |a, out, _| info(a, out) },
     Subcommand { name: "run", values: &["--new", "--cmd", "--params", "--out", "--format", "--quality"], bare: &[], run: run_cmds },
-    Subcommand { name: "batch", values: &["--actions", "--in", "--out", "--format", "--quality"], bare: &[], run: batch },
+    Subcommand { name: "batch", values: &["--actions", "--in", "--out", "--format", "--quality"], bare: &["--in-place"], run: batch },
     Subcommand { name: "droplet", values: &["--out"], bare: &[], run: droplet },
     Subcommand { name: "commands", values: &["--filter"], bare: &["--json"], run: |a, out, _| commands(a, out) },
     Subcommand {
@@ -166,11 +169,12 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
 fn export_opts(a: &Args) -> Result<ExportOptions, String> {
     let mut o = ExportOptions::default();
     if let Some(q) = a.get("--quality") {
-        let q: u8 = q.parse().map_err(|_| format!("bad --quality `{q}`"))?;
-        o.encode.jpeg_quality = q.clamp(1, 100);
+        let q: u8 =
+            q.parse().ok().filter(|q| (1..=100).contains(q)).ok_or_else(|| format!("bad --quality `{q}`: expected a whole number from 1 to 100"))?;
+        o.encode.jpeg_quality = q;
         // WebP with a quality is lossy WebP.
         o.encode.webp_lossless = false;
-        o.encode.webp_quality = q.min(100);
+        o.encode.webp_quality = q;
     }
     Ok(o)
 }
@@ -190,9 +194,10 @@ fn convert(a: &Args, _out: &mut dyn Write, err: &mut dyn Write) -> R {
     let [input, output] = a.positional.as_slice() else {
         return Err("convert needs <in> <out>".into());
     };
+    let opts = export_opts(a)?;
     let o = files::open(Path::new(input)).map_err(|e| e.to_string())?;
     warn_all(err, &o.warnings);
-    let ws = files::save(&o.document, Path::new(output), a.get("--format"), &export_opts(a)?, None).map_err(|e| e.to_string())?;
+    let ws = files::save(&o.document, Path::new(output), a.get("--format"), &opts, None).map_err(|e| e.to_string())?;
     warn_all(err, &ws);
     Ok(())
 }
@@ -237,6 +242,7 @@ fn command_list(a: &Args) -> Result<Vec<(String, Value)>, String> {
 }
 
 fn run_cmds(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
+    let opts = export_opts(a)?;
     let mut h = Headless::trusted_local();
     match (a.positional.as_slice(), a.get("--new")) {
         ([file], None) => {
@@ -259,29 +265,25 @@ fn run_cmds(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
         print_json(out, &json!({"command": id, "result": r}), true)?;
     }
     if let Some(o) = a.get("--out") {
-        let r = h.save(None, Some(Path::new(o)), a.get("--format"), &export_opts(a)?).map_err(|e| e.to_string())?;
+        let r = h.save(None, Some(Path::new(o)), a.get("--format"), &opts).map_err(|e| e.to_string())?;
         let ws: Vec<String> = serde_json::from_value(r["warnings"].clone()).unwrap_or_default();
         warn_all(err, &ws);
     }
     Ok(())
 }
 
-/// Parse an actions file: `[{"command": id, "params": {…}}]` or
-/// `{"actions": [...]}`; `"id"` is accepted for `"command"`.
+/// Parse an actions file: the steps of a recorded action or a droplet (`[id, params]` pairs,
+/// `{"command": id, "params": {…}}` objects or bare ids; `"id"` is accepted for `"command"`), as a
+/// list or wrapped in `{"actions": […]}`, `{"steps": […]}` or a droplet (#489).
 pub fn parse_actions(text: &str) -> Result<Vec<(String, Value)>, String> {
     let v: Value = serde_json::from_str(text).map_err(|e| format!("actions JSON: {e}"))?;
-    let list = match &v {
-        Value::Array(a) => a.clone(),
-        Value::Object(m) => m.get("actions").and_then(Value::as_array).cloned().ok_or("actions JSON: expected an array or {\"actions\": [...]}")?,
-        _ => return Err("actions JSON: expected an array".into()),
-    };
-    list.into_iter()
-        .enumerate()
-        .map(|(i, a)| {
-            let id = a.get("command").or_else(|| a.get("id")).and_then(Value::as_str).ok_or_else(|| format!("action {i}: missing \"command\""))?;
-            Ok((id.to_owned(), a.get("params").cloned().unwrap_or_else(|| json!({}))))
-        })
-        .collect()
+    photosuite_engine::automate_cmds::parse_action(v.get("actions").unwrap_or(&v), "batch --actions").map_err(|e| e.to_string())
+}
+
+/// Whether `a` and `b` name the same existing folder, however they are spelt (relative, with a
+/// trailing separator, through a symbolic link).
+fn same_dir(a: &Path, b: &Path) -> bool {
+    matches!((std::fs::canonicalize(a), std::fs::canonicalize(b)), (Ok(a), Ok(b)) if a == b)
 }
 
 fn is_input(p: &Path) -> bool {
@@ -296,14 +298,24 @@ fn batch(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
     let text = std::fs::read_to_string(actions_path).map_err(|e| format!("{actions_path}: {e}"))?;
     let actions = parse_actions(&text)?;
     let opts = export_opts(a)?;
+    // Results are saved as `<out>/<stem>.<ext>`, so an `--out` that is the `--in` folder would
+    // replace the originals (#492).
+    if !a.has("--in-place") && same_dir(&in_dir, &out_dir) {
+        return Err(format!(
+            "--out {} is the --in folder, so the results would replace the originals: choose another --out folder, or pass --in-place to overwrite them",
+            out_dir.display()
+        ));
+    }
     std::fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
     let mut inputs: Vec<PathBuf> =
         std::fs::read_dir(&in_dir).map_err(|e| format!("{}: {e}", in_dir.display()))?.flatten().map(|e| e.path()).filter(|p| is_input(p)).collect();
     inputs.sort();
     let (mut ok, mut failed) = (0, 0);
     let mut written = photosuite_engine::file_cmds::OutputClaims::default();
+    // `--format .jpg` names outputs `<stem>.jpg`, as `--format jpg` does (#490).
+    let format = a.get("--format").map(|f| f.strip_prefix('.').unwrap_or(f));
     for input in &inputs {
-        let ext = a.get("--format").map(str::to_owned).or_else(|| input.extension().map(|e| e.to_string_lossy().into_owned())).unwrap_or_else(|| "png".into());
+        let ext = format.map(str::to_owned).or_else(|| input.extension().map(|e| e.to_string_lossy().into_owned())).unwrap_or_else(|| "png".into());
         let stem = input.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let target = out_dir.join(format!("{stem}.{ext}"));
         let target_text = target.to_string_lossy();

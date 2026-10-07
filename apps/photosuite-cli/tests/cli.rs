@@ -212,6 +212,157 @@ fn parse_actions_formats() {
     assert!(photosuite_cli::parse_actions(r#"{"actions":[{"command":"c"}]}"#).unwrap().len() == 1);
     assert!(photosuite_cli::parse_actions(r#"[{"params":{}}]"#).is_err());
     assert!(photosuite_cli::parse_actions("7").is_err());
+    // #489: the step shapes a recorded action and a droplet store, bare or wrapped.
+    let want = vec![("a".to_string(), json!({"x":1})), ("b".to_string(), json!({}))];
+    for text in [
+        r#"[["a",{"x":1}],["b"]]"#,
+        r#"[["a",{"x":1}],"b"]"#,
+        r#"{"steps":[["a",{"x":1}],["b",{}]]}"#,
+        r#"{"photosuiteDroplet":1,"action":{"steps":[["a",{"x":1}],{"command":"b"}]}}"#,
+        r#"{"actions":[["a",{"x":1}],["b",{}]]}"#,
+    ] {
+        assert_eq!(photosuite_cli::parse_actions(text).unwrap(), want, "{text}");
+    }
+    for text in ["[42]", "[[]]", "[[7,{}]]", r#"{"name":"x"}"#] {
+        assert!(photosuite_cli::parse_actions(text).is_err(), "{text}");
+    }
+}
+
+/// Runs `batch` on `input` with `actions` (saved as `<name>.json`), writing to the folder `<d>/<name>`.
+fn batch_with(d: &Path, input: &Path, name: &str, actions: &str, extra: &[&str]) -> std::process::Output {
+    let file = d.join(format!("{name}.json"));
+    std::fs::write(&file, actions).unwrap();
+    bin().args(["batch", "--actions"]).arg(&file).arg("--in").arg(input).arg("--out").arg(d.join(name)).args(extra).output().unwrap()
+}
+
+/// #489: `batch --actions` takes `[id, params]` steps and a droplet's steps, with the same results
+/// as the object form; a malformed step fails before anything is written.
+#[test]
+fn batch_accepts_recorded_action_steps() {
+    let d = tmp("batch-steps");
+    let input = d.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    write_png(&input.join("a.png"), 8, 4, 3);
+    write_png(&input.join("b.png"), 6, 5, 9);
+    let shapes = [
+        ("objects", r#"[{"command":"image.adjustments.invert"}]"#),
+        ("pairs", r#"[["image.adjustments.invert",{}]]"#),
+        ("ids", r#"["image.adjustments.invert"]"#),
+        ("droplet", r#"{"photosuiteDroplet":1,"action":{"steps":[["image.adjustments.invert",{}]]}}"#),
+    ];
+    for (name, actions) in shapes {
+        let o = batch_with(&d, &input, name, actions, &[]);
+        assert!(o.status.success(), "{name}: {}", String::from_utf8_lossy(&o.stderr));
+        assert!(String::from_utf8_lossy(&o.stdout).contains("2 succeeded, 0 failed"), "{name}");
+        for f in ["a.png", "b.png"] {
+            assert_eq!(std::fs::read(d.join(name).join(f)).unwrap(), std::fs::read(d.join("objects").join(f)).unwrap(), "{name}/{f}");
+        }
+    }
+    let o = batch_with(&d, &input, "bad", "[42]", &[]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(!d.join("bad").exists(), "nothing written");
+}
+
+/// #490: a leading dot on `--format` doesn't double the dot in output names.
+#[test]
+fn batch_format_with_leading_dot() {
+    let d = tmp("batch-dot");
+    let input = d.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    write_png(&input.join("a.png"), 8, 4, 3);
+    write_png(&input.join("b.png"), 6, 5, 9);
+    let invert = r#"[{"command":"image.adjustments.invert"}]"#;
+    for (name, format) in [("dot", ".jpg"), ("plain", "jpg")] {
+        let o = batch_with(&d, &input, name, invert, &["--format", format]);
+        assert!(o.status.success(), "{format}: {}", String::from_utf8_lossy(&o.stderr));
+        let mut names: Vec<String> = std::fs::read_dir(d.join(name)).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        names.sort();
+        assert_eq!(names, ["a.jpg", "b.jpg"], "{format}");
+        assert_eq!(photosuite_codecs::detect(&std::fs::read(d.join(name).join("a.jpg")).unwrap()), Some(photosuite_codecs::Format::Jpeg));
+    }
+}
+
+/// #491: `--quality` outside 1-100 is an error for every subcommand, whatever the number's size,
+/// and nothing is written.
+#[test]
+fn quality_outside_1_to_100_is_refused() {
+    let d = tmp("quality");
+    let input = d.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    let a = input.join("a.png");
+    write_png(&a, 8, 4, 3);
+    let invert = r#"[{"command":"image.adjustments.invert"}]"#;
+    for q in ["0", "101", "255", "256", "1000", "-1", "abc", "50.5", ""] {
+        let out = d.join("q.jpg");
+        let (mut convert, mut run) = (bin(), bin());
+        convert.arg("convert").arg(&a).arg(&out).args(["--quality", q]);
+        run.arg("run").arg(&a).args(["--cmd", "image.adjustments.invert", "--out"]).arg(&out).args(["--quality", q]);
+        for cmd in [&mut convert, &mut run] {
+            let o = cmd.output().unwrap();
+            assert_eq!(o.status.code(), Some(1), "--quality {q}");
+            assert!(String::from_utf8_lossy(&o.stderr).contains(&format!("bad --quality `{q}`: expected a whole number from 1 to 100")), "--quality {q}");
+            assert!(!out.exists(), "--quality {q} wrote a file");
+        }
+        let o = batch_with(&d, &input, "qb", invert, &["--format", "jpg", "--quality", q]);
+        assert_eq!(o.status.code(), Some(1), "batch --quality {q}");
+        assert!(!d.join("qb").exists(), "batch --quality {q} wrote a folder");
+    }
+    // The documented range still encodes, lower quality making a smaller file.
+    let sizes: Vec<usize> = ["1", "50", "100"]
+        .iter()
+        .map(|q| {
+            let out = d.join(format!("q{q}.jpg"));
+            ok(bin().arg("convert").arg(&a).arg(&out).args(["--quality", q]));
+            std::fs::read(out).unwrap().len()
+        })
+        .collect();
+    assert!(sizes[0] <= sizes[1] && sizes[1] <= sizes[2], "{sizes:?}");
+}
+
+/// #492: an `--out` folder that is the `--in` folder, however it is spelt, is refused before
+/// anything is written, unless `--in-place` asks for it.
+#[test]
+fn batch_refuses_to_write_over_its_inputs() {
+    let d = tmp("batch-in-place");
+    let input = d.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    write_png(&input.join("a.png"), 8, 4, 3);
+    let img = photosuite_codecs::Image::from_u8(8, 4, photosuite_codecs::ChannelLayout::Rgb, vec![90; 96]).unwrap();
+    std::fs::write(input.join("a.tif"), photosuite_codecs::encode(&img, photosuite_codecs::Format::Tiff, &Default::default()).unwrap()).unwrap();
+    let actions = d.join("actions.json");
+    std::fs::write(&actions, r#"[{"command":"image.adjustments.invert"}]"#).unwrap();
+    let snapshot = || {
+        let mut files: Vec<(PathBuf, Vec<u8>)> =
+            std::fs::read_dir(&input).unwrap().map(|e| e.unwrap().path()).map(|p| (p.clone(), std::fs::read(p).unwrap())).collect();
+        files.sort();
+        files
+    };
+    let before = snapshot();
+    let batch = |out: &Path, extra: &[&str]| {
+        bin().current_dir(&d).args(["batch", "--actions"]).arg(&actions).args(["--in", "in", "--out"]).arg(out).args(extra).output().unwrap()
+    };
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&input, d.join("link")).unwrap();
+    let link = cfg!(unix).then(|| PathBuf::from("link"));
+    for out in [PathBuf::from("in"), PathBuf::from("./in/"), input.clone(), input.join(".")].iter().chain(&link) {
+        for extra in [&[][..], &["--format", "tif"][..]] {
+            let o = batch(out, extra);
+            let err = String::from_utf8_lossy(&o.stderr);
+            assert_eq!(o.status.code(), Some(1), "--out {} {extra:?}: {err}", out.display());
+            assert!(err.contains("is the --in folder") && err.contains("--in-place"), "{err}");
+            assert_eq!(snapshot(), before, "--out {} {extra:?} changed the originals", out.display());
+        }
+    }
+    // A separate folder runs as before, leaving the originals alone.
+    let (out, _) = ok(bin().current_dir(&d).args(["batch", "--actions"]).arg(&actions).args(["--in", "in", "--out", "out"]));
+    assert!(out.contains("2 succeeded, 0 failed"), "{out}");
+    assert_eq!(snapshot(), before);
+    // `--in-place` opts in: each result replaces its original.
+    let o = batch(Path::new("in"), &["--in-place"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let after = snapshot();
+    assert_eq!(after.len(), 2);
+    assert!(after.iter().zip(&before).all(|(a, b)| a.0 == b.0 && a.1 != b.1), "both inputs replaced");
 }
 
 #[test]

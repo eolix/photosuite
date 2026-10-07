@@ -50,14 +50,7 @@ pub fn parse_script(text: &str) -> Result<Vec<(String, Value)>> {
     let t = text.trim_start_matches('\u{feff}').trim();
     if t.starts_with('[') || t.starts_with('{') {
         let v: Value = serde_json::from_str(t).map_err(|e| bad(cmd, format!("script JSON: {e}")))?;
-        let steps = match &v {
-            Value::Array(_) => &v,
-            Value::Object(o) => {
-                o.get("steps").or_else(|| o.get("action").and_then(|a| a.get("steps").or(Some(a)))).ok_or_else(|| bad(cmd, "script object needs \"steps\""))?
-            }
-            _ => return Err(bad(cmd, "script JSON must be an array of steps or an object")),
-        };
-        return parse_steps(steps, cmd);
+        return parse_action(&v, cmd);
     }
     let mut out = Vec::new();
     for (n, line) in t.lines().enumerate() {
@@ -70,6 +63,20 @@ pub fn parse_script(text: &str) -> Result<Vec<(String, Value)>> {
         out.push((id.to_string(), params));
     }
     Ok(out)
+}
+
+/// The steps of a JSON action: an array of steps (`[id, params]`, `{"command", "params"}` or a
+/// bare id), `{"steps"|"action": …}` (a recorded action) or a droplet. `cmd` names the caller in
+/// errors.
+pub fn parse_action(v: &Value, cmd: &str) -> Result<Vec<(String, Value)>> {
+    let steps = match v {
+        Value::Array(_) => v,
+        Value::Object(o) => {
+            o.get("steps").or_else(|| o.get("action").and_then(|a| a.get("steps").or(Some(a)))).ok_or_else(|| bad(cmd, "an action object needs \"steps\""))?
+        }
+        _ => return Err(bad(cmd, "an action must be an array of steps or an object")),
+    };
+    parse_steps(steps, cmd)
 }
 
 fn parse_steps(v: &Value, cmd: &str) -> Result<Vec<(String, Value)>> {
