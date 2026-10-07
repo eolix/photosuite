@@ -374,17 +374,23 @@ fn curve_editor(ui: &mut egui::Ui, p: &mut CameraRaw, dirty: &mut bool) {
     }
     // Interaction.
     let drag_id = ui.id().with("cr-curve-drag");
-    let mut dragging: Option<usize> = ui.data(|d| d.get_temp(drag_id));
+    // Stored as `Option<usize>`, so read back as one: reading it as `usize` found nothing, and
+    // the point stopped following the pointer after the drag's first frame.
+    let mut dragging: Option<usize> = ui.data(|d| d.get_temp::<Option<usize>>(drag_id)).flatten();
     if let Some(pos) = resp.interact_pointer_pos() {
         let q = from_screen(pos);
         if resp.drag_started() || resp.clicked() {
-            let near = p.point_curve.iter().position(|c| (to_screen(c[0], c[1]) - pos).length() < 8.0);
+            // Where the press started, not where the pointer is once it has moved far enough to
+            // count as a drag: grabbing a point mustn't add a new one beside it.
+            let at = ui.input(|i| i.pointer.press_origin()).filter(|o| rect.contains(*o)).unwrap_or(pos);
+            let near = p.point_curve.iter().position(|c| (to_screen(c[0], c[1]) - at).length() < 8.0);
             if resp.secondary_clicked() {
                 if let Some(i) = near.filter(|i| *i != 0 && *i + 1 != p.point_curve.len()) {
                     p.point_curve.remove(i);
                     *dirty = true;
                 }
             } else {
+                let q = from_screen(at);
                 dragging = Some(near.unwrap_or_else(|| {
                     p.point_curve.push(q);
                     p.point_curve.sort_by(|a, b| a[0].total_cmp(&b[0]));
@@ -770,6 +776,55 @@ mod tests {
         let top = h.get_by_label("OK").rect().bottom() - (ok.bottom() - dialog.top());
         let bar = crate::panels::title_bar_height(&ctx);
         assert!((top - bar).abs() < 1.0, "dialog top {top} stops at the title bar ({bar})");
+    }
+
+    /// Dragging on the curve adds a point there and it follows the pointer for the whole drag
+    /// (it used to stop after the first frame), and dragging it again moves it rather than
+    /// adding another beside it.
+    #[test]
+    fn curve_point_follows_a_long_drag_and_can_be_dragged_again() {
+        use egui_kittest::kittest::Queryable;
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
+        let mut h =
+            egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).build_ui_state(|ui, app: &mut PhotosuiteApp| show(app, ui.ctx()), app);
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        let ctx = h.ctx.clone();
+        menu(h.state_mut(), &ctx, "filter.cameraRaw", &json!({})).unwrap().unwrap();
+        h.state_mut().camera_raw.as_mut().unwrap().open_section = Some("Curve".into());
+        h.run_steps(3);
+        let curve = |h: &egui_kittest::Harness<'_, PhotosuiteApp>| h.state().camera_raw.as_ref().unwrap().params.point_curve.clone();
+        // Drags by `by` in 30 steps; returns the curve after the first step (the drag has begun).
+        let drag = |h: &mut egui_kittest::Harness<'_, PhotosuiteApp>, from: Pos2, by: egui::Vec2| {
+            h.hover_at(from);
+            h.drag_at(from);
+            h.run_steps(2);
+            let mut early = Vec::new();
+            for i in 1..=30 {
+                h.hover_at(from + by * (i as f32 / 30.0));
+                h.run_steps(1);
+                if i == 3 {
+                    early = h.state().camera_raw.as_ref().unwrap().params.point_curve.clone();
+                }
+            }
+            h.drop_at(from + by);
+            h.run_steps(2);
+            early
+        };
+        // The editor's square starts just under the header, at the panel's left edge.
+        let header = h.get_by_label("Curve").rect();
+        let from = pos2(header.left() + 100.0, header.bottom() + 130.0);
+        let early = drag(&mut h, from, vec2(45.0, -60.0));
+        let c = curve(&h);
+        assert_eq!(c.len(), 3, "one point added: {c:?}");
+        let (added, first) = (early[1], c[1]);
+        // Most of the 45 x 60 pt came after the drag's first frames: the point kept following.
+        assert!(first[0] - added[0] > 20.0 && first[1] - added[1] > 30.0, "followed the whole drag: {added:?} → {first:?}");
+        // Grab it where it ended up and drag it back down: it moves, nothing is added.
+        drag(&mut h, from + vec2(45.0, -60.0), vec2(-20.0, 40.0));
+        let c = curve(&h);
+        assert_eq!(c.len(), 3, "no point added beside it: {c:?}");
+        assert!(c[1][0] < first[0] - 10.0 && c[1][1] < first[1] - 20.0, "{first:?} → {:?}", c[1]);
     }
 
     #[test]
