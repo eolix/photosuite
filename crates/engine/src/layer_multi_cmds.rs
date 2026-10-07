@@ -148,7 +148,7 @@ fn select_linked(s: &mut Session) -> Result<Value> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let groups = link_groups(&d.doc, &d.selected_layers());
     let ids: Vec<LayerId> = d.doc.walk().into_iter().filter(|(_, _, l)| l.link_group.is_some_and(|g| groups.contains(&g))).map(|(_, _, l)| l.id).collect();
-    let active = d.active_layer;
+    let active = d.active_layer.filter(|a| ids.contains(a)).or(ids.last().copied());
     let n = ids.len();
     set_selection(s, ids, active, active)?;
     Ok(json!({"selected": n}))
@@ -1130,6 +1130,78 @@ mod tests {
         select_all(&mut s, &[b, d]);
         s.execute("layer.groupLayers", json!({})).unwrap();
         assert_eq!(doc(&s).layers.len(), 4);
+    }
+
+    #[test]
+    fn select_linked_layers_excludes_an_unlinked_active_layer() {
+        for depth in [8, 16, 32] {
+            let mut s = session(depth);
+            let a = rect_layer(&mut s, Rect::new(0, 0, 10, 10));
+            let b = rect_layer(&mut s, Rect::new(20, 20, 30, 30));
+            let other = rect_layer(&mut s, Rect::new(50, 50, 60, 60));
+            select_all(&mut s, &[a, b]);
+            s.execute("layer.linkLayers", json!({})).unwrap();
+            s.execute("layer.select", json!({"layer": a.0})).unwrap();
+            s.execute("layer.select", json!({"layer": other.0, "mode": "toggle"})).unwrap();
+            assert_eq!(sel(&s), vec![a, other]);
+            assert_eq!(s.active().unwrap().active_layer, Some(other));
+            let past = s.active().unwrap().history.past_len();
+            let dirty = s.active().unwrap().is_dirty();
+
+            let result = s.execute("layer.selectLinkedLayers", json!({})).unwrap();
+            assert_eq!(sel(&s), vec![a, b]);
+            assert_eq!(result["selected"], sel(&s).len());
+            assert_eq!(s.active().unwrap().active_layer, Some(b));
+            assert_eq!(s.active().unwrap().layer_anchor, Some(b));
+            assert_eq!(s.active().unwrap().history.past_len(), past);
+            assert_eq!(s.active().unwrap().is_dirty(), dirty);
+
+            // A following multi-layer delete must leave the unrelated layer intact.
+            s.execute("layer.delete", json!({})).unwrap();
+            assert!(doc(&s).layer(a).is_none() && doc(&s).layer(b).is_none());
+            assert!(doc(&s).layer(other).is_some());
+            s.undo();
+            assert!(doc(&s).layer(a).is_some() && doc(&s).layer(b).is_some());
+            assert!(doc(&s).layer(other).is_some());
+        }
+    }
+
+    #[test]
+    fn select_linked_layers_preserves_a_linked_active_layer() {
+        for depth in [8, 16, 32] {
+            let mut s = session(depth);
+            let a = rect_layer(&mut s, Rect::new(0, 0, 10, 10));
+            let b = rect_layer(&mut s, Rect::new(20, 20, 30, 30));
+            select_all(&mut s, &[a, b]);
+            s.execute("layer.linkLayers", json!({})).unwrap();
+            for active in [a, b] {
+                s.execute("layer.select", json!({"layer": active.0})).unwrap();
+                let st = s.active_mut().unwrap();
+                st.saved_revision = st.revision;
+                let past = st.history.past_len();
+                for _ in 0..2 {
+                    let result = s.execute("layer.selectLinkedLayers", json!({})).unwrap();
+                    assert_eq!(sel(&s), vec![a, b]);
+                    assert_eq!(result["selected"], sel(&s).len());
+                    assert_eq!(s.active().unwrap().active_layer, Some(active));
+                    assert_eq!(s.active().unwrap().layer_anchor, Some(active));
+                    assert_eq!(s.active().unwrap().history.past_len(), past);
+                    assert!(!s.active().unwrap().is_dirty());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn select_linked_layers_requires_a_linked_selection() {
+        let mut s = Session::new();
+        assert!(!s.is_enabled("layer.selectLinkedLayers"));
+        assert!(s.execute("layer.selectLinkedLayers", json!({})).is_err());
+        let mut s = session(8);
+        let before = sel(&s);
+        assert!(!s.is_enabled("layer.selectLinkedLayers"));
+        assert!(s.execute("layer.selectLinkedLayers", json!({})).is_err());
+        assert_eq!(sel(&s), before);
     }
 
     #[test]
