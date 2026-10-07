@@ -102,6 +102,21 @@ fn blob_session(depth: u32) -> Session {
 }
 
 #[test]
+fn content_aware_fill_huge_area_neither_panics_nor_wraps() {
+    let mut s = blob_session(8);
+    // `[1e30, 0, 1e30, 10]` overflowed the i32 additions in the area parser (a debug-build
+    // panic, a garbage sampling window in release); the additions saturate now, so this is
+    // simply a whole-canvas window.
+    let r = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": [1e30, 0.0, 1e30, 10.0], "colorAdaptation": "none"})).unwrap();
+    assert!(r["filled"].as_u64().unwrap() > 100);
+    // A malformed area names the problem instead of silently falling back.
+    for area in [json!([0.0, 0.0, null, 10.0]), json!([0.0, 0.0, 10.0]), json!("nope")] {
+        let err = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": area})).unwrap_err();
+        assert!(err.to_string().contains("`area`"), "{err}");
+    }
+}
+
+#[test]
 fn content_aware_fill_removes_object_at_all_depths() {
     for depth in [8, 16, 32] {
         let mut s = blob_session(depth);

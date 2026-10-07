@@ -532,6 +532,22 @@ mod tests {
     }
 
     #[test]
+    fn geometry_params_that_would_wrap_are_rejected() {
+        let mut s = session();
+        // 2^32 + 50 wrapped to `x = 50` and 3e9 to a negative coordinate through `as i32`;
+        // both are bad-params errors now, whatever the front door (UI, CLI, control, MCP).
+        for x in [4_294_967_346_i64, 3_000_000_000_i64] {
+            let err = s.execute("select.rect", json!({"x": x, "y": 0, "width": 10, "height": 10})).unwrap_err();
+            assert!(err.to_string().contains("32-bit"), "{err}");
+        }
+        let err = s.execute("document.pixel", json!({"x": 4_294_967_346_i64, "y": 0})).unwrap_err();
+        assert!(err.to_string().contains("32 bits"), "{err}");
+        // In-range coordinates, including negative and past-canvas ones, are unaffected.
+        s.execute("select.rect", json!({"x": -100, "y": -100, "width": 500, "height": 500})).unwrap();
+        s.execute("document.pixel", json!({"x": 0, "y": 0})).unwrap();
+    }
+
+    #[test]
     fn grow_and_similar() {
         let mut s = session();
         s.execute("select.rect", json!({"x": 6, "y": 6, "width": 2, "height": 2})).unwrap();

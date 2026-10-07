@@ -10,7 +10,7 @@ use photosuite_doc::{Document, Layer, LayerContent, LayerId};
 use photosuite_geom::Rect;
 use serde_json::{Value, json};
 
-use crate::commands::{CommandSpec, int};
+use crate::commands::{CommandSpec, int_i32};
 use crate::{DocState, EngineError, Result, Session};
 
 // ---------- selection state ----------
@@ -237,8 +237,8 @@ pub(crate) fn move_layers(doc: &mut Document, moves: &[(LayerId, i32, i32)]) -> 
 
 /// `layer.translate`: the explicit layer, or every selected layer, plus their linked layers.
 pub fn translate(s: &mut Session, p: &Value) -> Result<Value> {
-    let dx = int(p, "dx").unwrap_or(0) as i32;
-    let dy = int(p, "dy").unwrap_or(0) as i32;
+    let dx = int_i32("layer.translate", p, "dx")?.unwrap_or(0);
+    let dy = int_i32("layer.translate", p, "dy")?.unwrap_or(0);
     if dx == 0 && dy == 0 {
         return Ok(Value::Null);
     }
@@ -1202,6 +1202,21 @@ mod tests {
         assert!(!s.is_enabled("layer.selectLinkedLayers"));
         assert!(s.execute("layer.selectLinkedLayers", json!({})).is_err());
         assert_eq!(sel(&s), before);
+    }
+
+    #[test]
+    fn translate_rejects_offsets_that_would_wrap() {
+        let mut s = session(8);
+        let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
+        select_all(&mut s, &[a]);
+        // 2^32 + 50 wrapped to `dx = 50` and 3e9 to a negative offset through `as i32`.
+        for dx in [4_294_967_346_i64, 3_000_000_000_i64] {
+            let err = s.execute("layer.translate", json!({"dx": dx, "dy": 0})).unwrap_err();
+            assert!(err.to_string().contains("32-bit"), "{err}");
+        }
+        assert_eq!(bounds(&s, a), Rect::new(0, 0, 5, 5), "the layer never moved");
+        // Large in-range offsets still work.
+        s.execute("layer.translate", json!({"dx": -200_000, "dy": 200_000})).unwrap();
     }
 
     #[test]

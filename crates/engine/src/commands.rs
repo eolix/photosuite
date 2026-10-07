@@ -121,6 +121,17 @@ pub(crate) fn int(p: &Value, key: &str) -> Option<i64> {
     p.get(key).and_then(|v| v.as_i64().or_else(|| v.as_f64().filter(|f| f.is_finite()).map(|f| f.round() as i64)))
 }
 
+/// [`int`] narrowed to `i32` for geometry: `None` when absent, and a bad-params error when the
+/// value would wrap through `as i32` — out-of-range integers truncate by multiples of 2^32,
+/// which silently relocates geometry (`dx = 2^32 + 50` moves 50 px, `3e9` goes negative)
+/// instead of erroring.
+pub(crate) fn int_i32(cmd: &str, p: &Value, key: &str) -> Result<Option<i32>> {
+    match int(p, key) {
+        None => Ok(None),
+        Some(v) => i32::try_from(v).map(Some).map_err(|_| bad(cmd, format!("`{key}` = {v} is outside the 32-bit coordinate range"))),
+    }
+}
+
 fn f32_or(p: &Value, key: &str, default: f32) -> f32 {
     p.get(key).and_then(Value::as_f64).map(|v| v as f32).unwrap_or(default)
 }
@@ -324,8 +335,8 @@ fn build() -> Vec<CommandSpec> {
             r##"{"x":i32,"y":i32,"width":u32,"height":u32,"mode":"replace|add|subtract|intersect"="replace","ellipse":bool=false,"antiAlias":bool=true,"feather":px=0}"##,
             has_doc,
             |s, p| {
-                let get = |k: &str| int(p, k).ok_or_else(|| bad("select.rect", format!("missing `{k}`")));
-                let r = Rect::from_xywh(get("x")? as i32, get("y")? as i32, get("width")?.max(0) as u32, get("height")?.max(0) as u32);
+                let get = |k: &str| int_i32("select.rect", p, k).and_then(|v| v.ok_or_else(|| bad("select.rect", format!("missing `{k}`"))));
+                let r = Rect::from_xywh(get("x")?, get("y")?, get("width")?.max(0) as u32, get("height")?.max(0) as u32);
                 let mode = p.get("mode").and_then(Value::as_str).unwrap_or("replace").to_string();
                 let ellipse = p.get("ellipse").and_then(Value::as_bool).unwrap_or(false);
                 // Options bar: anti-aliased ellipse edges (4x4 supersampled) and Feather (applied to the new shape only).

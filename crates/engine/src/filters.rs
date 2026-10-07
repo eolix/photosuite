@@ -15,7 +15,9 @@ fn f(p: &Value, k: &str, d: f32) -> f32 {
     p.get(k).and_then(Value::as_f64).map_or(d, |v| v as f32)
 }
 fn i(p: &Value, k: &str, d: i32) -> i32 {
-    p.get(k).and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f.round() as i64))).map_or(d, |v| v as i32)
+    // Clamped like the neighbouring filter params: an out-of-range value saturates instead of
+    // wrapping through `as i32` (`3e9` used to come back as a negative offset).
+    p.get(k).and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f.round() as i64))).map_or(d, |v| v.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32)
 }
 fn b(p: &Value, k: &str, d: bool) -> bool {
     p.get(k).and_then(Value::as_bool).unwrap_or(d)
@@ -496,6 +498,17 @@ mod tests {
             let j = (5 * 48 + 5) * 4;
             assert_ne!(after[j..j + 4], before[j..j + 4]);
         }
+    }
+
+    #[test]
+    fn huge_offsets_clamp_instead_of_wrapping() {
+        // 3e9 wrapped to a negative offset through `as i32`; it saturates now, so it
+        // equals the maximal in-range offset instead of shifting the other way.
+        let mut a = session();
+        a.execute("filter.other.offset", json!({"horizontal": 3_000_000_000_i64, "vertical": 0})).unwrap();
+        let mut b = session();
+        b.execute("filter.other.offset", json!({"horizontal": 2_147_483_647_i64, "vertical": 0})).unwrap();
+        assert_eq!(active_pixels(&a), active_pixels(&b));
     }
 
     #[test]

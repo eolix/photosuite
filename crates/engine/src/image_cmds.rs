@@ -250,8 +250,15 @@ fn canvas_size(s: &mut Session, p: &Value) -> Result<Value> {
 /// Image → Crop (to the selection bounds).
 fn crop(s: &mut Session, p: &Value) -> Result<Value> {
     let delete = p.get("deleteCroppedPixels").and_then(Value::as_bool).unwrap_or(true);
-    let explicit = match (crate::commands::int(p, "x"), crate::commands::int(p, "y"), crate::commands::int(p, "width"), crate::commands::int(p, "height")) {
-        (Some(x), Some(y), Some(w), Some(h)) if w > 0 && h > 0 => Some(Rect::new(x as i32, y as i32, (x + w) as i32, (y + h) as i32)),
+    // Values beyond i32 would wrap through the narrowing casts into a rectangle unrelated to
+    // the numbers passed; reject them (see `commands::int_i32`).
+    let explicit = match (
+        crate::commands::int_i32("image.crop", p, "x")?,
+        crate::commands::int_i32("image.crop", p, "y")?,
+        crate::commands::int_i32("image.crop", p, "width")?,
+        crate::commands::int_i32("image.crop", p, "height")?,
+    ) {
+        (Some(x), Some(y), Some(w), Some(h)) if w > 0 && h > 0 => Some(Rect::new(x, y, x.saturating_add(w), y.saturating_add(h))),
         _ => None,
     };
     // An explicit rectangle (the Crop tool) may extend past the canvas; a selection crop is clamped.
@@ -433,6 +440,17 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn crop_rejects_rectangles_that_would_wrap() {
+        let mut s = session();
+        // 2^32 + 100 wrapped to `x = 100` through the narrowing casts: a crop rectangle
+        // somewhere unrelated to the numbers passed.
+        let err = s.execute("image.crop", json!({"x": 4_294_967_396_i64, "y": 0, "width": 10, "height": 10})).unwrap_err();
+        assert!(err.to_string().contains("32-bit"), "{err}");
+        // In-range rectangles past the canvas still work (clamped by the crop itself).
+        s.execute("image.crop", json!({"x": -10, "y": -10, "width": 1000, "height": 1000})).unwrap();
+    }
 
     fn session() -> Session {
         let mut s = Session::new();
