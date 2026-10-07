@@ -39,7 +39,10 @@ pub fn entries(l: &Layer, multi: bool, has_selection: bool) -> Vec<Entry> {
     match &l.content {
         LayerContent::Text(_) => v.push(Some(("Rasterize Type", "layer.rasterize.type"))),
         LayerContent::Shape(_) => v.push(Some(("Rasterize Layer", "layer.rasterize.shape"))),
-        LayerContent::Smart(_) => v.push(Some(("Rasterize Layer", "layer.rasterize.smartObject"))),
+        LayerContent::Smart(_) => {
+            v.push(Some((tl!("Edit Contents"), "layer.smartObjects.editContents")));
+            v.push(Some(("Rasterize Layer", "layer.rasterize.smartObject")));
+        }
         LayerContent::Fill(_) => v.push(Some(("Rasterize Layer", "layer.rasterize.fillContent"))),
         _ => v.push(Some(("Rasterize Layer", "layer.rasterize.layer"))),
     }
@@ -119,6 +122,70 @@ pub fn show(app: &crate::PhotosuiteApp, ui: &mut egui::Ui, l: &Layer, on_set: bo
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn smart_object_context_menu_edits_the_clicked_layer() {
+        use crate::PhotosuiteApp;
+        use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
+        use egui_kittest::{Harness, kittest::Queryable};
+
+        fn click(h: &mut Harness<'_, PhotosuiteApp>, at: Pos2, button: PointerButton) {
+            h.hover_at(at);
+            h.step();
+            for pressed in [true, false] {
+                h.event(Event::PointerButton { pos: at, button, pressed, modifiers: Modifiers::NONE });
+                h.step();
+            }
+            h.run_steps(3);
+        }
+
+        for ppp in [1.0, 2.0] {
+            let mut s = photosuite_engine::Session::new();
+            s.execute("file.new", json!({"width": 640, "height": 480})).unwrap();
+            s.execute("layer.new.layer", json!({"name": "Smart source"})).unwrap();
+            s.execute("paint.stroke", json!({"points": [[100, 100]], "size": 20})).unwrap();
+            let smart = s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
+            s.execute("layer.new.layer", json!({"name": "Other active layer"})).unwrap();
+            let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_pixels_per_point(ppp).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(
+                move |cc| {
+                    PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+                    PhotosuiteApp::new(s, crate::Services::default())
+                },
+            );
+            let ctx = h.ctx.clone();
+            let (req, _rx) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
+            crate::control::handle(h.state_mut(), &ctx, &req);
+            h.run_steps(8);
+            let row = crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == smart).expect("layer row drawn").row;
+            // Top-level Pro row: 6 pt padding, 28 pt eye column, 24 pt layer thumbnail.
+            let at = pos2(row.left() + 6.0 + 28.0 + 12.0, row.center().y);
+            click(&mut h, at, PointerButton::Secondary);
+            let at = h.get_by_label("Edit Contents").rect().center();
+            click(&mut h, at, PointerButton::Primary);
+            assert_eq!(h.state().session.active_index(), Some(1), "@{ppp}x: contents tab opens");
+            assert!(h.state().session.is_enabled("layer.smartObjects.saveContents"));
+            assert!(h.state().session.active().unwrap().doc.walk().iter().any(|(_, _, l)| l.name == "Smart source"));
+            h.state_mut().session.set_active(0);
+            assert_eq!(h.state().session.active().unwrap().active_layer, Some(photosuite_doc::LayerId(smart)));
+        }
+    }
+
+    #[test]
+    fn edit_contents_is_available_only_for_smart_objects() {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 32, "height": 24})).unwrap();
+        s.execute("layer.new.layer", json!({"name": "Source"})).unwrap();
+        let layer = |s: &photosuite_engine::Session| {
+            let st = s.active().unwrap();
+            st.doc.layer(st.active_layer.unwrap()).unwrap().clone()
+        };
+        assert!(!entries(&layer(&s), false, false).iter().flatten().any(|e| e.1 == "layer.smartObjects.editContents"));
+        s.execute("paint.stroke", json!({"points": [[12, 12]], "size": 8})).unwrap();
+        s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+        let ids: Vec<_> = entries(&layer(&s), false, false).into_iter().flatten().map(|e| e.1).collect();
+        let edit = ids.iter().position(|id| *id == "layer.smartObjects.editContents").expect("Edit Contents entry");
+        assert_eq!(ids[edit + 1], "layer.rasterize.smartObject");
+    }
 
     #[test]
     fn entries_follow_layer_state() {
