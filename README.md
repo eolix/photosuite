@@ -4,8 +4,6 @@
 
 <h1 align="center">PhotoSuite</h1>
 
-<h3 align="center">Now powered by PhotoCraft</h3>
-
 <p align="center">
   <strong>A desktop image editor, faithful to classic Adobe Photoshop, with native PSD/PSB compatibility - written entirely in Rust.</strong>
 </p>
@@ -33,8 +31,8 @@ Rust image-editing engine (MIT OR Apache-2.0): its document model, PSD reader an
 compositor and command system are the foundation, with PhotoSuite's interface, tools and features
 on top.
 
-> PhotoSuite's intention is to fully tolerate Photoshop-PhotoSuite PSD round trips, with 
-> any effects and smart objects/filters. It's a work in progress.
+> PhotoSuite's intention is to fully suppport Photoshop-PhotoSuite PSD round trips, with 
+> all effects and smart objects/filters. It's a work in progress.
 > It was originally clean-room written in JS with a Rust engine (Tauri), but it has since
 > taken a more modern, performant approach. The Javascript version still lives in many forks.
 
