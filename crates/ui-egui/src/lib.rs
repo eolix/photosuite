@@ -220,6 +220,8 @@ pub struct Recovered {
 pub type AppendTextFn = Box<dyn FnMut(&str, &str) -> Result<(), String>>;
 /// Requests from the operating system since the last call (see [`OsEvent`]).
 pub type OsEventsFn = Box<dyn FnMut() -> Vec<OsEvent>>;
+/// Where the OS pointer is now, in egui points within the window; `None` when unknown.
+pub type CursorPosFn = Box<dyn FnMut(&egui::Context) -> Option<egui::Pos2>>;
 
 /// Platform services injected by the app binary (file dialogs, codecs), keeping this crate free of
 /// I/O dependencies.
@@ -280,6 +282,9 @@ pub struct Services {
     pub append_text: Option<AppendTextFn>,
     /// OS requests (macOS open-documents / quit Apple events), polled every frame.
     pub os_events: Option<OsEventsFn>,
+    /// The pointer position read from the OS (desktop): winit 0.30's file drops carry none, and
+    /// the window gets no pointer events during an OS drag (see `file_open::DropTarget`).
+    pub cursor_pos: Option<CursorPosFn>,
     /// The persistent brush preset store, loading in the background (desktop; see
     /// `photosuite_engine::preset_store`). Attached to the session once it arrives; without
     /// one, brush presets are session-only (web, tests).
@@ -350,6 +355,15 @@ pub struct PhotosuiteApp {
     fonts_ready: bool,
     /// Screen rect of the main canvas last frame (for overlays and the navigator).
     pub last_canvas_rect: egui::Rect,
+    /// The document area showing the active document's canvas last frame (not the tabs, the
+    /// start screen or an opening file's card): files dropped here are placed as layers.
+    pub(crate) drop_canvas_rect: Option<egui::Rect>,
+    /// The document tab strip last frame: a drop there opens the file at the slot under it.
+    pub(crate) tab_strip: Option<canvas::TabStrip>,
+    /// Files dropped on the canvas still to place, one Free Transform at a time.
+    pub(crate) drop_places: std::collections::VecDeque<egui::DroppedFileHandle>,
+    /// The document each of `ui.views` belongs to, as of the last [`Self::sync_views`].
+    view_docs: Vec<DocId>,
     pub fps: f32,
     last_frame_time: f64,
     thumbs: HashMap<(photosuite_doc::LayerId, u8), (u64, egui::TextureHandle)>,
@@ -487,6 +501,10 @@ impl PhotosuiteApp {
             native_menu_bar: false,
             fonts_ready: false,
             last_canvas_rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0)),
+            drop_canvas_rect: None,
+            tab_strip: None,
+            drop_places: Default::default(),
+            view_docs: Vec::new(),
             fps: 0.0,
             last_frame_time: 0.0,
             thumbs: HashMap::new(),
@@ -667,12 +685,25 @@ impl PhotosuiteApp {
         r
     }
 
-    /// Keep one view per document.
+    /// Keep one view per document, in tab order: a view and its windows stay with their document
+    /// when tabs move (`document.move`) or close.
     pub fn sync_views(&mut self) {
         crate::lasso_ui::cancel_stale(self);
-        let n = self.session.documents().len();
-        self.ui.views.resize_with(n, Default::default);
-        self.ui.windows.retain(|w| w.document < n);
+        let ids: Vec<DocId> = self.session.documents().iter().map(|d| d.doc.id).collect();
+        // Where the document of view `i` is now. Views not tracked yet keep their index.
+        let now = |i: usize| match self.view_docs.get(i) {
+            Some(id) => ids.iter().position(|d| d == id),
+            None => (i < ids.len()).then_some(i),
+        };
+        let mut views: Vec<Option<state::View>> = ids.iter().map(|_| None).collect();
+        for (i, v) in std::mem::take(&mut self.ui.views).into_iter().enumerate() {
+            if let Some(slot) = now(i).and_then(|to| views.get_mut(to)) {
+                *slot = Some(v);
+            }
+        }
+        self.ui.views = views.into_iter().map(Option::unwrap_or_default).collect();
+        self.ui.windows.retain_mut(|w| now(w.document).map(|d| w.document = d).is_some());
+        self.view_docs = ids;
         self.prune_thumbs();
         self.sync_mask_targets();
         // Channel-view textures outlive a hidden view (cheap re-show), not their document.
@@ -1030,8 +1061,17 @@ impl eframe::App for PhotosuiteApp {
         }
         // Finder double-click / Open With / Dock drops (macOS open-documents events).
         self.drain_os_events(ctx);
-        // Files dropped onto the window open as documents (with their path, like File › Open).
-        self.open_dropped(ctx.input(|i| i.raw.dropped_files.clone()));
+        // While files are dragged over the window it gets no pointer events: keep frames coming so
+        // the tab strip can follow the pointer.
+        if ctx.input(|i| !i.raw.hovered_files.is_empty()) {
+            ctx.request_repaint();
+        }
+        let dropped = ctx.input(|i| i.raw.dropped_files.clone());
+        if !dropped.is_empty() {
+            let at = self.services.cursor_pos.as_mut().and_then(|f| f(ctx));
+            self.open_dropped(ctx, dropped, at);
+        }
+        self.place_next_dropped(ctx);
         // The control transport wakes the UI on arrival (ctx.request_repaint); only poll while a
         // screenshot is pending. (Polling every 50 ms here made idle apps render at 20 fps.)
         if !self.pending_screenshots.is_empty() {

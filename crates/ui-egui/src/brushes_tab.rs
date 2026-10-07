@@ -92,18 +92,6 @@ pub fn apply(app: &mut PhotosuiteApp, acts: Vec<Action>) {
     }
 }
 
-/// An accent insertion line on one edge of `r` while a drag hovers it.
-fn drop_line(ui: &egui::Ui, r: egui::Rect, after: bool, vertical: bool, t: &Tokens) {
-    let s = Stroke::new(2.0, t.accent);
-    if vertical {
-        let x = if after { r.right() } else { r.left() };
-        ui.painter().line_segment([pos2(x, r.top() + 2.0), pos2(x, r.bottom() - 2.0)], s);
-    } else {
-        let y = if after { r.bottom() } else { r.top() };
-        ui.painter().line_segment([pos2(r.left() + 4.0, y), pos2(r.right() - 4.0, y)], s);
-    }
-}
-
 /// Is the pointer on the second half of `r` (lower in a list, right in a grid)?
 fn second_half(ui: &egui::Ui, r: egui::Rect, grid: bool) -> bool {
     ui.ctx().pointer_interact_pos().is_some_and(|p| if grid { p.x > r.center().x } else { p.y > r.center().y })
@@ -116,7 +104,7 @@ fn preset_interactions(ui: &egui::Ui, resp: &egui::Response, r: egui::Rect, p: &
     if let Some(d) = resp.dnd_hover_payload::<BrushDrag>()
         && matches!(&*d, BrushDrag::Preset(n) if *n != p.name)
     {
-        drop_line(ui, r, second_half(ui, r, grid), grid, &t);
+        widgets::drop_line(ui, r, second_half(ui, r, grid), grid, &t);
     }
     if let Some(d) = resp.dnd_release_payload::<BrushDrag>()
         && let BrushDrag::Preset(n) = &*d
@@ -225,7 +213,7 @@ fn group_header(ui: &mut egui::Ui, label: &str, key: &str, open: bool, count: us
     resp.dnd_set_drag_payload(BrushDrag::Group(key.to_string()));
     if let Some(d) = resp.dnd_hover_payload::<BrushDrag>() {
         match &*d {
-            BrushDrag::Group(g) if g != key => drop_line(ui, r, false, false, &t),
+            BrushDrag::Group(g) if g != key => widgets::drop_line(ui, r, false, false, &t),
             BrushDrag::Preset(_) => {
                 ui.painter().rect_stroke(r, t.radius_sm, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
             }

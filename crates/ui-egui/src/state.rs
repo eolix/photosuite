@@ -557,13 +557,23 @@ pub struct TransformSession {
     /// the Quick Mask by itself (`None`: the layer, with its linked masks).
     #[serde(default)]
     pub target: Option<serde_json::Value>,
-    /// Free Transform on a copy (⌥⌘T): the copy was made for this session, so Cancel takes it back
-    /// and OK folds it into the transform's history step (#352).
+    /// The layer was made for this session (⌥⌘T's copy, #352; a file dropped on the canvas), so
+    /// Cancel takes it back and OK folds it into one history step with the transform.
     #[serde(default)]
-    pub copy: bool,
+    pub made: Option<MadeLayer>,
     /// Edit › Transform › Skew / Distort / Perspective (`Free` for Free Transform).
     #[serde(default)]
     pub mode: TransformMode,
+}
+
+/// Why a Free Transform session's layer was made for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MadeLayer {
+    /// Free Transform on a copy (⌥⌘T): OK makes the copy and the transform one Free Transform step.
+    Copy,
+    /// A file dropped on the canvas: OK makes the place and the transform one Place Embedded step.
+    Place,
 }
 
 /// In-progress inline type editing (Type tool). Offsets are character indices.

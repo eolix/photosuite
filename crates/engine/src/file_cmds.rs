@@ -372,6 +372,9 @@ fn import_pdf(s: &mut Session, p: &Value) -> Result<Value> {
 
 // ---------- place ----------
 
+/// History label of an embedded place.
+pub const PLACE_EMBEDDED: &str = "Place Embedded";
+
 /// Place a file's bytes as a smart object layer, centred and (when larger than the canvas)
 /// scaled down to fit, like Photoshop's Place with "Resize Image During Place". `linked` makes it
 /// a linked smart object that refers to that path instead of embedding the bytes.
@@ -402,7 +405,7 @@ pub fn place_bytes(s: &mut Session, name: &str, bytes: Vec<u8>, linked: Option<S
     };
     let so = SmartObject::new(source, Affine { m: [scale, 0.0, 0.0, scale, dx, dy] }, Some(px));
     let layer_name = stem(name);
-    let label = if matches!(so.source, SmartSource::Linked { .. }) { "Place Linked" } else { "Place Embedded" };
+    let label = if matches!(so.source, SmartSource::Linked { .. }) { "Place Linked" } else { PLACE_EMBEDDED };
     let id = s.edit(label, |doc, active| {
         let id = doc.insert_above(*active, Layer::new(layer_name, LayerContent::Smart(so)));
         *active = Some(id);

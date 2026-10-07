@@ -807,9 +807,7 @@ fn front(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<Val
                 Err(e) => return Some(Err(e)),
             };
             let linked = (id == "file.placeLinked").then(|| name.clone());
-            let r = photosuite_engine::file_cmds::place_bytes(&mut app.session, &name, bytes, linked, &json!({})).map_err(|e| e.to_string());
-            app.sync_views();
-            Some(r)
+            Some(app.place_bytes(&name, bytes, linked))
         }
         "file.fileInfo" => {
             let info = app.session.execute("file.fileInfo", json!({})).ok()?;

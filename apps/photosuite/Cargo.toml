@@ -47,6 +47,21 @@ winit = { version = "0.30", default-features = false, features = ["wayland-csd-a
 # safe API. Pinned exactly: review the diff before bumping.
 fmv-macos-events = "=0.1.0"
 muda = "0.21.0"
+# Safe AppKit calls only: find where the pointer is when files are dropped (cursor.rs; winit 0.30
+# drops carry no position). Already in Cargo.lock (winit, photosuite-tablet); pinned exactly to the
+# same versions.
+objc2 = "=0.6.4"
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSGeometry"] }
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSApplicationScripting", "NSEvent", "NSResponder", "NSView", "NSWindow"] }
+
+# Drop position on X11 (`cursor.rs`): pure-Rust X client, already in Cargo.lock; pinned exactly.
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb = { version = "=0.13.2", default-features = false }
+
+# Drop position on Windows (`cursor.rs`): safe Win32 wrappers (GetCursorPos), no dependencies of
+# its own. Pinned exactly: review the diff before bumping.
+[target.'cfg(target_os = "windows")'.dependencies]
+winsafe = { version = "=0.0.29", default-features = false, features = ["user"] }
 
 [build-dependencies]
 # Icon + VERSIONINFO for photosuite.exe; build.rs only uses it when targeting Windows.

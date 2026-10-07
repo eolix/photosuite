@@ -23,6 +23,7 @@ mod app_icon;
 mod apple_events;
 mod control_server;
 mod crash_guard;
+mod cursor;
 mod gpu_startup;
 // Pure logic is tested on every platform; only Linux runs the check.
 #[cfg(any(target_os = "linux", test))]
@@ -310,6 +311,8 @@ fn main() -> eframe::Result {
             {
                 app.services.os_events = Some(apple_events.connect(&cc.egui_ctx));
             }
+            // Where file drags and drops are (winit 0.30 doesn't say).
+            app.services.cursor_pos = cursor::service(cc);
             // Tablet pressure/tilt/eraser (winit drops them): the macOS monitor installed above
             // and the X11 reader write into this feed.
             app.stylus.feed = stylus_feed;

@@ -34,6 +34,8 @@ pub struct OpenTab {
     pub name: String,
     /// Where it was read from (File › Save writes back there; added to Open Recent).
     pub path: Option<String>,
+    /// The tab position it goes to when it opens (a file dropped on the tabs); `None`: the end.
+    pub slot: Option<usize>,
 }
 
 /// The shell's job bookkeeping.
@@ -74,9 +76,9 @@ pub fn start_open(app: &mut PhotosuiteApp, name: &str, path: Option<String>, sou
     let name = &app.open_name(name);
     match app.session.start_open(name, source).map_err(|e| e.to_string())? {
         // Inline (wasm): finish now, like a background open that ended at once.
-        Started::Done(v) => finish_open(app, name, path.as_deref(), &v),
+        Started::Done(v) => finish_open(app, name, path.as_deref(), &v, None),
         Started::Job(job) => {
-            app.jobs.opens.push(OpenTab { job, name: name.to_string(), path });
+            app.jobs.opens.push(OpenTab { job, name: name.to_string(), path, slot: None });
             app.jobs.focus = Some(job);
             app.ui.chrome.home = None;
             app.ui.status = crate::i18n::fmt(tl!("Opening {name}…"), &[("name", name)]);
@@ -150,7 +152,7 @@ fn on_event(app: &mut PhotosuiteApp, e: JobEvent) {
         let tab = app.jobs.opens.remove(i);
         match e.outcome {
             JobOutcome::Done(v) => {
-                if let Err(err) = finish_open(app, &tab.name, tab.path.as_deref(), &v) {
+                if let Err(err) = finish_open(app, &tab.name, tab.path.as_deref(), &v, tab.slot) {
                     app.open_failed(&tab.name, &err);
                 }
             }
@@ -189,8 +191,13 @@ fn on_event(app: &mut PhotosuiteApp, e: JobEvent) {
 
 /// What [`crate::PhotosuiteApp::open_bytes`] does after decoding, for a background open's result
 /// (`{document, warnings, color}`).
-fn finish_open(app: &mut PhotosuiteApp, name: &str, path: Option<&str>, v: &Value) -> Result<(), String> {
-    let index = v.get("document").and_then(Value::as_u64).ok_or("the open job returned no document")? as usize;
+fn finish_open(app: &mut PhotosuiteApp, name: &str, path: Option<&str>, v: &Value, slot: Option<usize>) -> Result<(), String> {
+    let mut index = v.get("document").and_then(Value::as_u64).ok_or("the open job returned no document")? as usize;
+    if let Some(slot) = slot
+        && let Ok(moved) = app.run("document.move", json!({"document": index, "to": slot}))
+    {
+        index = moved.get("document").and_then(Value::as_u64).map_or(index, |i| i as usize);
+    }
     let warnings: Vec<String> =
         v.get("warnings").and_then(Value::as_array).map(|a| a.iter().filter_map(|w| w.as_str().map(str::to_string)).collect()).unwrap_or_default();
     app.session.set_active(index);

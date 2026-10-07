@@ -18,7 +18,7 @@ use serde_json::json;
 
 use crate::PhotosuiteApp;
 use crate::canvas::{ToolEvent, ViewXform};
-use crate::state::{Tool, TransformMode, TransformSession};
+use crate::state::{MadeLayer, Tool, TransformMode, TransformSession};
 
 /// Which Split button is armed. The guide follows the pointer and the split is added on release.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -190,7 +190,7 @@ pub fn begin(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String>
         warp: None,
         selection: false,
         target: None,
-        copy: false,
+        made: None,
         mode: Default::default(),
     });
     start_steps(app);
@@ -203,17 +203,28 @@ pub fn begin_copy(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), St
     let selection = app.session.active().is_some_and(|d| d.doc.selection.is_some());
     app.run(if selection { "layer.new.layerViaCopy" } else { "layer.duplicate" }, json!({}))?;
     if let Err(e) = begin(app, ctx) {
-        take_back_copy(app);
+        take_back_made(app);
         return Err(e);
     }
     if let Some(t) = app.ui.transform.as_mut() {
-        t.copy = true;
+        t.made = Some(MadeLayer::Copy);
     }
     Ok(())
 }
 
-/// Undoes the copy a cancelled or failed ⌥⌘T made, leaving nothing to redo.
-fn take_back_copy(app: &mut PhotosuiteApp) {
+/// Free Transform on the layer a file dropped on the canvas just placed, like the reference app's
+/// Place: Esc takes the place back, ↩ makes the place and the transform one Place Embedded step.
+pub fn begin_placed(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> {
+    begin(app, ctx)?;
+    if let Some(t) = app.ui.transform.as_mut() {
+        t.made = Some(MadeLayer::Place);
+    }
+    Ok(())
+}
+
+/// Undoes the layer a cancelled or failed session made (⌥⌘T's copy, a placed file), leaving
+/// nothing to redo.
+fn take_back_made(app: &mut PhotosuiteApp) {
     app.session.undo();
     if let Some(st) = app.session.active_mut() {
         st.history.clear_redo();
@@ -221,10 +232,14 @@ fn take_back_copy(app: &mut PhotosuiteApp) {
     app.sync_views();
 }
 
-/// After ⌥⌘T's transform: the copy and the transform become one history step (the transform's).
-fn fold_copy(app: &mut PhotosuiteApp) {
+/// After the transform: the step that made the layer and the transform become one history step,
+/// the transform's for a copy and Place Embedded for a placed file.
+fn fold_made(app: &mut PhotosuiteApp, made: MadeLayer) {
     if let Some(st) = app.session.active_mut() {
         st.history.purge_last();
+        if made == MadeLayer::Place {
+            st.history.set_current_label(photosuite_engine::file_cmds::PLACE_EMBEDDED);
+        }
     }
 }
 
@@ -290,7 +305,7 @@ fn begin_lone(
         warp: None,
         selection: false,
         target: Some(target),
-        copy: false,
+        made: None,
         mode: Default::default(),
     });
     start_steps(app);
@@ -349,7 +364,7 @@ pub fn begin_selection(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(
         warp: None,
         selection: true,
         target: None,
-        copy: false,
+        made: None,
         mode: Default::default(),
     });
     start_steps(app);
@@ -487,7 +502,7 @@ pub fn commit(app: &mut PhotosuiteApp) {
         }
         return;
     }
-    let copy = t.copy;
+    let made = t.made;
     let r = if let Some(w) = &t.warp {
         if w.is_identity() {
             return;
@@ -495,7 +510,7 @@ pub fn commit(app: &mut PhotosuiteApp) {
         app.run("edit.transform.warp", json!({"layer": t.layer, "rect": t.rect, "warp": w, "interpolation": t.interpolation}))
     } else {
         if t.quad == corners(t.rect) {
-            return; // untouched: nothing to do and no history step; a ⌥⌘T copy stays
+            return; // untouched: nothing to do and no history step; a ⌥⌘T copy or a place stays
         }
         let mut p = json!({"layer": t.layer, "rect": t.rect, "quad": t.quad, "interpolation": t.interpolation});
         if let Some(target) = t.target {
@@ -504,11 +519,14 @@ pub fn commit(app: &mut PhotosuiteApp) {
         app.run("edit.transform", p)
     };
     match r {
-        Ok(_) if copy => fold_copy(app),
-        Ok(_) => {}
+        Ok(_) => {
+            if let Some(made) = made {
+                fold_made(app, made);
+            }
+        }
         Err(e) => {
-            if copy {
-                take_back_copy(app);
+            if made.is_some() {
+                take_back_made(app);
             }
             app.ui.status = e;
         }
@@ -528,10 +546,10 @@ pub fn end_if_left(app: &mut PhotosuiteApp) {
 }
 
 pub fn cancel(app: &mut PhotosuiteApp) {
-    let copy = app.ui.transform.take().is_some_and(|t| t.copy);
+    let made = app.ui.transform.take().is_some_and(|t| t.made.is_some());
     app.transform_preview = None;
-    if copy {
-        take_back_copy(app);
+    if made {
+        take_back_made(app);
     }
 }
 
@@ -1536,7 +1554,7 @@ mod tests {
             warp: None,
             selection: false,
             target: None,
-            copy: false,
+            made: None,
             mode: Default::default(),
         }
     }
@@ -1783,7 +1801,7 @@ mod tests {
         let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 24, 24));
         let (layers, steps) = (app.session.active().unwrap().doc.layers.len(), app.session.active().unwrap().history.past_len());
         crate::menus::invoke(&mut app, &ctx, "edit.freeTransformCopy", json!({})).unwrap();
-        assert!(app.ui.transform.as_ref().unwrap().copy);
+        assert_eq!(app.ui.transform.as_ref().unwrap().made, Some(MadeLayer::Copy));
         assert!(!crate::menus::is_enabled(&app, "edit.freeTransformCopy"), "one transform at a time");
         // Esc: the copy goes too.
         cancel(&mut app);

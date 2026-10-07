@@ -5,6 +5,19 @@ use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, S
 
 use crate::theme::{self, Tokens};
 
+/// An accent insertion line on one edge of `r` while a drag hovers it (vertical: on its left or,
+/// `after`, right edge; else on its top or bottom).
+pub fn drop_line(ui: &Ui, r: Rect, after: bool, vertical: bool, t: &Tokens) {
+    let s = Stroke::new(2.0, t.accent);
+    if vertical {
+        let x = if after { r.right() } else { r.left() };
+        ui.painter().line_segment([pos2(x, r.top() + 2.0), pos2(x, r.bottom() - 2.0)], s);
+    } else {
+        let y = if after { r.bottom() } else { r.top() };
+        ui.painter().line_segment([pos2(r.left() + 4.0, y), pos2(r.right() - 4.0, y)], s);
+    }
+}
+
 /// Draw a bevelled box (Classic theme) or a flat rounded box.
 pub fn surface(ui: &Ui, rect: Rect, fill: Color32, raised: bool) {
     let t = Tokens::get(ui.ctx());

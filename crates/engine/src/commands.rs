@@ -811,6 +811,28 @@ fn build() -> Vec<CommandSpec> {
             journal: false,
         },
         CommandSpec {
+            id: "document.move",
+            label: "Move Document",
+            menu: &[],
+            shortcut: None,
+            params: r##"{"document":index?,"to":index}"##,
+            enabled: has_doc,
+            run: |s, p| {
+                let index = |key: &str| {
+                    p.get(key)
+                        .map(|v| v.as_u64().and_then(|v| usize::try_from(v).ok()).ok_or_else(|| bad("document.move", format!("`{key}` must be a tab index"))))
+                };
+                let from = match index("document") {
+                    Some(i) => i?,
+                    None => s.active_index().ok_or(EngineError::NoDocument)?,
+                };
+                let to = index("to").ok_or_else(|| bad("document.move", "missing `to`"))??;
+                let to = s.move_document(from, to).ok_or(EngineError::NoDocument)?;
+                Ok(json!({"document": to}))
+            },
+            journal: false,
+        },
+        CommandSpec {
             id: "command.list",
             label: "List Commands",
             menu: &[],

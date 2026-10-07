@@ -789,13 +789,6 @@ fn preset_names(s: &Session, kind: &str) -> Option<Vec<String>> {
     })
 }
 
-/// Move item `i` of `v` to position `to`.
-fn move_item<T>(v: &mut Vec<T>, i: usize, to: usize) {
-    let x = v.remove(i);
-    let to = to.min(v.len());
-    v.insert(to, x);
-}
-
 fn preset_index(s: &Session, kind: &str, p: &Value) -> Result<usize> {
     let names = preset_names(s, kind).ok_or_else(|| bad("edit.presets.presetManager", format!("unknown preset kind `{kind}` ({})", PRESET_KINDS.join("|"))))?;
     if let Some(i) = p.get("index").and_then(Value::as_u64) {
@@ -844,10 +837,10 @@ fn preset_manager(s: &mut Session, p: &Value) -> Result<Value> {
         "move" => {
             let to = p.get("to").and_then(Value::as_u64).ok_or_else(|| bad(cmd, "missing `to`"))? as usize;
             match kind.as_str() {
-                "brushes" => move_item(&mut s.tools.presets, i, to),
-                "patterns" => move_item(&mut s.patterns.items, i, to),
-                _ => move_item(&mut s.edit_state.custom_shapes, i, to),
-            }
+                "brushes" => crate::move_item(&mut s.tools.presets, i, to),
+                "patterns" => crate::move_item(&mut s.patterns.items, i, to),
+                _ => crate::move_item(&mut s.edit_state.custom_shapes, i, to),
+            };
         }
         other => return Err(bad(cmd, format!("unknown action `{other}` (list|rename|delete|move)"))),
     }

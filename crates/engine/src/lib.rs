@@ -325,6 +325,18 @@ pub struct Session {
     jobs: jobs::Jobs,
 }
 
+/// Move item `i` of `v` to position `to`, clamped to the end. Returns where it went; `None` when
+/// `i` is out of range.
+pub fn move_item<T>(v: &mut Vec<T>, i: usize, to: usize) -> Option<usize> {
+    if i >= v.len() {
+        return None;
+    }
+    let x = v.remove(i);
+    let to = to.min(v.len());
+    v.insert(to, x);
+    Some(to)
+}
+
 impl Session {
     pub fn new() -> Self {
         Self::default()
@@ -349,6 +361,15 @@ impl Session {
         } else {
             false
         }
+    }
+
+    /// Move the document at `from` to tab position `to` (clamped to the last), keeping the active
+    /// document active. Returns its new index; `None` when `from` is out of range.
+    pub fn move_document(&mut self, from: usize, to: usize) -> Option<usize> {
+        let active = self.active().map(|d| d.doc.id);
+        let to = move_item(&mut self.docs, from, to)?;
+        self.active = active.and_then(|id| self.docs.iter().position(|d| d.doc.id == id));
+        Some(to)
     }
 
     /// Add a document (from File → New, an import, etc.) and make it active.

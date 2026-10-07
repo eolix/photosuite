@@ -1,8 +1,9 @@
-//! Opening files from disk: File › Open, Open Recent, drag-and-drop onto the window, command-line
-//! paths at launch and the OS's "open these documents" requests (macOS Finder double-click, Open
-//! With, drops on the Dock icon) all go through [`PhotosuiteApp::open_file`], so each one names the
-//! document after the file, remembers its path (File › Save writes back to it) and adds it to Open
-//! Recent. Failures are shown as errors (status bar + notice); import warnings as a notice.
+//! Opening files from disk: File › Open, Open Recent, drag-and-drop onto the window (except onto
+//! a document's canvas, which places the file as a layer), command-line paths at launch
+//! and the OS's "open these documents" requests (macOS Finder double-click, Open With, drops on the
+//! Dock icon) all go through [`PhotosuiteApp::open_file`], so each one names the document after the
+//! file, remembers its path (File › Save writes back to it) and adds it to Open Recent. Failures
+//! are shown as errors (status bar + notice); import warnings as a notice.
 
 use crate::{PhotosuiteApp, notices};
 use photosuite_engine::file_cmds::{is_template, untitled_name};
@@ -16,6 +17,25 @@ pub enum OsEvent {
     /// Quit (e.g. the Dock menu's Quit, log out): goes through the normal close path, which asks
     /// about unsaved changes.
     Quit,
+}
+
+/// Where files dropped on the window land, as in the reference app. winit 0.30's drops carry no
+/// position, so it comes from the OS ([`Services::cursor_pos`](crate::Services::cursor_pos));
+/// unknown counts as elsewhere.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DropTarget {
+    /// The active document's canvas: placed as layers (Place Embedded), each in Free Transform.
+    Canvas,
+    /// The tab strip: opened with their tabs from this position (the strip shows it while files
+    /// hover).
+    Tabs(usize),
+    /// Anywhere else (panels, a dialog, no document): opened like File › Open.
+    Elsewhere,
+}
+
+/// A dropped file's name ("dropped" when it has none).
+fn dropped_name(f: &egui::DroppedFileHandle) -> String {
+    f.path().file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "dropped".into())
 }
 
 /// The file name of `path` (the document's display name), or `path` itself when it has none.
@@ -112,28 +132,98 @@ impl PhotosuiteApp {
 
     /// Show "Couldn't open <name>: <error>" as an error (status bar + notice).
     pub fn open_failed(&mut self, name: &str, err: &str) {
-        let msg = format!("Couldn't open {name}: {err}");
+        self.failed(format!("Couldn't open {name}: {err}"));
+    }
+
+    /// Log `msg` and show it as an error (status bar + notice).
+    fn failed(&mut self, msg: String) {
         log::warn!("{msg}");
         notices::error(self, msg);
     }
 
-    /// Files dropped onto the window. Native drops carry an absolute path and open like File ›
-    /// Open; anything else (no path) opens by name only.
-    pub fn open_dropped(&mut self, files: Vec<egui::DroppedFileHandle>) {
+    /// Files dropped onto the window at `at` (the pointer, when known), routed by [`DropTarget`].
+    /// Preset files (brushes, gradients) always go to their libraries. Native drops carry an
+    /// absolute path, read in bounded reads (#375) rather than egui's whole-file read.
+    pub fn open_dropped(&mut self, ctx: &egui::Context, files: Vec<egui::DroppedFileHandle>, at: Option<egui::Pos2>) {
+        let target = self.drop_target(ctx, at);
+        let mut slot = match target {
+            DropTarget::Tabs(slot) => Some(slot),
+            DropTarget::Canvas | DropTarget::Elsewhere => None,
+        };
         for f in files {
-            let path = f.path().to_string_lossy().to_string();
-            let name = f.path().file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "dropped".into());
-            // A desktop drop opens like File › Open: on the background worker when jobs are on, and
-            // read in bounded reads either way (#375) rather than with egui's whole-file read.
-            let opened = if f.path().is_absolute() {
-                self.open_path(&path).map(|_| ())
-            } else {
-                crate::read_dropped(&*f).and_then(|bytes| self.open_bytes(&name, &bytes)).map(|_| ())
-            };
-            if let Err(e) = opened {
-                self.open_failed(&name, &e);
+            let name = dropped_name(&f);
+            if target == DropTarget::Canvas && !crate::preset_files_ui::is_preset_file(&name) {
+                self.drop_places.push_back(f);
+                continue;
+            }
+            match self.open_dropped_file(&f, &name, slot) {
+                Ok(true) => slot = slot.map(|s| s + 1),
+                Ok(false) => {}
+                Err(e) => self.open_failed(&name, &e),
             }
         }
+    }
+
+    /// Where a drop at `at` lands. Over a window or dialog it's neither the canvas nor the tabs.
+    pub(crate) fn drop_target(&self, ctx: &egui::Context, at: Option<egui::Pos2>) -> DropTarget {
+        let Some(p) = at.filter(|p| ctx.layer_id_at(*p).is_none_or(|l| l.order == egui::Order::Background)) else {
+            return DropTarget::Elsewhere;
+        };
+        if let Some(strip) = self.tab_strip.as_ref().filter(|s| s.rect.contains(p)) {
+            return DropTarget::Tabs(strip.slot(p.x));
+        }
+        // The canvas shown last frame may belong to a document closed since.
+        if self.session.active().is_some() && self.drop_canvas_rect.is_some_and(|r| r.contains(p)) {
+            return DropTarget::Canvas;
+        }
+        DropTarget::Elsewhere
+    }
+
+    /// Open one dropped file; with `slot`, its tab goes there (when it finishes opening, for
+    /// background opens). True when it took the slot.
+    fn open_dropped_file(&mut self, f: &egui::DroppedFileHandle, name: &str, slot: Option<usize>) -> Result<bool, String> {
+        // Opens append: a background open's tab, or a document.
+        let (docs, opens) = (self.session.documents().len(), self.jobs.opens.len());
+        if f.path().is_absolute() {
+            self.open_path(&f.path().to_string_lossy())?;
+        } else {
+            self.open_bytes(name, &crate::read_dropped(&**f)?)?;
+        }
+        let Some(slot) = slot else { return Ok(false) };
+        if let Some(tab) = self.jobs.opens.get_mut(opens) {
+            tab.slot = Some(slot);
+            return Ok(true);
+        }
+        Ok(self.run("document.move", serde_json::json!({"document": docs, "to": slot})).is_ok())
+    }
+
+    /// Place the next file dropped on the canvas and start Free Transform on it, once no other
+    /// transform is in progress (so several files are placed and transformed one after another).
+    pub(crate) fn place_next_dropped(&mut self, ctx: &egui::Context) {
+        while self.ui.transform.is_none() {
+            let Some(f) = self.drop_places.pop_front() else { return };
+            let placed = if f.path().is_absolute() {
+                self.run("file.placeEmbedded", serde_json::json!({"path": f.path().to_string_lossy()}))
+            } else {
+                crate::read_dropped(&*f).and_then(|bytes| self.place_bytes(&dropped_name(&f), bytes, None))
+            };
+            match placed {
+                Ok(_) => {
+                    if let Err(e) = crate::transform_tool::begin_placed(self, ctx) {
+                        self.ui.status = e;
+                    }
+                }
+                Err(e) => self.failed(crate::i18n::fmt(tl!("Couldn't place {name}: {error}"), &[("name", &dropped_name(&f)), ("error", &e)])),
+            }
+        }
+    }
+
+    /// Place a file's bytes as a smart object layer (File › Place; `linked`: Place Linked, to that
+    /// path), for files that weren't read from a path the command can read.
+    pub(crate) fn place_bytes(&mut self, name: &str, bytes: Vec<u8>, linked: Option<String>) -> Result<serde_json::Value, String> {
+        let r = photosuite_engine::file_cmds::place_bytes(&mut self.session, name, bytes, linked, &serde_json::json!({})).map_err(|e| e.to_string());
+        self.sync_views();
+        r
     }
 
     /// Handle the OS requests queued since the last frame.
