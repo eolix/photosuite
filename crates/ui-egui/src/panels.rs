@@ -1811,17 +1811,17 @@ fn layer_row(
             actions.push(("ui.maskTarget".into(), json!(false)));
         }
     }
-    // Double-click: the name renames in place; the Background, which can't be renamed while
-    // it's locked, becomes a normal layer; an adjustment or fill thumbnail opens its settings and
-    // a Smart Object thumbnail its contents, and a type thumbnail edits its text; anywhere else
-    // on the row opens Layer Style (#350, #537).
+    // Double-click: the name renames in place (over the row's full height, not just the glyphs:
+    // #651); the Background, which can't be renamed while it's locked, becomes a normal layer; an
+    // adjustment or fill thumbnail opens its settings and a Smart Object thumbnail its contents,
+    // and a type thumbnail edits its text; anywhere else on the row opens Layer Style (#350, #537).
     // The first click already made this the active layer.
     if resp.double_clicked() {
         let pos = resp.interact_pointer_pos();
         let on = |r: Rect| pos.is_some_and(|p| r.expand(2.0).contains(p));
         if crate::doc_props_ui::is_background(doc, l) {
             actions.push(("layer.new.layerFromBackground".into(), json!({})));
-        } else if name_rect.is_some_and(on) {
+        } else if name_rect.is_some_and(|n| on(Rect::from_x_y_ranges(n.x_range(), rect.y_range()))) {
             if let Some(done) = crate::layer_row_ui::start_rename(ctx, l.id.0, &l.name) {
                 // One rename at a time: starting this one commits any other (#314).
                 actions.push(done);

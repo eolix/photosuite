@@ -191,6 +191,24 @@ fn a_rename_ends_when_its_layer_goes_away() {
     assert_eq!(h.state().ui.tool, crate::state::Tool::Move);
 }
 
+/// #651: a double-click just above or below the name, still over it, renames rather than opening
+/// Layer Style.
+#[test]
+fn double_click_above_or_below_the_name_renames() {
+    for ppp in [1.0, 2.0] {
+        let (mut h, [a, ..]) = harness(ppp);
+        let row = recorded(&h.ctx).into_iter().find(|r| r.layer == a).unwrap();
+        let name = row.name.expect("name drawn");
+        for y in [row.row.top() + 1.0, row.row.bottom() - 2.0] {
+            assert!(!name.expand(2.0).contains(pos2(name.center().x, y)), "@{ppp}x: off the glyphs");
+            double_click(&mut h, pos2(name.center().x, y));
+            assert_eq!(renaming(&h.ctx), Some(a), "@{ppp}x: y {y} renames");
+            assert!(h.state().ui.dialogs.is_empty(), "@{ppp}x: no Layer Style");
+            key(&mut h, Key::Escape);
+        }
+    }
+}
+
 /// #350: a double-click on the row outside the name opens Layer Style for that layer; on the
 /// name it still renames; on a Smart Object's thumbnail it opens the contents.
 #[test]
