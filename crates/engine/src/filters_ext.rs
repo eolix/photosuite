@@ -1,5 +1,5 @@
 //! The second batch of `filter.*` commands: Pixelate, Stylize, Distort (Displace, Shear,
-//! ZigZag), Render (Fibers, Lens Flare, Lighting Effects), Reduce Noise, Smart/Lens/Shape Blur,
+//! ZigZag), Render (Fibers, Lens Flare, Lighting Effects, Relight), Reduce Noise, Smart/Lens/Shape Blur,
 //! Blur Gallery, Other (Custom, HSB/HSL) and Video.
 //!
 //! They run through [`crate::filters::run_filter`] (selection, smart objects, history and
@@ -189,6 +189,14 @@ pub fn params_for(id: &str, p: &Value) -> Option<FilterParams> {
                 "moviePrime" => LensType::MoviePrime,
                 _ => LensType::Zoom,
             },
+        },
+        "filter.render.relight" => FilterParams::Relight {
+            angle: f(p, "angle", 45.0).clamp(-180.0, 180.0),
+            elevation: f(p, "elevation", 40.0).clamp(0.0, 90.0),
+            intensity: f(p, "intensity", 40.0).clamp(0.0, 100.0),
+            ambient: f(p, "ambient", 55.0).clamp(0.0, 100.0),
+            warmth: f(p, "warmth", 0.0).clamp(-100.0, 100.0),
+            softness: f(p, "softness", 25.0).clamp(1.0, 100.0),
         },
         "filter.render.lightingEffects" => FilterParams::LightingEffects {
             lights: list::<Light>(p, "lights").unwrap_or_else(|| {
@@ -436,6 +444,60 @@ pub(crate) fn resolve_in_layer(fp: &mut FilterParams, layer: &Layer, bounds: Rec
     }
 }
 
+fn relight_bad(msg: &str) -> EngineError {
+    EngineError::BadParams { cmd: "filter.render.relight".into(), msg: msg.into() }
+}
+
+fn relight_num(p: &Value, key: &str, default: f32, min: f32, max: f32) -> Result<f32> {
+    match p.get(key) {
+        None => Ok(default),
+        Some(Value::Number(n)) => {
+            let Some(x) = n.as_f64() else {
+                return Err(relight_bad(&format!("\"{key}\" must be a finite number")));
+            };
+            let x = x as f32;
+            if !x.is_finite() {
+                return Err(relight_bad(&format!("\"{key}\" must be finite")));
+            }
+            if x < min || x > max {
+                return Err(relight_bad(&format!("\"{key}\" must be in {min}..{max}")));
+            }
+            Ok(x)
+        }
+        Some(_) => Err(relight_bad(&format!("\"{key}\" must be a number"))),
+    }
+}
+
+fn validate_relight(p: &Value) -> Result<()> {
+    if p.is_null() {
+        return Err(relight_bad("params must be a JSON object"));
+    }
+    if !p.is_object() {
+        return Err(relight_bad("params must be a JSON object"));
+    }
+    relight_num(p, "angle", 45.0, -180.0, 180.0)?;
+    relight_num(p, "elevation", 40.0, 0.0, 90.0)?;
+    relight_num(p, "intensity", 40.0, 0.0, 100.0)?;
+    relight_num(p, "ambient", 55.0, 0.0, 100.0)?;
+    relight_num(p, "warmth", 0.0, -100.0, 100.0)?;
+    relight_num(p, "softness", 25.0, 1.0, 100.0)?;
+    Ok(())
+}
+
+fn relight_enabled(s: &Session) -> std::result::Result<(), String> {
+    crate::filters::has_filterable_layer(s)?;
+    if crate::channel_cmds::edits_channel(s) {
+        return Ok(());
+    }
+    let l = crate::active_layer_of(s)?;
+    if l.locks.pixels || l.locks.all { Err(format!("the layer \"{}\" is locked", l.name)) } else { Ok(()) }
+}
+
+fn run_relight(s: &mut Session, p: &Value) -> Result<Value> {
+    validate_relight(p)?;
+    crate::filters::run_filter(s, "filter.render.relight", p)
+}
+
 macro_rules! cmd {
     ($id:literal, $label:literal, [$($m:literal),*], $params:literal) => {
         CommandSpec {
@@ -526,6 +588,16 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Filter", "Render"],
             r##"{"lightType":"spot|point|infinite","intensity":-100..100=75,"lightX":0..1=0.25,"lightY":0..1=0.2,"lightZ":0..2=0.6,"targetX":0..1=0.5,"targetY":0..1=0.55,"cone":1..89=45,"hotspot":0..100=50,"angle":-180..180=135,"elevation":0..90=45,"gloss":-100..100=0,"metallic":-100..100=0,"exposure":-100..100=0,"ambience":-100..100=8,"texture":"none|red|green|blue|alpha|luminance","height":0..100=50,"whiteIsHigh":bool=true,"lights":json}"##
         ),
+        CommandSpec {
+            id: "filter.render.relight",
+            label: "Relight…",
+            menu: &["Filter", "Render"],
+            shortcut: None,
+            params: r##"{"angle":-180..180=45,"elevation":0..90=40,"intensity":0..100=40,"ambient":0..100=55,"warmth":-100..100=0,"softness":1..100=25}"##,
+            enabled: relight_enabled,
+            run: run_relight,
+            journal: true,
+        },
         // Noise
         cmd!(
             "filter.noise.reduceNoise",

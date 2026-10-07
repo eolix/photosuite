@@ -54,6 +54,7 @@ pub mod poisson;
 pub mod puppet;
 pub mod pyramid;
 pub mod quantize;
+mod relight;
 mod render;
 pub mod render2;
 pub mod resample;
@@ -412,6 +413,16 @@ pub enum FilterParams {
         height: f32,
         white_is_high: bool,
     },
+    /// Photographic relight: angle −180…180°, elevation 0…90°, intensity/ambient 0…100,
+    /// warmth −100…100, softness 1…100. Intensity 0 is an identity copy.
+    Relight {
+        angle: f32,
+        elevation: f32,
+        intensity: f32,
+        ambient: f32,
+        warmth: f32,
+        softness: f32,
+    },
 
     // ---- Noise ----
     /// Strength 0–10, the rest 0–100 %.
@@ -594,6 +605,7 @@ impl FilterParams {
             FilterParams::Fibers { .. } => "Fibers",
             FilterParams::LensFlare { .. } => "Lens Flare",
             FilterParams::LightingEffects { .. } => "Lighting Effects",
+            FilterParams::Relight { .. } => "Relight",
             FilterParams::ReduceNoise { .. } => "Reduce Noise",
             FilterParams::SmartBlur { .. } => "Smart Blur",
             FilterParams::LensBlur { .. } => "Lens Blur",
@@ -635,6 +647,8 @@ fn halo_ext(p: &FilterParams) -> Halo {
         // Generators and per-pixel renders only need the bounds geometry (always in the context).
         FilterParams::Fibers { .. } | FilterParams::LensFlare { .. } => Halo::Radius(0),
         FilterParams::LightingEffects { .. } => r(1.0),
+        FilterParams::Relight { intensity, .. } if *intensity == 0.0 => Halo::Radius(0),
+        FilterParams::Relight { .. } => Halo::Radius(relight::HALO_RADIUS),
         FilterParams::ReduceNoise { .. } => r(denoise::reach()),
         FilterParams::SmartBlur { radius, .. } => r(*radius),
         FilterParams::LensBlur { radius, .. } => r(*radius),
@@ -769,6 +783,12 @@ pub fn kernel(params: &FilterParams, src: &Image, out: Rect, ctx: &Ctx) -> Vec<f
                 height: *height,
                 white_is_high: *white_is_high,
             },
+        ),
+        FilterParams::Relight { angle, elevation, intensity, ambient, warmth, softness } => relight::relight(
+            src,
+            out,
+            ctx,
+            relight::Params { angle: *angle, elevation: *elevation, intensity: *intensity, ambient: *ambient, warmth: *warmth, softness: *softness },
         ),
         FilterParams::ReduceNoise { strength, preserve_details, reduce_color_noise, sharpen_details, remove_jpeg_artifact } => denoise::reduce_noise(
             src,

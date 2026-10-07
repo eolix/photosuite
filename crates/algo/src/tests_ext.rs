@@ -74,6 +74,7 @@ fn new_filters() -> Vec<FilterParams> {
             height: 50.0,
             white_is_high: true,
         },
+        FilterParams::Relight { angle: 45.0, elevation: 40.0, intensity: 40.0, ambient: 55.0, warmth: 0.0, softness: 25.0 },
         FilterParams::ReduceNoise { strength: 6.0, preserve_details: 60.0, reduce_color_noise: 45.0, sharpen_details: 25.0, remove_jpeg_artifact: true },
         FilterParams::SmartBlur { radius: 3.0, threshold: 40.0, quality: BlurQuality::High, mode: SmartBlurMode::Normal },
         FilterParams::SmartBlur { radius: 3.0, threshold: 25.0, quality: BlurQuality::Low, mode: SmartBlurMode::OverlayEdge },
