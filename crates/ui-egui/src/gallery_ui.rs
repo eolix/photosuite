@@ -1,4 +1,4 @@
-//! Filter › Filter Gallery…: a full-window dialog like Photoshop's: a big preview on the left,
+//! Filter › Filter Gallery…: a large dialog like Photoshop's: a big preview on the left,
 //! the category folders with thumbnails in the middle, and on the right OK / Cancel, the
 //! selected effect's filter and settings, and the effect-layer stack (new, delete, reorder,
 //! show/hide). The stack is applied bottom to top.
@@ -394,22 +394,22 @@ fn update_thumbs(d: &mut GalleryDialog, ctx: &egui::Context, budget: usize) {
 }
 
 /// Draws the dialog (a full-window layer over the app).
+/// The dialog's largest size; smaller windows get a smaller one ([`widgets::tool_dialog_rect`]).
+const DIALOG_MAX: egui::Vec2 = vec2(1500.0, 950.0);
+
 pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
-    let screen = ctx.content_rect();
     let mut action: Option<&str> = None;
-    egui::Area::new(egui::Id::new("gallery-dialog")).order(egui::Order::Foreground).fixed_pos(screen.min).show(ctx, |ui| {
+    let Some(d) = app.distort.gallery.as_ref() else { return };
+    let pct = if d.zoom > 0.0 { format!("{:.0}%", d.zoom * 100.0) } else { tl!("Fit").into() };
+    let name = d.effects.get(d.selected).map_or("", |e| e.filter.name());
+    let heading = format!("{name} ({}, {pct})", d.layer_name);
+    let rect = widgets::tool_dialog_rect(ctx, DIALOG_MAX);
+    // The dialogs' own frame (title bar, dragging, kept below the app's title bar), at a fixed size.
+    crate::dialogs::frame(ctx, egui::Id::new("gallery-dialog"), &heading, crate::dialogs::FrameSize::Fixed(rect.size()), |ui, size| {
         let Some(d) = app.distort.gallery.as_mut() else { return };
-        let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let (body, _) = ui.allocate_exact_size(size.unwrap_or(rect.size()), Sense::hover());
         let painter = ui.painter().clone();
-        painter.rect_filled(full, 0.0, t.chrome);
-        let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
-        painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
-        let pct = if d.zoom > 0.0 { format!("{:.0}%", d.zoom * 100.0) } else { tl!("Fit").into() };
-        let name = d.effects.get(d.selected).map_or("", |e| e.filter.name());
-        painter.text(title.center(), Align2::CENTER_CENTER, format!("{name} ({}, {pct})", d.layer_name), FontId::proportional(13.0), t.text);
-        let body = ERect::from_min_max(pos2(full.left(), title.bottom()), full.max);
         let right = ERect::from_min_size(pos2(body.right() - RIGHT_W, body.top()), vec2(RIGHT_W, body.height()));
         let mid = ERect::from_min_size(pos2(right.left() - MID_W, body.top()), vec2(MID_W, body.height()));
         let area = ERect::from_min_max(body.min, pos2(mid.left(), body.bottom() - 30.0));
