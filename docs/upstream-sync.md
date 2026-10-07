@@ -4,7 +4,7 @@ PhotoSuite is a modified version of [PhotoCraft](https://github.com/storytold/ph
 `NOTICE`). This file is the record of which upstream commits have been brought over and which
 were decided against, and the procedure for doing it. `cargo xtask upstream` reads and writes it.
 
-Synced through: `a96a621deea97d4b1ecd173b8b921587e33f3ca5`
+Synced through: `c34facea4d8329c39947fdf295495fb41025294b`
 
 Every upstream commit up to and including that one is in PhotoSuite or was decided against.
 (`a96a621` is the revision PhotoSuite was created from.)
