@@ -189,6 +189,36 @@ fn filter_stack_order_blend_disable_and_clear() {
     assert!(!s.is_enabled("layer.smartFilter.clearSmartFilters"));
 }
 
+/// Issue #466: an explicit `layer` target is checked instead of the active layer, which stays
+/// active; without one the commands still follow the active layer (menus).
+#[test]
+fn smart_filter_commands_check_an_explicit_layer_target() {
+    let mut s = session(8);
+    paint(&mut s);
+    let so = convert(&mut s);
+    s.execute("filter.sharpen.smartSharpen", json!({"amount": 65, "radius": 1})).unwrap();
+    let curves = s.execute("layer.newAdjustmentLayer.curves", json!({"points": [[0, 0], [255, 255]]})).unwrap()["layer"].as_u64().unwrap();
+    let active = |s: &Session| s.active().unwrap().active_layer.unwrap().0;
+    assert_eq!(active(&s), curves);
+    let filter = |s: &Session| match &s.active().unwrap().doc.layer(LayerId(so)).unwrap().content {
+        LayerContent::Smart(sm) => sm.smart_filters[0].clone(),
+        other => panic!("not smart: {}", other.kind_name()),
+    };
+    // No target: the active Curves layer decides, as the menu shows.
+    assert!(!s.is_enabled("layer.smartFilter.setParams"));
+    assert!(matches!(s.execute("layer.smartFilter.setParams", json!({"params": {"amount": 80}})), Err(EngineError::Disabled(..))));
+    let r = s.execute("layer.smartFilter.setParams", json!({"layer": so, "index": 0, "params": {"amount": 80}})).unwrap();
+    assert_eq!(r, json!({"layer": so}));
+    assert_eq!(filter(&s).params["amount"], json!(80));
+    s.execute("layer.smartFilter.setVisible", json!({"layer": so, "visible": false})).unwrap();
+    assert!(!filter(&s).visible);
+    assert_eq!(active(&s), curves, "the active layer stays");
+    // A target that isn't a smart object with filters is still refused, and the active layer stays.
+    assert!(matches!(s.execute("layer.smartFilter.setParams", json!({"layer": curves, "params": {}})), Err(EngineError::Disabled(..))));
+    assert!(s.execute("layer.smartFilter.setParams", json!({"layer": 999_999, "params": {}})).is_err());
+    assert_eq!(active(&s), curves);
+}
+
 #[test]
 fn selection_becomes_the_filter_mask() {
     let mut s = session(8);

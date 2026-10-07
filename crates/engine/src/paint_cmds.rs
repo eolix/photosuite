@@ -4,6 +4,7 @@ use photosuite_algo::paint::{GradientShape, bucket_fill, bucket_fill_src, paint_
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, blend_from_str};
+use crate::presets::gradients;
 use crate::{EngineError, Result, Session};
 
 fn f(p: &Value, k: &str, d: f32) -> f32 {
@@ -83,14 +84,15 @@ fn gradient(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let (fg, bg) = (s.tools.foreground, s.tools.background);
     // A preset (`gradient`), explicit `stops`, or the current gradient (Gradients panel); the
-    // legacy `colors` list spaces its colours evenly.
-    let stops: Vec<(f32, [f32; 4])> = match crate::presets::gradients::tool_stops(s, p)? {
+    // legacy `colors` list spaces its colours evenly. Explicit `transparency` applies to all.
+    let stops: Vec<(f32, [f32; 4])> = match gradients::tool_stops(s, p)? {
         Some(st) => st,
         None => {
             let colors: Vec<[f32; 4]> =
                 p.get("colors").and_then(Value::as_array).map(|a| a.iter().map(|v| color(Some(v), fg)).collect()).unwrap_or_else(|| vec![fg, bg]);
             let n = colors.len();
-            colors.into_iter().enumerate().map(|(i, c)| (if n > 1 { i as f32 / (n - 1) as f32 } else { 0.0 }, c)).collect()
+            let cs = colors.into_iter().enumerate().map(|(i, c)| (if n > 1 { i as f32 / (n - 1) as f32 } else { 0.0 }, c)).collect();
+            gradients::apply_opacity(cs, &gradients::transparency_param(p, "paint.gradient")?.unwrap_or_default())
         }
     };
     let reverse = b(p, "reverse", false);

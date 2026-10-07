@@ -85,8 +85,7 @@ impl GradientPreset {
         GradientPreset { name: "Foreground to Background".into(), stops: vec![(0.0, StopColor::Foreground), (1.0, StopColor::Background)], opacity: Vec::new() }
     }
 
-    /// RGBA stops for painting: colour and transparency stops merged. Where both vary, extra
-    /// samples keep the product close to Photoshop's per-pixel interpolation.
+    /// RGBA stops for painting: colour and transparency stops merged (see [`apply_opacity`]).
     pub fn resolve(&self, fg: [f32; 4], bg: [f32; 4]) -> Vec<(f32, [f32; 4])> {
         let rgb = |c: StopColor| match c {
             StopColor::Foreground => [fg[0], fg[1], fg[2], 1.0],
@@ -98,28 +97,7 @@ impl GradientPreset {
         if cs.is_empty() {
             cs = vec![(0.0, [fg[0], fg[1], fg[2], 1.0]), (1.0, [bg[0], bg[1], bg[2], 1.0])];
         }
-        let mut os: Vec<(f32, f32)> = self.opacity.iter().map(|(t, a)| (t.clamp(0.0, 1.0), a.clamp(0.0, 1.0))).collect();
-        os.sort_by(|a, b| a.0.total_cmp(&b.0));
-        if os.is_empty() || os.iter().all(|o| (o.1 - 1.0).abs() < 1e-6) {
-            return cs;
-        }
-        let mut ts: Vec<f32> = cs.iter().map(|s| s.0).chain(os.iter().map(|s| s.0)).chain([0.0, 1.0]).collect();
-        ts.sort_by(f32::total_cmp);
-        ts.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
-        let mut all = Vec::new();
-        for w in ts.windows(2) {
-            for k in 0..4 {
-                all.push(w[0] + (w[1] - w[0]) * k as f32 / 4.0);
-            }
-        }
-        all.push(1.0);
-        all.into_iter()
-            .map(|t| {
-                let mut c = sample(&cs, t, lerp4).unwrap_or([0.0; 4]);
-                c[3] = sample(&os, t, |a, b, u| a + (b - a) * u).unwrap_or(1.0);
-                (t, c)
-            })
-            .collect()
+        apply_opacity(cs, &self.opacity)
     }
 
     /// Colour stops (live colours resolved now, sorted, opaque) and opacity stops (sorted; empty
@@ -185,14 +163,64 @@ impl GradientPreset {
             return Err(bad(cmd, "a gradient needs at least 2 colour stops"));
         }
         stops.sort_by(|a, b| a.0.total_cmp(&b.0));
-        let mut opacity: Vec<(f32, f32)> = p
-            .get("transparency")
-            .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(|o| Some((o.get(0)?.as_f64()? as f32, (o.get(1)?.as_f64()? as f32 / 100.0).clamp(0.0, 1.0)))).collect())
-            .unwrap_or_default();
-        opacity.sort_by(|a, b| a.0.total_cmp(&b.0));
-        Ok(GradientPreset { name: name.into(), stops, opacity })
+        GradientPreset { name: name.into(), stops, opacity: Vec::new() }.with_transparency(p, cmd)
     }
+
+    /// This gradient with its transparency stops replaced by explicit `"transparency"` stops,
+    /// when `p` has them (see [`transparency_param`]).
+    pub fn with_transparency(mut self, p: &Value, cmd: &str) -> Result<Self> {
+        if let Some(opacity) = transparency_param(p, cmd)? {
+            self.opacity = opacity;
+        }
+        Ok(self)
+    }
+}
+
+/// Sorted RGBA colour stops `cs` with transparency stops `(location, opacity 0..1)` multiplied
+/// into their alpha. Where both vary, extra samples keep the product close to the reference app's
+/// per-pixel interpolation.
+pub fn apply_opacity(cs: Stops, opacity: &[(f32, f32)]) -> Stops {
+    let mut os: Vec<(f32, f32)> = opacity.iter().map(|(t, a)| (t.clamp(0.0, 1.0), a.clamp(0.0, 1.0))).collect();
+    os.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if os.is_empty() || os.iter().all(|o| (o.1 - 1.0).abs() < 1e-6) {
+        return cs;
+    }
+    let mut ts: Vec<f32> = cs.iter().map(|s| s.0).chain(os.iter().map(|s| s.0)).chain([0.0, 1.0]).collect();
+    ts.sort_by(f32::total_cmp);
+    ts.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
+    let mut all = Vec::new();
+    for w in ts.windows(2) {
+        for k in 0..4 {
+            all.push(w[0] + (w[1] - w[0]) * k as f32 / 4.0);
+        }
+    }
+    all.push(1.0);
+    all.into_iter()
+        .map(|t| {
+            let mut c = sample(&cs, t, lerp4).unwrap_or([0.0; 4]);
+            c[3] *= sample(&os, t, |a, b, u| a + (b - a) * u).unwrap_or(1.0);
+            (t, c)
+        })
+        .collect()
+}
+
+/// Explicit `"transparency":[[location 0..1, opacity 0..100], …]` as sorted `(location,
+/// opacity 0..1)` stops (`[]` = opaque); `None` when `p` has none.
+pub fn transparency_param(p: &Value, cmd: &str) -> Result<Option<Vec<(f32, f32)>>> {
+    let Some(v) = p.get("transparency") else { return Ok(None) };
+    let arr = v.as_array().ok_or_else(|| bad(cmd, "`transparency` is [[location, opacity %], …]"))?;
+    if arr.len() > 1024 {
+        return Err(bad(cmd, "too many opacity stops (max 1024)"));
+    }
+    let mut stops = Vec::with_capacity(arr.len());
+    for s in arr {
+        let pair = s.as_array().filter(|a| a.len() == 2).ok_or_else(|| bad(cmd, "an opacity stop is [location 0..1, opacity 0..100]"))?;
+        let f = |i: usize| pair.get(i).and_then(Value::as_f64).map(|v| v as f32).filter(|v| v.is_finite());
+        let (Some(t), Some(o)) = (f(0), f(1)) else { return Err(bad(cmd, "opacity stops are numbers")) };
+        stops.push((t.clamp(0.0, 1.0), (o / 100.0).clamp(0.0, 1.0)));
+    }
+    stops.sort_by(|a, b| a.0.total_cmp(&b.0));
+    Ok(Some(stops))
 }
 
 /// Built-in groups, laid out like Photoshop's default Gradients panel (Basics, then folders by
@@ -334,21 +362,23 @@ pub type FillStops = (Vec<(f32, Color)>, Vec<(f32, f32)>);
 const CMD_SELECT: &str = "gradient.presets.select";
 
 /// Gradient for the Gradient tool: `"gradient": preset name`, else explicit `"stops"`, else the
-/// current gradient (Gradients panel selection). `None` when the caller gave `colors` (the
-/// legacy evenly spaced form `paint.gradient` handles itself).
+/// current gradient (Gradients panel selection); explicit `"transparency"` stops replace its
+/// own. `None` when the caller gave `colors` (the legacy evenly spaced form `paint.gradient`
+/// handles itself).
 pub fn tool_stops(s: &Session, p: &Value) -> Result<Option<Stops>> {
-    let (fg, bg) = (s.tools.foreground, s.tools.background);
+    const CMD: &str = "paint.gradient";
     if p.get("colors").and_then(Value::as_array).is_some_and(|a| !a.is_empty()) {
         return Ok(None);
     }
-    if let Some(name) = str_param(p, "gradient") {
-        let (gi, ii) = find(&s.presets.gradients, name, None).ok_or_else(|| bad("paint.gradient", format!("no gradient preset \"{name}\"")))?;
-        return Ok(Some(s.presets.gradients[gi].items[ii].resolve(fg, bg)));
-    }
-    if p.get("stops").is_some() {
-        return Ok(Some(GradientPreset::from_params("Custom", p, "paint.gradient")?.resolve(fg, bg)));
-    }
-    Ok(Some(s.presets.gradient.resolve(fg, bg)))
+    let g = if let Some(name) = str_param(p, "gradient") {
+        let (gi, ii) = find(&s.presets.gradients, name, None).ok_or_else(|| bad(CMD, format!("no gradient preset \"{name}\"")))?;
+        s.presets.gradients[gi].items[ii].clone().with_transparency(p, CMD)?
+    } else if p.get("stops").is_some() {
+        GradientPreset::from_params("Custom", p, CMD)?
+    } else {
+        s.presets.gradient.clone().with_transparency(p, CMD)?
+    };
+    Ok(Some(g.resolve(s.tools.foreground, s.tools.background)))
 }
 
 /// The preset named by `"preset"` (else the current gradient), or explicit `"stops"`.
