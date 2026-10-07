@@ -184,6 +184,31 @@ fn content_aware_scale_params() {
     assert!(s.execute("edit.contentAwareScale", json!({"protect": "no such channel"})).is_err());
 }
 
+#[test]
+fn content_aware_scale_enlarges_a_one_pixel_line() {
+    // A 1 px wide (or tall) layer has no seam to spare, so enlarging it used to return the line
+    // unchanged and crash or write a short buffer. The line's single column (row) is repeated.
+    for (line, params, to) in [
+        (Rect::new(10, 0, 11, 48), json!({"width": 5}), [5, 48]),
+        (Rect::new(10, 0, 11, 48), json!({"width": 6, "height": 30}), [6, 30]),
+        (Rect::new(0, 7, 64, 8), json!({"height": 4}), [64, 4]),
+        (Rect::new(0, 7, 64, 8), json!({"width": 20, "height": 3}), [20, 3]),
+    ] {
+        let mut s = session(8);
+        s.execute("layer.new.layer", json!({})).unwrap();
+        s.edit("paint", |doc, active| {
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(line, &[1.0, 0.0, 0.0, 1.0]);
+            Ok(())
+        })
+        .unwrap();
+        let r = s.execute("edit.contentAwareScale", params.clone()).unwrap();
+        assert_eq!(r["to"], json!(to), "{params}");
+        let b = active(&s).surface().unwrap().content_bounds();
+        assert_eq!([b.width(), b.height()], to, "{params}");
+        assert_eq!(px(&s, b.x0 + b.width() as i32 - 1, b.y0 + b.height() as i32 - 1), vec![1.0, 0.0, 0.0, 1.0], "{params}");
+    }
+}
+
 fn square_path(x: f64, y: f64, w: f64) -> Path {
     Path::new(vec![Subpath::polygon(&[(x, y), (x + w, y), (x + w, y + w), (x, y + w)])])
 }

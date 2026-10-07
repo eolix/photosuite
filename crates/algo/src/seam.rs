@@ -143,7 +143,8 @@ pub fn carve_width_with(w: usize, h: usize, ch: usize, img: &[f32], protect: Opt
         let mut tprot = prot.clone();
         let mut dup: Vec<Vec<usize>> = vec![Vec::with_capacity(k); h];
         for _ in 0..k {
-            if tw <= 1 {
+            // A 1 px wide image's only seam is its one column: take it, so it is duplicated.
+            if tw == 0 {
                 break;
             }
             ctl.check()?;
@@ -358,6 +359,20 @@ mod tests {
         }
         let out = carve(16, 4, 1, &marked, Some(&protect), 8, 4);
         assert!((0..4).all(|y| out[y * 8..y * 8 + 8].iter().any(|v| (*v - 0.51).abs() < 1e-6)));
+    }
+
+    #[test]
+    fn one_pixel_lines_enlarge_by_repeating() {
+        // Width 1 has no seam to spare: its one column is repeated. Height 1 likewise (through
+        // the transposed pass), alone or with the other axis.
+        let col = [0.1f32, 0.2, 0.3, 0.4, 0.5];
+        assert_eq!(carve(1, 5, 1, &col, None, 4, 5), col.iter().flat_map(|v| [*v; 4]).collect::<Vec<_>>());
+        assert_eq!(carve(5, 1, 1, &col, None, 5, 3), col.repeat(3));
+        assert_eq!(carve(1, 1, 3, &[0.7, 0.8, 0.9], None, 3, 2), [0.7, 0.8, 0.9].repeat(6));
+        for (w, h, nw, nh) in [(1, 5, 6, 10), (1, 17, 6, 34), (16, 1, 21, 2), (7, 1, 3, 8), (2, 1, 1, 8)] {
+            let img = vec![0.5f32; w * h * 4];
+            assert_eq!(carve(w, h, 4, &img, Some(&vec![1.0; w * h]), nw, nh).len(), nw * nh * 4, "{w}x{h} -> {nw}x{nh}");
+        }
     }
 
     #[test]
