@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
-default-members = ["crates/*", "apps/photosuite-cli", "xtask"]
+default-members = ["crates/*", "apps/photosuite", "apps/photosuite-cli", "xtask"]
 
 [workspace.package]
 version = "0.9.18"
