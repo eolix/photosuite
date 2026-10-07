@@ -128,11 +128,11 @@ pub fn show_fallback(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.label(tl!("Retry GPU requires a restart. Save your work first."));
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if crate::widgets::primary_button(ui, tl!("Keep Using CPU"), 150.0).clicked() {
-                    choice = Some(false);
-                }
-                if crate::widgets::secondary_button(ui, tl!("Retry GPU"), 120.0).clicked() {
-                    choice = Some(true);
+                use crate::widgets::{ButtonRole, DialogButton};
+                let buttons =
+                    [DialogButton::new(ButtonRole::Default, tl!("Keep Using CPU"), 150.0), DialogButton::new(ButtonRole::Alternate, tl!("Retry GPU"), 120.0)];
+                if let Some(role) = crate::widgets::dialog_buttons(ui, &buttons) {
+                    choice = Some(role == ButtonRole::Alternate);
                 }
             });
         });

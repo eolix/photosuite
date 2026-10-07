@@ -418,12 +418,15 @@ fn dialog(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let ok = if kind == "deleteWorkspace" { "Delete" } else { "OK" };
-                    if crate::widgets::primary_button(ui, ok, 70.0).clicked() {
-                        result = Some(true);
-                    }
-                    if crate::widgets::secondary_button(ui, tl!("Cancel"), 70.0).clicked() {
-                        result = Some(false);
+                    let ok = if kind == "deleteWorkspace" { tl!("Delete") } else { tl!("OK") };
+                    if let Some(role) = crate::widgets::dialog_buttons(
+                        ui,
+                        &[
+                            crate::widgets::DialogButton::new(crate::widgets::ButtonRole::Default, ok, 70.0),
+                            crate::widgets::DialogButton::new(crate::widgets::ButtonRole::Cancel, tl!("Cancel"), 70.0),
+                        ],
+                    ) {
+                        result = Some(role == crate::widgets::ButtonRole::Default);
                     }
                 });
             });

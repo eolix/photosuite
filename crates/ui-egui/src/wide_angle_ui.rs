@@ -389,11 +389,14 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         let foot = ERect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
         painter.rect_filled(foot, 0.0, t.dock);
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
-        if widgets::primary_button(&mut fu, tl!("OK"), 90.0).clicked() {
-            action = Some("ok");
-        }
-        if widgets::secondary_button(&mut fu, tl!("Cancel"), 90.0).clicked() {
-            action = Some("cancel");
+        if let Some(role) = widgets::dialog_buttons(
+            &mut fu,
+            &[
+                widgets::DialogButton::new(widgets::ButtonRole::Default, tl!("OK"), 90.0),
+                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 90.0),
+            ],
+        ) {
+            action = Some(if role == widgets::ButtonRole::Default { "ok" } else { "cancel" });
         }
         fu.label(egui::RichText::new(format!("{:.0} ms · straightness {:.1} px", d.render_ms, d.residual)).color(t.text_faint));
     });

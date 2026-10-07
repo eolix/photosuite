@@ -270,10 +270,17 @@ fn rename_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, acts: &mut Vec<Action>
             resp.request_focus();
         }
         let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if widgets::primary_button(ui, "OK", 52.0).clicked() || enter {
+        let clicked = widgets::dialog_buttons(
+            ui,
+            &[
+                widgets::DialogButton::new(widgets::ButtonRole::Default, tl!("OK"), 52.0),
+                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 60.0),
+            ],
+        );
+        if clicked == Some(widgets::ButtonRole::Default) || enter {
             acts.push(Action::Rename(r.clone()));
         }
-        if widgets::secondary_button(ui, "Cancel", 60.0).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        if clicked == Some(widgets::ButtonRole::Cancel) || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             cancel = true;
         }
     });

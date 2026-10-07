@@ -670,11 +670,14 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         // Footer buttons.
         let foot = ERect::from_min_size(pos2(right.left() + 14.0, right.bottom() - 48.0), vec2(RIGHT_W - 28.0, 32.0));
         let mut fb = ui.new_child(egui::UiBuilder::new().max_rect(foot).layout(egui::Layout::right_to_left(egui::Align::Center)));
-        if widgets::primary_button(&mut fb, tl!("OK"), 84.0).clicked() {
-            action = Some("ok");
-        }
-        if widgets::secondary_button(&mut fb, tl!("Cancel"), 84.0).clicked() {
-            action = Some("cancel");
+        if let Some(role) = widgets::dialog_buttons(
+            &mut fb,
+            &[
+                widgets::DialogButton::new(widgets::ButtonRole::Default, tl!("OK"), 84.0),
+                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 84.0),
+            ],
+        ) {
+            action = Some(if role == widgets::ButtonRole::Default { "ok" } else { "cancel" });
         }
         // Preview.
         let area = ERect::from_min_max(pos2(left.right(), body.top()), pos2(right.left(), body.bottom()));

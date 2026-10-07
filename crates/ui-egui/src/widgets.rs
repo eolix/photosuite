@@ -316,11 +316,98 @@ pub fn secondary_button(ui: &mut Ui, label: &str, min_width: f32) -> Response {
     button_impl(ui, label, min_width, t.field, t.text, false)
 }
 
+/// What a dialog button does, which decides where the platform's button order puts it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ButtonRole {
+    /// The default answer (OK, Save, Yes), drawn as the primary button.
+    Default,
+    /// Another answer that closes the dialog (Don't Save, No).
+    Alternate,
+    /// Closes the dialog without acting.
+    Cancel,
+    /// Acts but keeps the dialog open (Apply).
+    Apply,
+}
+
+impl ButtonRole {
+    /// Position from the left in the platform's order. Windows and Linux put the default action
+    /// first (OK Cancel Apply, Yes No Cancel); macOS puts it last, in the corner, with Cancel beside
+    /// it and the other answers further left (Don't Save, Cancel, Save).
+    fn slot(self, mac: bool) -> u8 {
+        match (self, mac) {
+            (Self::Default, false) | (Self::Alternate, true) => 0,
+            (Self::Alternate, false) | (Self::Cancel, true) => 1,
+            (Self::Cancel, false) | (Self::Apply, true) => 2,
+            (Self::Apply, false) | (Self::Default, true) => 3,
+        }
+    }
+}
+
+/// One button of a [`dialog_buttons`] row.
+#[derive(Clone, Copy)]
+pub struct DialogButton<'a> {
+    pub role: ButtonRole,
+    pub label: &'a str,
+    pub min_width: f32,
+    pub enabled: bool,
+}
+
+impl<'a> DialogButton<'a> {
+    pub fn new(role: ButtonRole, label: &'a str, min_width: f32) -> Self {
+        Self { role, label, min_width, enabled: true }
+    }
+
+    pub fn enabled(self, enabled: bool) -> Self {
+        Self { enabled, ..self }
+    }
+}
+
+/// A dialog's button row at the cursor, in the platform's order (see [`ButtonRole`]): every modal
+/// draws its buttons through this, so they all agree. Inside a right-to-left row it sits at the
+/// right edge. The buttons are laid out left to right, so Tab walks them in reading order.
+/// Returns the role of the button clicked this frame.
+pub fn dialog_buttons(ui: &mut Ui, buttons: &[DialogButton]) -> Option<ButtonRole> {
+    let mac = ui.ctx().os() == egui::os::OperatingSystem::Mac;
+    let gap = ui.spacing().item_spacing.x;
+    let size = buttons.iter().fold(Vec2::ZERO, |acc, b| {
+        let s = button_size(ui, b.label, b.min_width);
+        vec2(acc.x + s.x, acc.y.max(s.y))
+    }) + vec2(gap * buttons.len().saturating_sub(1) as f32, 0.0);
+    ui.allocate_ui_with_layout(size, egui::Layout::left_to_right(egui::Align::Center), |ui| {
+        let mut hit = None;
+        for slot in 0..4 {
+            for b in buttons.iter().filter(|b| b.role.slot(mac) == slot) {
+                let r = ui
+                    .add_enabled_ui(b.enabled, |ui| {
+                        if b.role == ButtonRole::Default { primary_button(ui, b.label, b.min_width) } else { secondary_button(ui, b.label, b.min_width) }
+                    })
+                    .inner;
+                if r.clicked() {
+                    hit = Some(b.role);
+                }
+            }
+        }
+        hit
+    })
+    .inner
+}
+
+/// The size of a primary or secondary button: its label plus padding, at least `min_width` wide.
+fn button_size(ui: &Ui, label: &str, min_width: f32) -> Vec2 {
+    button_layout(ui, label, min_width, Tokens::get(ui.ctx()).text).1
+}
+
+fn button_layout(ui: &Ui, label: &str, min_width: f32, fg: Color32) -> (std::sync::Arc<egui::Galley>, Vec2) {
+    let galley = ui.painter().layout_no_wrap(tl!(label).to_owned(), theme::medium(13.0), fg);
+    let h = if Tokens::get(ui.ctx()).pro { 28.0 } else { 30.0 };
+    let size = vec2((galley.size().x + 28.0).max(min_width), h);
+    (galley, size)
+}
+
 fn button_impl(ui: &mut Ui, label: &str, min_width: f32, bg: Color32, fg: Color32, primary: bool) -> Response {
     let t = Tokens::get(ui.ctx());
-    let galley = ui.painter().layout_no_wrap(tl!(label).to_owned(), theme::medium(13.0), fg);
-    let h = if t.pro { 28.0 } else { 30.0 };
-    let size = vec2((galley.size().x + 28.0).max(min_width), h);
+    let (galley, size) = button_layout(ui, label, min_width, fg);
+    let h = size.y;
     let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     // Painted text: name the button for accessibility (and so tests and agents can find it).
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label));
@@ -633,6 +720,48 @@ mod tests {
         // Taller than the room: its top goes to the top of the bounds.
         assert_eq!(super::keep_inside(r(100.0, 300.0, 200.0, 900.0), b), vec2(0.0, -262.0));
         assert_eq!(super::keep_inside(r(f32::NAN, 0.0, 10.0, 10.0), b), vec2(0.0, 0.0));
+    }
+
+    /// A right-aligned OK / Cancel / Apply row as `os` draws it: labels left to right, and the
+    /// row's right edge with the window's.
+    fn button_row(os: egui::os::OperatingSystem) -> (Vec<String>, f32, f32) {
+        use super::{ButtonRole, DialogButton};
+        use egui_kittest::{Harness, kittest::Queryable};
+        // Drawn from the second frame, once the theme's fonts are bound.
+        let mut h = Harness::builder().with_size(egui::vec2(500.0, 80.0)).build_ui_state(
+            |ui, ready: &mut bool| {
+                if *ready {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        let row = [
+                            DialogButton::new(ButtonRole::Default, "OK", 84.0),
+                            DialogButton::new(ButtonRole::Cancel, "Cancel", 84.0),
+                            DialogButton::new(ButtonRole::Apply, "Apply", 84.0),
+                        ];
+                        super::dialog_buttons(ui, &row);
+                    });
+                }
+            },
+            false,
+        );
+        crate::PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        h.ctx.set_os(os);
+        *h.state_mut() = true;
+        h.run();
+        let mut drawn: Vec<(f32, f32, String)> =
+            ["OK", "Cancel", "Apply"].iter().map(|l| (h.get_by_label(l).rect().left(), h.get_by_label(l).rect().right(), l.to_string())).collect();
+        drawn.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let right = drawn.last().map_or(0.0, |d| d.1);
+        (drawn.into_iter().map(|d| d.2).collect(), right, h.ctx.content_rect().right())
+    }
+
+    #[test]
+    fn dialog_buttons_follow_the_platform_order() {
+        use egui::os::OperatingSystem as Os;
+        for (os, want) in [(Os::Windows, ["OK", "Cancel", "Apply"]), (Os::Nix, ["OK", "Cancel", "Apply"]), (Os::Mac, ["Cancel", "Apply", "OK"])] {
+            let (order, right, edge) = button_row(os);
+            assert_eq!(order, want, "{os:?}");
+            assert!(edge - right < 20.0, "{os:?}: the row hugs the right edge ({right} of {edge})");
+        }
     }
 
     #[test]

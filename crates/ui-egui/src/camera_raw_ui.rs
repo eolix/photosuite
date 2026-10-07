@@ -633,12 +633,16 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         painter.rect_filled(foot, 0.0, t.dock);
         painter.line_segment([foot.left_top(), foot.right_top()], Stroke::new(1.0, t.separator));
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
+        // Opening a raw file says Open, as Photoshop does.
         let ok = if d.opened_file.is_some() { tl!("Open") } else { tl!("OK") };
-        if widgets::primary_button(&mut fu, ok, 90.0).clicked() {
-            action = Some("ok");
-        }
-        if widgets::secondary_button(&mut fu, tl!("Cancel"), 90.0).clicked() {
-            action = Some("cancel");
+        if let Some(role) = widgets::dialog_buttons(
+            &mut fu,
+            &[
+                widgets::DialogButton::new(widgets::ButtonRole::Default, ok, 90.0),
+                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 90.0),
+            ],
+        ) {
+            action = Some(if role == widgets::ButtonRole::Default { "ok" } else { "cancel" });
         }
         fu.add_space(12.0);
         widgets::checkbox(&mut fu, &mut d.show_before, tl!("Before (Y)"));

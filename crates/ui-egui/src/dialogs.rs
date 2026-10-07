@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 
 use crate::PhotosuiteApp;
 use crate::state::{Dialog, DialogKind};
+use crate::widgets::{ButtonRole, DialogButton, dialog_buttons};
 
 /// Where this frame's dialogs are on screen (the canvas reads last frame's: it draws first).
 const RECTS: &str = "pc-dialog-rects";
@@ -229,7 +230,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
                 if matches!(d.kind, DialogKind::About | DialogKind::Error) {
-                    if crate::widgets::primary_button(ui, tl!("OK"), 84.0).clicked() {
+                    if dialog_buttons(ui, &[DialogButton::new(ButtonRole::Default, tl!("OK"), 84.0)]).is_some() {
                         outcome = Some(false);
                     }
                 } else {
@@ -240,15 +241,20 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                     } else {
                         crate::file_ui::ok_label(&d.fields).unwrap_or("OK")
                     };
-                    if crate::widgets::primary_button(ui, ok_label, 84.0).clicked() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        outcome = Some(true);
-                    }
-                    if d.kind == DialogKind::Command && crate::prefs_ui::is_preferences(&fields) {
+                    let ok = DialogButton::new(ButtonRole::Default, ok_label, 84.0);
+                    let cancel = DialogButton::new(ButtonRole::Cancel, if d.kind == DialogKind::NewDocument { tl!("Close") } else { tl!("Cancel") }, 84.0);
+                    let clicked = if d.kind == DialogKind::Command && crate::prefs_ui::is_preferences(&fields) {
                         let changed = crate::prefs_ui::preferences_changed(app, &fields);
-                        apply_requested = ui.add_enabled_ui(changed, |ui| crate::widgets::secondary_button(ui, tl!("Apply"), 84.0)).inner.clicked();
-                    }
-                    if crate::widgets::secondary_button(ui, if d.kind == DialogKind::NewDocument { "Close" } else { "Cancel" }, 84.0).clicked() {
-                        outcome = Some(false);
+                        dialog_buttons(ui, &[ok, cancel, DialogButton::new(ButtonRole::Apply, tl!("Apply"), 84.0).enabled(changed)])
+                    } else {
+                        dialog_buttons(ui, &[ok, cancel])
+                    };
+                    match clicked {
+                        Some(ButtonRole::Cancel) => outcome = Some(false),
+                        Some(ButtonRole::Apply) => apply_requested = true,
+                        Some(_) => outcome = Some(true),
+                        None if ui.input(|i| i.key_pressed(egui::Key::Enter)) => outcome = Some(true),
+                        None => {}
                     }
                 }
             });
@@ -389,8 +395,9 @@ mod tests {
         h.run_steps(4);
         let bounds = crate::widgets::dialog_bounds(&h.ctx);
         let title = h.get_by_label("Layer Style").rect();
-        let ok = h.get_by_label("OK").rect();
-        // Centred: the title's left edge and the OK button's right edge are about as far from the
+        // The button row's right edge: OK or Cancel, whichever the platform's order puts last.
+        let ok = h.get_by_label("OK").rect().union(h.get_by_label("Cancel").rect());
+        // Centred: the title's left edge and the button row's right edge are about as far from the
         // window's sides.
         let (left, right) = (title.left() - bounds.left(), bounds.right() - ok.right());
         assert!((left - right).abs() < 24.0 && left > 100.0, "left {left}, right {right}");
@@ -401,7 +408,7 @@ mod tests {
         h.run_steps(4);
         let cr = h.get_by_label_contains("Camera Raw Filter").rect();
         assert!((cr.height() - layer_style_title).abs() < 0.5, "same title font: {} vs {layer_style_title}", cr.height());
-        let cr_ok = h.get_by_label("OK").rect();
+        let cr_ok = h.get_by_label("OK").rect().union(h.get_by_label("Cancel").rect());
         let (left, right) = (cr.left() - bounds.left(), bounds.right() - cr_ok.right());
         assert!((left - right).abs() < 24.0 && left > 16.0, "Camera Raw: left {left}, right {right}");
     }
