@@ -419,6 +419,19 @@ fn only_layered_files_save_in_place() {
     assert_eq!(extension("my.dir/name"), None);
 }
 
+#[test]
+fn templates_open_untitled_without_their_path() {
+    assert!(is_template("dir/card.PSDT") && !is_template("card.psd") && !is_template("psdt"));
+    let dir = tmp("template");
+    let path = format!("{dir}/card.psdt");
+    let mut s = session(8, 8, 8);
+    std::fs::write(&path, encode(doc(&s), "x.psd", None).unwrap().0).unwrap();
+    s.execute("file.openAs", json!({"path": path})).unwrap();
+    s.execute("file.openAs", json!({"path": path, "as": "psd"})).unwrap();
+    let opened: Vec<_> = s.documents()[1..].iter().map(|d| (d.doc.name.as_str(), d.path.as_deref())).collect();
+    assert_eq!(opened, [("Untitled-1", None), ("Untitled-2", None)]);
+}
+
 /// Two inputs with one output name: the first result is kept and the second is an error, never
 /// a silent overwrite listed as written (#422).
 #[test]

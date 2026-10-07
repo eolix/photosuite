@@ -71,6 +71,7 @@ pub fn run(app: &mut PhotosuiteApp, id: &str, params: Value) -> Result<Value, St
 /// Open a file in the background: a tab appears at once and shows the progress; the document
 /// replaces it when decoded. `path` is remembered for File › Save and Open Recent.
 pub fn start_open(app: &mut PhotosuiteApp, name: &str, path: Option<String>, source: OpenSource) -> Result<(), String> {
+    let name = &app.open_name(name);
     match app.session.start_open(name, source).map_err(|e| e.to_string())? {
         // Inline (wasm): finish now, like a background open that ended at once.
         Started::Done(v) => finish_open(app, name, path.as_deref(), &v),
@@ -193,11 +194,8 @@ fn finish_open(app: &mut PhotosuiteApp, name: &str, path: Option<&str>, v: &Valu
     let warnings: Vec<String> =
         v.get("warnings").and_then(Value::as_array).map(|a| a.iter().filter_map(|w| w.as_str().map(str::to_string)).collect()).unwrap_or_default();
     app.session.set_active(index);
-    if let (Some(p), Some(st)) = (path, app.session.active_mut()) {
-        st.path = Some(p.to_string());
-    }
     if let Some(p) = path {
-        app.push_recent(p);
+        app.opened_from(p, None);
     }
     app.sync_views();
     app.ui.status = format!("Opened {name}");

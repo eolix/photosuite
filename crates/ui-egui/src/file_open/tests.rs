@@ -182,6 +182,23 @@ fn save_keeps_the_quality_the_file_was_opened_with() {
 }
 
 #[test]
+fn templates_open_as_new_untitled_documents() {
+    let (mut app, written) = app_with(None, None);
+    let ctx = egui::Context::default();
+    app.open_file("/pics/card.PSDT", b"x").unwrap();
+    app.open_file("/pics/card.psdt", b"x").unwrap();
+    let names: Vec<_> = app.session.documents().iter().map(|d| d.doc.name.clone()).collect();
+    assert_eq!(names, ["Untitled-1", "Untitled-2"]);
+    assert!(app.session.documents().iter().all(|d| d.path.is_none()));
+    assert_eq!(app.ui.recent_files.first().map(String::as_str), Some("/pics/card.psdt"));
+    // File › Save doesn't write back to the template: it opens the Save As screen.
+    let r = menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
+    let d = app.ui.dialog_mut(r["dialog"].as_u64().unwrap()).unwrap();
+    assert!(d.fields.contains_key("__saveAs"), "{r}");
+    assert!(written.borrow().is_empty());
+}
+
+#[test]
 fn import_warnings_reach_status_notice_and_control_response() {
     let dir = std::env::temp_dir().join(format!("photosuite-open-warn-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();

@@ -135,6 +135,23 @@ pub fn saves_in_place(path: &str) -> bool {
     extension(path).is_some_and(|ext| matches!(ext.as_str(), "psd" | "psb" | "pcraft"))
 }
 
+/// Whether `path` names a document template (.psdt). A template opens as a new untitled document
+/// without its path, so a save never writes over the template.
+pub fn is_template(path: &str) -> bool {
+    extension(path).as_deref() == Some("psdt")
+}
+
+/// The first "`base`-N" that isn't `taken`.
+pub fn untitled_name(base: &str, taken: impl Fn(&str) -> bool) -> String {
+    (1..).map(|i| format!("{base}-{i}")).find(|n| !taken(n)).unwrap_or_default()
+}
+
+/// The name a document opened from `path` gets when `path` is a template: the first "Untitled-N"
+/// no open document has.
+pub fn template_name(s: &Session, path: &str) -> Option<String> {
+    is_template(path).then(|| untitled_name("Untitled", |n| s.documents().iter().any(|d| d.doc.name == n)))
+}
+
 pub(crate) fn stem(path: &str) -> String {
     let n = file_name(path);
     match n.rfind('.') {
@@ -309,7 +326,16 @@ pub fn open_bytes_as(s: &mut Session, name: &str, bytes: &[u8], as_ext: Option<&
     };
     let r = photosuite_io::import(&decode_name, bytes).map_err(|e| EngineError::Other(format!("{decode_name}: {e}")))?;
     let mut doc = r.document;
-    doc.name = file_name(name);
+    let path = match template_name(s, name) {
+        Some(untitled) => {
+            doc.name = untitled;
+            None
+        }
+        None => {
+            doc.name = file_name(name);
+            path
+        }
+    };
     // Color Settings policies (preserve / convert / discard the embedded profile).
     let (i, color) = s.open_document(doc, path);
     // Import notes (e.g. how a camera raw was developed, or that only its preview opened).

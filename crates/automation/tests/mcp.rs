@@ -356,6 +356,13 @@ async fn save_without_path_never_flattens_over_the_opened_file() {
     json_of(&call(&client, "doc_save", json!({"path": "work.pcraft"})).await);
     assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "work.pcraft");
     assert_eq!(std::fs::read(dir.join("seed.png")).unwrap(), png);
+
+    // A template opens untitled, without its path.
+    std::fs::write(dir.join("card.psdt"), &psd).unwrap();
+    assert_eq!(json_of(&call(&client, "doc_open", json!({"path": "card.psdt"})).await)["name"], "Untitled-1");
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("card.psdt")).unwrap(), psd);
     client.cancel().await.unwrap();
     cleanup(&dir);
 }

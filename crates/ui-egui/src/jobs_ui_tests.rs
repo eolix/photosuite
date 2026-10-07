@@ -257,3 +257,18 @@ fn files_open_in_the_background_with_a_tab_and_cancel_closes_it() {
     assert_eq!(h.state().session.documents().len(), 2);
     assert!(h.state().jobs.focus.is_none());
 }
+
+#[test]
+fn templates_open_untitled_in_the_background() {
+    let mut h = app_harness();
+    h.state_mut().open_file("/tmp/photosuite-test/card.psdt", &psd_bytes()).unwrap();
+    assert_eq!(h.state().jobs.opens[0].name, "Untitled-1");
+    let t = Instant::now();
+    while !h.state().jobs.opens.is_empty() && t.elapsed() < Duration::from_secs(30) {
+        h.step();
+    }
+    h.run_steps(2);
+    let st = h.state().session.active().unwrap();
+    assert_eq!((st.doc.name.as_str(), st.path.as_deref()), ("Untitled-1", None));
+    assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/photosuite-test/card.psdt"));
+}
