@@ -824,10 +824,11 @@ fn build() -> Vec<CommandSpec> {
             params: r##"{"x":i32,"y":i32}"##,
             enabled: has_doc,
             run: |s, p| {
-                let x = int(p, "x").unwrap_or(0) as i32;
-                let y = int(p, "y").unwrap_or(0) as i32;
+                let coord = |k: &str| i32::try_from(int(p, k).unwrap_or(0)).map_err(|_| bad("document.pixel", format!("{k} must fit in 32 bits")));
+                let (x, y) = (coord("x")?, coord("y")?);
                 let d = s.active().ok_or(EngineError::NoDocument)?;
-                let px = photosuite_compose::render(&d.doc, Rect::from_xywh(x, y, 1, 1)).px[0];
+                // At i32::MAX the 1x1 rect saturates to empty: a pixel that far out is transparent.
+                let px = photosuite_compose::render(&d.doc, Rect::from_xywh(x, y, 1, 1)).px.first().copied().unwrap_or_default();
                 Ok(json!(px))
             },
             journal: false,

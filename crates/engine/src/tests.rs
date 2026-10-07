@@ -12,6 +12,17 @@ fn px(s: &mut Session, x: i32, y: i32) -> Vec<f32> {
 }
 
 #[test]
+fn document_pixel_at_the_coordinate_limits() {
+    let mut s = session_with_doc();
+    // The last representable column used to panic (its 1x1 rect saturated to empty).
+    assert_eq!(px(&mut s, i32::MAX, 0), vec![0.0; 4]);
+    assert_eq!(px(&mut s, i32::MIN, i32::MAX), vec![0.0; 4]);
+    // Values beyond i32 used to wrap around onto the canvas (2^32 read column 0).
+    let e = s.execute("document.pixel", json!({"x": 1i64 << 32, "y": 0})).unwrap_err();
+    assert!(matches!(e, EngineError::BadParams { .. }), "{e}");
+}
+
+#[test]
 fn command_ids_are_unique_and_documented() {
     let mut seen = std::collections::HashSet::new();
     for c in command_specs() {
