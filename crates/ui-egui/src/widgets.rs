@@ -371,44 +371,6 @@ pub fn tool_dialog_rect(ctx: &egui::Context, max: Vec2) -> egui::Rect {
     egui::Rect::from_center_size(bounds.center(), size)
 }
 
-/// Shows a tool dialog at `rect` as a modal (the app behind takes no input, and isn't dimmed,
-/// like the other dialogs): its shadow and background, `content`, then its border on top.
-/// Dragging its top `title_h` points moves it, as with the other dialogs; it stays on screen,
-/// and keeps its place when it is opened again.
-pub fn tool_dialog<R>(ctx: &egui::Context, id: egui::Id, rect: egui::Rect, title_h: f32, content: impl FnOnce(&mut Ui, egui::Rect) -> R) -> Option<R> {
-    let t = Tokens::get(ctx);
-    let offset_id = id.with("offset");
-    // Kept below the title bar and on screen: the window may have shrunk since it was moved.
-    let bounds = dialog_bounds(ctx);
-    let mut offset = ctx.data(|d| d.get_temp::<Vec2>(offset_id)).unwrap_or_default();
-    offset += keep_inside(rect.translate(offset), bounds);
-    let rect = rect.translate(offset);
-    let area = egui::Area::new(id).order(egui::Order::Foreground).fixed_pos(rect.min);
-    let r = egui::Modal::new(id).area(area).backdrop_color(Color32::TRANSPARENT).frame(egui::Frame::NONE).show(ctx, |ui| {
-        let (full, _) = ui.allocate_exact_size(rect.size(), Sense::click());
-        let title = egui::Rect::from_min_size(full.min, vec2(full.width(), title_h.clamp(0.0, full.height())));
-        let drag = ui.interact(title, id.with("title"), Sense::drag()).drag_delta();
-        if drag != Vec2::ZERO {
-            let moved = offset + drag + keep_inside(rect.translate(drag), bounds);
-            ctx.data_mut(|d| d.insert_temp(offset_id, moved));
-        }
-        let radius = t.radius;
-        ui.painter().add(ctx.global_style().visuals.popup_shadow.as_shape(full, radius));
-        ui.painter().rect_filled(full, radius, t.chrome);
-        let out = content(ui, full);
-        ui.painter().rect_stroke(full, radius, Stroke::new(1.0, t.separator), StrokeKind::Inside);
-        out
-    });
-    Some(r.inner)
-}
-
-/// Corner radius for a tool dialog strip along its top (`top`) or bottom edge.
-pub fn tool_dialog_corners(ctx: &egui::Context, top: bool, left: bool, right: bool) -> egui::CornerRadius {
-    let r = Tokens::get(ctx).radius.round().clamp(0.0, 255.0) as u8;
-    let (l, rr) = (if left { r } else { 0 }, if right { r } else { 0 });
-    if top { egui::CornerRadius { nw: l, ne: rr, sw: 0, se: 0 } } else { egui::CornerRadius { nw: 0, ne: 0, sw: l, se: rr } }
-}
-
 /// Small caps section label.
 pub fn section_label(ui: &mut Ui, text: &str) {
     let t = Tokens::get(ui.ctx());

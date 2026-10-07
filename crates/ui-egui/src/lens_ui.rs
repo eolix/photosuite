@@ -11,7 +11,7 @@
 //! "tab":"auto|custom", "straighten":[[x,y],[x,y]] (0..=1 of the image), "commit":true |
 //! "cancel":true}}}`; the reply describes the dialog.
 
-use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
+use egui::{Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
 use photosuite_doc::LayerId;
 use photosuite_geom::Rect;
 use photosuite_raster::Surface;
@@ -391,20 +391,18 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let rect = crate::widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let mut action: Option<&str> = None;
-    crate::widgets::tool_dialog(ctx, egui::Id::new("lens-correction-dialog"), rect, 34.0, |ui, full| {
+    // The dialogs' own frame (title bar, dragging, kept below the app's title bar), at a fixed size.
+    let size = crate::dialogs::FrameSize::Fixed(rect.size());
+    crate::dialogs::frame(ctx, egui::Id::new("lens-correction-dialog"), tl!("Lens Correction"), size, |ui, size| {
         let Some(d) = app.lens.as_mut() else { return };
         if d.dirty {
             d.render(ctx);
         }
+        let (body, _) = ui.allocate_exact_size(size.unwrap_or(rect.size()), Sense::click());
         let painter = ui.painter().clone();
-        let title = ERect::from_min_size(full.min, vec2(full.width(), 34.0));
-        painter.rect_filled(title, crate::widgets::tool_dialog_corners(ctx, true, true, true), t.dock);
-        painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
-        painter.text(pos2(title.left() + 16.0, title.center().y), Align2::LEFT_CENTER, tl!("Lens Correction"), crate::theme::semibold(14.0), t.text);
-        let body = ERect::from_min_max(pos2(full.left(), title.bottom()), full.max);
         // Tool strip.
         let strip = ERect::from_min_max(body.min, pos2(body.left() + STRIP_W, body.bottom()));
-        painter.rect_filled(strip, crate::widgets::tool_dialog_corners(ctx, false, true, false), t.dock);
+        painter.rect_filled(strip, 0.0, t.dock);
         let mut su = ui.new_child(egui::UiBuilder::new().max_rect(strip.shrink2(vec2(6.0, 10.0))).layout(egui::Layout::top_down(egui::Align::Center)));
         if crate::icons::button(&mut su, "tools-grid-4x4", 28.0, d.show_grid, tl!("Show Grid")).clicked() {
             d.show_grid = !d.show_grid;
@@ -485,7 +483,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         // Panel.
         let right = ERect::from_min_max(pos2(body.right() - PANEL_W, body.top()), body.max);
-        painter.rect_filled(right, crate::widgets::tool_dialog_corners(ctx, false, false, true), t.dock);
+        painter.rect_filled(right, 0.0, t.dock);
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let foot_h = 92.0;
         let mut pu = ui

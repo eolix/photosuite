@@ -37,6 +37,88 @@ pub fn pan_delta(ctx: &egui::Context, canvas: egui::Rect, hand: bool) -> Option<
     (panning && canvas.contains(origin) && !rects.iter().any(|r| r.contains(origin))).then_some(delta)
 }
 
+/// How a dialog's frame is sized: a width range for the content to fill (the ordinary
+/// dialogs), or a fixed outer size (Camera Raw, Lens Correction).
+#[derive(Clone, Copy, Debug)]
+pub enum FrameSize {
+    Width(f32, f32),
+    Fixed(egui::Vec2),
+}
+
+/// Every dialog's frame: a modal over the document (not dimmed: Photoshop doesn't, so previews
+/// are judged at true contrast), a title bar in the window title bar's colour, dragged by that
+/// title bar and kept on screen below the app's title bar (on macOS the system's: a dialog there
+/// would sit under the traffic lights, and a drag would move the window).
+///
+/// `body` gets the frame's content `Ui` and, for a fixed size, the body's size below the title
+/// bar. The response says whether it should close (Esc is the caller's).
+pub fn frame<R>(
+    ctx: &egui::Context,
+    id: egui::Id,
+    title: &str,
+    size: FrameSize,
+    body: impl FnOnce(&mut egui::Ui, Option<egui::Vec2>) -> R,
+) -> egui::ModalResponse<R> {
+    // Offset from centre (below the title bar), moved by dragging the title bar (view state
+    // only, so egui memory).
+    let bounds = crate::widgets::dialog_bounds(ctx);
+    let offset: egui::Vec2 = ctx.data(|m| m.get_temp(id)).unwrap_or_default();
+    let mut drag = egui::Vec2::ZERO;
+    let centre = bounds.center() - ctx.content_rect().center();
+    // Kept inside the bounds by a correction worked out from last frame's size, never stored:
+    // on its first frame a dialog's size isn't known yet, and storing a correction made from that
+    // pinned the dialog to a corner.
+    let size_id = id.with("size");
+    let correction = ctx
+        .data(|m| m.get_temp::<egui::Vec2>(size_id))
+        .map(|sz| crate::widgets::keep_inside(egui::Rect::from_center_size(ctx.content_rect().center() + centre + offset, sz), bounds))
+        .unwrap_or_default();
+    let area = egui::Modal::default_area(id).anchor(egui::Align2::CENTER_CENTER, centre + offset + correction);
+    let modal = egui::Modal::new(id).area(area).backdrop_color(egui::Color32::TRANSPARENT).show(ctx, |ui| {
+        let margin = ui.spacing().menu_margin;
+        let chrome = margin.sum() + egui::vec2(2.0, 2.0);
+        let (min_w, max_w) = match size {
+            FrameSize::Width(lo, hi) => (lo, hi),
+            FrameSize::Fixed(outer) => ((outer.x - chrome.x).max(1.0), (outer.x - chrome.x).max(1.0)),
+        };
+        ui.set_min_width(min_w);
+        ui.set_max_width(max_w);
+        // Title bar: a strip across the dialog's top in the window title bar's colour, its
+        // bottom edge the separator. Painted behind the title, so its slot is reserved first.
+        let tk = crate::theme::Tokens::get(ui.ctx());
+        let strip = ui.painter().clone().with_clip_rect(ui.ctx().content_rect());
+        let strip_bg = strip.add(egui::Shape::Noop);
+        ui.add_space(1.0);
+        let t = ui.add(egui::Label::new(egui::RichText::new(title).font(crate::theme::semibold(13.0)).color(tk.text)).selectable(false)).rect;
+        let frame_top = ui.max_rect().top() - f32::from(margin.top);
+        let band = egui::Rect::from_min_max(
+            egui::pos2(ui.max_rect().left() - f32::from(margin.left), frame_top),
+            egui::pos2(ui.max_rect().right() + f32::from(margin.right), t.bottom() + 7.0),
+        );
+        let r = ui.visuals().menu_corner_radius;
+        strip.set(strip_bg, egui::Shape::rect_filled(band, egui::CornerRadius { nw: r.nw, ne: r.ne, sw: 0, se: 0 }, tk.chrome));
+        strip.line_segment([band.left_bottom(), band.right_bottom()], egui::Stroke::new(1.0, tk.separator));
+        drag = ui.interact(band, id.with("title"), egui::Sense::drag()).drag_delta();
+        ui.add_space(band.bottom() - t.bottom() + 10.0);
+        let body_size = match size {
+            FrameSize::Width(..) => None,
+            FrameSize::Fixed(outer) => {
+                let used = ui.min_rect().height() + ui.spacing().item_spacing.y;
+                Some(egui::vec2(max_w, (outer.y - chrome.y - used).max(1.0)))
+            }
+        };
+        body(ui, body_size)
+    });
+    ctx.data_mut(|m| m.insert_temp(size_id, modal.response.rect.size()));
+    // A drag moves it from where it is shown, and stops at the bounds.
+    if drag != egui::Vec2::ZERO {
+        let moved = modal.response.rect.translate(drag);
+        let to = offset + correction + drag + crate::widgets::keep_inside(moved, bounds);
+        ctx.data_mut(|m| m.insert_temp(id, to));
+    }
+    modal
+}
+
 pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let dialogs = app.ui.dialogs.clone();
     let mut shown = Vec::new();
@@ -45,49 +127,23 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         let mut outcome: Option<bool> = None; // Some(true)=OK, Some(false)=Cancel
         let title = display_title(&d);
         let id = egui::Id::new(("dialog", d.id));
-        // Offset from centre, moved by dragging the title bar (view state only, so egui memory).
-        let offset: egui::Vec2 = ctx.data(|m| m.get_temp(id)).unwrap_or_default();
-        let mut drag = egui::Vec2::ZERO;
-        let area = egui::Modal::default_area(id).anchor(egui::Align2::CENTER_CENTER, offset);
-        // Photoshop doesn't dim the window behind dialogs: previews must be judged at true contrast.
-        let modal = egui::Modal::new(id).area(area).backdrop_color(egui::Color32::TRANSPARENT).show(ctx, |ui| {
-            ui.set_min_width(380.0);
-            let wide = crate::prefs_ui::width(&d.fields);
-            if let Some(w) = wide {
-                ui.set_min_width(w.min(460.0));
-            }
-            if d.kind == DialogKind::NewDocument {
-                ui.set_min_width(800.0);
-            }
-            ui.set_max_width(wide.unwrap_or(if d.kind == DialogKind::NewDocument {
-                800.0
-            } else if d.kind == DialogKind::LayerStyle || d.fields.contains_key("__export") || crate::color_picker_ui::owns(&d.fields) {
-                600.0
-            } else {
-                440.0
-            }));
-            if let Some(w) = crate::file_ui::dialog_width(&d.fields) {
-                ui.set_min_width(w);
-                ui.set_max_width(w);
-            }
-            // Title bar: a strip across the dialog's top in the window title bar's colour, its
-            // bottom edge the separator. Painted behind the title, so its slot is reserved first.
-            let tk = crate::theme::Tokens::get(ui.ctx());
-            let margin = ui.spacing().menu_margin;
-            let strip = ui.painter().clone().with_clip_rect(ui.ctx().content_rect());
-            let strip_bg = strip.add(egui::Shape::Noop);
-            ui.add_space(1.0);
-            let t = ui.add(egui::Label::new(egui::RichText::new(&title).font(crate::theme::semibold(13.0)).color(tk.text)).selectable(false)).rect;
-            let frame_top = ui.max_rect().top() - f32::from(margin.top);
-            let band = egui::Rect::from_min_max(
-                egui::pos2(ui.max_rect().left() - f32::from(margin.left), frame_top),
-                egui::pos2(ui.max_rect().right() + f32::from(margin.right), t.bottom() + 7.0),
-            );
-            let r = ui.visuals().menu_corner_radius;
-            strip.set(strip_bg, egui::Shape::rect_filled(band, egui::CornerRadius { nw: r.nw, ne: r.ne, sw: 0, se: 0 }, tk.chrome));
-            strip.line_segment([band.left_bottom(), band.right_bottom()], egui::Stroke::new(1.0, tk.separator));
-            drag = ui.interact(band, id.with("title"), egui::Sense::drag()).drag_delta();
-            ui.add_space(band.bottom() - t.bottom() + 10.0);
+        let wide = crate::prefs_ui::width(&d.fields);
+        let mut min_w = wide.map_or(380.0, |w| w.clamp(380.0, 460.0));
+        if d.kind == DialogKind::NewDocument {
+            min_w = min_w.max(800.0);
+        }
+        let mut max_w = wide.unwrap_or(if d.kind == DialogKind::NewDocument {
+            800.0
+        } else if d.kind == DialogKind::LayerStyle || d.fields.contains_key("__export") || crate::color_picker_ui::owns(&d.fields) {
+            600.0
+        } else {
+            440.0
+        });
+        if let Some(w) = crate::file_ui::dialog_width(&d.fields) {
+            min_w = min_w.max(w);
+            max_w = w;
+        }
+        let modal = frame(ctx, id, &title, FrameSize::Width(min_w, max_w), |ui, _| {
             match d.kind {
                 DialogKind::NewDocument => {
                     let recent = crate::new_doc_ui::recent(app);
@@ -161,13 +217,6 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.min_rect().expand(ui.spacing().menu_margin.sum().max_elem() + 2.0)
         });
         shown.push(modal.inner);
-        // Keep the whole dialog on screen and below the title bar (on macOS the system's: a
-        // dialog there would sit under the traffic lights, and a drag would move the window).
-        // Also when it opens too tall for the room above it.
-        let fix = crate::widgets::keep_inside(modal.response.rect.translate(drag), crate::widgets::dialog_bounds(ctx));
-        if drag != egui::Vec2::ZERO || fix.length() > 0.5 {
-            ctx.data_mut(|m| m.insert_temp(id, offset + drag + fix));
-        }
         // Esc cancels (topmost dialog, no popup open). A click outside does nothing: Photoshop keeps
         // the dialog, and the pointer may be panning or zooming the canvas under it.
         if outcome.is_none()
@@ -276,6 +325,44 @@ pub fn open_command_dialog(app: &mut PhotosuiteApp, command: &str, label: &str) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A dialog opens centred below the title bar (its first frame, when its size isn't known
+    /// yet, used to leave it pinned to a corner), and Camera Raw gets the same frame: the same
+    /// title bar as every other dialog.
+    #[test]
+    fn dialogs_open_centred_and_share_one_frame() {
+        use egui_kittest::{Harness, kittest::Queryable};
+
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
+        let mut h = Harness::builder().with_size(egui::vec2(1440.0, 900.0)).build_ui_state(
+            |ui, app| {
+                show(app, ui.ctx());
+                crate::camera_raw_ui::show(app, ui.ctx());
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        h.state_mut().ui.open_dialog(DialogKind::LayerStyle, serde_json::Map::new());
+        h.run_steps(4);
+        let bounds = crate::widgets::dialog_bounds(&h.ctx);
+        let title = h.get_by_label("Layer Style").rect();
+        let ok = h.get_by_label("OK").rect();
+        // Centred: the title's left edge and the OK button's right edge are about as far from the
+        // window's sides.
+        let (left, right) = (title.left() - bounds.left(), bounds.right() - ok.right());
+        assert!((left - right).abs() < 24.0 && left > 100.0, "left {left}, right {right}");
+        let layer_style_title = title.height();
+        h.state_mut().ui.dialogs.clear();
+        let ctx = h.ctx.clone();
+        crate::camera_raw_ui::menu(h.state_mut(), &ctx, "filter.cameraRaw", &serde_json::json!({})).unwrap().unwrap();
+        h.run_steps(4);
+        let cr = h.get_by_label_contains("Camera Raw Filter").rect();
+        assert!((cr.height() - layer_style_title).abs() < 0.5, "same title font: {} vs {layer_style_title}", cr.height());
+        let cr_ok = h.get_by_label("OK").rect();
+        let (left, right) = (cr.left() - bounds.left(), bounds.right() - cr_ok.right());
+        assert!((left - right).abs() < 24.0 && left > 16.0, "Camera Raw: left {left}, right {right}");
+    }
 
     #[test]
     fn dragging_the_title_bar_moves_the_dialog() {

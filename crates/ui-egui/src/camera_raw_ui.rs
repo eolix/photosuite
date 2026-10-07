@@ -11,7 +11,7 @@
 //! "autoWhiteBalance":true, "whiteBalanceAt":[u, v] (0..=1 of the image), "commit":true |
 //! "cancel":true}}}`; the reply describes the dialog.
 
-use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
+use egui::{Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
 use photosuite_algo::camera_raw::{CameraRaw, Wheel, curve_lut};
 use photosuite_doc::LayerId;
 use photosuite_geom::Rect;
@@ -434,19 +434,21 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let rect = widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let mut action: Option<&str> = None;
-    widgets::tool_dialog(ctx, egui::Id::new("camera-raw-dialog"), rect, 30.0, |ui, full| {
+    let heading = match app.camera_raw.as_ref() {
+        Some(d) if d.opened_file.is_some() => format!("Camera Raw ({})", d.layer_name),
+        Some(d) => format!("Camera Raw Filter ({})", d.layer_name),
+        None => return,
+    };
+    // The dialogs' own frame (title bar, dragging, kept below the app's title bar), at a fixed size.
+    crate::dialogs::frame(ctx, egui::Id::new("camera-raw-dialog"), &heading, crate::dialogs::FrameSize::Fixed(rect.size()), |ui, size| {
         let Some(d) = app.camera_raw.as_mut() else { return };
         if d.dirty {
             d.render(ctx);
         }
+        let (full, _) = ui.allocate_exact_size(size.unwrap_or(rect.size()), Sense::click());
         let painter = ui.painter().clone();
-        let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, widgets::tool_dialog_corners(ctx, true, true, true), t.dock);
-        painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
-        let heading = if d.opened_file.is_some() { format!("Camera Raw ({})", d.layer_name) } else { format!("Camera Raw Filter ({})", d.layer_name) };
-        painter.text(title.center(), Align2::CENTER_CENTER, heading, FontId::proportional(13.0), t.text);
         let footer_h = 48.0;
-        let body = ERect::from_min_max(pos2(full.left(), title.bottom()), pos2(full.right(), full.bottom() - footer_h));
+        let body = ERect::from_min_max(full.min, pos2(full.right(), full.bottom() - footer_h));
         // Preview.
         let view = ERect::from_min_max(body.min, pos2(body.right() - PANEL_W, body.bottom())).shrink(16.0);
         painter.rect_filled(view, 0.0, t.canvas);
@@ -615,7 +617,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         // Footer.
         let foot = ERect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
-        painter.rect_filled(foot, widgets::tool_dialog_corners(ctx, false, true, true), t.dock);
+        painter.rect_filled(foot, 0.0, t.dock);
         painter.line_segment([foot.left_top(), foot.right_top()], Stroke::new(1.0, t.separator));
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
         let ok = if d.opened_file.is_some() { tl!("Open") } else { tl!("OK") };
@@ -773,9 +775,11 @@ mod tests {
         }
         h.drop_at(from + vec2(0.0, -2000.0));
         h.run_steps(3);
-        let top = h.get_by_label("OK").rect().bottom() - (ok.bottom() - dialog.top());
+        // The title sits a frame margin (and a point) below the dialog's top edge.
+        let margin = f32::from(ctx.global_style().spacing.menu_margin.top) + 1.0;
+        let top = h.get_by_label_contains("Camera Raw Filter").rect().top() - margin;
         let bar = crate::panels::title_bar_height(&ctx);
-        assert!((top - bar).abs() < 1.0, "dialog top {top} stops at the title bar ({bar})");
+        assert!((top - bar).abs() < 1.5, "dialog top {top} stops at the title bar ({bar})");
     }
 
     /// Dragging on the curve adds a point there and it follows the pointer for the whole drag
