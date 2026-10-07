@@ -85,7 +85,7 @@ pub fn parse_spec(spec: &str) -> Vec<Param> {
             Kind::Text
         } else if v == "doc" {
             Kind::Document
-        } else if v == "json" || v.starts_with('[') || v.starts_with('{') {
+        } else if v == "json" || v.starts_with("layer id") || v.starts_with('[') || v.starts_with('{') {
             Kind::Json
         } else if let Some(n) = v.strip_prefix("int[").and_then(|r| r.strip_suffix(']')).and_then(|n| n.parse().ok()) {
             Kind::Grid(n)
@@ -509,6 +509,16 @@ mod tests {
             kinds,
             [&Kind::Bool(true), &Kind::Grid(25), &Kind::Json, &Kind::Json, &Kind::Text, &Kind::Document, &Kind::Range { min: 1.0, max: 9999.0, default: 1.0 }]
         );
+    }
+
+    /// A layer-id param has no number field: drawing the Auto-Align dialog used to write
+    /// `reference: 0` back, which the engine rejects as not a selected layer (#674).
+    #[test]
+    fn layer_id_params_stay_out_of_the_dialog() {
+        let mut f = Map::new();
+        f.insert("__command".into(), json!("edit.autoAlignLayers"));
+        egui::Context::default().run_ui(Default::default(), |ui| body(ui, &mut f)).textures_delta.clear();
+        assert!(!params_of(&f).as_object().unwrap().contains_key("reference"), "{f:?}");
     }
 
     #[test]
