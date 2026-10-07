@@ -299,6 +299,7 @@ pub(crate) fn freehand_tool(tool: Tool) -> bool {
             | Tool::Sponge
             | Tool::Lasso
             | Tool::Patch
+            | Tool::ContentAwareMove
             | Tool::QuickSelection
     )
 }
@@ -2284,8 +2285,8 @@ fn draw_drag_preview(app: &mut PhotosuiteApp, painter: &egui::Painter, xf: &View
             };
             crate::tool_feedback::draw_ants(painter, &pts, true);
         }
-        // Patch Tool dragging the patch: the selection outline follows the pointer.
-        Tool::Patch if crate::retouch_ui::patch_drags_selection(app, d.start, d.modifiers) => {
+        // Patch / Content-Aware Move dragging the selection: its outline follows the pointer.
+        Tool::Patch | Tool::ContentAwareMove if crate::retouch_ui::patch_drags_selection(app, d.start, d.modifiers) => {
             let start = d.start;
             let [dx, dy] = crate::retouch_ui::patch_offset(app, start, last);
             if let Some((_, _, segs)) = &app.outline_cache {
@@ -2293,7 +2294,7 @@ fn draw_drag_preview(app: &mut PhotosuiteApp, painter: &egui::Painter, xf: &View
                 marching_ants_segments(painter, xf, &moved, painter.ctx().input(|i| i.time));
             }
         }
-        Tool::Lasso | Tool::Patch => {
+        Tool::Lasso | Tool::Patch | Tool::ContentAwareMove => {
             let mut pts: Vec<Pos2> = d.points.iter().map(|p| xf.to_screen(p[0] as f32, p[1] as f32)).collect();
             if let Some(lasso) = &d.lasso {
                 pts.push(xf.to_screen(lasso.cursor[0] as f32, lasso.cursor[1] as f32));
@@ -2720,7 +2721,10 @@ pub(crate) fn finish_gesture(app: &mut PhotosuiteApp, d: Drag) {
             let _ = app.run("select.rect", json!({"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0, "mode": mode, "ellipse": d.tool == Tool::EllipseMarquee, "antiAlias": aa, "feather": feather}));
         }
         Tool::Patch if crate::retouch_ui::patch_drags_selection(app, d.start, d.modifiers) => crate::retouch_ui::finish_patch(app, d.start, [end[0], end[1]]),
-        Tool::Lasso | Tool::Patch => {
+        Tool::ContentAwareMove if crate::retouch_ui::patch_drags_selection(app, d.start, d.modifiers) => {
+            crate::retouch_ui::finish_content_aware_move(app, d.start, [end[0], end[1]])
+        }
+        Tool::Lasso | Tool::Patch | Tool::ContentAwareMove => {
             let pts: Vec<[f64; 2]> = d.points.iter().map(|p| [p[0], p[1]]).collect();
             if pts.len() >= 3 {
                 let mode = selection_mode(app, d.modifiers);

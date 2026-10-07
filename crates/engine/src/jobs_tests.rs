@@ -270,6 +270,32 @@ fn content_aware_fill_and_scale_run_as_jobs() {
 }
 
 #[test]
+fn content_aware_move_runs_as_a_job() {
+    let mut inline = session(160, 120);
+    let mut s = session(160, 120);
+    for t in [&mut inline, &mut s] {
+        t.execute("select.rect", json!({"x": 20, "y": 40, "width": 30, "height": 30})).unwrap();
+    }
+    let p = json!({"offset": [90, 10], "structure": 3, "color": 4});
+    inline.execute("paint.contentAwareMove", p.clone()).unwrap();
+    let before = s.active().unwrap().doc.clone();
+    let id = job(s.start("paint.contentAwareMove", p.clone()).unwrap());
+    let e = wait_event(&mut s, id);
+    let JobOutcome::Done(v) = &e.outcome else { panic!("{e:?}") };
+    assert_eq!(v["offset"], json!([90, 10]));
+    assert_eq!(pixels(&s), pixels(&inline), "same result as the synchronous command");
+    let sel = |s: &Session| s.active().unwrap().doc.selection.as_ref().unwrap().read_region(s.active().unwrap().doc.bounds());
+    assert_eq!(sel(&s), sel(&inline), "the selection moved the same way");
+    // Cancelled at once: the document stays as it was.
+    s.undo();
+    let id = job(s.start("paint.contentAwareMove", p).unwrap());
+    assert!(s.cancel_job(id));
+    s.join_cancelled_jobs();
+    assert_eq!(wait_event(&mut s, id).outcome, JobOutcome::Cancelled);
+    assert_eq!(pixels(&s), before.layer(s.active().unwrap().active_layer.unwrap()).unwrap().surface().unwrap().read_region(before.bounds()));
+}
+
+#[test]
 fn open_runs_as_a_job_and_cancel_adds_nothing() {
     let mut src = session(40, 30);
     let doc = (*src.active().unwrap().doc).clone();

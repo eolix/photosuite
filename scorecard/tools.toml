@@ -29,9 +29,9 @@ note = "paint.patch (retouch_cmds/patch.rs, source/destination) + Tool::Patch (J
 [[item]]
 id = "TOOL-213-4"
 target = "Content-Aware Move tool reusing inpaint completion"
-status = "missing"
+status = "partial"
 issue = 213
-note = "inpaint::complete only used by spot healing (retouch_cmds.rs:386)"
+note = "paint.contentAwareMove (retouch_cmds/content_aware_move.rs: move/extend, Structure 1-7, Color 0-10, Sample All Layers; background job) + Tool::ContentAwareMove (J group: lasso, then drag). Missing: Transform On Drop, a live preview of the result (the drag shows the outline only)"
 
 [[item]]
 id = "TOOL-213-5"

@@ -1,4 +1,5 @@
-//! Timing: Healing Brush and Spot Healing dab cost, and Patch cost, on a 6016×6016 document.
+//! Timing: Healing Brush and Spot Healing dab cost, and Patch and Content-Aware Move cost, on a
+//! 6016×6016 document.
 //! `cargo run --release -p photosuite-engine --example retouch_bench [side] [depth]`
 //!
 //! Each measurement is one single-dab stroke through the full command path (`Session::execute`:
@@ -68,5 +69,16 @@ fn main() {
         let t = Instant::now();
         photosuite_engine::retouch_cmds::patch_preview(&s, &json!({"offset": [300, 200]}), 128 * 128, 1).unwrap();
         println!("patch preview {size:>4}×{size:<4}: {:>8.1?}", t.elapsed());
+    }
+    // Content-Aware Move: the same selections dragged 300 px, then undone (both fills: the edge band
+    // at the new place and the old place), and Extend at Color 5 (one fill, plus the colour fit).
+    for size in [100, 250, 500, 1000] {
+        for (mode, color) in [("move", 0), ("extend", 5)] {
+            s.execute("select.rect", json!({"x": 2300, "y": 2300, "width": size, "height": size, "ellipse": true})).unwrap();
+            let t = Instant::now();
+            s.execute("paint.contentAwareMove", json!({"offset": [300, 200], "mode": mode, "color": color})).unwrap();
+            println!("contentAwareMove {mode:<6} {size:>4}×{size:<4}: {:>8.1?}", t.elapsed());
+            s.execute("edit.undo", json!({})).unwrap();
+        }
     }
 }

@@ -32,7 +32,7 @@ pub(super) fn enabled(s: &Session) -> std::result::Result<(), String> {
 }
 
 /// The layer `p` targets (`None` for an alpha channel or the Quick Mask), as `parse_brush`.
-fn target_layer(s: &Session, p: &Value) -> Result<Option<LayerId>> {
+pub(super) fn target_layer(s: &Session, p: &Value) -> Result<Option<LayerId>> {
     if crate::channel_cmds::is_channel_target(p) {
         return Ok(None);
     }
@@ -43,25 +43,25 @@ fn target_layer(s: &Session, p: &Value) -> Result<Option<LayerId>> {
 }
 
 /// Integer drag offset, rejecting non-finite and absurd values.
-fn offset(p: &Value) -> Result<(i32, i32)> {
-    let (dx, dy) = point(p, "offset").ok_or_else(|| bad(CMD, "missing `offset` ([dx, dy])"))?;
+pub(super) fn offset(cmd: &str, p: &Value) -> Result<(i32, i32)> {
+    let (dx, dy) = point(p, "offset").ok_or_else(|| bad(cmd, "missing `offset` ([dx, dy])"))?;
     let ok = |v: f64| v.is_finite() && v.abs() < 1e7;
     if !ok(dx) || !ok(dy) {
-        return Err(bad(CMD, "`offset` must be two finite numbers"));
+        return Err(bad(cmd, "`offset` must be two finite numbers"));
     }
     Ok((dx.round() as i32, dy.round() as i32))
 }
 
 /// Selected area within the canvas: the selection's content bounds, or the whole canvas when the
 /// selection covers everything outside its tiles (an inverted selection).
-fn selection_area(sel: &Surface, canvas: Rect) -> Rect {
+pub(super) fn selection_area(sel: &Surface, canvas: Rect) -> Rect {
     let outside = sel.default_pixel().first().copied().unwrap_or(0.0);
     let b = if outside > 0.0 { canvas } else { sel.content_bounds() };
     b.intersect(&canvas)
 }
 
 /// Selection coverage over `rect` (row-major, 0..1).
-fn coverage(sel: &Surface, rect: Rect) -> Vec<f32> {
+pub(super) fn coverage(sel: &Surface, rect: Rect) -> Vec<f32> {
     // Read tile by tile (a per-pixel lookup costs a tile search each).
     let n = sel.channels().max(1);
     sel.read_region(rect).chunks_exact(n).map(|px| px[0].clamp(0.0, 1.0)).collect()
@@ -151,7 +151,7 @@ fn plan(s: &Session, p: &Value) -> Result<Plan> {
         "destination" => PatchMode::Destination,
         o => return Err(bad(CMD, format!("unknown mode `{o}` (source|destination)"))),
     };
-    let (dx, dy) = offset(p)?;
+    let (dx, dy) = offset(CMD, p)?;
     let id = target_layer(s, p)?;
     let d = s.active().ok_or(EngineError::Other("no document open".into()))?;
     let canvas = d.doc.bounds();

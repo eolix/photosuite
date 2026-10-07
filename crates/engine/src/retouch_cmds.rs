@@ -1,5 +1,5 @@
-//! Retouching tools as commands: Clone Stamp, Healing Brush, Spot Healing Brush, Patch, Dodge,
-//! Burn, Sponge, Blur, Sharpen, Smudge and History Brush.
+//! Retouching tools as commands: Clone Stamp, Healing Brush, Spot Healing Brush, Patch,
+//! Content-Aware Move, Dodge, Burn, Sponge, Blur, Sharpen, Smudge and History Brush.
 //!
 //! Every command takes a Photoshop-style brush (`points`, `size`, `hardness`, `opacity`, `flow`,
 //! `spacing`, `layer`), respects the active selection as a mask and the layer's transparency lock, and
@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use crate::commands::{CommandSpec, blend_from_str};
 use crate::{EngineError, Result, Session};
 
+mod content_aware_move;
 mod patch;
 pub use patch::preview as patch_preview;
 
@@ -697,6 +698,16 @@ pub fn specs() -> Vec<CommandSpec> {
             params: r#"{"offset":[dx,dy] (how far the selection was dragged),"mode":"source|destination"="source","layer":id?=active,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target} → {"damage","offset"}"#,
             enabled: patch::enabled,
             run: patch::patch,
+            journal: true,
+        },
+        CommandSpec {
+            id: "paint.contentAwareMove",
+            label: "Content-Aware Move",
+            menu: &[],
+            shortcut: None,
+            params: r#"{"offset":[dx,dy] (how far the selection was dragged),"mode":"move|extend"="move","structure":1..7=4 (7 keeps the content up to its edge, lower blends a wider edge band),"color":0..10=0 (how far the content's colour adapts to its new place),"sampleAllLayers":bool=false,"layer":id?=active,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target} → {"damage","offset","mode"} (a background job; the selection moves with the content)"#,
+            enabled: content_aware_move::enabled,
+            run: content_aware_move::content_aware_move,
             journal: true,
         },
         CommandSpec {

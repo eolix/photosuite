@@ -695,3 +695,182 @@ fn patch_preview_matches_the_command_and_its_coarse_solve_is_close() {
     assert!(worst < 0.03, "coarse preview off by {worst}");
     assert!(patch_preview(&s, &json!({"offset": [500, 0]}), 64, 1).is_err());
 }
+
+// ---------------------------------------------------------------------------------------------
+// Content-Aware Move
+// ---------------------------------------------------------------------------------------------
+
+/// `texture` with a solid blue object over `x0..x0+12`, `y0..y0+12`.
+fn with_object(x0: i32, y0: i32) -> impl Fn(i32, i32) -> [f32; 4] {
+    move |x, y| if (x0..x0 + 12).contains(&x) && (y0..y0 + 12).contains(&y) { [0.05, 0.1, 0.9, 1.0] } else { texture(x, y) }
+}
+
+fn is_object(px: [f32; 4]) -> bool {
+    px[2] > 0.8 && px[0] < 0.2
+}
+
+fn selected(s: &Session, x: i32, y: i32) -> bool {
+    s.active().unwrap().doc.selection.as_ref().is_some_and(|sel| sel.sample_channel(x, y, 0) > 0.0)
+}
+
+#[test]
+fn content_aware_move_moves_the_object_and_fills_its_place_at_all_depths() {
+    for depth in DEPTHS {
+        let mut s = session(128, 64, depth, "rgb");
+        paint_layer(&mut s, with_object(20, 26));
+        s.execute("select.rect", json!({"x": 16, "y": 22, "width": 20, "height": 20})).unwrap();
+        let r = s.execute("paint.contentAwareMove", json!({"offset": [70, 0]})).unwrap();
+        assert_eq!(r["offset"], json!([70, 0]));
+        assert_eq!(r["mode"], "move");
+        // The object's core is at the new place; its old place holds texture again.
+        for (x, y) in [(93, 32), (95, 30), (98, 35)] {
+            assert!(is_object(rgba(&s, x, y)), "depth {depth}: object at {x},{y}: {:?}", rgba(&s, x, y));
+        }
+        for y in 26..38 {
+            for x in 20..32 {
+                assert!(!is_object(rgba(&s, x, y)), "depth {depth}: old place {x},{y} still shows the object");
+            }
+        }
+        // Far away nothing changed.
+        for (x, y) in [(2, 2), (60, 60), (125, 5)] {
+            let (got, want) = (rgba(&s, x, y), texture(x, y));
+            assert!((got[0] - want[0]).abs() <= tol(depth), "depth {depth}: {x},{y} changed: {got:?}");
+        }
+        // The selection followed the content.
+        assert!(selected(&s, 96, 32) && !selected(&s, 26, 32), "depth {depth}: selection moved");
+        // One step: undo restores pixels and selection, redo brings the move back.
+        s.execute("edit.undo", json!({})).unwrap();
+        assert!(is_object(rgba(&s, 25, 31)) && !is_object(rgba(&s, 95, 31)), "depth {depth}: undo restores the object");
+        assert!(selected(&s, 26, 32) && !selected(&s, 96, 32), "depth {depth}: undo restores the selection");
+        s.execute("edit.redo", json!({})).unwrap();
+        assert!(is_object(rgba(&s, 95, 31)) && !is_object(rgba(&s, 25, 31)), "depth {depth}: redo");
+    }
+}
+
+#[test]
+fn content_aware_extend_keeps_the_original() {
+    let mut s = session(128, 64, 8, "rgb");
+    paint_layer(&mut s, with_object(20, 26));
+    s.execute("select.rect", json!({"x": 16, "y": 22, "width": 20, "height": 20})).unwrap();
+    let r = s.execute("paint.contentAwareMove", json!({"offset": [60, -10], "mode": "extend"})).unwrap();
+    assert_eq!(r["mode"], "extend");
+    assert!(is_object(rgba(&s, 25, 31)), "the original stays");
+    assert!(is_object(rgba(&s, 85, 21)), "the copy lands");
+    assert_eq!(s.active().unwrap().history.undo_label(), Some("Content-Aware Extend"));
+}
+
+#[test]
+fn content_aware_move_structure_and_color_shape_the_result() {
+    // Structure 7, Color 0: the content is copied exactly, edge to edge.
+    let mut s = session(128, 64, 16, "rgb");
+    paint_layer(&mut s, texture);
+    s.execute("select.rect", json!({"x": 10, "y": 10, "width": 24, "height": 24})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [70, 20], "structure": 7, "mode": "extend"})).unwrap();
+    for (x, y) in [(10, 10), (22, 22), (33, 33)] {
+        let (got, want) = (rgba(&s, x + 70, y + 20), texture(x, y));
+        for c in 0..4 {
+            assert!((got[c] - want[c]).abs() <= tol(16), "strict copy at {x},{y}: {got:?} vs {want:?}");
+        }
+    }
+    // A lower Structure re-synthesises an edge band: the edge differs from a plain copy, the
+    // centre doesn't.
+    let mut s = session(128, 64, 16, "rgb");
+    paint_layer(&mut s, texture);
+    let copy = |s: &Session, x: i32, y: i32| (rgba(s, x + 70, y + 20), rgba(s, x, y));
+    s.execute("select.rect", json!({"x": 10, "y": 10, "width": 24, "height": 24})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [70, 20], "structure": 1, "mode": "extend"})).unwrap();
+    let (centre, orig) = copy(&s, 22, 22);
+    assert_eq!(centre, orig, "the centre is kept");
+    let edge = (0..24).filter(|i| copy(&s, 10 + i, 10).0 != copy(&s, 10 + i, 10).1).count();
+    assert!(edge > 12, "the top edge row is blended in ({edge} of 24 pixels differ)");
+
+    // Color 10 fits a bright patch to a dark place; Color 0 keeps it bright.
+    let mean = |color: u64| {
+        let mut s = session(128, 64, 32, "rgb");
+        paint_layer(&mut s, |x, _| if x < 64 { [0.8, 0.8, 0.8, 1.0] } else { [0.2, 0.2, 0.2, 1.0] });
+        s.execute("select.rect", json!({"x": 20, "y": 20, "width": 16, "height": 16})).unwrap();
+        s.execute("paint.contentAwareMove", json!({"offset": [70, 0], "structure": 7, "color": color, "mode": "extend"})).unwrap();
+        (94..102).map(|x| rgba(&s, x, 28)[0]).sum::<f32>() / 8.0
+    };
+    let (kept, fitted) = (mean(0), mean(10));
+    assert!((kept - 0.8).abs() < 1e-3, "color 0 keeps the colour: {kept}");
+    assert!(fitted < 0.3, "color 10 adapts to the dark surroundings: {fitted}");
+}
+
+#[test]
+fn content_aware_move_overlapping_at_the_edge_and_on_other_targets() {
+    // A short drag (the content overlaps its old place) from the canvas edge.
+    let mut s = session(96, 48, 8, "rgb");
+    paint_layer(&mut s, with_object(0, 18));
+    s.execute("select.rect", json!({"x": 0, "y": 14, "width": 16, "height": 20})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [8, 0]})).unwrap();
+    assert!(is_object(rgba(&s, 14, 24)), "object moved right");
+    assert!(!is_object(rgba(&s, 2, 24)), "its old left part is filled: {:?}", rgba(&s, 2, 24));
+    assert!(rgba(&s, 0, 24)[3] > 0.99, "the edge stays opaque");
+
+    // On a transparent layer the old place becomes transparent like its surroundings.
+    let mut s = session(96, 48, 8, "rgb");
+    s.execute("layer.new.layer", json!({})).unwrap();
+    s.execute("paint.pencil", json!({"points": [[30, 24]], "size": 10, "color": "#1020e0"})).unwrap();
+    s.execute("select.rect", json!({"x": 20, "y": 14, "width": 20, "height": 20})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [40, 0]})).unwrap();
+    assert!(rgba(&s, 30, 24)[3] < 0.05, "old place cleared: {:?}", rgba(&s, 30, 24));
+    assert!(rgba(&s, 70, 24)[3] > 0.95, "object moved: {:?}", rgba(&s, 70, 24));
+
+    // A layer mask and a grayscale document work like any retouch target.
+    s.execute("layer.layerMask.revealAll", json!({})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [-20, 0], "target": "mask"})).unwrap();
+    let mut g = session(64, 48, 16, "gray");
+    g.execute("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
+    g.execute("paint.contentAwareMove", json!({"offset": [30, 20], "structure": 2, "color": 5})).unwrap();
+}
+
+#[test]
+fn content_aware_move_samples_all_layers_onto_an_empty_layer() {
+    let mut s = session(128, 64, 8, "rgb");
+    paint_layer(&mut s, with_object(20, 26));
+    s.execute("layer.new.layer", json!({})).unwrap();
+    s.execute("select.rect", json!({"x": 16, "y": 22, "width": 20, "height": 20})).unwrap();
+    // Without Sample All Layers the empty layer has nothing to move.
+    s.execute("paint.contentAwareMove", json!({"offset": [70, 0]})).unwrap();
+    assert!(rgba(&s, 95, 31)[3] < 0.01);
+    s.execute("edit.undo", json!({})).unwrap();
+    s.execute("paint.contentAwareMove", json!({"offset": [70, 0], "sampleAllLayers": true})).unwrap();
+    assert!(is_object(rgba(&s, 95, 31)), "the object is painted onto the empty layer: {:?}", rgba(&s, 95, 31));
+    let fill = rgba(&s, 25, 31);
+    assert!(fill[3] > 0.99 && !is_object(fill), "its old place is covered with fill: {fill:?}");
+    assert!(rgba(&s, 2, 2)[3] < 0.01, "elsewhere the layer stays empty");
+}
+
+#[test]
+fn content_aware_move_fails_gracefully() {
+    let mut s = session(64, 48, 8, "rgb");
+    assert!(!s.is_enabled("paint.contentAwareMove"), "no selection");
+    assert!(s.execute("paint.contentAwareMove", json!({"offset": [10, 0]})).is_err());
+    s.execute("select.rect", json!({"x": 10, "y": 10, "width": 10, "height": 10})).unwrap();
+    assert!(s.is_enabled("paint.contentAwareMove"));
+    for p in [
+        json!({}),
+        json!({"offset": [10]}),
+        json!({"offset": "far"}),
+        json!({"offset": [1e300, 0]}),
+        json!({"offset": [-1e300, 1e300]}),
+        json!({"offset": [0, 0]}),
+        json!({"offset": [0.4, -0.4]}),
+        json!({"offset": [10, 0], "mode": "bogus"}),
+        json!({"offset": [10, 0], "structure": 0}),
+        json!({"offset": [10, 0], "structure": 8}),
+        json!({"offset": [10, 0], "structure": "high"}),
+        json!({"offset": [10, 0], "color": -1}),
+        json!({"offset": [10, 0], "color": 11}),
+        json!({"offset": [10, 0], "color": [1]}),
+        json!({"offset": [50, 0]}),
+        json!({"offset": [0, -30]}),
+        json!({"offset": [10, 0], "target": "mask"}),
+        json!({"offset": [10, 0], "target": {"channel": 7}}),
+        json!({"offset": [10, 0], "layer": 999}),
+    ] {
+        assert!(s.execute("paint.contentAwareMove", p.clone()).is_err(), "{p}");
+    }
+    assert!(s.execute("paint.contentAwareMove", json!({"offset": [10, 0], "structure": 7.0, "color": null})).is_ok());
+}
