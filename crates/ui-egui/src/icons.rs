@@ -139,6 +139,8 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::Sponge => "tools-sponge",
         Tool::Pen => "tools-pen",
         Tool::Type => "tools-htype",
+        // No vertical type icon in PhotoSuite's set yet: the horizontal one stands in.
+        Tool::VerticalType => "tools-htype",
         Tool::PathSelection => "tools-pselect",
         Tool::Rectangle => "tools-rect",
         Tool::EllipseShape => "tools-ellipse",

@@ -35,7 +35,7 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     ],
     &[
         &[Tool::Pen],
-        &[Tool::Type],
+        &[Tool::Type, Tool::VerticalType],
         &[Tool::PathSelection],
         &[Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line, Tool::CustomShape],
     ],
@@ -106,6 +106,10 @@ pub fn toolbar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
             }
             ui.spacing_mut().item_spacing = vec2(2.0, 1.0);
             let flyout_id = egui::Id::new("tool-flyout");
+            let held_id = flyout_id.with("held");
+            if ui.input(|i| i.pointer.any_pressed()) {
+                ui.data_mut(|d| d.remove::<egui::Id>(held_id));
+            }
             let mut slot_index = 0usize;
             // One column always, so a short window scrolls the slots instead of widening the
             // strip. The scrollbar stays hidden: it would eat into a 44 pt column.
@@ -132,14 +136,25 @@ pub fn toolbar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                                 let tri = vec![r.right_bottom() + vec2(-2.0, -2.0), r.right_bottom() + vec2(-6.0, -2.0), r.right_bottom() + vec2(-2.0, -6.0)];
                                 ui.painter().add(egui::Shape::convex_polygon(tri, t.text_faint, Stroke::NONE));
                             }
-                            if resp.clicked() {
+                            if resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key) {
                                 app.ui.tool = tool;
                             }
                             // Right-click or long-press opens the flyout (Photoshop).
-                            let long_press =
-                                resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.press_start_time().is_some_and(|t0| i.time - t0 > 0.35));
+                            let held_for = resp.is_pointer_button_down_on().then(|| ui.input(|i| i.pointer.press_start_time().map(|t0| i.time - t0))).flatten();
+                            if slot.len() > 1
+                                && let Some(seconds) = held_for
+                                && seconds < 0.35
+                            {
+                                ui.ctx().request_repaint_after(std::time::Duration::from_secs_f64(0.35 - seconds));
+                            }
+                            let long_press = held_for.is_some_and(|seconds| seconds >= 0.35);
                             if slot.len() > 1 && (resp.secondary_clicked() || long_press) {
-                                ui.data_mut(|d| d.insert_temp(flyout_id, (key, resp.rect)));
+                                ui.data_mut(|d| {
+                                    d.insert_temp(flyout_id, (key, resp.rect));
+                                    if long_press {
+                                        d.insert_temp(held_id, key);
+                                    }
+                                });
                             }
                             if slot.len() > 1 && long_press {
                                 ui.ctx().request_repaint();
@@ -201,7 +216,8 @@ pub fn toolbar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                                             }
                                         });
                                     });
-                                let clicked_outside = ui.input(|i| i.pointer.any_click()) && !area.response.hovered() && !resp.hovered();
+                                let held_release = resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) == Some(key);
+                                let clicked_outside = ui.input(|i| i.pointer.any_click()) && !held_release && !area.response.hovered() && !resp.hovered();
                                 if clicked_outside || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                                     ui.data_mut(|d| d.remove::<(egui::Id, Rect)>(flyout_id));
                                 }
@@ -768,7 +784,7 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                             }
                         });
                     }
-                    Tool::Type if t.pro => crate::type_tool::options_bar(app, ui),
+                    Tool::Type | Tool::VerticalType if t.pro => crate::type_tool::options_bar(app, ui),
                     Tool::Move if t.pro => {
                         let o = &mut app.ui.tool_options;
                         widgets::checkbox(ui, &mut o.move_auto_select, tl!("Auto-Select:"));
@@ -867,7 +883,7 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                     ),
                     Tool::Gradient => hint(ui, "Drag to draw a gradient"),
                     Tool::PaintBucket => hint(ui, "Click to fill similar colours"),
-                    Tool::Type => hint(ui, "Click to add text"),
+                    Tool::Type | Tool::VerticalType => hint(ui, "Click to add text"),
                     // Retouching and smart-selection tools draw their bar in `retouch_ui::options_bar`.
                     _ => {}
                 }
@@ -2813,6 +2829,64 @@ mod swatch_type_tests {
         let st = h.state().session.active().unwrap();
         let Some(photosuite_doc::LayerContent::Text(t)) = st.doc.layer(photosuite_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
         assert_eq!(t.char_runs().len(), 1, "still one white run");
+    }
+}
+
+#[cfg(test)]
+mod type_flyout_tests {
+    use super::*;
+
+    fn frame(app: &mut PhotosuiteApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
+        let mut out = ctx.run_ui(
+            egui::RawInput { time: Some(time), events, screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(1200.0, 1800.0))), ..Default::default() },
+            |ui| toolbar(app, ui),
+        );
+        out.textures_delta.clear();
+    }
+
+    #[test]
+    fn long_press_type_button_selects_vertical_without_selecting_on_release() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let initial = app.ui.tool;
+        let ctx = egui::Context::default();
+        PhotosuiteApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        frame(&mut app, &ctx, 0.0, vec![]);
+        frame(&mut app, &ctx, 0.1, vec![]);
+        // Slots are counted as drawn: without the ones Edit › Toolbar hides (PhotoSuite hides some).
+        let hidden = app.session.prefs().toolbar.hidden.clone();
+        let index = TOOL_SECTIONS
+            .iter()
+            .flat_map(|section| section.iter())
+            .filter(|slot| slot.iter().any(|tool| !hidden.contains(&format!("{tool:?}"))))
+            .position(|slot| slot.contains(&Tool::Type))
+            .unwrap();
+        // PhotoSuite's toolbar buttons (`toolbar`'s `bx`).
+        let bx = if Tokens::get(&ctx).pro { 28.0 } else { 36.0 };
+        let mut buttons: Vec<Rect> = ctx.viewport(|v| {
+            v.prev_pass
+                .widgets
+                .layers()
+                .flat_map(|(_, w)| w.iter())
+                .filter(|w| w.rect.size() == Vec2::splat(bx) && w.sense.senses_click())
+                .map(|w| w.rect)
+                .collect()
+        });
+        buttons.sort_by(|a, b| a.top().total_cmp(&b.top()));
+        let at = buttons[index].center();
+        let pointer = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
+        frame(&mut app, &ctx, 1.0, vec![egui::Event::PointerMoved(at), pointer(at, true)]);
+        frame(&mut app, &ctx, 1.36, vec![]);
+        assert_eq!(ctx.data(|d| d.get_temp::<(egui::Id, Rect)>(egui::Id::new("tool-flyout"))).map(|(id, _)| id), Some(egui::Id::new(("tool-slot", index))));
+        frame(&mut app, &ctx, 1.4, vec![pointer(at, false)]);
+        frame(&mut app, &ctx, 1.45, vec![]);
+        assert_eq!(app.ui.tool, initial);
+        let key = egui::Id::new(("tool-slot", index));
+        let menu = ctx.memory(|m| m.area_rect(key.with("flyout"))).unwrap();
+        let row = egui::pos2(menu.left() + 65.0, menu.top() + 39.0 + 8.0);
+        frame(&mut app, &ctx, 2.0, vec![egui::Event::PointerMoved(row), pointer(row, true)]);
+        frame(&mut app, &ctx, 2.05, vec![pointer(row, false)]);
+        assert_eq!(app.ui.tool, Tool::VerticalType);
+        assert!(ctx.data(|d| d.get_temp::<(egui::Id, Rect)>(egui::Id::new("tool-flyout"))).is_none());
     }
 }
 

@@ -1005,7 +1005,7 @@ impl eframe::App for PhotosuiteApp {
             self.checker = None;
         }
         self.drain_control(ctx);
-        if self.ui.text_edit.is_some() && self.ui.tool != state::Tool::Type {
+        if self.ui.text_edit.is_some() && !self.ui.tool.is_type() {
             type_tool::commit(self);
         }
         if self.ui.pen.is_some() && self.ui.tool != state::Tool::Pen {

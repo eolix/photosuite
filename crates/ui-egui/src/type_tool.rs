@@ -110,7 +110,8 @@ pub fn edit_active(app: &mut PhotosuiteApp) -> Result<(), String> {
         ed.anchor = 0;
         ed.caret = n;
     }
-    app.ui.tool = crate::state::Tool::Type;
+    let vertical = app.session.active().and_then(|st| text_layer(&st.doc, id)).is_some_and(|t| t.orientation == photosuite_doc::text::Orientation::Vertical);
+    app.ui.tool = if vertical { crate::state::Tool::VerticalType } else { crate::state::Tool::Type };
     app.ui.mask_target = false;
     app.ui.vector_mask_target = false;
     Ok(())
@@ -256,6 +257,7 @@ pub fn pointer_up(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
     let o = app.ui.tool_options.clone();
     let mut p = json!({
         "text": PLACEHOLDER,
+        "orientation": if app.ui.tool == crate::state::Tool::VerticalType { "vertical" } else { "horizontal" },
         "font": o.type_font,
         "fontStyle": o.type_style,
         "size": o.type_size,

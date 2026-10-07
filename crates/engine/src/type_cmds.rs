@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use photosuite_color::Color;
 use photosuite_doc::text::{
-    AntiAlias, Caps, CharStyle, FontFeature, FontVariation, Kerning, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape,
+    AntiAlias, Caps, CharStyle, FontFeature, FontVariation, Kerning, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape,
 };
 use photosuite_doc::{Affine, Document, Layer, LayerContent, LayerId, TextLayer};
 use serde_json::{Value, json};
@@ -531,10 +531,16 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "New Type Layer",
             menu: &["Layer", "New"],
             shortcut: None,
-            params: r##"{"x":px,"y":px (baseline anchor of point text),"text":str,"box":[x,y,w,h]? (paragraph text),"name":str?,"align":"left|center|right|justify…"?, …character keys: "font","size":pt=12,"color",…}"##,
+            params: r##"{"x":px,"y":px (baseline anchor of point text),"text":str,"box":[x,y,w,h]? (paragraph text),"name":str?,"align":"left|center|right|justify…"?,"orientation":"horizontal|vertical"="horizontal", …character keys: "font","size":pt=12,"color",…}"##,
             enabled: has_doc,
             journal: true,
             run: |s, p| {
+                let orientation = match p.get("orientation") {
+                    None => Orientation::Horizontal,
+                    Some(Value::String(value)) if value == "horizontal" => Orientation::Horizontal,
+                    Some(Value::String(value)) if value == "vertical" => Orientation::Vertical,
+                    _ => return Err(bad("type.create", "orientation must be horizontal or vertical")),
+                };
                 check_size_tracking(p).map_err(|m| bad("type.create", m))?;
                 let text = norm_text(p.get("text").and_then(Value::as_str).unwrap_or(""));
                 // Type › Save Default Type Styles sets the starting styles; the colour is always
@@ -560,6 +566,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     text,
                     shape,
                     transform,
+                    orientation,
                     ..Default::default()
                 };
                 t.sync_summary();
@@ -1233,5 +1240,26 @@ mod tests {
         assert_eq!(kerning_of(&s, id)[0].1, metric.round() + 120.0);
         assert!(s.undo() && s.undo());
         assert_eq!(kerning_of(&s, id)[0], (Kerning::Metrics, 0.0));
+    }
+    #[test]
+    fn create_vertical_type_is_atomic_and_invalid_orientation_is_rejected() {
+        for boxed in [false, true] {
+            let mut s = session();
+            let before = s.active().unwrap().history.entries().len();
+            for orientation in [json!("diagonal"), json!(null), json!(true)] {
+                assert!(s.execute("type.create", json!({"text": "test", "orientation": orientation})).is_err());
+                assert_eq!(s.active().unwrap().history.entries().len(), before);
+            }
+            let mut p = json!({"text": "test", "orientation": "vertical", "x": 20, "y": 20});
+            if boxed {
+                p["box"] = json!([20, 20, 80, 60]);
+            }
+            let id = s.execute("type.create", p).unwrap()["layer"].as_u64().unwrap();
+            let t = text_layer(&s, id);
+            assert_eq!(t.orientation, Orientation::Vertical);
+            assert_eq!(matches!(t.shape, TextShape::Box { .. }), boxed);
+            s.execute("edit.undo", json!({})).unwrap();
+            assert!(s.active().unwrap().doc.layer(LayerId(id)).is_none());
+        }
     }
 }

@@ -411,3 +411,26 @@ fn foreground_colour_recolours_only_selected_type() {
     assert_eq!((rgb_at(&app, id, 6), rgb_at(&app, id, 10)), ([0, 255, 0, 255], [0, 255, 0, 255]));
     assert_eq!(app.session.active().unwrap().history.entries().len(), steps + 1, "one step for the session");
 }
+
+#[test]
+fn vertical_type_tool_creates_point_and_paragraph_text_with_one_undo() {
+    use crate::canvas::{ToolEvent, tool_event};
+    use photosuite_doc::text::{Orientation, TextShape};
+    for end in [[100.0, 100.0], [240.0, 230.0]] {
+        let mut app = new_app();
+        app.ui.tool = crate::state::Tool::VerticalType;
+        let before = app.session.active().unwrap().history.entries().len();
+        tool_event(&mut app, ToolEvent::Down { x: 100.0, y: 100.0, pressure: 1.0 }, Modifiers::NONE);
+        tool_event(&mut app, ToolEvent::Move { x: end[0], y: end[1], pressure: 1.0 }, Modifiers::NONE);
+        tool_event(&mut app, ToolEvent::Up { x: end[0], y: end[1] }, Modifiers::NONE);
+        let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
+        let st = app.session.active().unwrap();
+        let text = text_layer(&st.doc, id).unwrap();
+        assert_eq!(text.orientation, Orientation::Vertical);
+        assert_eq!(matches!(text.shape, TextShape::Box { .. }), end != [100.0, 100.0]);
+        assert_eq!(st.history.entries().len(), before + 1);
+        super::commit(&mut app);
+        app.run("edit.undo", json!({})).unwrap();
+        assert!(app.session.active().unwrap().doc.layer(id).is_none());
+    }
+}
