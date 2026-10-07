@@ -307,6 +307,43 @@ fn empty_text_and_empty_lines() {
     assert_eq!(r.rect.width(), 0);
 }
 
+/// U+0003 is a forced line break inside a paragraph (as PSD type stores Shift+Return): a new
+/// line with the paragraph's leading and no paragraph spacing, never a missing-glyph box.
+#[test]
+fn forced_line_break_starts_a_line_in_the_same_paragraph() {
+    let mut e = TextEngine::new();
+    let text = "one\u{3}two";
+    let spaced = ParagraphStyle { space_before_pt: 5.0, space_after_pt: 5.0, ..Default::default() };
+    let l = e.layout(&with_para(point(text, 10.0), spaced.clone()), 72.0);
+    assert_eq!(l.lines.len(), 2, "{:?}", l.lines);
+    assert_eq!(text[l.lines[0].range.clone()].trim_end_matches('\u{3}'), "one");
+    assert_eq!(&text[l.lines[1].range.clone()], "two");
+    assert_eq!((l.lines[0].paragraph, l.lines[1].paragraph), (0, 0));
+    assert!((l.lines[1].baseline - 12.0).abs() < 1e-3, "auto leading, no paragraph spacing: {}", l.lines[1].baseline);
+    assert!(l.glyphs.iter().all(|g| g.id != 0), "no .notdef for the break");
+    // A paragraph break in the same place adds the spacing.
+    let p = e.layout(&with_para(point("one\ntwo", 10.0), spaced), 72.0);
+    assert!((p.lines[1].baseline - 22.0).abs() < 1e-3, "{}", p.lines[1].baseline);
+    // Centred lines are centred on their own, and box text breaks there too.
+    let c = e.layout(&with_para(point("a\u{3}wide line", 20.0), ParagraphStyle { align: TextAlign::Center, ..Default::default() }), 72.0);
+    assert_eq!(c.lines.len(), 2);
+    assert!((c.lines[0].x0 + c.lines[0].x1).abs() < 0.01 && (c.lines[1].x0 + c.lines[1].x1).abs() < 0.01, "{:?}", c.lines);
+    let mut b = point("short\u{3}next", 12.0);
+    b.shape = TextShape::Box { x: 0.0, y: 0.0, width: 500.0, height: 500.0 };
+    assert_eq!(e.layout(&b, 72.0).lines.len(), 2);
+    // Rendered at every depth: two rows of ink, and nothing after the first line's text.
+    for fmt in [PixelFormat::RGBA8, PixelFormat::RGBA16, PixelFormat::RGBA32F] {
+        let (l, r) = e.render(&TextLayer { transform: Affine::translate(0.0, 40.0), ..point(text, 20.0) }, 72.0, fmt);
+        let row = |i: usize| {
+            let ln = &l.lines[i];
+            photosuite_geom::Rect::new(-2, (ln.baseline - ln.ascent + 40.0) as i32, 200, (ln.baseline + 40.0) as i32)
+        };
+        assert!(alpha_sum(&r.surface, row(0)) > 1.0 && alpha_sum(&r.surface, row(1)) > 1.0, "{fmt:?}");
+        let one_end = l.lines[0].x1.ceil() as i32 + 2;
+        assert!(alpha_sum(&r.surface, photosuite_geom::Rect::new(one_end, row(0).y0, 200, row(0).y1)) < 1e-3, "{fmt:?}: ink after the first line's text");
+    }
+}
+
 #[test]
 fn postscript_names() {
     let g = fonts::guess_from_postscript("MyriadPro-BoldIt");
