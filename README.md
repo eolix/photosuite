@@ -44,11 +44,21 @@ Installers are on the **[Releases](https://github.com/eolix/photosuite/releases)
 |:---|:---|:---|
 | **macOS** 11+ | `.dmg` (and a command-line `.zip`) | Universal: Apple silicon and Intel |
 | **Windows** 10+ | `.msi` installer, portable `.zip` | x64 |
-| **Linux** | `.AppImage`, `.deb`, `.rpm`, `.tar.gz` | x86_64 and arm64 |
+| **Linux** | `.AppImage`, `.deb`, `.rpm`, Arch Linux `.pkg.tar.zst`, `.tar.gz` | x86_64 and arm64 |
 | **Linux** | `.flatpak` | x86_64 |
 
-The AppImage carries update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate)
-fetches only what changed in a new release.
+On Linux, pick the package for your distribution (`<version>` and `<arch>` as in the file name):
+
+```sh
+sudo apt install ./photosuite-<version>-linux-<arch>.deb          # Debian, Ubuntu, Mint, Pop!_OS
+sudo dnf install ./photosuite-<version>-linux-<arch>.rpm          # Fedora, RHEL (openSUSE: zypper install)
+sudo pacman -U photosuite-<version>-linux-<arch>.pkg.tar.zst      # Arch Linux, Manjaro, EndeavourOS
+flatpak install --user photosuite-<version>-linux-x86_64.flatpak  # any distribution with Flatpak
+```
+
+The AppImage needs no installation (`chmod +x` it and run it) and carries update information, so
+[AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) fetches only what changed
+in a new release.
 
 ## What this is
 

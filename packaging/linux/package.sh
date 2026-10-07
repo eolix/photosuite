@@ -4,11 +4,12 @@
 #   $DIST/photosuite-<version>-linux-<arch>.AppImage  any distro with glibc >= the build host's
 #   $DIST/photosuite-<version>-linux-<arch>.deb       Debian, Ubuntu, Mint, Pop!_OS, ...
 #   $DIST/photosuite-<version>-linux-<arch>.rpm       Fedora, openSUSE, RHEL, ...
+#   $DIST/photosuite-<version>-linux-<arch>.pkg.tar.zst  Arch Linux, Manjaro, EndeavourOS, ...
 #   $DIST/photosuite-<version>-linux-<arch>.tar.gz    plain FHS-style tree (bin/, share/)
 #
-# Usage: packaging/linux/package.sh [--skip-build] [--formats "appimage deb rpm tar"]
+# Usage: packaging/linux/package.sh [--skip-build] [--formats "appimage deb rpm arch tar"]
 #
-# Needs: cargo; nfpm for deb/rpm (https://nfpm.goreleaser.com); appimagetool for the AppImage
+# Needs: cargo; nfpm for deb/rpm/arch (https://nfpm.goreleaser.com); appimagetool for the AppImage
 # (downloaded into $CARGO_TARGET_DIR if missing). Build on an old distro (CI: Ubuntu 22.04,
 # glibc 2.35) so the binaries run on newer ones. Optional: desktop-file-validate, appstreamcli,
 # and zsyncmake (package zsync) for the AppImage's .zsync if appimagetool doesn't write it.
@@ -23,7 +24,7 @@ HERE="$ROOT/packaging/linux"
 APP_ID=io.github.eolix.PhotoSuite
 
 SKIP_BUILD=0
-FORMATS="appimage deb rpm tar"
+FORMATS="appimage deb rpm arch tar"
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-build) SKIP_BUILD=1; shift ;;
@@ -85,16 +86,23 @@ if has tar; then
   echo "wrote $DIST/$BASENAME.tar.gz"
 fi
 
-# ---- .deb / .rpm --------------------------------------------------------------------------------
-if has deb || has rpm; then
+# ---- .deb / .rpm / Arch -------------------------------------------------------------------------
+if has deb || has rpm || has arch; then
   command -v nfpm >/dev/null || { echo "error: nfpm not found (https://nfpm.goreleaser.com/install/)" >&2; exit 1; }
   export VERSION
   export NFPM_ARCH="$DEB_ARCH"
-  # nfpm expands env vars in fields like `version` and `arch`, but not in `contents[].src`.
-  sed "s|\${STAGE}|$STAGE|g" "$HERE/nfpm.yaml" >"$WORK/nfpm.yaml"
+  # nfpm expands env vars in fields like `version` and `arch`, but not in `contents[].src` or
+  # `archlinux.packager`.
+  sed -e "s|\${STAGE}|$STAGE|g" -e "s|\${PHOTOSUITE_MAINTAINER}|$PHOTOSUITE_MAINTAINER|g" "$HERE/nfpm.yaml" >"$WORK/nfpm.yaml"
   for fmt in deb rpm; do
     if has "$fmt"; then (cd "$ROOT" && nfpm package -f "$WORK/nfpm.yaml" -p "$fmt" -t "$DIST/$BASENAME.$fmt"); fi
   done
+  if has arch; then
+    # pkgver can't hold a hyphen, and nfpm's semver parsing would drop the pre-release from it:
+    # 0.2.0-rc.1 goes in as 0.2.0_rc.1, which pacman sorts before 0.2.0.
+    sed "s|^version_schema: semver|version_schema: none|" "$WORK/nfpm.yaml" >"$WORK/nfpm-arch.yaml"
+    (cd "$ROOT" && VERSION="${VERSION//-/_}" nfpm package -f "$WORK/nfpm-arch.yaml" -p archlinux -t "$DIST/$BASENAME.pkg.tar.zst")
+  fi
 fi
 
 # ---- AppImage -----------------------------------------------------------------------------------

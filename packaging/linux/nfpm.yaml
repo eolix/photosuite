@@ -1,6 +1,7 @@
-# .deb and .rpm packages (nfpm: https://nfpm.goreleaser.com). Run by package.sh, which stages
-# the file tree, substitutes its path for ${STAGE} (nfpm doesn't expand env vars in `src`) and
-# exports VERSION and NFPM_ARCH.
+# .deb, .rpm and Arch Linux (.pkg.tar.zst) packages (nfpm: https://nfpm.goreleaser.com). Run by
+# package.sh, which stages the file tree, substitutes its path for ${STAGE} and the maintainer
+# for ${PHOTOSUITE_MAINTAINER} (nfpm doesn't expand env vars in `src` or `archlinux.packager`),
+# and exports VERSION and NFPM_ARCH.
 #
 #   nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/release/
 name: photosuite
@@ -8,6 +9,8 @@ arch: ${NFPM_ARCH}
 platform: linux
 version: ${VERSION}
 # semver: 0.2.0-rc.1 becomes 0.2.0~rc.1 in deb/rpm, so pre-releases sort before the release.
+# The Arch package is built with `none` and 0.2.0_rc.1 instead (package.sh): nfpm's archlinux
+# packager drops the pre-release part from pkgver, and pacman sorts 0.2.0_rc.1 before 0.2.0.
 version_schema: semver
 release: 1
 section: graphics
@@ -48,6 +51,22 @@ overrides:
       - mesa-vulkan-drivers
       - libegl-mesa0
       - xdg-desktop-portal
+  # Arch Linux has no "or" in depends and nfpm writes no optdepends: both GPU loaders are listed
+  # (small, and libglvnd comes with Mesa anyway). Desktop, MIME and icon caches are refreshed by
+  # pacman's own hooks; postinst.sh does nothing more than they do.
+  archlinux:
+    depends:
+      - glibc>=2.35
+      - gcc-libs
+      - libxkbcommon
+      - libxkbcommon-x11
+      - wayland
+      - libx11
+      - libxcb
+      - libxcursor
+      - libxi
+      - vulkan-icd-loader
+      - libglvnd
   rpm:
     # Soname provides rather than package names, so the same requirements resolve on Fedora/RHEL
     # (libxkbcommon-x11, libX11-xcb, ...) and openSUSE (libxkbcommon-x11-0, libX11-xcb1, ...).
@@ -75,6 +94,9 @@ contents:
   - src: ${STAGE}/usr/share/
     dst: /usr/share/
     type: tree
+
+archlinux:
+  packager: ${PHOTOSUITE_MAINTAINER}
 
 scripts:
   postinstall: packaging/linux/postinst.sh
