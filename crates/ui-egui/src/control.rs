@@ -322,8 +322,10 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                     Err(e) => return err(format!("brushesView: {e} (list, grid)")),
                 }
             }
-            if let Some(size) = p.get("brushSize").and_then(Value::as_f64) {
-                app.session.tools.brush.size = size as f32;
+            if let Some(size) = p.get("brushSize").and_then(Value::as_f64)
+                && let Err(e) = app.run("tools.setBrush", json!({"brush": {"size": size}}))
+            {
+                return err(e);
             }
             ok(Value::Null)
         }
@@ -802,6 +804,37 @@ mod tests {
             assert_eq!(app.ui.theme, kind);
             assert_eq!(ThemeKind::from_name(kind.id()), Some(kind));
         }
+    }
+
+    #[test]
+    fn ui_set_brush_size_dispatches_a_journaled_brush_command() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+
+        let r = call(&mut app, &ctx, "ui.set", json!({"brushSize": 42.5}));
+        assert_eq!(r["ok"], true, "{r}");
+        assert_eq!(app.session.tools.brush.size, 42.5);
+        let (id, params) = app.session.journal.last().cloned().expect("brush change is journaled");
+        assert_eq!(id, "tools.setBrush");
+        assert_eq!(params, json!({"brush": {"size": 42.5}}));
+
+        // The control API has historically ignored non-numeric optional values.
+        for params in [json!({}), json!({"brushSize": null}), json!({"brushSize": "large"}), json!({"brushSize": true})] {
+            let journal_len = app.session.journal.len();
+            let r = call(&mut app, &ctx, "ui.set", params);
+            assert_eq!(r["ok"], true, "{r}");
+            assert_eq!(app.session.tools.brush.size, 42.5);
+            assert_eq!(app.session.journal.len(), journal_len);
+        }
+
+        // Values that cannot be represented by BrushSettings must report the command error and
+        // leave both the brush and journal unchanged instead of mutating tool state directly.
+        let journal_len = app.session.journal.len();
+        let r = call(&mut app, &ctx, "ui.set", json!({"brushSize": f64::MAX}));
+        assert_eq!(r["ok"], false, "{r}");
+        assert!(r["error"].as_str().is_some(), "{r}");
+        assert_eq!(app.session.tools.brush.size, 42.5);
+        assert_eq!(app.session.journal.len(), journal_len);
     }
 
     #[test]
