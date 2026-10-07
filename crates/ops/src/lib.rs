@@ -111,6 +111,11 @@ impl History {
         self.undo.pop_back().is_some()
     }
 
+    /// Forget the redo states, e.g. after undoing half of a compound step that failed.
+    pub fn clear_redo(&mut self) {
+        self.redo.clear();
+    }
+
     pub fn clear(&mut self) {
         self.undo.clear();
         self.redo.clear();

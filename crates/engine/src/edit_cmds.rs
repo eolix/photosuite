@@ -357,6 +357,38 @@ fn toggle_last_state(s: &mut Session) -> Result<Value> {
 
 /// Edit › Transform › Again: replay the last `edit.transform` on the active layer.
 fn transform_again(s: &mut Session) -> Result<Value> {
+    let p = transform_again_params(s)?;
+    s.execute("edit.transform", p)
+}
+
+/// Transform Again on a copy (⌥⇧⌘T, no menu item): duplicates the active layer and repeats the
+/// last transform on the copy, as one history step, so pressing it again steps and repeats
+/// (#352). The transform is worked out before anything changes, so a refusal leaves no copy.
+fn transform_again_copy(s: &mut Session) -> Result<Value> {
+    let p = transform_again_params(s)?;
+    let id = active_id(s)?;
+    s.execute("layer.duplicate", json!({"layer": id.0}))?;
+    match s.execute("edit.transform", p) {
+        Ok(r) => {
+            let st = s.active_mut().ok_or(EngineError::NoDocument)?;
+            st.history.purge_last();
+            st.history.set_current_label("Transform Again");
+            Ok(r)
+        }
+        Err(e) => {
+            // The copy (e.g. of a layer whose position is locked) couldn't be transformed: take
+            // it back, leaving nothing to redo.
+            s.undo();
+            if let Some(st) = s.active_mut() {
+                st.history.clear_redo();
+            }
+            Err(e)
+        }
+    }
+}
+
+/// The `edit.transform` params that repeat the last transform on the active layer.
+fn transform_again_params(s: &Session) -> Result<Value> {
     let (_, last) =
         s.journal.iter().rev().find(|(id, _)| id == "edit.transform").cloned().ok_or(EngineError::Other("there is no transform to repeat".into()))?;
     let (rect, quad) = (last.get("rect").cloned(), last.get("quad").cloned());
@@ -391,7 +423,7 @@ fn transform_again(s: &mut Session) -> Result<Value> {
         (_, _, Some(m)) => p["matrix"] = m,
         _ => return Err(EngineError::Other("the last transform can't be repeated".into())),
     }
-    s.execute("edit.transform", p)
+    Ok(p)
 }
 
 /// View › New Guide / guide moves (undoable, like Photoshop's "New Guide"/"Move Guide" states).
@@ -470,6 +502,15 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!("image.autoColor", "Auto Color", &["Image"], Some("Cmd+Shift+B"), "{}", has_pixels, |s, _| auto_adjust(s, "color")),
         spec!("edit.toggleLastState", "Toggle Last State", &["Edit"], Some("Cmd+Alt+Z"), "{}", has_doc, |s, _| toggle_last_state(s)),
         spec!("edit.transform.again", "Again", &["Edit", "Transform"], Some("Cmd+Shift+T"), "{}", has_doc, |s, _| transform_again(s)),
+        spec!(
+            "edit.transform.againCopy",
+            "Transform Again on a Copy",
+            &[],
+            Some("Cmd+Alt+Shift+T"),
+            "{} (duplicates the active layer and repeats the last transform on the copy: step and repeat)",
+            has_doc,
+            |s, _| transform_again_copy(s)
+        ),
         spec!("view.newGuide", "New Guide…", &["View"], None, r##"{"orientation":"horizontal|vertical","position":px}"##, has_doc, |s, p| guide_cmd(
             s, p, "new"
         )),
@@ -696,6 +737,40 @@ mod tests {
             assert!(lo < 0.05 && hi > 0.95, "{cmd}: {a:?} {b:?}");
             s.undo();
         }
+    }
+
+    /// #352: ⌥⇧⌘T steps and repeats: each press adds a copy one transform further on, and each
+    /// is one undo step.
+    #[test]
+    fn transform_again_on_a_copy_steps_and_repeats() {
+        let mut s = session();
+        assert!(s.execute("edit.transform.againCopy", json!({})).is_err(), "nothing to repeat yet");
+        assert_eq!(s.active().unwrap().doc.layers.len(), 2, "a refusal leaves no copy");
+        s.execute("edit.transform", json!({"matrix": [1, 0, 0, 1, 10, 0]})).unwrap();
+        let steps = s.active().unwrap().history.past_len();
+        for (i, x) in [30, 40].into_iter().enumerate() {
+            s.execute("edit.transform.againCopy", json!({})).unwrap();
+            let d = &s.active().unwrap().doc;
+            assert_eq!(d.layers.len(), 3 + i);
+            assert_eq!(active_bounds(&s), Rect::new(x, 10, x + 40, 30), "the copy moved one step further");
+            assert_eq!(s.active().unwrap().history.past_len(), steps + 1 + i, "one history step per press");
+        }
+        assert_eq!(s.active().unwrap().history.undo_label(), Some("Transform Again"));
+        // The original and the first copy stay where they were.
+        let d = &s.active().unwrap().doc;
+        let b = |i: usize| d.layers[i].surface().unwrap().content_bounds();
+        assert_eq!((b(1), b(2)), (Rect::new(20, 10, 60, 30), Rect::new(30, 10, 70, 30)));
+        // Undo removes the copy and its move together.
+        s.undo();
+        assert_eq!(s.active().unwrap().doc.layers.len(), 3);
+        assert_eq!(active_bounds(&s), Rect::new(30, 10, 70, 30));
+        // A copy that can't move (position locked) is taken back.
+        let id = s.active().unwrap().active_layer.unwrap();
+        s.execute("layer.setProps", json!({"layer": id.0, "locks": {"position": true}})).unwrap();
+        let layers = s.active().unwrap().doc.layers.len();
+        assert!(s.execute("edit.transform.againCopy", json!({})).unwrap_err().to_string().contains("locked"));
+        assert_eq!(s.active().unwrap().doc.layers.len(), layers);
+        assert!(!s.active().unwrap().history.can_redo(), "nothing to redo");
     }
 
     #[test]
