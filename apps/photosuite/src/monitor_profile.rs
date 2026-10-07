@@ -213,6 +213,8 @@ mod tests {
         assert!(parse_reply("execution error: -1728").unwrap_err().contains("-1728"));
     }
 
+    // Drives /bin/sleep and /bin/sh; the helper itself only runs on macOS.
+    #[cfg(unix)]
     #[test]
     fn a_hung_helper_is_stopped_and_big_replies_dont_block() {
         let t0 = std::time::Instant::now();
