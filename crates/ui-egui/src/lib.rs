@@ -950,12 +950,7 @@ impl eframe::App for PhotosuiteApp {
         if self.ui.pen.is_some() && self.ui.tool != state::Tool::Pen {
             vector_ui::pen_commit(self, false);
         }
-        // A transform whose layer or document went away (undo, close) ends silently.
-        if let Some(t) = &self.ui.transform
-            && self.session.active().and_then(|s| s.doc.layer(photosuite_doc::LayerId(t.layer))).is_none()
-        {
-            transform_tool::cancel(self);
-        }
+        transform_tool::end_if_left(self);
         self.collect_screenshots(ctx);
         self.issue_screenshots(ctx);
         prefs_ui::tick(self, ctx);

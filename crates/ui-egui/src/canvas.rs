@@ -2336,6 +2336,7 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     // An Alt+right-drag armed for this press (`paint_mouse`): taken before anything else can
     // consume the event, so it never outlives the press it was armed for (#297).
     let armed = std::mem::take(&mut app.brush_resize_armed);
+    crate::transform_tool::end_if_left(app);
     // View › Snap / Snap To and smart guides (snap_ui.rs).
     let raw = ev;
     let ev = crate::snap_ui::filter_event(app, ev, mods);
