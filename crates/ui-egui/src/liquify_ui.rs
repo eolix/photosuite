@@ -59,6 +59,63 @@ impl Default for LiquifyOpts {
     }
 }
 
+/// The `prefs.dialogs` key under which the brush settings are remembered between uses and
+/// launches (#418).
+const REMEMBERED: &str = "filter.liquify";
+
+impl LiquifyOpts {
+    /// Applies the settings named in `v` (the control channel's and the remembered keys),
+    /// clamped to their ranges; the others are left as they are. A bad `tool` is an error, after
+    /// everything else has been applied.
+    pub fn apply(&mut self, v: &Value) -> Result<(), String> {
+        let num = |k: &str| v.get(k).and_then(Value::as_f64).filter(|n| n.is_finite()).map(|n| n as f32);
+        let flag = |k: &str| v.get(k).and_then(Value::as_bool);
+        if let Some(n) = num("size") {
+            self.size = n.clamp(1.0, 15000.0);
+        }
+        for (k, slot) in
+            [("density", &mut self.density), ("pressure", &mut self.pressure), ("rate", &mut self.rate), ("backdropOpacity", &mut self.backdrop_opacity)]
+        {
+            if let Some(n) = num(k) {
+                *slot = n.clamp(0.0, 100.0);
+            }
+        }
+        for (k, slot) in [("showMesh", &mut self.show_mesh), ("showMask", &mut self.show_mask), ("showBackdrop", &mut self.show_backdrop)] {
+            if let Some(b) = flag(k) {
+                *slot = b;
+            }
+        }
+        if let Some(m) = v.get("meshSize").and_then(Value::as_str) {
+            self.mesh_size = match m {
+                "small" => 0,
+                "large" => 2,
+                _ => 1,
+            };
+        }
+        if let Some(t) = v.get("tool") {
+            self.tool = serde_json::from_value(t.clone()).map_err(|e| format!("bad tool: {e}"))?;
+        }
+        Ok(())
+    }
+
+    /// The settings as [`LiquifyOpts::apply`] reads them.
+    pub fn to_json(&self) -> Value {
+        let mesh = ["small", "medium", "large"].get(self.mesh_size).copied().unwrap_or("medium");
+        json!({
+            "tool": self.tool,
+            "size": self.size,
+            "density": self.density,
+            "pressure": self.pressure,
+            "rate": self.rate,
+            "showMesh": self.show_mesh,
+            "meshSize": mesh,
+            "showMask": self.show_mask,
+            "showBackdrop": self.show_backdrop,
+            "backdropOpacity": self.backdrop_opacity,
+        })
+    }
+}
+
 pub struct LiquifyDialog {
     pub layer: LayerId,
     layer_name: String,
@@ -266,16 +323,35 @@ pub fn open(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> 
         last_dab: 0.0,
         dab_ms: 0.0,
     };
-    // A sensible starting brush: about a tenth of the image.
+    // A sensible starting brush (about a tenth of the image), then the settings last used, so
+    // Liquify opens as it was left (#418). Saved values are clamped; a bad one is skipped.
     d.opts.size = ((canvas.width().max(canvas.height()) as f32) / 10.0).round().clamp(10.0, 1500.0);
+    if let Some(saved) = app.session.prefs().dialogs.get(REMEMBERED) {
+        let _ = d.opts.apply(saved);
+    }
     d.upload(ctx);
     app.distort.liquify = Some(d);
     Ok(())
 }
 
+/// Keeps the brush settings for the next time Liquify opens, also after a restart.
+fn remember(app: &mut PhotosuiteApp, opts: &LiquifyOpts) {
+    let v = opts.to_json();
+    app.session.prefs.edit(|p| p.dialogs.insert(REMEMBERED.into(), v));
+}
+
+/// Cancel (button, Esc or the control channel): the document is untouched; the brush settings
+/// are kept.
+pub fn cancel(app: &mut PhotosuiteApp) {
+    if let Some(d) = app.distort.liquify.take() {
+        remember(app, &d.opts);
+    }
+}
+
 /// OK: runs `filter.liquify` with the recorded strokes (one history step).
 pub fn commit(app: &mut PhotosuiteApp) {
     let Some(mut d) = app.distort.liquify.take() else { return };
+    remember(app, &d.opts);
     d.end();
     if d.strokes.is_empty() {
         return;
@@ -291,43 +367,13 @@ pub fn control(app: &mut PhotosuiteApp, ui: &Value) -> Result<Value, String> {
         return Ok(json!({"committed": true}));
     }
     if ui.get("cancel").and_then(Value::as_bool) == Some(true) {
-        app.distort.liquify = None;
+        cancel(app);
         return Ok(json!({"cancelled": true}));
     }
     let d = app.distort.liquify.as_mut().ok_or(tl!("Liquify is not open"))?;
-    if let Some(t) = ui.get("tool") {
-        d.opts.tool = serde_json::from_value(t.clone()).map_err(|e| format!("bad tool: {e}"))?;
-    }
+    d.opts.apply(ui)?;
     let num = |k: &str| ui.get(k).and_then(Value::as_f64).map(|v| v as f32);
     let flag = |k: &str| ui.get(k).and_then(Value::as_bool);
-    if let Some(v) = num("size") {
-        d.opts.size = v.clamp(1.0, 15000.0);
-    }
-    if let Some(v) = num("density") {
-        d.opts.density = v.clamp(0.0, 100.0);
-    }
-    if let Some(v) = num("pressure") {
-        d.opts.pressure = v.clamp(0.0, 100.0);
-    }
-    if let Some(v) = num("rate") {
-        d.opts.rate = v.clamp(0.0, 100.0);
-    }
-    if let Some(v) = flag("showMesh") {
-        d.opts.show_mesh = v;
-    }
-    if let Some(v) = flag("showMask") {
-        d.opts.show_mask = v;
-    }
-    if let Some(v) = flag("showBackdrop") {
-        d.opts.show_backdrop = v;
-    }
-    if let Some(v) = ui.get("meshSize").and_then(Value::as_str) {
-        d.opts.mesh_size = match v {
-            "small" => 0,
-            "large" => 2,
-            _ => 1,
-        };
-    }
     if flag("undo") == Some(true) {
         d.undo();
     }
@@ -633,7 +679,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     }
     match action {
         Some("ok") => commit(app),
-        Some("cancel") => app.distort.liquify = None,
+        Some("cancel") => cancel(app),
         _ => {}
     }
 }
@@ -720,6 +766,43 @@ mod tests {
             .unwrap();
         app.sync_views();
         app
+    }
+
+    /// #418: the brush settings survive Cancel, OK and Esc, and come back the next time Liquify
+    /// opens (also after a restart: they live in the preferences).
+    #[test]
+    fn brush_settings_are_remembered_between_uses() {
+        let ctx = egui::Context::default();
+        let mut app = app_with_layer();
+        open(&mut app, &ctx).unwrap();
+        let fresh = app.distort.liquify.as_ref().unwrap().opts.clone();
+        assert_eq!((fresh.density, fresh.tool), (50.0, LiquifyTool::ForwardWarp), "first use: the defaults");
+        let set = json!({"tool": "twirlCw", "size": 37, "density": 85, "pressure": 60, "rate": 30, "showMesh": true, "meshSize": "large", "showBackdrop": true, "backdropOpacity": 25});
+        control(&mut app, &set).unwrap();
+        control(&mut app, &json!({"cancel": true})).unwrap();
+        assert!(app.distort.liquify.is_none());
+        open(&mut app, &ctx).unwrap();
+        assert_eq!(app.distort.liquify.as_ref().unwrap().opts.to_json(), {
+            let mut o = LiquifyOpts::default();
+            o.apply(&set).unwrap();
+            o.to_json()
+        });
+        // OK and Esc keep the latest settings too.
+        control(&mut app, &json!({"density": 90})).unwrap();
+        commit(&mut app);
+        open(&mut app, &ctx).unwrap();
+        assert_eq!(app.distort.liquify.as_ref().unwrap().opts.density, 90.0);
+        control(&mut app, &json!({"density": 70})).unwrap();
+        cancel(&mut app);
+        assert_eq!(app.session.prefs().dialogs[REMEMBERED]["density"], json!(70.0));
+        // A damaged preference keeps what it can and never fails to open.
+        app.session.prefs.edit(|p| p.dialogs.insert(REMEMBERED.into(), json!({"tool": "nope", "density": "lots", "size": 1e12, "rate": 20})));
+        open(&mut app, &ctx).unwrap();
+        let o = &app.distort.liquify.as_ref().unwrap().opts;
+        assert_eq!((o.tool, o.density, o.size, o.rate), (LiquifyTool::ForwardWarp, 50.0, 15000.0, 20.0));
+        app.session.prefs.edit(|p| p.dialogs.insert(REMEMBERED.into(), json!("not an object")));
+        cancel(&mut app);
+        assert!(open(&mut app, &ctx).is_ok());
     }
 
     #[test]
