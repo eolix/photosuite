@@ -9,11 +9,7 @@ use serde_json::json;
 fn midtone_luma(gamma: f64) -> f64 {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 8, "height": 8, "background": "#808080"})).unwrap();
-    s.execute(
-        "image.adjustments.hdrToning",
-        json!({"gamma": gamma, "strength": 0.1, "detail": 0, "saturation": 0, "radius": 30}),
-    )
-    .unwrap();
+    s.execute("image.adjustments.hdrToning", json!({"gamma": gamma, "strength": 0.1, "detail": 0, "saturation": 0, "radius": 30})).unwrap();
     let p: Vec<f32> = serde_json::from_value(s.execute("document.pixel", json!({"x": 4, "y": 4})).unwrap()).unwrap();
     f64::from(0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2])
 }
