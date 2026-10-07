@@ -109,10 +109,82 @@ fn hex(c: [f32; 4]) -> String {
     format!("#{:02x}{:02x}{:02x}", b(c[0]), b(c[1]), b(c[2]))
 }
 
+/// Smallest paragraph box a handle drag leaves, in text-space px.
+const MIN_BOX: f32 = 4.0;
+
+/// Which box edges handle `i` moves: (left, right, top, bottom). The order matches the overlay.
+fn handle_sides(i: u8) -> (bool, bool, bool, bool) {
+    match i {
+        0 => (true, false, true, false),
+        1 => (false, true, true, false),
+        2 => (false, true, false, true),
+        3 => (true, false, false, true),
+        4 => (false, false, true, false),
+        5 => (false, true, false, false),
+        6 => (false, false, false, true),
+        _ => (true, false, false, false),
+    }
+}
+
+fn box_shape(app: &PhotosuiteApp, id: LayerId) -> Option<(f32, f32, f32, f32)> {
+    match app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape))? {
+        photosuite_doc::text::TextShape::Box { x, y, width, height } => Some((x, y, width, height)),
+        _ => None,
+    }
+}
+
+/// The paragraph-box handle under the document point, if the layer is paragraph text.
+fn box_handle_at(app: &mut PhotosuiteApp, id: LayerId, x: f64, y: f64) -> Option<u8> {
+    let (bx, by, w, h) = box_shape(app, id)?;
+    let (_, aff, _) = layout(app, id)?;
+    let (r, b) = (bx + w, by + h);
+    let (mx, my) = (bx + w / 2.0, by + h / 2.0);
+    let spots = [(bx, by), (r, by), (r, b), (bx, b), (mx, by), (r, my), (mx, b), (bx, my)];
+    let tol = f64::from(6.0 / app.current_zoom().max(0.01));
+    spots
+        .iter()
+        .position(|&(sx, sy)| {
+            let p = aff.apply(Point::new(f64::from(sx), f64::from(sy)));
+            (p.x - x).abs() <= tol && (p.y - y).abs() <= tol
+        })
+        .map(|i| i as u8)
+}
+
+/// Drag handle `i` to the document point: the dragged edges follow it, the others stay put.
+fn resize_box(app: &mut PhotosuiteApp, ed: &TextEdit, i: u8, x: f64, y: f64) {
+    let id = LayerId(ed.layer);
+    let Some((bx, by, w, h)) = box_shape(app, id) else { return };
+    let Some((_, aff, _)) = layout(app, id) else { return };
+    let (px, py) = to_text(&aff, x, y);
+    let (l, r, t, b) = handle_sides(i);
+    let (mut x0, mut y0, mut x1, mut y1) = (bx, by, bx + w, by + h);
+    if l {
+        x0 = px.min(x1 - MIN_BOX);
+    }
+    if r {
+        x1 = px.max(x0 + MIN_BOX);
+    }
+    if t {
+        y0 = py.min(y1 - MIN_BOX);
+    }
+    if b {
+        y1 = py.max(y0 + MIN_BOX);
+    }
+    // type.edit places the box's top-left at the given document point.
+    let o = aff.apply(Point::new(f64::from(x0), f64::from(y0)));
+    let _ = app.run("type.edit", json!({"layer": ed.layer, "box": [o.x, o.y, x1 - x0, y1 - y0], "coalesce": ed.session}));
+}
+
 /// Pointer down with the Type tool. Returns true when the press was consumed (no box drag).
 pub fn pointer_down(app: &mut PhotosuiteApp, x: f64, y: f64, shift: bool) -> bool {
     if let Some(ed) = app.ui.text_edit.clone() {
         let id = LayerId(ed.layer);
+        if let Some(i) = box_handle_at(app, id, x, y) {
+            if let Some(e) = app.ui.text_edit.as_mut() {
+                e.resize = Some(i);
+            }
+            return true;
+        }
         if hit_layer(app, x, y) == Some(id) {
             let off = hit_offset(app, id, x, y);
             if let Some(e) = app.ui.text_edit.as_mut() {
@@ -132,7 +204,7 @@ pub fn pointer_down(app: &mut PhotosuiteApp, x: f64, y: f64, shift: bool) -> boo
         let key = session_key(app);
         begin_edit(app, id, &key);
         let off = hit_offset(app, id, x, y);
-        app.ui.text_edit = Some(TextEdit { layer: id.0, caret: off, anchor: off, session: key, created: false, dragging: true, preedit: None });
+        app.ui.text_edit = Some(TextEdit { layer: id.0, caret: off, anchor: off, session: key, created: false, dragging: true, resize: None, preedit: None });
         return true;
     }
     false
@@ -140,6 +212,10 @@ pub fn pointer_down(app: &mut PhotosuiteApp, x: f64, y: f64, shift: bool) -> boo
 
 pub fn pointer_move(app: &mut PhotosuiteApp, x: f64, y: f64) {
     let Some(ed) = app.ui.text_edit.clone() else { return };
+    if let Some(i) = ed.resize {
+        resize_box(app, &ed, i, x, y);
+        return;
+    }
     if ed.dragging {
         let off = hit_offset(app, LayerId(ed.layer), x, y);
         if let Some(e) = app.ui.text_edit.as_mut() {
@@ -152,6 +228,7 @@ pub fn pointer_move(app: &mut PhotosuiteApp, x: f64, y: f64) {
 pub fn pointer_up(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
     if let Some(e) = app.ui.text_edit.as_mut() {
         e.dragging = false;
+        e.resize = None;
         return;
     }
     let (w, h) = ((end[0] - start[0]).abs(), (end[1] - start[1]).abs());
@@ -181,7 +258,7 @@ pub fn pointer_up(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
         }
         // Like Photoshop: the placeholder is selected, so typing replaces it.
         let n = PLACEHOLDER.chars().count();
-        app.ui.text_edit = Some(TextEdit { layer: id, caret: n, anchor: 0, session: key, created: true, dragging: false, preedit: None });
+        app.ui.text_edit = Some(TextEdit { layer: id, caret: n, anchor: 0, session: key, created: true, dragging: false, resize: None, preedit: None });
     }
 }
 
@@ -1306,6 +1383,31 @@ mod tests {
         let doc = &app.session.active().unwrap().doc;
         assert_eq!(doc.layers.last().unwrap().name, "Héllo world");
         assert!(app.ui.text_edit.is_none());
+    }
+
+    #[test]
+    fn dragging_a_box_handle_resizes_the_paragraph_box() {
+        let mut app = app();
+        pointer_up(&mut app, [10.0, 10.0], [110.0, 60.0]);
+        let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
+        let steps = app.session.active().unwrap().history.entries().len();
+        // Top-left corner: the box keeps its bottom-right corner.
+        assert!(pointer_down(&mut app, 10.0, 10.0, false));
+        assert_eq!(app.ui.text_edit.as_ref().unwrap().resize, Some(0));
+        pointer_move(&mut app, 20.0, 25.0);
+        pointer_move(&mut app, 30.0, 30.0);
+        pointer_up(&mut app, [10.0, 10.0], [30.0, 30.0]);
+        assert_eq!(box_shape(&app, id), Some((0.0, 0.0, 80.0, 30.0)));
+        let aff = layout(&mut app, id).unwrap().1;
+        assert_eq!((aff.m[4], aff.m[5]), (30.0, 30.0));
+        // The whole drag is one history step, and the edit session survives it.
+        assert_eq!(app.session.active().unwrap().history.entries().len(), steps);
+        assert!(app.ui.text_edit.is_some());
+        // Right edge: only the width changes, and never below the minimum.
+        assert!(pointer_down(&mut app, 110.0, 45.0, false));
+        pointer_move(&mut app, 0.0, 99.0);
+        pointer_up(&mut app, [110.0, 45.0], [0.0, 99.0]);
+        assert_eq!(box_shape(&app, id), Some((0.0, 0.0, MIN_BOX, 30.0)));
     }
 
     #[test]

@@ -512,6 +512,9 @@ pub struct TextEdit {
     pub created: bool,
     #[serde(skip)]
     pub dragging: bool,
+    /// Paragraph-box handle being dragged (0-3 corners from top-left clockwise, 4-7 top/right/bottom/left edges).
+    #[serde(skip)]
+    pub resize: Option<u8>,
     /// IME composition in progress: (start, length) in characters. The preedit text lives in the
     /// layer so it lays out like typed text; each IME update replaces it.
     #[serde(skip)]

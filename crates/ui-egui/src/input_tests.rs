@@ -217,8 +217,16 @@ fn type_tool_alt_arrows_kern_the_pair() {
     };
     let steps = |h: &Harness<'static, PhotosuiteApp>| h.state().session.active().unwrap().history.entries().len();
     let metric = photosuite_text::shared().lock().unwrap().pair_kerning(&text(&h), 72.0, 0).unwrap().round();
-    h.state_mut().ui.text_edit =
-        Some(crate::state::TextEdit { layer: id, caret: 1, anchor: 1, session: "kern-test".into(), created: false, dragging: false, preedit: None });
+    h.state_mut().ui.text_edit = Some(crate::state::TextEdit {
+        layer: id,
+        caret: 1,
+        anchor: 1,
+        session: "kern-test".into(),
+        created: false,
+        dragging: false,
+        resize: None,
+        preedit: None,
+    });
     h.run_steps(2);
     let s0 = steps(&h);
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowRight);

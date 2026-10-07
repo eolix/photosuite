@@ -243,8 +243,16 @@ fn size_applies_at_layer_and_selection_scope() {
         let w1 = text(&app, id).cache.unwrap().content_bounds().width();
         assert!(w1 as f32 > w0 as f32 * 1.4, "psd {psd}: the pixels grow ({w0} → {w1})");
         // Selection scope: "world" only.
-        app.ui.text_edit =
-            Some(crate::state::TextEdit { layer: id.0, caret: 11, anchor: 6, session: "s".into(), created: false, dragging: false, preedit: None });
+        app.ui.text_edit = Some(crate::state::TextEdit {
+            layer: id.0,
+            caret: 11,
+            anchor: 6,
+            session: "s".into(),
+            created: false,
+            dragging: false,
+            resize: None,
+            preedit: None,
+        });
         super::apply(&mut app, &ctx, json!({"size": 10.0}));
         assert_eq!((size_at(&app, id, 0), size_at(&app, id, 5), size_at(&app, id, 6), size_at(&app, id, 10)), (30.0, 30.0, 10.0, 10.0), "psd {psd}");
     }
