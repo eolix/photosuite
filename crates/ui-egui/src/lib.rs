@@ -796,7 +796,10 @@ impl PhotosuiteApp {
     /// written and the export warnings (also shown to the user).
     pub fn save_automation(&mut self, path: Option<String>) -> Result<(String, Vec<String>), String> {
         let state = self.session.active().ok_or("no document")?;
-        let target = path.or_else(|| state.path.clone()).ok_or("document has no relative path; pass `path`")?;
+        // As File › Save: without `path` only a layered file is written back (#416).
+        let target = path
+            .or_else(|| state.path.clone().filter(|p| photosuite_engine::file_cmds::saves_in_place(p)))
+            .ok_or("pass `path`: a save without one writes back only to the document's own PSD, PSB or .pcraft file")?;
         let export = self.services.export.as_ref().ok_or("no exporter configured")?;
         let (bytes, warnings) = export(&state.doc, &target, &ExportSettings::default())?;
         let write = self.services.automation_write.as_mut().ok_or("automation write authority is not configured")?;

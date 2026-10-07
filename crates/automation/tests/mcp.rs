@@ -254,6 +254,57 @@ async fn open_png_and_inspect() {
     cleanup(&dir);
 }
 
+fn write_image(dir: &std::path::Path, name: &str, format: photosuite_codecs::Format) -> Vec<u8> {
+    let img = photosuite_codecs::Image::from_u8(16, 8, photosuite_codecs::ChannelLayout::Rgb, (0..384).map(|i| (i * 7 % 251) as u8).collect()).unwrap();
+    let bytes = photosuite_codecs::encode(&img, format, &Default::default()).unwrap();
+    std::fs::write(dir.join(name), &bytes).unwrap();
+    bytes
+}
+
+/// A save without `path` writes back only to a layered file in its own format (#416).
+#[tokio::test(flavor = "multi_thread")]
+async fn save_without_path_never_flattens_over_the_opened_file() {
+    let dir = tmp("save-in-place");
+    let png = write_image(&dir, "seed.png", photosuite_codecs::Format::Png);
+    let jpg = write_image(&dir, "seed.jpg", photosuite_codecs::Format::Jpeg);
+    let client = connect(headless_in(&dir)).await;
+    let refused = |r: &CallToolResult| r.is_error == Some(true) && text(r).contains("pass `path`");
+
+    // A flat file, edited or not, is left unchanged.
+    json_of(&call(&client, "doc_open", json!({"path": "seed.png"})).await);
+    json_of(&call(&client, "command_run", json!({"id": "layer.newAdjustmentLayer.curves", "params": {"points": [[0, 0], [128, 170], [255, 255]]}})).await);
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("seed.png")).unwrap(), png);
+    json_of(&call(&client, "doc_open", json!({"path": "seed.jpg"})).await);
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("seed.jpg")).unwrap(), jpg);
+
+    // An explicit path, even the opened file's own, still writes and reports what was lost.
+    let r = json_of(&call(&client, "doc_save", json!({"path": "seed.jpg"})).await);
+    assert!(r["warnings"].to_string().contains("lossy"), "{r}");
+
+    // A layered file saves in place in its own format, but not converted over itself.
+    json_of(&call(&client, "doc_select", json!({"index": 0})).await);
+    json_of(&call(&client, "doc_save", json!({"path": "layered.psd"})).await);
+    json_of(&call(&client, "doc_open", json!({"path": "layered.psd"})).await);
+    let psd = std::fs::read(dir.join("layered.psd")).unwrap();
+    let r = call(&client, "doc_save", json!({"format": "png"})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("layered.psd")).unwrap(), psd);
+    assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "layered.psd");
+    assert!(photosuite_io::is_psd(&std::fs::read(dir.join("layered.psd")).unwrap()));
+
+    // Once saved as .pcraft, a flat-born document saves in place there.
+    json_of(&call(&client, "doc_select", json!({"index": 0})).await);
+    json_of(&call(&client, "doc_save", json!({"path": "work.pcraft"})).await);
+    assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "work.pcraft");
+    assert_eq!(std::fs::read(dir.join("seed.png")).unwrap(), png);
+    client.cancel().await.unwrap();
+    cleanup(&dir);
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn filesystem_policy_rejects_absolute_and_escaping_paths_before_effects() {
     let base = tmp("filesystem-policy");

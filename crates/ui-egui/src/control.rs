@@ -733,5 +733,14 @@ mod tests {
         let r = call(&mut app, &ctx, "app.save", json!({"path": "out.png"}));
         assert_eq!(r["result"], json!({"path": "out.png", "warnings": ["Layers were flattened"]}), "{r}");
         assert_eq!(*written.borrow(), vec!["out.png".to_string()]);
+        // Without `path`, only a layered file is written back, like File › Save (#416).
+        call(&mut app, &ctx, "app.open", json!({"path": "in/flat.jpg"}));
+        let r = call(&mut app, &ctx, "app.save", json!({}));
+        assert!(r["error"].as_str().unwrap().contains("pass `path`"), "{r}");
+        assert_eq!(written.borrow().len(), 1, "nothing written over the JPEG");
+        call(&mut app, &ctx, "app.open", json!({"path": "in/layered.psd"}));
+        let r = call(&mut app, &ctx, "app.save", json!({}));
+        assert_eq!(r["result"]["path"], "in/layered.psd", "{r}");
+        assert_eq!(written.borrow().last().map(String::as_str), Some("in/layered.psd"));
     }
 }

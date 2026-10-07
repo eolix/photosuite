@@ -122,6 +122,17 @@ pub(crate) fn file_name(path: &str) -> String {
     path.rsplit(['/', '\\']).next().unwrap_or(path).to_string()
 }
 
+/// The lower-case extension of the file name in `path` (none for `.hidden` or `name`).
+pub fn extension(path: &str) -> Option<String> {
+    file_name(path).rsplit_once('.').filter(|(base, ext)| !base.is_empty() && !ext.is_empty()).map(|(_, ext)| ext.to_ascii_lowercase())
+}
+
+/// Whether a save without a new path may write back to `path`: only layered files (PSD, PSB,
+/// .pcraft). A flat file goes through Save As instead, so it is never flattened over the original.
+pub fn saves_in_place(path: &str) -> bool {
+    extension(path).is_some_and(|ext| matches!(ext.as_str(), "psd" | "psb" | "pcraft"))
+}
+
 pub(crate) fn stem(path: &str) -> String {
     let n = file_name(path);
     match n.rfind('.') {

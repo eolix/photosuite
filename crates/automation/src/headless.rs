@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use photosuite_engine::{Session, command_specs};
+use photosuite_engine::{Session, command_specs, file_cmds};
 use photosuite_format::PcraftWriter;
 use photosuite_io::ExportOptions;
 use serde_json::{Value, json};
@@ -91,7 +91,18 @@ impl Headless {
         };
         let target: PathBuf = match (path, stored_path.as_deref()) {
             (Some(p), _) => p.to_path_buf(),
-            (None, Some(p)) => PathBuf::from(p),
+            // Like the desktop's File › Save: without a new path, only a layered file is written
+            // back, in its own format; a flattened or converted copy never replaces it (#416).
+            (None, Some(p)) => {
+                let own = file_cmds::extension(p);
+                let written = format.map(|f| f.trim_start_matches('.').to_ascii_lowercase()).or_else(|| own.clone());
+                if !file_cmds::saves_in_place(p) || written != own {
+                    return Err(AutomationError::BadRequest(format!(
+                        "pass `path`: without one, only a PSD, PSB or .pcraft file is written back, in its own format, so `{p}` was left unchanged"
+                    )));
+                }
+                PathBuf::from(p)
+            }
             (None, None) => {
                 return Err(AutomationError::BadRequest("document has no path; pass `path`".into()));
             }
