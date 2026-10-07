@@ -134,7 +134,10 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         let mut max_w = wide.unwrap_or(if d.kind == DialogKind::NewDocument {
             800.0
-        } else if d.kind == DialogKind::LayerStyle || d.fields.contains_key("__export") || crate::color_picker_ui::owns(&d.fields) {
+        } else if d.kind == DialogKind::LayerStyle {
+            // Effect list, parameters, and the Preview swatch column.
+            680.0
+        } else if d.fields.contains_key("__export") || crate::color_picker_ui::owns(&d.fields) {
             600.0
         } else {
             440.0
@@ -183,7 +186,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                 DialogKind::Command if fields.contains_key("__filter") => crate::filter_dialog::body(ui, &mut fields),
                 DialogKind::Command if fields.contains_key("__form") => crate::view_cmds::form_body(ui, &mut fields),
                 DialogKind::Command => {}
-                DialogKind::LayerStyle => crate::layer_style::body(ui, &mut fields),
+                DialogKind::LayerStyle => crate::layer_style::body(ui, &mut fields, &app.session.patterns),
                 DialogKind::Error => {
                     ui.label(fields.get("message").and_then(Value::as_str).unwrap_or("Error"));
                 }

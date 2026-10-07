@@ -376,6 +376,7 @@ fn display_doc(app: &mut PhotosuiteApp, idx: usize) -> (std::sync::Arc<Document>
     }
     if let Some(d) = style
         && app.session.active_index() == Some(idx)
+        && d.fields.get("__preview").and_then(serde_json::Value::as_bool) != Some(false)
     {
         let key = (crate::layer_style::preview_hash(&d.fields) ^ st.revision.wrapping_mul(0x9e37_79b9_7f4a_7c15)) | 1 << 63;
         if app.style_preview.as_ref().map(|p| p.0) != Some(key) {
@@ -2576,6 +2577,11 @@ mod tests {
         let (shown, key2) = display_doc(&mut app, 0);
         assert_eq!(fx(&shown), 2);
         assert_ne!(key, key2, "an edit re-renders the canvas");
+        // Preview off: the canvas shows the document as it is, until it's ticked again.
+        app.ui.dialog_mut(id).unwrap().fields.insert("__preview".into(), json!(false));
+        assert_eq!(fx(&display_doc(&mut app, 0).0), 0);
+        app.ui.dialog_mut(id).unwrap().fields.insert("__preview".into(), json!(true));
+        assert_eq!(fx(&display_doc(&mut app, 0).0), 2);
         app.ui.close_dialog(id);
         let (shown, key) = display_doc(&mut app, 0);
         assert_eq!((fx(&shown), key), (0, 0));

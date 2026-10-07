@@ -399,6 +399,14 @@ fn blending_options(s: &mut Session, p: &Value) -> Result<Value> {
         None => None,
         Some(v) => Some(blend_if_entries(v, mode)?),
     };
+    // Advanced Blending › Channels: which colour channels blend (unticked ones keep the backdrop).
+    let channels = match p.get("channels") {
+        None => None,
+        Some(Value::Array(a)) if a.len() <= mode.color_channels() && a.iter().all(Value::is_boolean) => {
+            Some(a.iter().enumerate().filter(|(_, v)| v.as_bool() == Some(false)).fold(0u32, |m, (i, _)| m | 1 << i))
+        }
+        Some(v) => return Err(bad(CMD, format!("channels: expected up to {} booleans, one per colour channel (got {v})", mode.color_channels()))),
+    };
     s.edit("Blending Options", |doc, _| {
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
         if let Some(b) = blend {
@@ -412,6 +420,9 @@ fn blending_options(s: &mut Session, p: &Value) -> Result<Value> {
         }
         if let Some(f) = fill {
             l.fill_opacity = f;
+        }
+        if let Some(c) = channels {
+            l.excluded_channels = c;
         }
         match &blend_if {
             // `null`: Blend If back to the defaults.
@@ -764,7 +775,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "layer.layerStyle.blendingOptions",
             "Blending Options…",
             ["Layer", "Layer Style"],
-            r##"{"layer":id?,"blend":"normal|multiply|…"?,"opacity":0..100?,"fillOpacity":0..100?,"blendIf":{"channel":"gray|red|green|blue|cyan|…"|index="gray","thisLayer":[black,white]|[blackLo,blackHi,whiteLo,whiteHi]?,"underlying":[…]?}|[{…},…]|null?} (Blend If values 0..255; split points fade; null resets)"##,
+            r##"{"layer":id?,"blend":"normal|multiply|…"?,"opacity":0..100?,"fillOpacity":0..100?,"channels":[bool,…]? (one per colour channel: false = left out of blending),"blendIf":{"channel":"gray|red|green|blue|cyan|…"|index="gray","thisLayer":[black,white]|[blackLo,blackHi,whiteLo,whiteHi]?,"underlying":[…]?}|[{…},…]|null?} (Blend If values 0..255; split points fade; null resets)"##,
             has_layer,
             blending_options
         ),

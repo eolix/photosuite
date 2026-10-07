@@ -408,3 +408,19 @@ fn load_files_into_stack_as_smart_object_then_median() {
     assert!((px[0] - 0.2).abs() < 2.0 / 255.0, "{px:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Advanced Blending › Channels: an unticked channel keeps the backdrop's value there.
+#[test]
+fn blending_options_channels() {
+    for depth in DEPTHS {
+        let mut s = session(depth, "rgb");
+        paint(&mut s, |_, _| [1.0, 1.0, 1.0, 1.0]);
+        s.execute("layer.layerStyle.blendingOptions", json!({"channels": [true, false, true]})).unwrap();
+        assert_eq!(active(&s).excluded_channels, 0b010, "green left out");
+        s.execute("layer.layerStyle.blendingOptions", json!({"channels": [true, true, true]})).unwrap();
+        assert_eq!(active(&s).excluded_channels, 0);
+        for bad in [json!([true, true, true, true]), json!(["r"]), json!(true), json!({"r": false})] {
+            assert!(s.execute("layer.layerStyle.blendingOptions", json!({"channels": bad})).is_err(), "{bad}");
+        }
+    }
+}
