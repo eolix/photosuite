@@ -18,7 +18,7 @@ pub fn adjust_surface(s: &mut Surface, adj: &Adjustment, selection: Option<&Surf
     let raw = s.read_region(r);
     let mut buf = Buffer { rect: r, px: raw.chunks_exact(n).map(|p| to_rgba(&fmt, p)).collect() };
     let orig = buf.clone();
-    adjust::apply_with(adj, &mut buf, adjust::Transfer::for_mode(mode));
+    adjust::apply_with(adj, &mut buf, adjust::Transfer::for_document(mode, fmt.sample));
     let w = r.width() as usize;
     let mut out = Vec::with_capacity(raw.len());
     for (i, (a, o)) in buf.px.iter().zip(&orig.px).enumerate() {

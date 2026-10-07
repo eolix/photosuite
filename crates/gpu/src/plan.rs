@@ -298,7 +298,7 @@ impl<'a> DocCtx<'a> {
     pub fn of(doc: &'a Document) -> Self {
         DocCtx {
             canvas: doc.bounds(),
-            transfer: Transfer::for_mode(doc.mode),
+            transfer: Transfer::for_document(doc.mode, doc.depth),
             light: doc.global_light,
             patterns: &doc.patterns,
             mode: doc.mode,

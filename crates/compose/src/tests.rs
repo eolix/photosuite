@@ -1162,6 +1162,24 @@ fn exposure_offset_uses_gamma_2_2_in_rgb() {
     assert_eq!(adjust::Transfer::Gamma(1.732).for_exposure(), adjust::Transfer::Gamma(1.732));
 }
 
+// 32-bit samples are linear light: +1 stop doubles them as stored, where an 8-bit document goes
+// through its tone curve first (photoshop corpus rgb32 and gray32 exposure.psd).
+#[test]
+fn exposure_scales_32_bit_samples_as_stored() {
+    let plus_one_stop = Adjustment::Exposure { exposure: 1.0, offset: 0.0, gamma: 1.0 };
+    for (depth, fmt, want) in [(SampleType::F32, PixelFormat::RGBA32F, 0.4), (SampleType::U8, PixelFormat::RGBA8, 0.2744)] {
+        let mut d = Document::new("e", Size::new(1, 1), ColorMode::Rgb, depth);
+        let mut l = Layer::raster("px", fmt);
+        l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 1, 1), &[0.2, 0.2, 0.2, 1.0]);
+        d.layers = vec![l, Layer::new("exp", LayerContent::Adjustment(plus_one_stop.clone()))];
+        let got = px(&d, 0, 0)[0];
+        assert!((got - want).abs() < 2e-3, "{depth:?}: {got}");
+    }
+    for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
+        assert_eq!(adjust::Transfer::for_document(mode, SampleType::F32), adjust::Transfer::Gamma(1.0));
+    }
+}
+
 // A 30° Reflected gradient fill on a 4 × 4 canvas renders as Photoshop's (its end point snaps to
 // the corner: t = |x − y| / 4) at every depth.
 #[test]

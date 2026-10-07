@@ -445,7 +445,7 @@ impl<'a> Ctx<'a> {
     fn for_doc(doc: &Document, patterns: &'a pattern::PreparedPatterns<'a>) -> Self {
         Self {
             canvas: doc.bounds(),
-            transfer: adjust::Transfer::for_mode(doc.mode),
+            transfer: adjust::Transfer::for_document(doc.mode, doc.depth),
             light: doc.global_light,
             patterns,
             mode: doc.mode,

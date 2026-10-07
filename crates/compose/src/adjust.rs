@@ -13,7 +13,7 @@ use crate::Buffer;
 /// work in linear light (Exposure). Until ICC profiles are wired in (M8) this
 /// approximates the Photoshop defaults: sRGB for colour documents and the
 /// "Dot Gain 20%" grey profile (≈ gamma 1.73, fitted on the corpus) for
-/// grayscale documents.
+/// grayscale documents. 32-bit documents store linear light already.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Transfer {
     /// sRGB piecewise curve.
@@ -23,8 +23,13 @@ pub enum Transfer {
 }
 
 impl Transfer {
-    /// Default transfer for a document colour mode.
-    pub fn for_mode(mode: photosuite_color::ColorMode) -> Self {
+    /// Default transfer for a document's colour mode and depth. 32-bit samples are linear, and
+    /// Photoshop's Exposure works on them as stored (photoshop corpus rgb32 and gray32
+    /// exposure.psd: within 0.5/255, against 69/255 through the 2.2 curve).
+    pub fn for_document(mode: photosuite_color::ColorMode, depth: photosuite_color::SampleType) -> Self {
+        if depth == photosuite_color::SampleType::F32 {
+            return Transfer::Gamma(1.0);
+        }
         match mode {
             photosuite_color::ColorMode::Grayscale | photosuite_color::ColorMode::Duotone | photosuite_color::ColorMode::Bitmap => Transfer::Gamma(1.732),
             _ => Transfer::Srgb,
