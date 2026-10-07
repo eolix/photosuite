@@ -3,11 +3,10 @@
 use photosuite_codecs::{ChannelLayout, EncodeOptions, Image, SampleType as CS};
 use photosuite_color::{ColorMode, SampleType};
 use photosuite_doc::{Document, Layer, Size};
-use photosuite_format::Autosaver;
+use photosuite_format::RecoveryStore;
 use photosuite_geom::Rect;
-use photosuite_ui_egui::Services;
+use photosuite_ui_egui::{Recovered, Services};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -119,9 +118,40 @@ pub fn register_lens_profiles() {
     }));
 }
 
+type SharedRecovery = Rc<RefCell<Option<RecoveryStore>>>;
+
+/// Run `f` on the recovery store (`Err` without a config directory). The service closures never
+/// call each other, so the store is never borrowed twice.
+fn with_store<R>(store: &SharedRecovery, f: impl FnOnce(&mut RecoveryStore) -> R) -> Result<R, String> {
+    let mut slot = store.try_borrow_mut().map_err(|_| "crash recovery is busy".to_string())?;
+    Ok(f(slot.as_mut().ok_or("no config directory")?))
+}
+
+/// Crash recovery: background incremental .pcraft autosaves into `dir` (`None`: no config
+/// directory, so autosaves fail and nothing is recovered). Recovered documents keep their entries
+/// until a newer autosave replaces them or they're saved or closed (see [`RecoveryStore`]).
+fn recovery_services(dir: Option<PathBuf>) -> Services {
+    let store: SharedRecovery = Rc::new(RefCell::new(dir.map(RecoveryStore::new)));
+    let (s1, s2, s3) = (store.clone(), store.clone(), store.clone());
+    Services {
+        autosave: Some(Box::new(move |doc: &Arc<Document>, revision: u64, path: Option<&str>| {
+            with_store(&s1, |s| s.autosave(doc, revision, path.map(str::to_string)))
+        })),
+        discard_autosave: Some(Box::new(move |id: u64| {
+            let _ = with_store(&s2, |s| s.discard(id));
+        })),
+        recover: Some(Box::new(move || {
+            let found = with_store(&s3, |s| s.recover()).unwrap_or_default();
+            found.into_iter().map(|(e, doc)| Recovered { key: e.info.key, path: e.info.original_path, doc }).collect()
+        })),
+        adopt_autosave: Some(Box::new(move |id: u64, key: &str| {
+            let _ = with_store(&store, |s| s.adopt(id, key));
+        })),
+        ..Default::default()
+    }
+}
+
 pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) -> Services {
-    let savers: Rc<RefCell<HashMap<u64, Autosaver>>> = Rc::default();
-    let savers2 = savers.clone();
     let clip: Rc<RefCell<Option<arboard::Clipboard>>> = Rc::default();
     let automation_read = automation.clone().map(|workspace| {
         Box::new(move |path: &str| {
@@ -211,31 +241,6 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         }),
         load_prefs: Some(Box::new(|| std::fs::read_to_string(prefs_file()?).ok())),
         save_prefs: Some(Box::new(|text: &str| write_atomic(&prefs_file().ok_or("no config directory")?, text.as_bytes()))),
-        // Crash recovery: background incremental .pcraft saves into the recovery directory.
-        autosave: Some(Box::new(move |doc: &Arc<Document>, revision: u64, path: Option<&str>| {
-            let dir = recovery_dir().ok_or("no config directory")?;
-            let mut map = savers.borrow_mut();
-            let saver = map.entry(doc.id.0).or_insert_with(|| Autosaver::new(&dir, &format!("doc-{}", doc.id.0)));
-            saver.request(doc.clone(), revision, path.map(str::to_string), Default::default());
-            Ok(())
-        })),
-        discard_autosave: Some(Box::new(move |id: u64| {
-            if let Some(s) = savers2.borrow_mut().remove(&id) {
-                let _ = s.discard();
-            }
-        })),
-        recover: Some(Box::new(|| {
-            let Some(dir) = recovery_dir() else { return Vec::new() };
-            let mut out = Vec::new();
-            for entry in photosuite_format::list_recovery(&dir) {
-                if let Ok(doc) = photosuite_format::recover(&entry) {
-                    out.push((entry.info.original_path.clone(), doc));
-                }
-                // Recovered documents autosave again under their new ids.
-                let _ = photosuite_format::discard_recovery(&dir, &entry);
-            }
-            out
-        })),
         append_text: Some(Box::new(|path: &str, text: &str| {
             use std::io::Write;
             let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path).map_err(|e| e.to_string())?;
@@ -245,6 +250,7 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         os_events: None,
         // Set by main, which starts loading the store before the window opens.
         preset_store: None,
+        ..recovery_services(recovery_dir())
     }
 }
 
@@ -308,4 +314,95 @@ pub fn export_flat(doc: &Document, path: &str) -> Result<Vec<u8>, String> {
         _ => img,
     };
     photosuite_codecs::encode(&img, format, &EncodeOptions::default()).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use photosuite_engine::Session;
+    use photosuite_format::list_recovery;
+    use photosuite_ui_egui::{PhotosuiteApp, prefs_ui};
+    use serde_json::json;
+
+    const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+    const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+    const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+
+    /// One app launch with crash recovery in `dir` (dropping it is the crash: background writes
+    /// already queued finish, nothing else runs).
+    fn launch(dir: &Path) -> PhotosuiteApp {
+        PhotosuiteApp::new(Session::new(), recovery_services(Some(dir.to_path_buf())))
+    }
+
+    /// The first pixel of each open document, and whether it's unsaved.
+    fn open_docs(app: &PhotosuiteApp) -> Vec<([f32; 4], bool)> {
+        app.session.documents().iter().map(|d| (photosuite_compose::flatten(&d.doc).px.first().copied().unwrap_or_default(), d.is_dirty())).collect()
+    }
+
+    fn index_of(app: &PhotosuiteApp, color: [f32; 4]) -> usize {
+        open_docs(app).iter().position(|(c, _)| *c == color).unwrap()
+    }
+
+    fn new_doc(app: &mut PhotosuiteApp, color: &str) {
+        app.run("file.new", json!({"width": 4, "height": 4})).unwrap();
+        app.run("edit.fill", json!({"color": color})).unwrap();
+    }
+
+    fn autosave(app: &mut PhotosuiteApp, ctx: &egui::Context) {
+        prefs_ui::autosave_now(app);
+        prefs_ui::tick(app, ctx);
+    }
+
+    #[test]
+    fn recovered_documents_survive_a_second_crash_until_saved_or_closed() {
+        let dir = std::env::temp_dir().join(format!("photosuite-recovery-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let ctx = egui::Context::default();
+        // Launch 1: two unsaved documents are autosaved, then the app crashes.
+        {
+            let mut app = launch(&dir);
+            new_doc(&mut app, "#ff0000");
+            new_doc(&mut app, "#0000ff");
+            autosave(&mut app, &ctx);
+        }
+        assert_eq!(list_recovery(&dir).len(), 2);
+        // Launch 2 recovers both and crashes again before its first autosave (#444).
+        {
+            let mut app = launch(&dir);
+            let mut docs = open_docs(&app);
+            docs.sort_by(|a, b| a.0[0].total_cmp(&b.0[0]));
+            assert_eq!(docs, [(BLUE, true), (RED, true)], "recovered and still unsaved");
+            prefs_ui::tick(&mut app, &ctx);
+        }
+        assert_eq!(list_recovery(&dir).len(), 2, "recovering keeps the entries on disk");
+        // Launch 3 has both again; autosaving unchanged documents adds nothing, a new document
+        // (whose id may repeat one from an earlier launch) gets an entry of its own.
+        {
+            let mut app = launch(&dir);
+            assert_eq!(app.session.documents().len(), 2);
+            autosave(&mut app, &ctx);
+            new_doc(&mut app, "#00ff00");
+            autosave(&mut app, &ctx);
+        }
+        assert_eq!(list_recovery(&dir).len(), 3);
+        // Launch 4: closing and saving recovered documents removes their entries, no duplicates.
+        let mut app = launch(&dir);
+        assert_eq!(app.session.documents().len(), 3);
+        let red = index_of(&app, RED);
+        app.run("file.close", json!({"document": red})).unwrap();
+        // Saving marks the revision saved (the file write itself is the save service's job).
+        assert!(app.session.set_active(index_of(&app, BLUE)));
+        let st = app.session.active_mut().unwrap();
+        st.saved_revision = st.revision;
+        prefs_ui::tick(&mut app, &ctx);
+        let left = list_recovery(&dir);
+        assert_eq!(left.len(), 1);
+        assert_eq!(photosuite_compose::flatten(&photosuite_format::recover(&left[0]).unwrap()).px.first().copied(), Some(GREEN));
+        let green = index_of(&app, GREEN);
+        app.run("file.close", json!({"document": green})).unwrap();
+        prefs_ui::tick(&mut app, &ctx);
+        assert!(list_recovery(&dir).is_empty());
+        drop(app);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

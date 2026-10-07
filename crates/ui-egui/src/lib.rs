@@ -183,8 +183,21 @@ pub type SaveTextFn = Box<dyn FnMut(&str) -> Result<(), String>>;
 pub type AutosaveFn = Box<dyn FnMut(&std::sync::Arc<Document>, u64, Option<&str>) -> Result<(), String>>;
 /// Drop the recovery data of a document (by `DocId` value) once it is saved or closed.
 pub type DiscardAutosaveFn = Box<dyn FnMut(u64)>;
-/// Load recoverable documents left by a previous session: (original path, document).
-pub type RecoverFn = Box<dyn FnMut() -> Vec<(Option<String>, Document)>>;
+/// Load recoverable documents left by a previous session. Their recovery data stays until the
+/// documents are saved or closed.
+pub type RecoverFn = Box<dyn FnMut() -> Vec<Recovered>>;
+/// A recovered document (by `DocId` value, once open) takes over its recovery entry (by key):
+/// its autosaves replace the entry, and saving or closing it drops the entry.
+pub type AdoptAutosaveFn = Box<dyn FnMut(u64, &str)>;
+
+/// A document [`RecoverFn`] found.
+pub struct Recovered {
+    /// The recovery entry it was loaded from (see [`AdoptAutosaveFn`]).
+    pub key: String,
+    /// Where the user last saved it, if anywhere.
+    pub path: Option<String>,
+    pub doc: Document,
+}
 /// Append text to a file (History Log).
 pub type AppendTextFn = Box<dyn FnMut(&str, &str) -> Result<(), String>>;
 /// Requests from the operating system since the last call (see [`OsEvent`]).
@@ -238,6 +251,7 @@ pub struct Services {
     pub autosave: Option<AutosaveFn>,
     pub discard_autosave: Option<DiscardAutosaveFn>,
     pub recover: Option<RecoverFn>,
+    pub adopt_autosave: Option<AdoptAutosaveFn>,
     /// History Log text file output.
     pub append_text: Option<AppendTextFn>,
     /// OS requests (macOS open-documents / quit Apple events), polled every frame.

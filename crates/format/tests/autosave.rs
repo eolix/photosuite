@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use common::*;
 use photosuite_color::{ColorMode, SampleType};
+use photosuite_doc::{DocId, Document};
 use photosuite_format::*;
 
 #[test]
@@ -64,5 +65,138 @@ fn list_ignores_junk() {
     std::fs::write(dir.join("other.txt"), b"x").unwrap();
     assert!(list_recovery(&dir).is_empty());
     assert!(list_recovery(&dir.join("missing")).is_empty());
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// `doc` as document `id` with pixel (x, 0) of its paint layer set, so versions are told apart.
+fn edit(mut doc: Document, id: u64, x: i32) -> Document {
+    doc.id = DocId(id);
+    let layer = doc.layers[1].id;
+    doc.layer_mut(layer).unwrap().surface_mut().unwrap().write_pixel(x, 0, &[1.0, 0.0, 0.0, 1.0]);
+    doc
+}
+
+fn version(id: u64, x: i32, mode: ColorMode) -> Document {
+    edit(rich_doc(mode, SampleType::U8), id, x)
+}
+
+/// Save one snapshot under `key` and wait for it.
+fn save_once(dir: &std::path::Path, key: &str, doc: Document) {
+    let saver = Autosaver::new(dir, key);
+    saver.request(Arc::new(doc), 1, None, SaveOptions::default());
+    saver.flush().unwrap().unwrap();
+}
+
+/// The recovered documents by entry key, ids cleared (they're reassigned on open).
+fn recovered(store: &RecoveryStore) -> std::collections::BTreeMap<String, Document> {
+    store
+        .recover()
+        .into_iter()
+        .map(|(e, mut doc)| {
+            doc.id = DocId(0);
+            (e.info.key, doc)
+        })
+        .collect()
+}
+
+fn same(mut doc: Document) -> Document {
+    doc.id = DocId(0);
+    doc
+}
+
+#[test]
+fn recovered_entries_survive_a_second_crash_until_saved_or_closed() {
+    let dir = temp_dir("second-crash");
+    let (a, b) = (version(1, 3, ColorMode::Rgb), version(2, 5, ColorMode::Grayscale));
+    // Launch 1 autosaves two unsaved documents, then crashes (dropping waits for the writes).
+    {
+        let mut launch = RecoveryStore::new(&dir);
+        launch.autosave(&Arc::new(a.clone()), 4, None);
+        launch.autosave(&Arc::new(b.clone()), 6, Some("/work/b.pcraft".into()));
+    }
+    assert_eq!(list_recovery(&dir).len(), 2);
+    // Launch 2 recovers both and crashes before its first autosave: nothing may be lost.
+    let keys: Vec<String> = {
+        let mut launch = RecoveryStore::new(&dir);
+        let docs = recovered(&launch);
+        assert_eq!(docs.len(), 2);
+        assert_eq!(list_recovery(&dir).len(), 2, "recovering must not delete the entries");
+        for (i, key) in docs.keys().enumerate() {
+            launch.adopt(10 + i as u64, key);
+        }
+        docs.into_keys().collect()
+    };
+    // Launch 3 still has both, pixels intact; one is edited and autosaved, the other closed.
+    let edited = edit(a.clone(), 20, 9);
+    {
+        let mut launch = RecoveryStore::new(&dir);
+        let docs = recovered(&launch);
+        assert_eq!(docs.values().cloned().collect::<Vec<_>>(), vec![same(a.clone()), same(b.clone())]);
+        launch.adopt(20, &keys[0]);
+        launch.adopt(21, &keys[1]);
+        launch.autosave(&Arc::new(edited.clone()), 9, None);
+        launch.discard(21).unwrap();
+        assert_eq!(list_recovery(&dir).len(), 1, "closing removes the adopted entry");
+    }
+    // The autosave replaced the adopted entry in place: no duplicate, newest content.
+    let entries = list_recovery(&dir);
+    assert_eq!(entries.len(), 1);
+    assert_eq!((entries[0].info.key.as_str(), entries[0].info.revision), (keys[0].as_str(), 9));
+    // Launch 4 recovers it once more and saves it: the entry goes.
+    let mut launch = RecoveryStore::new(&dir);
+    assert_eq!(recovered(&launch).into_values().collect::<Vec<_>>(), vec![same(edited)]);
+    launch.adopt(30, &keys[0]);
+    launch.discard(30).unwrap();
+    assert!(list_recovery(&dir).is_empty());
+    drop(launch);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn new_documents_never_overwrite_surviving_entries() {
+    let dir = temp_dir("collision");
+    // An earlier launch (including builds that keyed entries by bare document id) left `doc-1`.
+    let old = version(1, 3, ColorMode::Rgb);
+    save_once(&dir, "doc-1", old.clone());
+    // A store from another launch left an entry for its own document 1 too.
+    let other = version(1, 6, ColorMode::Grayscale);
+    RecoveryStore::new(&dir).autosave(&Arc::new(other.clone()), 2, None);
+    assert_eq!(list_recovery(&dir).len(), 2);
+    // This launch adopts `doc-1` for its document 5, and its own new document 1 autosaves.
+    let fresh = version(1, 8, ColorMode::Rgb);
+    {
+        let mut launch = RecoveryStore::new(&dir);
+        launch.adopt(5, "doc-1");
+        launch.autosave(&Arc::new(fresh.clone()), 3, None);
+    }
+    let docs = recovered(&RecoveryStore::new(&dir));
+    assert_eq!(docs.len(), 3, "the new document got an entry of its own");
+    assert_eq!(docs.get("doc-1"), Some(&same(old)), "the adopted entry is untouched");
+    assert!(docs.values().any(|d| *d == same(other.clone())));
+    assert!(docs.values().any(|d| *d == same(fresh.clone())));
+    // Closing the new document removes only its own entry.
+    let mut launch = RecoveryStore::new(&dir);
+    launch.adopt(5, "doc-1");
+    launch.autosave(&Arc::new(fresh), 3, None);
+    launch.discard(1).unwrap();
+    assert_eq!(list_recovery(&dir).len(), 3);
+    launch.discard(5).unwrap();
+    assert_eq!(list_recovery(&dir).len(), 2);
+    drop(launch);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn sidecars_cannot_point_at_other_bundles() {
+    let dir = temp_dir("sidecar-key");
+    let inner = dir.join("Recovery");
+    save_once(&dir, "outside", rich_doc(ColorMode::Rgb, SampleType::U8));
+    save_once(&inner, "k", rich_doc(ColorMode::Rgb, SampleType::U8));
+    let info = std::fs::read_to_string(inner.join("k.json")).unwrap();
+    // A copied sidecar (its name isn't its key) and one whose key leaves the directory.
+    std::fs::write(inner.join("copy.json"), &info).unwrap();
+    std::fs::write(inner.join("escape.json"), info.replace("\"k\"", "\"../outside\"")).unwrap();
+    let entries = list_recovery(&inner);
+    assert_eq!(entries.iter().map(|e| e.info.key.as_str()).collect::<Vec<_>>(), ["k"]);
     std::fs::remove_dir_all(dir).unwrap();
 }

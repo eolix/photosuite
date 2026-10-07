@@ -111,11 +111,17 @@ pub fn load(app: &mut PhotosuiteApp) {
     {
         let docs = recover();
         let n = docs.len();
-        for (path, doc) in docs {
-            app.session.add_document(doc, path);
+        for r in docs {
+            app.session.add_document(r.doc, r.path);
             // Recovered documents are unsaved.
-            if let Some(st) = app.session.active_mut() {
-                st.saved_revision = 0;
+            let Some(st) = app.session.active_mut() else { continue };
+            st.saved_revision = 0;
+            // Their entry already holds this revision: it stays until a newer autosave replaces
+            // it or the document is saved or closed (see `autosave`).
+            let (id, revision) = (st.doc.id, st.revision);
+            app.prefs_rt.autosaved.insert(id, revision);
+            if let Some(adopt) = app.services.adopt_autosave.as_mut() {
+                adopt(id.0, &r.key);
             }
         }
         if n > 0 {
@@ -1656,6 +1662,42 @@ mod tests {
         autosave_now(&mut app);
         tick(&mut app, &ctx);
         assert_eq!(saved.lock().unwrap().len(), 2, "autosave off");
+    }
+
+    #[test]
+    fn recovered_documents_adopt_their_entries_until_saved_or_closed() {
+        type Log = Arc<Mutex<Vec<String>>>;
+        let log: Log = Arc::default();
+        let (l1, l2, l3) = (log.clone(), log.clone(), log.clone());
+        use photosuite_doc::{Color, ColorMode, Document, SampleType, Size};
+        let doc = || Document::with_background("R", Size::new(4, 4), ColorMode::Rgb, SampleType::U8, Color::WHITE);
+        let services = crate::Services {
+            autosave: Some(Box::new(move |d: &Arc<Document>, _: u64, _: Option<&str>| {
+                l1.lock().unwrap().push(format!("save {}", d.id.0));
+                Ok(())
+            })),
+            discard_autosave: Some(Box::new(move |id: u64| l2.lock().unwrap().push(format!("discard {id}")))),
+            recover: Some(Box::new(move || ["a", "b"].map(|key| crate::Recovered { key: key.into(), path: None, doc: doc() }).into())),
+            adopt_autosave: Some(Box::new(move |id: u64, key: &str| l3.lock().unwrap().push(format!("adopt {id} {key}")))),
+            ..Default::default()
+        };
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), services);
+        let ctx = egui::Context::default();
+        let ids: Vec<u64> = app.session.documents().iter().map(|d| d.doc.id.0).collect();
+        assert!(app.session.documents().iter().all(|d| d.is_dirty()), "recovered documents are unsaved");
+        let take = || std::mem::take(&mut *log.lock().unwrap());
+        assert_eq!(take(), [format!("adopt {} a", ids[0]), format!("adopt {} b", ids[1])]);
+        // Their entries are current: nothing to autosave until they change.
+        tick(&mut app, &ctx);
+        autosave_now(&mut app);
+        tick(&mut app, &ctx);
+        assert!(take().is_empty());
+        // Closing one drops its entry; editing the other autosaves over its own.
+        app.run("file.close", json!({"document": 0})).unwrap();
+        app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
+        autosave_now(&mut app);
+        tick(&mut app, &ctx);
+        assert_eq!(take(), [format!("discard {}", ids[0]), format!("save {}", ids[1])]);
     }
 
     #[test]
