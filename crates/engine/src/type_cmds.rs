@@ -404,7 +404,9 @@ pub fn refresh_geometry(doc: &Document, t: &mut TextLayer) {
     refresh(doc, t);
 }
 
-fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&mut TextLayer, &Document) -> Result<R>) -> Result<R> {
+/// Runs `f` on a type layer as one undo step. `f` may set an explicit layer name (`type.edit`'s
+/// `name`), which is applied in the same step; otherwise an auto-named layer follows its text.
+fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&mut TextLayer, &Document, &mut Option<String>) -> Result<R>) -> Result<R> {
     let id = layer_id(s, p)?;
     let (r, damage) = s.edit(label, |doc, _| {
         let snapshot = doc.clone();
@@ -414,12 +416,13 @@ fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&m
             return Err(EngineError::Other(format!("layer {} is a {} layer, not a type layer", id.0, l.content.kind_name())));
         };
         let before = t.cache.as_ref().map(|c| c.tile_bounds());
-        let r = f(t, &snapshot)?;
+        let mut rename = None;
+        let r = f(t, &snapshot, &mut rename)?;
         refresh(&snapshot, t);
         // Only this layer's pixels changed: the canvas recomposites their old and new area
         // instead of the whole document (#124). Unknown old pixels mean a full refresh.
         let damage = before.zip(t.cache.as_ref().map(|c| c.tile_bounds())).map(|(a, b)| a.union(&b));
-        let name = auto_named.then(|| layer_name(&t.text));
+        let name = rename.or_else(|| auto_named.then(|| layer_name(&t.text)));
         if let Some(n) = name {
             l.name = n;
         }
@@ -577,7 +580,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     }
                 };
                 let label = if kern_pair.is_some() { "Kerning" } else { "Edit Type" };
-                with_text_layer(s, p, label, |t, doc| {
+                with_text_layer(s, p, label, |t, doc, rename| {
                     if let Some((at, by)) = kern_pair {
                         // Photoshop's Alt+←/→: the pair before the caret becomes manually kerned,
                         // starting from what it shows now (its metrics/optical or manual value).
@@ -651,14 +654,10 @@ pub fn specs() -> Vec<CommandSpec> {
                             _ => AntiAlias::Smooth,
                         };
                     }
+                    // The rename lands in the same undo step as the edit (#497).
+                    *rename = name.clone();
                     Ok(())
                 })?;
-                if let Some(n) = name {
-                    s.edit("Rename Layer", |doc, _| {
-                        doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.name = n;
-                        Ok(())
-                    })?;
-                }
                 info(s, &json!({ "layer": id.0 }))
             },
         },
@@ -676,7 +675,7 @@ pub fn specs() -> Vec<CommandSpec> {
             run: |s, p| {
                 let id = layer_id(s, p)?;
                 check_kerning(p).map_err(|m| bad("type.setStyle", m))?;
-                with_text_layer(s, p, "Set Type Style", |t, _| {
+                with_text_layer(s, p, "Set Type Style", |t, _, _| {
                     let (a, b) = range_param(&t.text, p);
                     let mut probe = CharStyle::default();
                     if apply_char_props(&mut probe, p) {
@@ -896,6 +895,31 @@ mod tests {
         // A name given with the edit wins over the text.
         s.execute("type.edit", json!({"layer": id, "text": "Again", "name": "Footer"})).unwrap();
         assert_eq!(layer_name_of(&s, id), "Footer");
+    }
+
+    #[test]
+    fn edit_with_name_is_one_undo_step_for_text_name_and_bounds() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 10, "y": 50, "text": "Before", "size": 20, "name": "Original"})).unwrap()["layer"].as_u64().unwrap();
+        let layer = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        let before_bounds = text_layer(&s, id).cache.unwrap().content_bounds();
+        assert_eq!(layer.name, "Original");
+        let steps = s.active().unwrap().history.entries().len();
+
+        s.execute("type.edit", json!({"layer": id, "text": "A much longer edited title that wraps", "box": [10, 10, 50, 60], "name": "Renamed"})).unwrap();
+
+        let edited = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        let edited_bounds = text_layer(&s, id).cache.unwrap().content_bounds();
+        assert_eq!(edited.name, "Renamed");
+        assert_eq!(text_layer(&s, id).text, "A much longer edited title that wraps");
+        assert_ne!(edited_bounds, before_bounds);
+        assert_eq!(s.active().unwrap().history.entries().len(), steps + 1);
+
+        assert!(s.undo());
+        let restored = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        assert_eq!(restored.name, "Original");
+        assert_eq!(text_layer(&s, id).text, "Before");
+        assert_eq!(text_layer(&s, id).cache.unwrap().content_bounds(), before_bounds);
     }
 
     #[test]
