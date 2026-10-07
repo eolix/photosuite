@@ -899,6 +899,17 @@ fn tabs(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     }
 }
 
+/// Where a document tab's close button and title go: the close button before the title on macOS
+/// (as Photoshop and the system draw tabs there), after it on Windows and Linux.
+fn pro_tab_layout(r: Rect, close_on_left: bool) -> (Rect, f32) {
+    let size = egui::vec2(14.0, 14.0);
+    if close_on_left {
+        (Rect::from_center_size(egui::pos2(r.left() + 13.0, r.center().y), size), r.left() + 26.0)
+    } else {
+        (Rect::from_center_size(egui::pos2(r.right() - 13.0, r.center().y), size), r.left() + 12.0)
+    }
+}
+
 /// Photoshop document tabs: "name @ 33.3% (RGB/8)" on a dark strip; active tab matches panels.
 fn pro_tabs(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());
@@ -927,10 +938,10 @@ fn pro_tabs(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
             ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.35));
         }
         ui.painter().line_segment([r.right_top(), r.right_bottom()], Stroke::new(1.0, t.separator));
-        let xr = Rect::from_center_size(egui::pos2(r.left() + 13.0, r.center().y), egui::vec2(14.0, 14.0));
+        let (xr, text_x) = pro_tab_layout(r, cfg!(target_os = "macos"));
         let xresp = ui.interact(xr, ui.id().with(("ptabx", i)), Sense::click());
         crate::icons::paint(ui, xr, "x", 10.0, if xresp.hovered() { t.text } else { t.text_faint });
-        ui.painter().galley_with_override_text_color(egui::pos2(r.left() + 26.0, r.center().y - g.size().y / 2.0), g, if sel { t.text } else { t.text_faint });
+        ui.painter().galley_with_override_text_color(egui::pos2(text_x, r.center().y - g.size().y / 2.0), g, if sel { t.text } else { t.text_faint });
         if xresp.clicked() {
             close = Some(i);
         } else if resp.clicked() {
@@ -2280,6 +2291,21 @@ pub fn paint_target(app: &PhotosuiteApp) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The tab's close button sits before the title on macOS and after it on Windows and Linux;
+    /// either way it stays inside the tab and clear of the title.
+    #[test]
+    fn tab_close_button_side_follows_the_platform() {
+        let tab = Rect::from_min_size(egui::pos2(100.0, 0.0), egui::vec2(160.0, 26.0));
+        let (x_left, text_left) = pro_tab_layout(tab, true);
+        assert!(x_left.center().x < text_left && x_left.left() >= tab.left(), "{x_left:?} {text_left}");
+        let (x_right, text_right) = pro_tab_layout(tab, false);
+        assert!(x_right.center().x > tab.center().x && x_right.right() <= tab.right(), "{x_right:?}");
+        assert!(text_right < x_right.left(), "title starts left of the button");
+        // The title's width is the tab's minus 42 (tabs are sized as title + 42): it ends before the
+        // button.
+        assert!(text_right + (tab.width() - 42.0) <= x_right.left() + 0.5);
+    }
 
     #[test]
     fn view_transform_roundtrip() {
