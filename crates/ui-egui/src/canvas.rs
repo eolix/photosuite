@@ -1770,6 +1770,10 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
             let icon = match tool {
                 // Resizing the brush: the circle stays where the drag began (`brush_resize`).
                 t if resizing && crate::brush_resize::applies(t) => egui::CursorIcon::None,
+                // ⌥ turns a painting tool into the Eyedropper (`alt_eyedropper`).
+                t if app.alt_sampling || (app.drag.is_none() && alt_samples(t, crate::workspace_ui::sticky_mods(app, ui.input(|i| i.modifiers)))) => {
+                    egui::CursorIcon::Crosshair
+                }
                 t if t.is_brushlike() || t == Tool::QuickSelection => {
                     // Preferences › Cursors: brush tip outline (normal = the 50% contour, or
                     // full size), precise crosshair, or the standard pointer.
@@ -2121,6 +2125,30 @@ fn draw_drag_preview(app: &mut PhotosuiteApp, painter: &egui::Painter, xf: &View
     }
 }
 
+/// Tools on which holding ⌥ (Alt) switches to the Eyedropper: a click or drag sets the
+/// foreground colour, as with the Eyedropper itself (#417).
+fn alt_samples(tool: Tool, mods: egui::Modifiers) -> bool {
+    // Control+Alt is the brush-resize drag (`brush_resize`), not sampling.
+    mods.alt && !mods.ctrl && matches!(tool, Tool::Brush | Tool::Pencil | Tool::Gradient | Tool::PaintBucket)
+}
+
+/// Decided when the press starts, so ⌥ pressed or released mid-stroke never switches between
+/// painting and sampling.
+fn alt_eyedropper(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+    if matches!(ev, ToolEvent::Down { .. }) {
+        app.alt_sampling = alt_samples(app.ui.tool, mods);
+    }
+    if !app.alt_sampling {
+        return false;
+    }
+    match ev {
+        // Without ⌥: the sample sets the foreground colour, whatever the Eyedropper would do.
+        ToolEvent::Down { x, y, .. } | ToolEvent::Move { x, y, .. } => sample_eyedropper(app, x, y, egui::Modifiers::NONE),
+        ToolEvent::Up { .. } => app.alt_sampling = false,
+    }
+    true
+}
+
 fn sample_eyedropper(app: &mut PhotosuiteApp, x: f64, y: f64, mods: egui::Modifiers) {
     if let Ok(v) = app.run("document.pixel", json!({"x": x.floor(), "y": y.floor()})) {
         let color: Vec<f32> = serde_json::from_value(v).unwrap_or_default();
@@ -2177,6 +2205,10 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     // Control+Alt-drag or Alt+right-drag with a painting tool resizes the brush instead of
     // painting (#231, #297).
     if crate::brush_resize::pointer(app, ev, mods, armed) {
+        return;
+    }
+    // ⌥ (Alt) with a painting tool is the Eyedropper for that press.
+    if alt_eyedropper(app, ev, mods) {
         return;
     }
     // Move tool: ⇧ locks the axis, ⌥ duplicates (move_mods.rs).
@@ -2588,6 +2620,48 @@ mod tests {
 
         tool_event(&mut app, ToolEvent::Move { x: 30.0, y: 10.0, pressure: 1.0 }, egui::Modifiers::NONE);
         assert!(app.session.tools.foreground[1] > 0.99 && app.session.tools.foreground[0] < 0.01);
+    }
+
+    #[test]
+    fn alt_with_a_painting_tool_samples_the_foreground_instead_of_painting() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 40, "height": 20, "background": "transparent"})).unwrap();
+        app.run("shape.create", json!({"kind": "rect", "rect": [0, 0, 20, 20], "fill": "#ff0000"})).unwrap();
+        app.run("shape.create", json!({"kind": "rect", "rect": [20, 0, 20, 20], "fill": "#00ff00"})).unwrap();
+        let alt = egui::Modifiers::ALT;
+        for tool in [Tool::Brush, Tool::Pencil, Tool::Gradient, Tool::PaintBucket] {
+            app.ui.tool = tool;
+            app.run("tools.setColors", json!({"foreground": [0.0, 0.0, 1.0, 1.0], "background": [1.0, 1.0, 1.0, 1.0]})).unwrap();
+            let rev = app.session.active().unwrap().revision;
+            tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 }, alt);
+            assert_eq!(app.session.tools.foreground, [1.0, 0.0, 0.0, 1.0], "{tool:?}: ⌥-click sets the foreground");
+            // A drag keeps sampling, even after ⌥ is let go; the background is untouched.
+            tool_event(&mut app, ToolEvent::Move { x: 30.0, y: 10.0, pressure: 1.0 }, egui::Modifiers::NONE);
+            assert_eq!(app.session.tools.foreground, [0.0, 1.0, 0.0, 1.0], "{tool:?}");
+            tool_event(&mut app, ToolEvent::Up { x: 30.0, y: 10.0 }, egui::Modifiers::NONE);
+            assert_eq!(app.session.tools.background, [1.0, 1.0, 1.0, 1.0]);
+            assert_eq!(app.session.active().unwrap().revision, rev, "{tool:?}: sampling must not edit the document");
+            assert!(app.drag.is_none() && !app.alt_sampling);
+        }
+        // Agents get the same through `ui.pointer` (MCP `ui_pointer`).
+        app.ui.tool = Tool::Brush;
+        let ctx = egui::Context::default();
+        let events = json!([{"kind": "down", "x": 10, "y": 10}, {"kind": "up", "x": 10, "y": 10}]);
+        let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"modifiers": {"alt": true}, "events": events}));
+        let _ = crate::control::handle(&mut app, &ctx, &req);
+        assert_eq!(app.session.tools.foreground, [1.0, 0.0, 0.0, 1.0]);
+        app.run("tools.setColors", json!({"foreground": [0.0, 1.0, 0.0, 1.0]})).unwrap();
+        // Without ⌥ the Brush paints again, and ⌥ pressed mid-stroke doesn't switch to sampling.
+        app.run("layer.new.layer", json!({})).unwrap();
+        let rev = app.session.active().unwrap().revision;
+        tool_event(&mut app, ToolEvent::Down { x: 5.0, y: 5.0, pressure: 1.0 }, egui::Modifiers::NONE);
+        tool_event(&mut app, ToolEvent::Move { x: 30.0, y: 5.0, pressure: 1.0 }, alt);
+        tool_event(&mut app, ToolEvent::Up { x: 30.0, y: 5.0 }, alt);
+        assert_eq!(app.session.tools.foreground, [0.0, 1.0, 0.0, 1.0]);
+        assert!(app.session.active().unwrap().revision > rev, "the stroke was painted");
+        // Control+Alt stays the brush-resize gesture, never a sample.
+        assert!(!alt_samples(Tool::Brush, egui::Modifiers { alt: true, ctrl: true, ..Default::default() }));
+        assert!(!alt_samples(Tool::Eraser, alt), "⌥ with the Eraser is not the Eyedropper");
     }
 
     #[test]

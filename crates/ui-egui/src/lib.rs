@@ -272,6 +272,9 @@ pub struct PhotosuiteApp {
     /// The next tool `Down` is an Alt+right-drag that resizes the brush (#297). `tool_event`
     /// takes it on every event, so a press another handler consumes can't leave it set.
     pub(crate) brush_resize_armed: bool,
+    /// This press began with ⌥ (Alt) held on a painting tool, so it samples colours instead of
+    /// painting until it is released (`canvas::alt_eyedropper`, #417).
+    pub(crate) alt_sampling: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<(u64, Option<String>, Sender<ControlResponse>)>,
     /// Screenshots not yet requested from the viewport: (token, earliest time in ms, frames seen).
@@ -413,6 +416,7 @@ impl PhotosuiteApp {
             last_stroke_end: None,
             brush_resize: None,
             brush_resize_armed: false,
+            alt_sampling: false,
             control_rx: None,
             pending_screenshots: Vec::new(),
             queued_screenshots: Vec::new(),
