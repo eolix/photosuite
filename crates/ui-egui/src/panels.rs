@@ -2033,11 +2033,14 @@ pub fn properties_window(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.add_space(8.0);
             widgets::hairline(ui);
             ui.add_space(8.0);
-            if let LayerContent::Adjustment(adj) = &layer.content {
-                adjustment_controls(app, ui, id, adj);
-            } else {
-                layer_controls(app, ui, &layer);
-            }
+            // Per-layer ids, so text still being typed for one layer can't commit to the next.
+            ui.push_id(id, |ui| {
+                if let LayerContent::Adjustment(adj) = &layer.content {
+                    adjustment_controls(app, ui, id, adj);
+                } else {
+                    layer_controls(app, ui, &layer);
+                }
+            });
         });
     });
     if drag != egui::Vec2::ZERO && canvas.is_positive() {
@@ -2786,5 +2789,49 @@ mod swatch_type_tests {
         let st = h.state().session.active().unwrap();
         let Some(photosuite_doc::LayerContent::Text(t)) = st.doc.layer(photosuite_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
         assert_eq!(t.char_runs().len(), 1, "still one white run");
+    }
+}
+
+#[cfg(test)]
+mod properties_card_tests {
+    use super::*;
+    use egui_kittest::{Harness, kittest::Queryable};
+
+    /// Arithmetic left uncommitted in one fill layer's card never lands on the layer selected next.
+    #[test]
+    fn uncommitted_arithmetic_stays_with_its_layer() {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        let mut ids = Vec::new();
+        for color in ["#00ff00", "#0000ff"] {
+            s.execute("layer.newFillLayer.solidColor", json!({"color": color})).unwrap();
+            ids.push(s.active().unwrap().active_layer.unwrap());
+        }
+        // The layer selected next already shows 25, the value the edited one has when `25*` stops it.
+        s.execute("layer.setProps", json!({"layer": ids[0].0, "opacity": 0.25})).unwrap();
+        let mut app = PhotosuiteApp::new(s, crate::Services::default());
+        app.ui.panels.properties = true;
+        let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).build_ui_state(
+            |ui, app: &mut PhotosuiteApp| {
+                if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
+                    properties_window(app, ui.ctx());
+                }
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Anthracite);
+        h.run_steps(2);
+        h.query_all_by_role(egui::accesskit::Role::SpinButton).next().unwrap().click();
+        h.run_steps(1);
+        for ch in "25*2".chars() {
+            h.event(egui::Event::Text(ch.to_string()));
+            h.run_steps(1);
+        }
+        // The Layers panel selects the other layer in the frame the click leaves the field.
+        h.state_mut().session.execute("layer.select", json!({"layer": ids[0].0})).unwrap();
+        h.ctx.memory_mut(|m| m.stop_text_input());
+        h.run_steps(3);
+        let doc = &h.state().session.active().unwrap().doc;
+        assert_eq!(ids.iter().map(|&id| doc.layer(id).unwrap().opacity).collect::<Vec<_>>(), [0.25, 0.25]);
     }
 }

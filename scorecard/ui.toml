@@ -94,7 +94,7 @@ id = "UI-217-13"
 target = "Numeric fields accept arithmetic and units; scrubby labels; double-click resets a slider"
 status = "partial"
 issue = 217
-note = "widgets.rs:131 DragValue scrubs; no expressions, label scrub or reset"
+note = "widgets.rs:132 DragValue scrubs and takes + - * / arithmetic; no units in expressions, label scrub or reset"
 
 [[item]]
 id = "UI-217-14"
