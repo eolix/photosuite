@@ -273,10 +273,14 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
         CATEGORIES.iter().find(|c| c.0 == cat).map_or(CATEGORIES[0].1, |c| c.1).iter().map(preset_card).collect()
     };
     let chosen = get_s(f, "__preset", "");
+    // A fixed body height, so the dialog keeps its size from tab to tab with room to breathe;
+    // the preset grid scrolls inside it. Smaller windows get a shorter body.
+    let body_h = (ui.ctx().content_rect().height() - 220.0).clamp(300.0, 500.0);
     ui.horizontal_top(|ui| {
         // Left: preset grid.
         ui.vertical(|ui| {
             ui.set_width(520.0);
+            ui.set_min_height(body_h);
             // An empty Recent tab is just empty.
             if !cards.is_empty() {
                 let heading = if cat == "Recent" {
@@ -288,46 +292,48 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
                 ui.add_space(6.0);
             }
             let card = vec2(164.0, 112.0);
-            for row in cards.chunks(3) {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 8.0;
-                    for p in row {
-                        let (r, resp) = ui.allocate_exact_size(card, Sense::click());
-                        let on = chosen == p.key;
-                        ui.painter().rect_filled(
-                            r,
-                            t.radius,
+            egui::ScrollArea::vertical().id_salt("nd-presets").max_height((body_h - 24.0).max(120.0)).auto_shrink([false, true]).show(ui, |ui| {
+                for row in cards.chunks(3) {
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 8.0;
+                        for p in row {
+                            let (r, resp) = ui.allocate_exact_size(card, Sense::click());
+                            let on = chosen == p.key;
+                            ui.painter().rect_filled(
+                                r,
+                                t.radius,
+                                if on {
+                                    t.row_selected
+                                } else if resp.hovered() {
+                                    t.hover
+                                } else {
+                                    t.field
+                                },
+                            );
                             if on {
-                                t.row_selected
-                            } else if resp.hovered() {
-                                t.hover
+                                ui.painter().rect_stroke(r, t.radius, Stroke::new(1.5, t.accent), StrokeKind::Inside);
+                            }
+                            page_icon(ui, Rect::from_center_size(pos2(r.center().x, r.top() + 34.0), vec2(40.0, 40.0)), p.width, p.height, &t);
+                            ui.painter().text(pos2(r.center().x, r.top() + 72.0), Align2::CENTER_CENTER, &p.label, egui::FontId::proportional(12.0), t.text);
+                            let ppi = widgets::fmt_num(f64::from(p.ppi));
+                            let size = if p.unit == "in" {
+                                format!(
+                                    "{} x {} in @ {ppi} ppi",
+                                    widgets::fmt_num(to_unit(p.width as f32, "in", p.ppi) as f64),
+                                    widgets::fmt_num(to_unit(p.height as f32, "in", p.ppi) as f64),
+                                )
                             } else {
-                                t.field
-                            },
-                        );
-                        if on {
-                            ui.painter().rect_stroke(r, t.radius, Stroke::new(1.5, t.accent), StrokeKind::Inside);
+                                format!("{} x {} px @ {ppi} ppi", p.width, p.height)
+                            };
+                            ui.painter().text(pos2(r.center().x, r.top() + 90.0), Align2::CENTER_CENTER, size, egui::FontId::proportional(10.5), t.text_faint);
+                            if resp.clicked() {
+                                f.extend(p.fields.clone());
+                            }
                         }
-                        page_icon(ui, Rect::from_center_size(pos2(r.center().x, r.top() + 34.0), vec2(40.0, 40.0)), p.width, p.height, &t);
-                        ui.painter().text(pos2(r.center().x, r.top() + 72.0), Align2::CENTER_CENTER, &p.label, egui::FontId::proportional(12.0), t.text);
-                        let ppi = widgets::fmt_num(f64::from(p.ppi));
-                        let size = if p.unit == "in" {
-                            format!(
-                                "{} x {} in @ {ppi} ppi",
-                                widgets::fmt_num(to_unit(p.width as f32, "in", p.ppi) as f64),
-                                widgets::fmt_num(to_unit(p.height as f32, "in", p.ppi) as f64),
-                            )
-                        } else {
-                            format!("{} x {} px @ {ppi} ppi", p.width, p.height)
-                        };
-                        ui.painter().text(pos2(r.center().x, r.top() + 90.0), Align2::CENTER_CENTER, size, egui::FontId::proportional(10.5), t.text_faint);
-                        if resp.clicked() {
-                            f.extend(p.fields.clone());
-                        }
-                    }
-                });
-                ui.add_space(8.0);
-            }
+                    });
+                    ui.add_space(8.0);
+                }
+            });
         });
         ui.add_space(10.0);
         // Right: Preset Details.
@@ -422,6 +428,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
             }
         });
     });
+    ui.add_space(12.0);
 }
 
 #[cfg(test)]
@@ -682,6 +689,27 @@ mod tests {
             click_at(&mut h, heading.left_bottom() + egui::vec2(80.0, 60.0));
             let f = self::fields(&h);
             assert_eq!((f["width"].as_u64(), f["mode"].as_str()), (Some(640), Some("gray")));
+        }
+
+        /// The dialog keeps one size from tab to tab (the Create button doesn't move), and stays
+        /// on screen in a small window.
+        #[test]
+        fn dialog_keeps_its_size_across_tabs_and_fits_small_windows() {
+            for size in [egui::vec2(1440.0, 900.0), egui::vec2(1280.0, 720.0)] {
+                let app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+                let mut h = Harness::builder().with_size(size).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
+                PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+                h.state_mut().ui.open_dialog(DialogKind::NewDocument, UiState::new_document_fields());
+                h.run_steps(3);
+                let mut bottoms = Vec::new();
+                for (tab, _) in CATEGORIES {
+                    h.get_by_label(tab).click();
+                    h.run_steps(3);
+                    bottoms.push(h.get_by_label("Create").rect().bottom());
+                }
+                assert!(bottoms.windows(2).all(|w| (w[0] - w[1]).abs() < 0.5), "{size:?}: Create moved between tabs: {bottoms:?}");
+                assert!(bottoms[0] <= size.y, "{size:?}: Create is off screen at {}", bottoms[0]);
+            }
         }
 
         #[test]
