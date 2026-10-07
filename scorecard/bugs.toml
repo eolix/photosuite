@@ -71,16 +71,16 @@ note = "raw_defaults (prefs.rs:712), ask_before_saving_layered_tiff (prefs.rs:31
 [[item]]
 id = "BUG-204-4"
 target = "Recent files persisted through prefs across restarts"
-status = "missing"
+status = "done"
 issue = 204
-note = "ui-egui lib.rs:461 push_recent only touches app.ui.recent_files"
+note = "crates/ui-egui/src/lib.rs::push_recent stores the list in preferences; prefs_ui::load restores it and recent_files_survive_a_restart_and_honour_the_count verifies reload"
 
 [[item]]
 id = "BUG-204-5"
 target = "Recent-files list honours recent_file_count (default 20)"
-status = "missing"
+status = "done"
 issue = 204
-note = "lib.rs:465 truncate(10) hard-coded; menus.rs:1065 test asserts 'capped at 10'"
+note = "lib.rs push_recent caps the list with recent_cap (recent_file_count); menus.rs covers default and custom limits"
 
 [[item]]
 id = "BUG-204-6"
@@ -197,23 +197,23 @@ note = "Only smudge_drags_colour_along_the_stroke (retouch.rs:407)"
 [[item]]
 id = "BUG-208-1"
 target = "Shift while dragging a Rect/Elliptical Marquee constrains to a square/circle"
-status = "missing"
+status = "done"
 issue = 208
-note = "canvas.rs:1498 and :1769 pass shift=false to marquee_end"
+note = "canvas.rs marquee_corners applies Shift via Drag::marquee_mods; marquee_tests.rs::shift_during_the_drag_draws_a_square_and_the_readout_follows covers the drag"
 
 [[item]]
 id = "BUG-208-2"
 target = "Alt while dragging a marquee draws from the centre"
-status = "missing"
+status = "done"
 issue = 208
-note = "marquee_end (chrome_ui.rs:157) has no centre mode"
+note = "canvas.rs marquee_corners centres Alt drags; marquee_tests.rs::alt_draws_from_the_centre_and_shift_alt_a_centred_circle verifies rectangles and ellipses"
 
 [[item]]
 id = "BUG-208-3"
 target = "W x H px readout beside the cursor while dragging a marquee"
-status = "missing"
+status = "done"
 issue = 208
-note = "No size readout in canvas.rs or tool_feedback.rs"
+note = "canvas.rs marquee_readout draws the readout; marquee_tests.rs asserts dimensions while dragging and its removal after release"
 
 [[item]]
 id = "BUG-208-4"
@@ -225,6 +225,6 @@ note = "Mods captured at press (canvas.rs:1679, used :1779); only a badge test (
 [[item]]
 id = "BUG-208-5"
 target = "Kittest: Shift drag gives a square, Alt drag is centred, readout matches the size"
-status = "missing"
+status = "done"
 issue = 208
-note = "No marquee drag tests"
+note = "crates/ui-egui/src/marquee_tests.rs covers Shift, Alt, selection bounds, W/H readout and drag completion"
