@@ -49,7 +49,7 @@ fn injected_loss_stops_gpu_work_without_panicking() {
     assert!(g.composite(&d, d.bounds(), false).is_err());
     assert!(!g.upload_rect(key, [0, 0], [1, 1], &[0; 4]));
     g.upload_full(key, [1, 1], &[0; 4]);
-    g.set_display_lut(key, 2, Some(&[0; 32]));
+    g.set_display_lut(key, 0, 2, Some(&[0; 32]));
     assert!(g.read_texels(key).is_none());
     g.release();
     assert!(!g.has(key, [300, 200]));

@@ -2,7 +2,7 @@
 //! GPU canvas is dropped and every document keeps drawing through the CPU compositor and egui
 //! textures for the rest of the session, with a recovery warning. Also runs the desktop app's
 //! "started" hook once the first frames have rendered (the crash-safe startup marker), and
-//! provides the Help › System Info text.
+//! provides the Help › System Info text (including the monitor profile in use).
 
 use serde_json::json;
 
@@ -63,6 +63,7 @@ pub fn system_info(app: &PhotosuiteApp) -> Vec<String> {
     let mut v =
         vec![format!("PhotoSuite {}", photosuite_engine::build_info::long_version()), format!("Platform: {} {}", std::env::consts::OS, std::env::consts::ARCH)];
     v.extend(app.perf.gpu_info.lines());
+    v.extend(crate::monitor_status::summary_lines(app));
     v
 }
 
@@ -73,6 +74,8 @@ pub fn system_info_json(app: &PhotosuiteApp) -> serde_json::Value {
         "os": std::env::consts::OS,
         "arch": std::env::consts::ARCH,
         "gpu": app.perf.gpu_info,
+        "monitor": app.session.color.monitor_status(),
+        "displays": app.session.color.display_statuses(),
         "lines": system_info(app),
     })
 }

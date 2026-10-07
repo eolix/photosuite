@@ -146,12 +146,12 @@ pub fn dichromat(rgb_lin: [f32; 3], protan: bool) -> [f32; 3] {
 
 /// The display LUT when a simulation or 32-bit preview applies (None = plain profile proof).
 pub fn display_lut(c: &ColorState, doc: &Document, size: usize) -> Result<Option<Lut3d>> {
-    display_lut_with(c, doc, size, true)
+    display_lut_with(c, doc, size, true, c.main_display)
 }
 
 /// [`display_lut`], leaving the 32-bit preview out when `include_hdr` is false (the GPU canvas
 /// applies it in its shader).
-pub fn display_lut_with(c: &ColorState, doc: &Document, size: usize, include_hdr: bool) -> Result<Option<Lut3d>> {
+pub fn display_lut_with(c: &ColorState, doc: &Document, size: usize, include_hdr: bool, display: Option<u32>) -> Result<Option<Lut3d>> {
     let pv = c.proof(doc.id);
     let kind = if pv.enabled { pv.setup.kind } else { ProofKind::Profile };
     let hdr = if include_hdr { c.hdr_preview(doc) } else { None };
@@ -159,8 +159,8 @@ pub fn display_lut_with(c: &ColorState, doc: &Document, size: usize, include_hdr
         return Ok(None);
     }
     let err = |e: photosuite_cms::CmsError| EngineError::Other(format!("colour management: {e}"));
-    let src = c.canvas_display(doc)?.source.clone();
-    let mon = c.monitor();
+    let src = c.canvas_display_for(doc, display)?.source.clone();
+    let mon = c.monitor_for(display);
     let srgb = Builtin::Srgb.profile();
     let setup = &pv.setup;
     // composite → display for the plain case (with the profile proof when on).

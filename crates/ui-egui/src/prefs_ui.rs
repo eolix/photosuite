@@ -569,13 +569,18 @@ pub fn invoke(app: &mut PhotosuiteApp, _ctx: &egui::Context, id: &str, params: &
         "edit.toolbar" => Some(Ok(json!({"dialog": open_shortcuts(app, 2)}))),
         "edit.colorSettings" => {
             let d = crate::filter_dialog::open(app, "edit.colorSettings");
+            let cur = serde_json::to_value(&app.session.color.settings).unwrap_or_default();
+            // What Monitor Profile resolves to, so a fallback to sRGB is visible (#569): read the
+            // displays again now, and the dialog refreshes this line as it draws.
+            crate::monitor_status::read_now(app);
+            let note = crate::monitor_status::note(app);
             if let Some(dm) = d.and_then(|d| app.ui.dialog_mut(d)) {
-                let cur = serde_json::to_value(&app.session.color.settings).unwrap_or_default();
                 for (k, v) in cur.as_object().into_iter().flatten() {
                     if dm.fields.contains_key(k) {
                         dm.fields.insert(k.clone(), v.clone());
                     }
                 }
+                dm.fields.insert("__note".into(), json!(note));
             }
             dialog(d)
         }
@@ -1994,6 +1999,8 @@ mod tests {
         app.sync_views();
         let d = crate::menus::invoke(&mut app, &ctx, "edit.colorSettings", json!({})).unwrap()["dialog"].as_u64().unwrap();
         assert_eq!(app.ui.dialogs.iter().find(|x| x.id == d).unwrap().fields["workingRgb"], "srgb");
+        let note = app.ui.dialogs.iter().find(|x| x.id == d).unwrap().fields["__note"].as_str().unwrap().to_string();
+        assert!(note.starts_with("Monitor profile in use: sRGB") && note.contains("fallback"), "{note}");
         assert!(crate::menus::invoke(&mut app, &ctx, "edit.fade", json!({})).is_err());
         app.run("select.rect", json!({"x": 4, "y": 4, "width": 8, "height": 8})).unwrap();
         let d = crate::menus::invoke(&mut app, &ctx, "edit.contentAwareFill", json!({})).unwrap()["dialog"].as_u64().unwrap();

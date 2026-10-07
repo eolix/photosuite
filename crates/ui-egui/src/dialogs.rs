@@ -209,7 +209,13 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                 DialogKind::Command if fields.contains_key("__sizing") => crate::sizing::body(ui, &mut fields),
                 DialogKind::Command if crate::adjust_ui::owns_lookup(&fields) => crate::adjust_ui::lookup_dialog_body(app, ui, &mut fields),
                 DialogKind::Command if crate::adjust_dialog::owns(&fields) => crate::adjust_dialog::body(app, ui, &mut fields),
-                DialogKind::Command if fields.contains_key("__filter") => crate::filter_dialog::body(ui, &mut fields),
+                DialogKind::Command if fields.contains_key("__filter") => {
+                    // Color Settings: the monitor profile in use can change while it is open.
+                    if fields.get("__command").and_then(Value::as_str) == Some("edit.colorSettings") {
+                        fields.insert("__note".into(), Value::String(crate::monitor_status::note(app)));
+                    }
+                    crate::filter_dialog::body(ui, &mut fields)
+                }
                 DialogKind::Command if fields.contains_key("__form") => crate::view_cmds::form_body(ui, &mut fields),
                 DialogKind::Command => {}
                 DialogKind::LayerStyle => crate::layer_style::body(ui, &mut fields, &app.session.patterns),

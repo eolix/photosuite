@@ -409,6 +409,11 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
             }
         }
     }
+    // Read-only context the dialog opener supplies (e.g. the monitor profile in use).
+    if let Some(note) = f.get("__note").and_then(Value::as_str) {
+        ui.add_space(4.0);
+        ui.add(egui::Label::new(egui::RichText::new(note).color(t.text_dim)).wrap());
+    }
     if let Some(mut preview) = f.get("__preview").and_then(Value::as_bool) {
         ui.add_space(4.0);
         crate::widgets::checkbox(ui, &mut preview, tl!("Preview"));

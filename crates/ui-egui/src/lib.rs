@@ -81,6 +81,7 @@ pub mod mask_thumbs_ui;
 pub mod menu_catalog;
 pub mod menu_nav;
 pub mod menus;
+pub mod monitor_status;
 pub mod move_mods;
 pub mod move_ui;
 pub mod new_doc_ui;
@@ -264,13 +265,20 @@ pub struct Services {
     /// `photosuite_engine::preset_store`). Attached to the session once it arrives; without
     /// one, brush presets are session-only (web, tests).
     pub preset_store: Option<std::sync::mpsc::Receiver<photosuite_engine::preset_store::Opened>>,
+    /// Reads the displays and their ICC profiles in the background (desktop macOS; see
+    /// `monitor_status`). Without one, the canvas uses the profile chosen in Color Settings, or sRGB.
+    pub read_displays: Option<monitor_status::ReadDisplaysFn>,
 }
 
 pub struct PhotosuiteApp {
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
-    canvases: HashMap<DocId, canvas::CanvasCache>,
+    /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
+    /// canvas state is shared (`canvas::GPU_OUTPUT`).
+    canvases: HashMap<(DocId, u32), canvas::CanvasCache>,
+    /// Display profile readings (#569).
+    monitors: monitor_status::State,
     checker: Option<egui::TextureHandle>,
     drag: Option<canvas::Drag>,
     /// Brush/Eraser stroke being drawn, rendered by the engine (see `canvas::LiveStroke`).
@@ -429,6 +437,7 @@ impl PhotosuiteApp {
             ui: UiState::default(),
             services,
             canvases: HashMap::new(),
+            monitors: Default::default(),
             checker: None,
             drag: None,
             live_stroke: None,
@@ -950,6 +959,7 @@ impl eframe::App for PhotosuiteApp {
         self.collect_screenshots(ctx);
         self.issue_screenshots(ctx);
         prefs_ui::tick(self, ctx);
+        monitor_status::poll(self, ctx);
         discard_ui::guard_window_close(self, ctx);
         // Background jobs: apply finished ones, keep frames coming, Esc cancels (before the
         // shortcuts see Esc).
