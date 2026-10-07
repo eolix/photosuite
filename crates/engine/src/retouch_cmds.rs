@@ -379,17 +379,18 @@ enum SpotType {
     ProximityMatch,
 }
 
-/// Fill the stroke area with no source, then gradient-domain blend it into its surroundings.
-fn spot_heal_surface(surf: &mut Surface, area: Rect, stroke: &Stroke, kind: SpotType, sel: Option<&Surface>, lock: bool) -> Rect {
+/// Fill the stroke area with no source, then gradient-domain blend it into its surroundings. With
+/// `all` (Sample All Layers) it heals what is visible, so it works on an empty layer above the image.
+fn spot_heal_surface(surf: &mut Surface, pre: &Document, stroke: &Stroke, kind: SpotType, all: bool, sel: Option<&Surface>, lock: bool) -> Rect {
     let (bounds, cov) = stroke_coverage(stroke);
     let size = stroke.brush.size;
     let margin = (size.max(8.0) * 1.0).ceil() as i32 + 8;
-    let region_rect = bounds.inflate(margin).intersect(&area);
+    let region_rect = bounds.inflate(margin).intersect(&pre.bounds());
     if region_rect.is_empty() {
         return Rect::EMPTY;
     }
     let fmt = surf.format();
-    let img = Region::read(surf, region_rect);
+    let img = if all { composite_region(pre, None, SampleLayers::All, region_rect, fmt) } else { Region::read(surf, region_rect) };
     let (w, h, ch) = (img.width(), img.height(), img.ch);
     let bw = bounds.width() as usize;
     let mut stroke_cov = vec![0.0f32; w * h];
@@ -448,7 +449,8 @@ fn spot_healing(s: &mut Session, p: &Value) -> Result<Value> {
         "proximityMatch" => SpotType::ProximityMatch,
         o => return Err(bad(CMD, format!("unknown type `{o}` (contentAware|createTexture|proximityMatch)"))),
     };
-    let dmg = run_stroke(s, "Spot Healing Brush", id, p, |pre, surf, sel, lock| Ok(spot_heal_surface(surf, pre.bounds(), &stroke, kind, sel, lock)))?;
+    let all = sample_all_layers(p);
+    let dmg = run_stroke(s, "Spot Healing Brush", id, p, |pre, surf, sel, lock| Ok(spot_heal_surface(surf, pre, &stroke, kind, all, sel, lock)))?;
     Ok(json!({ "damage": damage_json(dmg) }))
 }
 
@@ -531,8 +533,8 @@ fn sponge_cmd(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({ "damage": damage_json(dmg) }))
 }
 
-/// "Sample All Layers" for Blur, Sharpen and Smudge (layer pixels only: a mask or channel has
-/// nothing to sample from other layers).
+/// "Sample All Layers" for Spot Healing, Blur, Sharpen and Smudge (layer pixels only: a mask or
+/// channel has nothing to sample from other layers).
 fn sample_all_layers(p: &Value) -> bool {
     flag(p, "sampleAllLayers", false) && targets_pixels(p)
 }
@@ -681,7 +683,7 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "Spot Healing Brush",
             menu: &[],
             shortcut: None,
-            params: brush_params!(r#","type":"contentAware|createTexture|proximityMatch"="contentAware""#),
+            params: brush_params!(r#","type":"contentAware|createTexture|proximityMatch"="contentAware","sampleAllLayers":bool=false"#),
             enabled: has_pixel_layer,
             run: spot_healing,
             journal: true,

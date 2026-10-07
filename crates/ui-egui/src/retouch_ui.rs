@@ -15,7 +15,7 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
     let o = app.ui.tool_options.clone();
     let pts = json!(points);
     let (cmd, mut p): (&str, Value) = match tool {
-        Tool::SpotHealing => ("paint.spotHealing", json!({"type": o.spot_type})),
+        Tool::SpotHealing => ("paint.spotHealing", json!({"type": o.spot_type, "sampleAllLayers": o.sample_all_layers})),
         Tool::MixerBrush => ("paint.mixerBrush", json!({})),
         Tool::Healing | Tool::CloneStamp => {
             let mut p = json!({"aligned": o.clone_aligned, "sampleLayer": o.clone_sample});
@@ -335,9 +335,9 @@ mod tests {
     }
 
     #[test]
-    fn sample_all_layers_reaches_blur_sharpen_and_smudge() {
-        // #207: the options-bar checkbox reaches the command.
-        for tool in [Tool::Blur, Tool::Sharpen, Tool::Smudge] {
+    fn sample_all_layers_reaches_the_command() {
+        // #207, #731: the options-bar checkbox reaches the command.
+        for tool in [Tool::SpotHealing, Tool::Blur, Tool::Sharpen, Tool::Smudge] {
             for all in [false, true] {
                 let mut app = app();
                 stripes(&mut app, 4, "pixels");
