@@ -159,14 +159,33 @@ fn nav_keys(app: &mut PhotosuiteApp, ctx: &egui::Context) -> bool {
 /// drops ⌘V entirely when the clipboard holds no text (an image). Outside text fields, give the
 /// pixel commands their key presses back: Copy/Cut/Paste become ⌘C/⌘X/⌘V presses (with ⇧/⌥ as
 /// held, so ⇧⌘C is Copy Merged), and a ⌘V release without a paste event becomes a ⌘V press.
+///
+/// Ctrl+Insert copies and Shift+Insert pastes: egui-winit maps them on Windows (a Shift+Insert
+/// release without a paste event pastes the image, like ⌘V), and we map them here on Linux.
 pub fn clipboard_keys(ctx: &egui::Context, typing: bool, raw: &mut egui::RawInput) {
+    let press = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
+    if cfg!(target_os = "linux") {
+        raw.events.retain_mut(|e| {
+            let egui::Event::Key { key: Key::Insert, pressed: true, modifiers: m, .. } = *e else { return true };
+            match (m.ctrl, m.shift) {
+                (true, false) => *e = egui::Event::Copy,
+                // Text fields need the clipboard text: egui-winit reads it and sends a Paste event.
+                (false, true) if typing => {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+                    return false;
+                }
+                (false, true) => *e = press(Key::V, Modifiers::COMMAND),
+                _ => {}
+            }
+            true
+        });
+    }
     if typing {
         return;
     }
     let seen = egui::Id::new("pc-paste-key-seen");
     // The modifiers held at each event: last frame's, updated as the events report changes.
     let mut mods = ctx.input(|i| i.modifiers);
-    let press = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     let mut out = Vec::with_capacity(raw.events.len());
     for e in raw.events.drain(..) {
         if let egui::Event::ModifiersChanged(m) | egui::Event::Key { modifiers: m, .. } = &e {
@@ -186,11 +205,15 @@ pub fn clipboard_keys(ctx: &egui::Context, typing: bool, raw: &mut egui::RawInpu
             out.push(press(key, held));
             continue;
         }
-        if let egui::Event::Key { key: Key::V, pressed: false, modifiers, .. } = &e
-            && modifiers.command
+        if let egui::Event::Key { key, pressed: false, modifiers, .. } = &e
+            && let Some(held) = match key {
+                Key::V if modifiers.command => Some(*modifiers),
+                Key::Insert if cfg!(target_os = "windows") && modifiers.shift && !modifiers.ctrl => Some(Modifiers::COMMAND),
+                _ => None,
+            }
             && !ctx.data_mut(|d| d.remove_temp::<bool>(seen)).unwrap_or(false)
         {
-            out.push(press(Key::V, *modifiers));
+            out.push(press(Key::V, held));
         }
         out.push(e);
     }
@@ -452,6 +475,38 @@ mod tests {
         let mut r = raw(vec![egui::Event::Paste("x".into())], Modifiers::COMMAND);
         clipboard_keys(&ctx, true, &mut r);
         assert!(matches!(r.events.as_slice(), [_, egui::Event::Paste(_)]));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn ctrl_and_shift_insert_copy_and_paste_on_linux() {
+        let ctx = egui::Context::default();
+        let insert = |modifiers| egui::RawInput {
+            events: vec![egui::Event::Key { key: Key::Insert, physical_key: None, pressed: true, repeat: false, modifiers }],
+            ..Default::default()
+        };
+        let pressed = |r: &egui::RawInput| match r.events.as_slice() {
+            [egui::Event::Key { key, pressed: true, modifiers, .. }] if modifiers.command => Some(*key),
+            _ => None,
+        };
+        // On the canvas they become the pixel commands' ⌘C / ⌘V.
+        let mut r = insert(Modifiers::CTRL);
+        clipboard_keys(&ctx, false, &mut r);
+        assert_eq!(pressed(&r), Some(Key::C));
+        let mut r = insert(Modifiers::SHIFT);
+        clipboard_keys(&ctx, false, &mut r);
+        assert_eq!(pressed(&r), Some(Key::V));
+        // In a text field Ctrl+Insert copies the text; Shift+Insert asks egui-winit for the text.
+        let mut r = insert(Modifiers::CTRL);
+        clipboard_keys(&ctx, true, &mut r);
+        assert!(matches!(r.events.as_slice(), [egui::Event::Copy]));
+        let mut r = insert(Modifiers::SHIFT);
+        clipboard_keys(&ctx, true, &mut r);
+        assert!(r.events.is_empty());
+        // Plain Insert is left alone.
+        let mut r = insert(Modifiers::NONE);
+        clipboard_keys(&ctx, false, &mut r);
+        assert!(matches!(r.events.as_slice(), [egui::Event::Key { key: Key::Insert, .. }]));
     }
 
     #[test]
