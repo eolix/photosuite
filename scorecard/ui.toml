@@ -8,16 +8,16 @@ order = 4
 [[item]]
 id = "UI-217-1"
 target = "Tool options, last Export As / Save for Web / Fill settings and font recents persist"
-status = "missing"
+status = "partial"
 issue = 217
-note = "No tool_options/export fields in Preferences (prefs.rs:694); export_dialog.rs:21 png/85"
+note = "Fill (fill_ui.rs:72) and Liquify (liquify_ui.rs:64, #418) keep their settings in Preferences (prefs.dialogs); no tool_options/export fields in Preferences; export_dialog.rs:21 png/85"
 
 [[item]]
 id = "UI-217-2"
 target = "Window size and dock width remembered across restarts"
 status = "missing"
 issue = 217
-note = "main.rs:108 fixed 1440x900; dock.rs:529 snapshot omits the width"
+note = "main.rs:46 native_options(): fixed 1440x900, centred on the main monitor (#419); dock.rs:529 snapshot omits the width"
 
 [[item]]
 id = "UI-217-3"
