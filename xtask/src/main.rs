@@ -12,6 +12,7 @@ mod pinned;
 mod scorecard;
 mod sha256;
 mod stats;
+mod upstream;
 mod version;
 
 use std::path::{Path, PathBuf};
@@ -41,6 +42,8 @@ commands:
                   regenerate docs/scorecard.md (--check: fail if it is stale)
   version [set X.Y.Z[-pre]]
                   print the workspace version, or set it (Cargo.toml + Cargo.lock)
+  upstream status [--fetch] [--all] | port <sha> | skip <sha> <reason> | pin
+                  port fixes from upstream PhotoCraft with their authorship (docs/upstream-sync.md)
   ico <out.ico> <in.png>...
                   pack square PNGs (<= 256 px) into a Windows .ico (see packaging/icons.sh)
 ";
@@ -60,6 +63,7 @@ fn main() -> ExitCode {
         Some("scorecard") => scorecard::run(&root(), &rest),
         Some("version") => version::run(&root(), &rest),
         Some("ico") => ico::run(&rest),
+        Some("upstream") => upstream::run(&root(), &rest),
         Some("-h" | "--help" | "help") | None => {
             print!("{USAGE}");
             Ok(())
