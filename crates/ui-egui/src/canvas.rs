@@ -57,7 +57,19 @@ pub struct Drag {
 
 impl Drag {
     pub fn new(tool: Tool, start: [f64; 2], points: Vec<[f64; 3]>, modifiers: egui::Modifiers, erase: bool) -> Self {
-        Self { tool, start, points, modifiers, erase, constrain: None, live: modifiers, released: egui::Modifiers::NONE, reposition: false, sel_move: None, lasso: None }
+        Self {
+            tool,
+            start,
+            points,
+            modifiers,
+            erase,
+            constrain: None,
+            live: modifiers,
+            released: egui::Modifiers::NONE,
+            reposition: false,
+            sel_move: None,
+            lasso: None,
+        }
     }
 
     /// Reposition: move the start and every point so the last one lands on `to` (same size).
