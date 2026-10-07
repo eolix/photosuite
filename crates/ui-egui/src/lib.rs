@@ -566,6 +566,9 @@ impl PhotosuiteApp {
         {
             authorize(id, &params)?;
         }
+        if let Some(r) = transform_tool::intercept(self, id) {
+            return r;
+        }
         let suppress_events = self.automation_input && self.session.prefs().script_events.enabled;
         if suppress_events {
             self.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
@@ -1354,6 +1357,9 @@ mod input_tests;
 
 #[cfg(test)]
 mod pencil_tests;
+
+#[cfg(test)]
+mod transform_undo_tests;
 
 #[cfg(test)]
 mod move_auto_select_tests;

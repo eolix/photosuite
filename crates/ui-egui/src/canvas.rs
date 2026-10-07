@@ -870,6 +870,7 @@ pub(crate) fn retain_gpu_documents(app: &mut PhotosuiteApp) {
 /// Tabs + canvas for the active document, or the start screen.
 pub fn document_area(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     retain_gpu_documents(app);
+    crate::transform_tool::track_steps(app, ui.ctx());
     let n = app.session.documents().len();
     // Files opening in the background (#210) have tabs before they have documents.
     let opening = !app.jobs.opens.is_empty();
@@ -2050,7 +2051,8 @@ fn transform_controls_rect(app: &PhotosuiteApp, xf: &ViewXform) -> Option<Rect> 
 /// The interior stays the normal Move-tool drag target.
 fn transform_controls_hit(r: Rect, p: Pos2) -> bool {
     let handles = [r.left_top(), r.center_top(), r.right_top(), r.right_center(), r.right_bottom(), r.center_bottom(), r.left_bottom(), r.left_center()];
-    handles.iter().any(|h| h.distance(p) <= 8.0) || (r.expand(18.0).contains(p) && !r.expand(5.0).contains(p))
+    let grab = crate::transform_tool::HANDLE_PX as f32;
+    handles.iter().any(|h| h.distance(p) <= grab) || (r.expand(18.0).contains(p) && !r.expand(5.0).contains(p))
 }
 
 /// Enter the existing Free Transform session when a Move-tool transform control is pressed.

@@ -115,7 +115,7 @@ fn in_quad(q: &[[f64; 2]; 4], p: [f64; 2]) -> bool {
     inside
 }
 
-/// Near a Free Transform corner or edge handle (within 8 screen px)?
+/// Near a Free Transform corner or edge handle (within its grab radius)?
 fn near_handle(q: &[[f64; 2]; 4], p: [f64; 2], tol: f64) -> bool {
     (0..4).any(|i| {
         let (a, b) = (q[i], q[(i + 1) % 4]);
@@ -141,7 +141,7 @@ fn begin(app: &mut PhotosuiteApp, p: [f64; 2]) {
     let tool = app.ui.tool;
     let tol = tolerance(app);
     let gesture = if let Some(t) = &app.ui.transform {
-        if near_handle(&t.quad, p, tol) {
+        if near_handle(&t.quad, p, crate::transform_tool::handle_tolerance(app)) {
             Some((Gesture::Point, vec![LayerId(t.layer)]))
         } else if in_quad(&t.quad, p) {
             Some((Gesture::TransformMove { rect: quad_rect(&t.quad) }, vec![LayerId(t.layer)]))

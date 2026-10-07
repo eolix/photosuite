@@ -1912,7 +1912,9 @@ fn history(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
             });
         });
     }
-    if let Some(delta) = target {
+    // An open Free Transform owns Undo (transform_tool::intercept): stepping the document's history under
+    // its box would leave it transforming pixels that changed.
+    if let Some(delta) = target.filter(|_| app.ui.transform.is_none()) {
         let (cmd, n) = if delta < 0 { ("edit.undo", -delta) } else { ("edit.redo", delta) };
         for _ in 0..n {
             if app.run(cmd, json!({})).is_err() {
@@ -2487,6 +2489,52 @@ mod color_tests {
             h.run_steps(2);
         }
         assert_eq!(srgb_bytes(h.state().session.tools.foreground), [0, 255, 0]);
+    }
+}
+
+#[cfg(test)]
+mod history_transform_tests {
+    use super::*;
+    use egui_kittest::Harness;
+
+    fn click(h: &mut Harness<'static, PhotosuiteApp>, p: egui::Pos2) {
+        h.hover_at(p);
+        h.run_steps(1);
+        for pressed in [true, false] {
+            h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+            h.run_steps(1);
+        }
+    }
+
+    /// While Free Transform is open, clicking a History state leaves the document alone: the
+    /// transform owns Undo. Without a transform the same click steps back as usual.
+    #[test]
+    fn history_rows_wait_for_an_open_transform() {
+        for transforming in [true, false] {
+            let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+            app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
+            app.run("layer.new.layer", json!({})).unwrap();
+            app.run("select.rect", json!({"x": 20, "y": 20, "width": 60, "height": 40})).unwrap();
+            app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
+            app.run("select.deselect", json!({})).unwrap();
+            let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotosuiteApp| history(app, ui), app);
+            h.run_steps(2);
+            if transforming {
+                let ctx = h.ctx.clone();
+                crate::transform_tool::begin(h.state_mut(), &ctx).unwrap();
+            }
+            let steps = h.state().session.active().unwrap().history.entries().len();
+            // The first state's row, below the 38 pt snapshot row.
+            let row = h.ctx.input(|i| i.viewport_rect()).min + vec2(60.0, 60.0);
+            click(&mut h, row);
+            let after = h.state().session.active().unwrap().history.entries().len();
+            if transforming {
+                assert_eq!(after, steps, "the document's history is untouched");
+                assert!(h.state().ui.transform.is_some());
+            } else {
+                assert!(after < steps, "the click steps back: {steps} -> {after}");
+            }
+        }
     }
 }
 
