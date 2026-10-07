@@ -140,6 +140,9 @@ pub enum DecodeWarning {
     /// The image data ends early (truncated or damaged file); the decoder filled in the rest
     /// (a baseline JPEG's missing rows come out grey).
     Truncated { format: Format },
+    /// Deep image data (per-pixel sample lists) was composited into the flat image; the samples
+    /// themselves (Z and other deep channels) are not part of the flat result.
+    DeepFlattened { format: Format, max_samples_per_pixel: u32 },
 }
 
 impl fmt::Display for DecodeWarning {
@@ -152,7 +155,58 @@ impl fmt::Display for DecodeWarning {
             DecodeWarning::Truncated { format } => {
                 write!(f, "{} data ends early (the file is truncated or damaged); part of the image is missing", format.name())
             }
+            DecodeWarning::DeepFlattened { format, max_samples_per_pixel } => write!(
+                f,
+                "{format} deep data was composited into a flat image (up to {max_samples_per_pixel} samples per pixel); per-pixel depth is not kept",
+                format = format.name()
+            ),
         }
+    }
+}
+
+/// One channel of a [`DeepImage`]: the samples of every pixel, one flat list in pixel order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeepChannel {
+    /// The channel name as in the file (e.g. `R`, `G`, `B`, `A`, `Z`).
+    pub name: String,
+    /// The sample type as stored in the file; `samples` always holds the numeric value as
+    /// f32 (half and 32-bit floats exactly; 32-bit unsigned integers exactly up to 2^24).
+    pub sample: SampleType,
+    /// Every sample of the channel, in pixel order; the samples of pixel `i` are
+    /// `counts[i]..counts[i+1]` (see [`DeepImage::counts`]).
+    pub samples: Vec<f32>,
+}
+
+/// Deep image data (OpenEXR `deepscanline`/`deeptile`): a variable-length list of samples
+/// per pixel, each with its own colour, alpha and depth. All channels share the same sample
+/// layout, so a sample is one index into every channel.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeepImage {
+    pub width: u32,
+    pub height: u32,
+    /// The sample channels in file order.
+    pub channels: Vec<DeepChannel>,
+    /// Cumulative sample counts, `len == width as usize * height as usize + 1`: pixel `i`
+    /// holds the samples `counts[i]..counts[i+1]` of every channel. Monotonically
+    /// non-decreasing, starting and ending at the total sample count.
+    pub counts: Vec<u64>,
+}
+
+impl DeepImage {
+    /// A channel by its exact name.
+    pub fn channel(&self, name: &str) -> Option<&DeepChannel> {
+        self.channels.iter().find(|c| c.name == name)
+    }
+
+    /// The samples of one pixel, as indices into every channel's `samples`.
+    pub fn sample_range(&self, pixel: usize) -> std::ops::Range<u64> {
+        let end = self.counts.get(pixel + 1).copied().unwrap_or(0);
+        self.counts.get(pixel).copied().unwrap_or(end)..end
+    }
+
+    /// The total number of samples over all pixels.
+    pub fn total_samples(&self) -> u64 {
+        self.counts.last().copied().unwrap_or(0)
     }
 }
 
