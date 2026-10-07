@@ -122,6 +122,8 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::Healing => "tools-hbrush",
         Tool::Brush => "tools-brush",
         Tool::Pencil => "tools-pencil",
+        // No Mixer Brush icon in PhotoSuite's set yet: the Brush one stands in.
+        Tool::MixerBrush => "tools-brush",
         Tool::CloneStamp => "tools-clone",
         Tool::Eraser => "tools-eraser",
         Tool::BackgroundEraser => "tools-beraser",

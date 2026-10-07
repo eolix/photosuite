@@ -1,6 +1,6 @@
 //! UI for the retouching tools (healing, clone, history brush, blur/sharpen/smudge, dodge/burn/
-//! sponge) and the smart selection tools (Quick Selection, Object Selection): gesture → engine
-//! command, options bars, and the clone-source marker.
+//! sponge, Mixer Brush) and the smart selection tools (Quick Selection, Object Selection): gesture
+//! → engine command, options bars, and the clone-source marker.
 
 use egui::{Color32, Stroke, vec2};
 use serde_json::{Value, json};
@@ -16,6 +16,7 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
     let pts = json!(points);
     let (cmd, mut p): (&str, Value) = match tool {
         Tool::SpotHealing => ("paint.spotHealing", json!({"type": o.spot_type})),
+        Tool::MixerBrush => ("paint.mixerBrush", json!({})),
         Tool::Healing | Tool::CloneStamp => {
             let mut p = json!({"aligned": o.clone_aligned, "sampleLayer": o.clone_sample});
             // The Clone Source panel's active slot (set by ⌥-click) drives the stroke: the engine
@@ -137,7 +138,9 @@ fn pct(ui: &mut egui::Ui, label: &str, v: &mut f32) {
 
 /// Options bar for the retouching and smart-selection tools. Returns false for other tools.
 pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, tool: Tool) -> bool {
-    if !tool.is_brushlike() && !matches!(tool, Tool::QuickSelection | Tool::ObjectSelection) || matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) {
+    if !tool.is_brushlike() && !matches!(tool, Tool::QuickSelection | Tool::ObjectSelection)
+        || matches!(tool, Tool::Brush | Tool::Pencil | Tool::MixerBrush | Tool::Eraser)
+    {
         return false;
     }
     let o = &mut app.ui.tool_options;
@@ -292,5 +295,49 @@ mod tests {
                 assert_eq!(a > 0.0, all, "{tool:?} sampleAllLayers={all}: alpha {a}");
             }
         }
+    }
+
+    #[test]
+    fn mixer_brush_is_selectable_and_paints_only_inside_the_selection_via_control() {
+        use crate::control::{ControlRequest, Outcome, handle};
+
+        let mut app = app();
+        app.run("paint.pencil", json!({"points": [[50, 30]], "size": 200, "color": "#204080"})).unwrap();
+        app.run("tools.setColors", json!({"foreground": "#f02010"})).unwrap();
+        app.run(
+            "tools.setBrush",
+            json!({
+                "pressureSize": false,
+                "size": 12,
+                "mixer": {"wet": 0.0, "load": 1.0, "mix": 0.0, "flow": 1.0}
+            }),
+        )
+        .unwrap();
+        app.run("select.rect", json!({"x": 35, "y": 20, "width": 30, "height": 20})).unwrap();
+        let before = {
+            let surface = active(&app).surface().unwrap();
+            [surface.rgba(20, 30), surface.rgba(50, 30), surface.rgba(80, 30)]
+        };
+
+        let ctx = egui::Context::default();
+        let (req, _rx) = ControlRequest::new(
+            "ui.pointer",
+            json!({
+                "tool": "mixerBrush",
+                "events": [
+                    {"kind": "down", "x": 8, "y": 30},
+                    {"kind": "move", "x": 92, "y": 30},
+                    {"kind": "up", "x": 92, "y": 30}
+                ]
+            }),
+        );
+        assert!(matches!(handle(&mut app, &ctx, &req), Outcome::Done(_)));
+        assert_eq!(app.ui.tool, Tool::MixerBrush);
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("paint.mixerBrush"));
+
+        let surface = active(&app).surface().unwrap();
+        assert_ne!(surface.rgba(50, 30), before[1], "the selected pixels are mixed");
+        assert_eq!(surface.rgba(20, 30), before[0], "outside the selection is unchanged");
+        assert_eq!(surface.rgba(80, 30), before[2], "the far side outside the selection is unchanged");
     }
 }

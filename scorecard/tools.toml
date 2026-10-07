@@ -15,9 +15,9 @@ note = "Tool::Pencil (B group): live aliased strokes on the pixel grid, square c
 [[item]]
 id = "TOOL-213-2"
 target = "Mixer Brush tool on the toolbar"
-status = "partial"
+status = "done"
 issue = 213
-note = "paint.mixerBrush (brush_cmds.rs:337) + panel options; no Tool variant"
+note = "Tool::MixerBrush in the Brush (B) flyout; Wet/Load/Mix/Flow/Sample All Layers options, command/control dispatch and selection-clipping tests"
 
 [[item]]
 id = "TOOL-213-3"

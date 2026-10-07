@@ -19,6 +19,7 @@ pub enum Tool {
     Count,
     Brush,
     Pencil,
+    MixerBrush,
     Eraser,
     BackgroundEraser,
     MagicEraser,
@@ -52,7 +53,7 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 44] = [
+    pub const ALL: [Tool; 45] = [
         Tool::Move,
         Tool::RectMarquee,
         Tool::EllipseMarquee,
@@ -67,6 +68,7 @@ impl Tool {
         Tool::Count,
         Tool::Brush,
         Tool::Pencil,
+        Tool::MixerBrush,
         Tool::Eraser,
         Tool::BackgroundEraser,
         Tool::MagicEraser,
@@ -106,6 +108,7 @@ impl Tool {
             Tool::EllipseMarquee => "Elliptical Marquee Tool",
             Tool::Brush => "Brush Tool",
             Tool::Pencil => "Pencil Tool",
+            Tool::MixerBrush => "Mixer Brush Tool",
             Tool::Eraser => "Eraser Tool",
             Tool::BackgroundEraser => "Background Eraser Tool",
             Tool::MagicEraser => "Magic Eraser Tool",
@@ -153,6 +156,7 @@ impl Tool {
             self,
             Tool::Brush
                 | Tool::Pencil
+                | Tool::MixerBrush
                 | Tool::Eraser
                 | Tool::BackgroundEraser
                 | Tool::SpotHealing
@@ -172,7 +176,7 @@ impl Tool {
         match self {
             Tool::Move => 'V',
             Tool::RectMarquee | Tool::EllipseMarquee => 'M',
-            Tool::Brush | Tool::Pencil => 'B',
+            Tool::Brush | Tool::Pencil | Tool::MixerBrush => 'B',
             Tool::Eraser | Tool::BackgroundEraser | Tool::MagicEraser => 'E',
             Tool::Eyedropper | Tool::Ruler | Tool::Note | Tool::Count => 'I',
             Tool::Lasso | Tool::PolygonLasso | Tool::MagneticLasso => 'L',
@@ -200,6 +204,7 @@ impl Tool {
             Tool::RectMarquee => "⬚",
             Tool::EllipseMarquee => "◌",
             Tool::Brush => "🖌",
+            Tool::MixerBrush => "🖌",
             Tool::Eraser => "⌫",
             Tool::Eyedropper => "💧",
             Tool::Lasso | Tool::PolygonLasso | Tool::MagneticLasso => "L",
@@ -776,6 +781,8 @@ mod tests {
         assert_eq!(Tool::from_name("Rect"), Some(Tool::RectMarquee));
         assert_eq!(Tool::from_name("RectMarquee"), Some(Tool::RectMarquee));
         assert_eq!(Tool::from_name("Eraser Tool"), Some(Tool::Eraser));
+        assert_eq!(Tool::from_name("mixerBrush"), Some(Tool::MixerBrush));
+        assert_eq!(Tool::from_name("Mixer Brush Tool"), Some(Tool::MixerBrush));
         assert_eq!(Tool::from_name("nope"), None);
     }
 

@@ -268,6 +268,7 @@ pub(crate) fn freehand_tool(tool: Tool) -> bool {
         tool,
         Tool::Brush
             | Tool::Pencil
+            | Tool::MixerBrush
             | Tool::Eraser
             | Tool::BackgroundEraser
             | Tool::HistoryBrush
@@ -2625,9 +2626,18 @@ mod tests {
 
     #[test]
     fn freehand_tools_are_the_ones_that_follow_a_path() {
-        for t in
-            [Tool::Brush, Tool::Pencil, Tool::Eraser, Tool::BackgroundEraser, Tool::CloneStamp, Tool::Smudge, Tool::Dodge, Tool::Lasso, Tool::QuickSelection]
-        {
+        for t in [
+            Tool::Brush,
+            Tool::Pencil,
+            Tool::MixerBrush,
+            Tool::Eraser,
+            Tool::BackgroundEraser,
+            Tool::CloneStamp,
+            Tool::Smudge,
+            Tool::Dodge,
+            Tool::Lasso,
+            Tool::QuickSelection,
+        ] {
             assert!(freehand_tool(t), "{t:?} paints or retouches along a path");
         }
         for t in [Tool::Move, Tool::Eyedropper, Tool::Gradient, Tool::Crop, Tool::RectMarquee, Tool::Type, Tool::Hand] {

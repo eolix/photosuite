@@ -289,6 +289,31 @@ fn options_bar_edits_are_one_set_brush_per_gesture() {
 }
 
 #[test]
+fn mixer_brush_options_update_the_persisted_mixer_settings() {
+    use egui_kittest::kittest::Queryable;
+    let mut h = options_bar_harness(crate::state::Tool::MixerBrush);
+    // PhotoSuite's themes all draw option labels with a trailing colon (`Tokens::pro`).
+    for label in ["Wet:", "Load:", "Mix:", "Flow:", "Sample All Layers"] {
+        assert!(h.get_by_label(label).rect().is_positive(), "missing Mixer Brush option {label}");
+    }
+
+    let initial = h.state().session.journal.len();
+    let at = h.get_by_label("Sample All Layers").rect().center();
+    h.hover_at(at);
+    h.run();
+    h.drag_at(at);
+    h.run();
+    h.drop_at(at);
+    h.run_steps(2);
+
+    assert!(h.state().session.tools.brush.mixer.sample_all_layers);
+    assert_eq!(h.state().session.journal.len(), initial + 1);
+    let (id, params) = h.state().session.journal.last().unwrap();
+    assert_eq!(id, "tools.setBrush");
+    assert_eq!(params["brush"]["mixer"]["sampleAllLayers"], true);
+}
+
+#[test]
 fn drop_targets_and_actions_reorder_presets() {
     use crate::brushes_tab::{Action, apply, drop_target, group_key};
     let mut app = app();

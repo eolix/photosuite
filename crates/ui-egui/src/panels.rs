@@ -25,7 +25,7 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     ],
     &[
         &[Tool::SpotHealing, Tool::Healing],
-        &[Tool::Brush, Tool::Pencil],
+        &[Tool::Brush, Tool::Pencil, Tool::MixerBrush],
         &[Tool::CloneStamp],
         &[Tool::HistoryBrush],
         &[Tool::Eraser, Tool::BackgroundEraser, Tool::MagicEraser],
@@ -478,7 +478,7 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                 }
                 let tool = app.ui.tool;
                 // Brush edits here go through `tools.setBrush`, one journal entry per gesture (Rule 1).
-                if (tool.is_brushlike() && !matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser)) || tool == Tool::QuickSelection {
+                if (tool.is_brushlike() && !matches!(tool, Tool::Brush | Tool::Pencil | Tool::MixerBrush | Tool::Eraser)) || tool == Tool::QuickSelection {
                     let before = app.session.tools.brush.clone();
                     let mut b = before.clone();
                     let pick = brush_preset_chip(ui, &mut b, &app.session.tools.presets);
@@ -511,19 +511,11 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                         if widgets::dropdown(ui, "brush-mode", &mut mode, &opts, 96.0) {
                             b.mode = mode;
                         }
-                        opt_label(ui, tl!("Opacity"));
-                        let mut o = b.opacity * 100.0;
-                        if widgets::value_field(ui, &mut o, 0.0..=100.0, "%", 62.0).changed() {
-                            b.opacity = o / 100.0;
-                        }
+                        percent_field(ui, tl!("Opacity"), &mut b.opacity, 0.0..=100.0, 62.0);
                         if icons::button(ui, "circle-dot", 24.0, b.pressure_opacity, tl!("Always use pressure for opacity")).clicked() {
                             b.pressure_opacity = !b.pressure_opacity;
                         }
-                        opt_label(ui, tl!("Flow"));
-                        let mut f = b.flow * 100.0;
-                        if widgets::value_field(ui, &mut f, 1.0..=100.0, "%", 62.0).changed() {
-                            b.flow = f / 100.0;
-                        }
+                        percent_field(ui, tl!("Flow"), &mut b.flow, 1.0..=100.0, 62.0);
                         let _ = icons::button(ui, "sparkles", 24.0, false, tl!("Enable airbrush-style build-up effects"));
                         opt_label(ui, tl!("Smoothing"));
                         smoothing_field(ui, b, 58.0);
@@ -567,26 +559,29 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                         opt_label(ui, tl!("Size"));
                         widgets::value_field(ui, &mut b.size, 1.0..=2500.0, "px", 76.0);
                         widgets::vline(ui, 22.0);
-                        opt_label(ui, tl!("Hardness"));
-                        let mut h = b.hardness * 100.0;
-                        if widgets::value_field(ui, &mut h, 0.0..=100.0, "%", 66.0).changed() {
-                            b.hardness = h / 100.0;
-                        }
-                        opt_label(ui, tl!("Opacity"));
-                        let mut o = b.opacity * 100.0;
-                        if widgets::value_field(ui, &mut o, 0.0..=100.0, "%", 66.0).changed() {
-                            b.opacity = o / 100.0;
-                        }
-                        opt_label(ui, tl!("Flow"));
-                        let mut f = b.flow * 100.0;
-                        if widgets::value_field(ui, &mut f, 1.0..=100.0, "%", 66.0).changed() {
-                            b.flow = f / 100.0;
-                        }
+                        percent_field(ui, tl!("Hardness"), &mut b.hardness, 0.0..=100.0, 66.0);
+                        percent_field(ui, tl!("Opacity"), &mut b.opacity, 0.0..=100.0, 66.0);
+                        percent_field(ui, tl!("Flow"), &mut b.flow, 1.0..=100.0, 66.0);
                         opt_label(ui, tl!("Smoothing"));
                         smoothing_field(ui, b, 66.0);
                         widgets::vline(ui, 22.0);
                         widgets::toggle(ui, &mut b.pressure_size, tl!("Pressure for Size"));
                         widgets::toggle(ui, &mut b.pressure_opacity, tl!("Pressure for Opacity"));
+                    }
+                    Tool::MixerBrush => {
+                        picked = brush_preset_chip(ui, b, &app.session.tools.presets);
+                        crate::brush_picker::settings_toggle(app, ui);
+                        widgets::vline(ui, 22.0);
+                        for (label, value) in [
+                            (tl!("Wet"), &mut b.mixer.wet),
+                            (tl!("Load"), &mut b.mixer.load),
+                            (tl!("Mix"), &mut b.mixer.mix),
+                            (tl!("Flow"), &mut b.mixer.flow),
+                        ] {
+                            percent_field(ui, label, value, 0.0..=100.0, 62.0);
+                        }
+                        widgets::vline(ui, 22.0);
+                        widgets::checkbox(ui, &mut b.mixer.sample_all_layers, tl!("Sample All Layers"));
                     }
                     Tool::RectMarquee | Tool::EllipseMarquee if t.pro => {
                         ui.spacing_mut().item_spacing.x = 2.0;
@@ -888,6 +883,14 @@ fn opt_label(ui: &mut egui::Ui, s: &str) {
     let t = Tokens::get(ui.ctx());
     let text = if t.pro && !s.ends_with(':') { format!("{s}:") } else { s.to_string() };
     ui.label(RichText::new(tl!(&text)).color(t.text_dim));
+}
+
+fn percent_field(ui: &mut egui::Ui, label: &str, value: &mut f32, range: std::ops::RangeInclusive<f32>, width: f32) {
+    opt_label(ui, label);
+    let mut percent = *value * 100.0;
+    if widgets::value_field(ui, &mut percent, range, "%", width).changed() {
+        *value = percent / 100.0;
+    }
 }
 
 fn hint(ui: &mut egui::Ui, s: &str) {
