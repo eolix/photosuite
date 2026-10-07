@@ -454,6 +454,63 @@ fn set_visible(s: &mut Session, p: &Value, visible: bool) -> Result<Value> {
     Ok(Value::Null)
 }
 
+/// Is `id` shown alone: it and its enclosing groups visible, every layer outside it hidden?
+fn shown_alone(doc: &Document, id: LayerId) -> bool {
+    let Some(path) = doc.path_of(id) else { return false };
+    doc.walk().iter().all(|(p, _, l)| match () {
+        _ if path.starts_with(p) => l.visible,
+        _ if p.starts_with(&path) => true,
+        _ => !l.visible,
+    })
+}
+
+/// ⌥-click on a layer's eye: show only that layer, or, when it already is shown
+/// alone, restore every layer's visibility from before (all layers shown if that was lost).
+/// ⌥-clicking another eye while one layer is shown alone moves the solo and keeps the snapshot.
+fn show_only(s: &mut Session, p: &Value) -> Result<Value> {
+    let id = layer_param(s, p)?;
+    let st = s.active().ok_or(EngineError::NoDocument)?;
+    let doc = st.doc.clone();
+    let path = doc.path_of(id).ok_or(EngineError::NoLayer(id))?;
+    let saved = st.show_only.clone().filter(|(prev, _)| shown_alone(&doc, *prev));
+    if shown_alone(&doc, id) {
+        let before: Vec<(LayerId, bool)> = match saved {
+            Some((_, v)) => v,
+            None => doc.walk().iter().map(|(_, _, l)| (l.id, true)).collect(),
+        };
+        s.edit("Show Layers", |doc, _| {
+            for (lid, visible) in &before {
+                if let Some(l) = doc.layer_mut(*lid) {
+                    l.visible = *visible;
+                }
+            }
+            Ok(())
+        })?;
+        if let Some(st) = s.active_mut() {
+            st.show_only = None;
+        }
+        return Ok(json!({"shownAlone": false}));
+    }
+    let snapshot = match saved {
+        Some((_, v)) => v,
+        None => doc.walk().iter().map(|(_, _, l)| (l.id, l.visible)).collect(),
+    };
+    let rows: Vec<(LayerId, bool)> =
+        doc.walk().iter().filter(|(p, _, _)| !(p.starts_with(&path) && p.len() > path.len())).map(|(p, _, l)| (l.id, path.starts_with(p))).collect();
+    s.edit("Show Only This Layer", |doc, _| {
+        for (lid, visible) in &rows {
+            if let Some(l) = doc.layer_mut(*lid) {
+                l.visible = *visible;
+            }
+        }
+        Ok(())
+    })?;
+    if let Some(st) = s.active_mut() {
+        st.show_only = Some((id, snapshot));
+    }
+    Ok(json!({"shownAlone": true}))
+}
+
 /// Pixels of a fill or smart-object layer's content alone (no mask, effects or opacity).
 fn content_pixels(doc: &Document, l: &Layer) -> photosuite_raster::Surface {
     let mut tmp = l.clone();
@@ -685,6 +742,15 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         spec!("layer.hideLayers", "Hide Layers", &["Layer"], Some("Cmd+,"), r##"{"layer":id?}"##, has_layer, |s, p| set_visible(s, p, false)),
         spec!("layer.showLayers", "Show Layers", &[], None, r##"{"layer":id?}"##, has_layer, |s, p| set_visible(s, p, true)),
+        spec!(
+            "layer.showOnly",
+            "Show Only This Layer",
+            &[],
+            None,
+            r##"{"layer":id?} → {shownAlone} (⌥-click a layer's eye; again restores the other layers' visibility)"##,
+            has_layer,
+            show_only
+        ),
         spec!("filter.blur.average", "Average", &["Filter", "Blur"], None, "{}", has_pixels, |s, _| average(s)),
         spec!("filter.render.clouds", "Clouds", &["Filter", "Render"], None, r##"{"seed":u32=0}"##, has_pixels, |s, p| clouds(s, p, false)),
         spec!("filter.render.differenceClouds", "Difference Clouds", &["Filter", "Render"], None, r##"{"seed":u32=0}"##, has_pixels, |s, p| clouds(s, p, true)),
@@ -828,6 +894,23 @@ mod tests {
         s.execute("edit.pasteSpecial.pasteOutside", json!({})).unwrap();
         let m = active(&s).mask.as_ref().unwrap();
         assert_eq!((m.value(0, 0), m.value(22, 12)), (1.0, 0.0));
+    }
+
+    #[test]
+    fn option_click_eye_shows_one_layer_then_restores() {
+        let mut s = session(8);
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let ids: Vec<LayerId> = doc(&s).layers.iter().map(|l| l.id).collect();
+        // Background, Layer 1 (hidden beforehand), Layer 2.
+        s.execute("layer.hideLayers", json!({"layer": ids[1].0})).unwrap();
+        let vis = |s: &Session| doc(s).layers.iter().map(|l| l.visible).collect::<Vec<_>>();
+        assert_eq!(s.execute("layer.showOnly", json!({"layer": ids[1].0})).unwrap()["shownAlone"], true);
+        assert_eq!(vis(&s), [false, true, false]);
+        // Another eye moves the solo; the original snapshot survives.
+        s.execute("layer.showOnly", json!({"layer": ids[2].0})).unwrap();
+        assert_eq!(vis(&s), [false, false, true]);
+        assert_eq!(s.execute("layer.showOnly", json!({"layer": ids[2].0})).unwrap()["shownAlone"], false);
+        assert_eq!(vis(&s), [true, false, true], "restored, with Layer 1 still hidden");
     }
 
     #[test]

@@ -1654,7 +1654,12 @@ fn layer_row(
     let eye_resp = ui.interact(eye, ui.id().with(("eye", l.id.0)), Sense::click());
     icons::paint(ui, eye, if l.visible { "eye" } else { "eye-off" }, 15.0, if l.visible { t.icon } else { t.text_faint });
     if eye_resp.clicked() {
-        actions.push(("layer.setProps".into(), json!({"layer": l.id.0, "visible": !l.visible})));
+        // ⌥-click shows only this layer; ⌥-click it again to restore the others.
+        if ui.input(|i| i.modifiers.alt) {
+            actions.push(("layer.showOnly".into(), json!({"layer": l.id.0})));
+        } else {
+            actions.push(("layer.setProps".into(), json!({"layer": l.id.0, "visible": !l.visible})));
+        }
     }
     // Everything but the thumbnails, the indentation and the name, so a narrow panel squeezes
     // the indentation first, then the thumbnails (a layer with two masks has three).
