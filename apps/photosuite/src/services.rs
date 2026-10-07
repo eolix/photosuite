@@ -21,8 +21,16 @@ const OPEN_EXTS: &[&str] = &[
 /// File › Save As formats: (filter name, extensions). The filter matching the suggested name's
 /// extension comes first; anything else defaults to Photoshop. The native .pcraft format isn't
 /// offered (it still opens, and an opened .pcraft file still saves in place).
-const SAVE_FILTERS: &[(&str, &[&str])] =
-    &[("Photoshop", &["psd", "psb"]), ("PNG", &["png"]), ("JPEG", &["jpg"]), ("TIFF", &["tif"]), ("Targa", &["tga"]), ("OpenEXR", &["exr"]), ("PDF", &["pdf"])];
+const SAVE_FILTERS: &[(&str, &[&str])] = &[
+    ("Photoshop", &["psd", "psb"]),
+    ("PNG", &["png"]),
+    ("JPEG", &["jpg"]),
+    ("WebP", &["webp"]),
+    ("TIFF", &["tif"]),
+    ("Targa", &["tga"]),
+    ("OpenEXR", &["exr"]),
+    ("PDF", &["pdf"]),
+];
 
 /// [`SAVE_FILTERS`] with the one for `suggested`'s extension first.
 fn save_filters(suggested: &str) -> Vec<(&'static str, &'static [&'static str])> {
@@ -359,6 +367,14 @@ mod tests {
     use photosuite_format::list_recovery;
     use photosuite_ui_egui::{PhotosuiteApp, prefs_ui};
     use serde_json::json;
+
+    /// "Export As" formats must lead with their own filter, or the save panel appends the first one's extension (`photo.webp.psd`).
+    #[test]
+    fn save_filters_lead_with_every_export_format() {
+        for ext in ["png", "jpg", "webp", "tif", "tga"] {
+            assert!(save_filters(&format!("photo.{ext}"))[0].1.contains(&ext), "{ext}");
+        }
+    }
 
     const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
     const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
