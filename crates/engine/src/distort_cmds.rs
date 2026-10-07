@@ -22,6 +22,7 @@ use photosuite_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
+use crate::photo_cmds::Stopwatch;
 use crate::{EngineError, Result, Session};
 
 pub const LIQUIFY: &str = "filter.liquify";
@@ -278,7 +279,7 @@ fn liquify(s: &mut Session, p: &Value) -> Result<Value> {
     if strokes.is_empty() {
         return Ok(json!({"layer": id.0, "changed": false}));
     }
-    let t0 = std::time::Instant::now();
+    let t0 = Stopwatch::start();
     let field = LiquifyField::from_strokes(canvas, cell, &strokes);
     let smart = matches!(s.active().and_then(|d| d.doc.layer(id)).map(|l| &l.content), Some(LayerContent::Smart(_)));
     if field.is_identity() && !smart {
@@ -300,7 +301,7 @@ fn liquify(s: &mut Session, p: &Value) -> Result<Value> {
         None,
     )?;
     let mut r = r;
-    r["ms"] = json!(t0.elapsed().as_secs_f64() * 1000.0);
+    r["ms"] = json!(t0.ms());
     r["maxDisplacement"] = json!(field.max_displacement());
     Ok(r)
 }
