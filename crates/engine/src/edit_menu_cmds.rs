@@ -730,7 +730,8 @@ fn find_replace(s: &mut Session, p: &Value) -> Result<Value> {
             let cursor = s.edit_state.find_cursor;
             let start = cursor.and_then(|(id, _, _)| layers.iter().position(|l| *l == id)).unwrap_or(0);
             for k in 0..=layers.len() {
-                let id = layers[(start + k) % layers.len().max(1)];
+                // `allLayers: false` with a non-type layer active leaves no layers to search (#703).
+                let Some(&id) = layers.get((start + k) % layers.len().max(1)) else { break };
                 let Some(text) = text_of(&doc, id) else { continue };
                 let ms = find_matches(&text, &find, case, whole);
                 let hit = match (k, cursor) {

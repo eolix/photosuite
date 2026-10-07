@@ -303,3 +303,26 @@ fn find_and_replace_across_type_layers() {
     assert_ne!(f2["found"]["layer"], f2["changed"]["layer"]);
     assert!(s.execute("edit.findAndReplaceText", json!({"find": ""})).is_err());
 }
+
+#[test]
+fn find_in_the_active_layer_finds_nothing_when_it_is_not_type() {
+    // #703: `allLayers: false` with a raster layer active leaves nothing to search.
+    let mut s = session(8);
+    let id = s.execute("type.create", json!({"text": "abc def", "x": 2, "y": 12})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("layer.new.layer", json!({"name": "raster"})).unwrap();
+    let steps = s.active().unwrap().history.entries().len();
+    for action in ["find", "change", "changeFind"] {
+        for forward in [true, false] {
+            let r =
+                s.execute("edit.findAndReplaceText", json!({"find": "abc", "replace": "x", "allLayers": false, "action": action, "forward": forward})).unwrap();
+            assert!(r["found"].is_null() && r["changed"].is_null(), "{action} {forward}: {r}");
+        }
+    }
+    let r = s.execute("edit.findAndReplaceText", json!({"find": "abc", "replace": "x", "allLayers": false})).unwrap();
+    assert_eq!(r["count"].as_u64(), Some(0));
+    assert_eq!(s.active().unwrap().history.entries().len(), steps);
+    // With the type layer active, the same search finds it.
+    s.execute("layer.select", json!({"layer": id})).unwrap();
+    let r = s.execute("edit.findAndReplaceText", json!({"find": "abc", "allLayers": false, "action": "find"})).unwrap();
+    assert_eq!((r["found"]["layer"].as_u64(), r["found"]["text"].as_str()), (Some(id), Some("abc")));
+}
