@@ -42,6 +42,7 @@ pub mod inspect;
 pub mod jobs;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
+pub mod layer_nav_cmds;
 pub mod layer_style;
 pub mod lens_cmds;
 pub mod mask_view_cmds;

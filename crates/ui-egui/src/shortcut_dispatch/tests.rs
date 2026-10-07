@@ -297,3 +297,18 @@ fn a_disabled_shortcut_says_why() {
     assert!(matches!(log.as_slice(), [(id, Outcome::Disabled(_) | Outcome::Failed(_))] if id == "layer.mergeLayers"), "{log:?}");
     assert!(!h.state().ui.status.is_empty() && h.state().ui.status_error, "the status bar says why");
 }
+
+/// #352: ⌥[ ⌥] ⌥, ⌥. and ⇧⌥[ walk the Layers panel's rows from the keyboard.
+#[test]
+fn alt_brackets_walk_the_layers_panel() {
+    let mut h = harness();
+    // Rows, top to bottom: paint, Hello (type), group, in-group, Background.
+    assert_eq!(active_name(&h), "paint");
+    for (key, want) in [("Alt+[", "Hello"), ("Alt+[", "group"), ("Alt+[", "in-group"), ("Alt+]", "group"), ("Alt+,", "Background"), ("Alt+.", "paint")] {
+        press(&mut h, key);
+        assert_eq!(active_name(&h), want, "after {key}");
+    }
+    press(&mut h, "Alt+Shift+[");
+    assert_eq!(active_name(&h), "Hello");
+    assert_eq!(h.state().session.active().unwrap().selected_layers().len(), 2, "⇧⌥[ adds to the selection");
+}
