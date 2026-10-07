@@ -1761,7 +1761,8 @@ fn layer_row(
     }
     // Double-click: the name renames in place; the Background, which can't be renamed while
     // it's locked, becomes a normal layer; an adjustment or fill thumbnail opens its settings and
-    // a Smart Object thumbnail its contents; anywhere else on the row opens Layer Style (#350).
+    // a Smart Object thumbnail its contents, and a type thumbnail edits its text; anywhere else
+    // on the row opens Layer Style (#350, #537).
     // The first click already made this the active layer.
     if resp.double_clicked() {
         let pos = resp.interact_pointer_pos();
@@ -1777,6 +1778,7 @@ fn layer_row(
             let id = match &l.content {
                 LayerContent::Adjustment(_) | LayerContent::Fill(_) if on(thumb) => "layer.layerContentOptions",
                 LayerContent::Smart(_) if on(thumb) => "layer.smartObjects.editContents",
+                LayerContent::Text(_) if on(thumb) => "type.editText",
                 _ => "layer.layerStyle.blendingOptions",
             };
             if crate::menus::is_enabled(app, id) {

@@ -333,3 +333,6 @@ mod tests;
 
 #[cfg(test)]
 mod rename_tests;
+
+#[cfg(test)]
+mod edit_tests;
