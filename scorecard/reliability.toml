@@ -39,9 +39,9 @@ note = "try_reserve only in io/flat.rs:221; codec max_alloc limits cover decode 
 [[item]]
 id = "REL-212-2"
 target = "Export switches to PSB when the estimated file size exceeds 2 GB"
-status = "missing"
+status = "done"
 issue = 212
-note = "io/psd_export.rs:558 switches only when a side exceeds 30000 px"
+note = "PSD export uses checked size estimates for raster, masks, channels, and retained metadata"
 
 [[item]]
 id = "REL-212-3"

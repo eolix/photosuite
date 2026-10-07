@@ -11,7 +11,7 @@ use photosuite_doc::{AlphaChannel, Document};
 use photosuite_geom::Rect;
 use photosuite_psd::file::LayerInfoPlacement;
 use photosuite_psd::resources::{ImageResource, ResolutionInfo, ids, version_info_resource};
-use photosuite_psd::{ColorMode as PsdMode, Compression, Header, ImageData, PsdFile, Version};
+use photosuite_psd::{ColorMode as PsdMode, Compression, Header, ImageData, PsdFile};
 use photosuite_raster::Surface;
 
 use crate::pixels::{encode_be, psd_depth};
@@ -86,7 +86,13 @@ pub(crate) fn document_to_psd(doc: &Document, force_psb: bool) -> (PsdFile, Vec<
         }
     }
     let big = doc.size.width > 30_000 || doc.size.height > 30_000;
-    let version = if force_psb || big { Version::Psb } else { Version::Psd };
+    let size_exceeds_limit = !force_psb && !big && crate::psd_export::psd_size_exceeds_limit(doc);
+    let version = crate::psd_export::psd_version(doc, force_psb, size_exceeds_limit);
+    if big && !force_psb {
+        warnings.push("document exceeds 30000 px; written as PSB".into());
+    } else if size_exceeds_limit && !force_psb {
+        warnings.push("estimated encoded size exceeds 2 GB; written as PSB".into());
+    }
     let header = Header::new(version, doc.size.width, doc.size.height, channels.len().max(1) as u16, psd_depth(sample), PsdMode::Multichannel);
     let image_data = ImageData::encode(Compression::Rle, &planes, &header)
         .or_else(|_| ImageData::encode(Compression::Raw, &planes, &header))
