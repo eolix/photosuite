@@ -186,6 +186,22 @@ pub fn backends(plan: &Plan, os: Os) -> Option<wgpu::Backends> {
     })
 }
 
+/// The DX12 shader compiler (#712). wgpu's default loads `dxcompiler.dll` by name, and the
+/// Windows DLL search falls through to the current directory and `PATH`, so another program's DXC
+/// build (a browser's, an SDK's) got loaded and failed device creation or crashed the first shader
+/// compile. Use a `dxcompiler.dll` shipped beside the executable, by its full path; otherwise FXC
+/// (`d3dcompiler_47.dll`, part of Windows). `WGPU_DX12_COMPILER` still picks one explicitly.
+pub fn dx12_compiler(env: Option<&str>, exe_dir: Option<&Path>) -> wgpu::Dx12Compiler {
+    if let Some(c) = env.and_then(|v| v.trim().parse().ok()) {
+        return c;
+    }
+    let beside_exe = exe_dir.map(|d| d.join("dxcompiler.dll")).filter(|p| p.is_file());
+    match beside_exe.as_deref().and_then(Path::to_str) {
+        Some(p) => wgpu::Dx12Compiler::DynamicDxc { dxc_path: p.to_string() },
+        None => wgpu::Dx12Compiler::Fxc,
+    }
+}
+
 /// What adapter selection needs to know about an adapter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Candidate {
@@ -237,13 +253,18 @@ pub fn intel_dx12_applied(adapters: &[Candidate], chosen: usize, os: Os) -> bool
         && adapters.iter().any(|a| a.vendor == INTEL && a.backend == wgpu::Backend::Vulkan)
 }
 
-/// Configure eframe's wgpu setup for `plan`: instance backends, adapter selection (Intel on
-/// Windows, software adapters for `cpu`) and the marker update once the adapter is chosen.
-/// `note` receives a remark for System Info (e.g. the Intel default).
+/// Configure eframe's wgpu setup for `plan`: instance backends, the DX12 shader compiler, adapter
+/// selection (Intel on Windows, software adapters for `cpu`) and the marker update once the
+/// adapter is chosen. `note` receives a remark for System Info (e.g. the Intel default).
 pub fn configure(setup: &mut egui_wgpu::WgpuSetup, plan: &Plan, os: Os, sentinel: SharedSentinel, note: Arc<Mutex<Option<String>>>) {
     if let egui_wgpu::WgpuSetup::CreateNew(create) = setup {
         if let Some(b) = backends(plan, os) {
             create.instance_descriptor.backends = b;
+        }
+        if os == Os::Windows {
+            let exe = std::env::current_exe().ok();
+            let env = std::env::var("WGPU_DX12_COMPILER").ok();
+            create.instance_descriptor.backend_options.dx12.shader_compiler = dx12_compiler(env.as_deref(), exe.as_deref().and_then(Path::parent));
         }
         let select = plan.env.is_none() && (plan.backend == GpuBackend::Cpu || (plan.backend == GpuBackend::Auto && os == Os::Windows));
         if select {
@@ -610,5 +631,37 @@ mod tests {
         std::fs::write(&p, "{not json").unwrap();
         assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// #712: never a `dxcompiler.dll` found through the DLL search path (current directory, PATH).
+    #[test]
+    fn dx12_compiler_is_fxc_or_dxc_beside_the_exe() {
+        use wgpu::Dx12Compiler as C;
+        let dir = temp_dir("dxc");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(matches!(dx12_compiler(None, None), C::Fxc));
+        assert!(matches!(dx12_compiler(None, Some(&dir)), C::Fxc));
+        std::fs::write(dir.join("dxcompiler.dll"), b"MZ").unwrap();
+        let expected = dir.join("dxcompiler.dll");
+        assert!(matches!(dx12_compiler(None, Some(&dir)), C::DynamicDxc { dxc_path } if Path::new(&dxc_path) == expected));
+        // An explicit WGPU_DX12_COMPILER wins; an unknown value is ignored.
+        assert!(matches!(dx12_compiler(Some(" FXC "), Some(&dir)), C::Fxc));
+        assert!(matches!(dx12_compiler(Some("dxc"), None), C::DynamicDxc { dxc_path } if dxc_path == "dxcompiler.dll"));
+        assert!(matches!(dx12_compiler(Some("quantum"), None), C::Fxc));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // The app's setup replaces wgpu's default (`Auto`: DXC by name from the search path).
+        let mut setup = egui_wgpu::WgpuSetup::without_display_handle();
+        let plan = plan(Auto, None, None, false, Os::Windows);
+        configure(&mut setup, &plan, Os::Windows, Arc::new(Mutex::new(None)), Arc::default());
+        let egui_wgpu::WgpuSetup::CreateNew(create) = &setup else { panic!("a new instance") };
+        if std::env::var_os("WGPU_DX12_COMPILER").is_none() {
+            let safe = match &create.instance_descriptor.backend_options.dx12.shader_compiler {
+                C::Fxc => true,
+                C::DynamicDxc { dxc_path } => Path::new(dxc_path).is_absolute(),
+                C::StaticDxc | C::Auto => false,
+            };
+            assert!(safe, "{:?}", create.instance_descriptor.backend_options.dx12.shader_compiler);
+        }
     }
 }
