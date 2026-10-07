@@ -133,7 +133,10 @@ pub struct JobCancelParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct BatchParams {
-    /// Commands to run in order: `[{"id": "layer.new.layer", "params": {"name": "Ink"}}, …]`.
+    /// Commands to run in order: `[{"id": "layer.new.layer", "params": {"name": "Ink"}}, …]`. A
+    /// step with `"wait": false` starts a long command as a background job (its result is
+    /// `{"job": id}`, as in `command_run`); later steps that edit the same document fail until
+    /// the job ends.
     pub steps: Vec<RunParams>,
     /// Stop at the first failing step (default true).
     #[serde(default)]
@@ -505,7 +508,8 @@ impl PhotosuiteMcp {
             return Ok(fail(format!("batch contains {} steps; maximum is {MAX_BATCH_STEPS}", p.steps.len())));
         }
         let stop = p.stop_on_error.unwrap_or(true);
-        let steps: Vec<Value> = p.steps.into_iter().map(|s| json!({"command": s.id, "params": s.params.unwrap_or_else(|| json!({}))})).collect();
+        let steps: Vec<Value> =
+            p.steps.into_iter().map(|s| json!({"command": s.id, "params": s.params.unwrap_or_else(|| json!({})), "wait": s.wait.unwrap_or(true)})).collect();
         let args = json!({"steps": steps, "stopOnError": stop});
         if let Some(r) = self.headless_op(move |h| h.batch(&args)).await {
             return to_result(r);

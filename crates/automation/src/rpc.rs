@@ -11,7 +11,7 @@
 //!   `doc.save {path?, format?, quality?, index?}`, `doc.inspect {index?}`,
 //!   `doc.render {index?, maxSide?, path?}` (writes a PNG to `path`, else
 //!   returns it base64-encoded), `doc.select {index}`, `doc.close {index?}`
-//! - `batch {steps: [{command, params?} | {method, params?}], stopOnError?}`
+//! - `batch {steps: [{command, params?, wait?} | {method, params?}], stopOnError?}`
 //! - `methods`: this list.
 
 use std::io::{BufRead, Write};
@@ -133,7 +133,7 @@ impl Headless {
         }
     }
 
-    /// Run `steps` in order. Each step is `{command, params?}` (an engine command) or
+    /// Run `steps` in order. Each step is `{command, params?, wait?}` (an engine command) or
     /// `{method, params?}` (any [`METHODS`] entry). Stops at the first error unless
     /// `stopOnError` is false; the reply lists every step's result.
     pub fn batch(&mut self, p: &Value) -> Result<Value, AutomationError> {
@@ -148,7 +148,9 @@ impl Headless {
         for (i, s) in steps.iter().enumerate() {
             let params = s.get("params").cloned().unwrap_or(Value::Null);
             let r = if let Some(c) = str_of(s, "command") {
-                self.command_run(c, params)
+                // Like `engine.execute`: `wait: false` starts a long command as a background job.
+                let wait = s.get("wait").and_then(Value::as_bool).unwrap_or(true);
+                self.command_start(c, params, wait)
             } else if let Some(m) = str_of(s, "method") {
                 if m == "batch" { Err(bad("nested batch")) } else { self.handle(m, params) }
             } else {
@@ -419,6 +421,29 @@ mod tests {
         let l = h.handle("jobs.list", json!({})).unwrap();
         assert_eq!(l["jobs"].as_array().unwrap().iter().find(|j| j["id"] == job).unwrap()["state"], "cancelled");
         assert!(std::sync::Arc::ptr_eq(&h.session.active().unwrap().doc, &before));
+    }
+
+    #[test]
+    fn batch_steps_can_start_background_jobs() {
+        let mut h = Headless::new();
+        h.handle("doc.new", json!({"width": 600, "height": 400})).unwrap();
+        let steps = json!([
+            {"command": "layer.new.layer"},
+            {"command": "edit.fill", "params": {"color": "#808080"}},
+            {"command": "filter.blur.gaussianBlur", "params": {"radius": 40}, "wait": false}
+        ]);
+        let r = h.handle("batch", json!({"steps": steps})).unwrap();
+        assert_eq!(r["completed"], 3, "{r}");
+        let job = r["results"][2]["result"]["job"].as_u64().unwrap_or_else(|| panic!("no job id: {r}"));
+        assert_eq!(r["results"][2]["result"]["pending"], true);
+        let listed = h.handle("jobs.list", json!({})).unwrap();
+        assert!(listed["jobs"].as_array().unwrap().iter().any(|j| j["id"] == job), "{listed}");
+        let t = std::time::Instant::now();
+        while h.session.jobs().iter().any(|j| j.id.0 == job) {
+            assert!(t.elapsed().as_secs() < 60);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+            h.handle("jobs.list", json!({})).unwrap();
+        }
     }
 
     #[test]
