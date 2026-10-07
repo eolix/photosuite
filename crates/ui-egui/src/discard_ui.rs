@@ -85,6 +85,7 @@ pub fn guard_window_close(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     }
     if intercept(app, EXIT, &Value::Null) {
         ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
     }
 }
 
@@ -299,7 +300,10 @@ mod tests {
         input.viewports.insert(egui::ViewportId::ROOT, info);
         let mut out = egui::Context::default().run_ui(input, |ui| guard_window_close(app, ui.ctx()));
         out.textures_delta.clear();
-        out.viewport_output[&egui::ViewportId::ROOT].commands.iter().any(|c| matches!(c, egui::ViewportCommand::CancelClose))
+        let commands = &out.viewport_output[&egui::ViewportId::ROOT].commands;
+        let cancelled = commands.iter().any(|c| matches!(c, egui::ViewportCommand::CancelClose));
+        assert_eq!(commands.iter().any(|c| matches!(c, egui::ViewportCommand::Focus)), cancelled);
+        cancelled
     }
 
     #[test]
