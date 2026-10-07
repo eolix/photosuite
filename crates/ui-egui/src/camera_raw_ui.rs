@@ -1,8 +1,9 @@
 //! Filter › Camera Raw Filter…: a large dialog like Adobe Camera Raw's (preview on the left,
 //! edit panels on the right: Basic, Curve, Detail, Color Mixer, Color Grading, Effects).
 //!
-//! The preview runs [`photosuite_algo::camera_raw::develop`] on a CPU proxy of the layer
-//! (≤ 900 px, `pixel_scale` keeps pixel radii true to the full image), recomputed when a
+//! The dialog is a large modal over the document, at most 1400 × 900 pt. The preview runs
+//! [`photosuite_algo::camera_raw::develop`] on a CPU proxy of the layer, sized to the preview
+//! (`pixel_scale` keeps pixel radii true to the full image), recomputed when a
 //! control changes. OK runs `filter.cameraRaw` with the non-default settings, so the result is
 //! one history step (or a smart filter on a smart object) and exactly replayable.
 //!
@@ -128,7 +129,7 @@ impl CameraRawDialog {
 /// The proxy's long side for an image of `w × h`: what the preview draws it at, in physical
 /// pixels, so it is shown 1:1 — neither magnified (soft) nor shrunk without mipmaps (grainy).
 fn preview_side(ctx: &egui::Context, w: usize, h: usize) -> usize {
-    let screen = ctx.content_rect();
+    let screen = widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let (vw, vh) = ((screen.width() - PANEL_W - 32.0).max(64.0), (screen.height() - 30.0 - 48.0 - 32.0).max(64.0));
     let fit = (vw / w.max(1) as f32).min(vh / h.max(1) as f32);
     let side = (w.max(h) as f32 * fit * ctx.pixels_per_point()).round() as usize;
@@ -337,7 +338,10 @@ fn row_reset(ui: &mut egui::Ui, dirty: &mut bool, label: &str, v: &mut f32, rang
 /// opens it and closes the rest (or closes it, when it was the open one).
 fn section(ui: &mut egui::Ui, open: &mut Option<String>, title: &str, body: impl FnOnce(&mut egui::Ui)) {
     let is_open = open.as_deref() == Some(title);
-    let r = egui::CollapsingHeader::new(egui::RichText::new(tl!(&title)).font(FontId::proportional(13.0))).id_salt(("cr-section", title)).open(Some(is_open)).show(ui, body);
+    let r = egui::CollapsingHeader::new(egui::RichText::new(tl!(&title)).font(FontId::proportional(13.0)))
+        .id_salt(("cr-section", title))
+        .open(Some(is_open))
+        .show(ui, body);
     if r.header_response.clicked() {
         *open = if is_open { None } else { Some(title.to_string()) };
     }
@@ -412,6 +416,9 @@ fn curve_editor(ui: &mut egui::Ui, p: &mut CameraRaw, dirty: &mut bool) {
     }
 }
 
+/// The dialog's largest size; smaller windows get a smaller one ([`widgets::tool_dialog_rect`]).
+const DIALOG_MAX: egui::Vec2 = vec2(1400.0, 900.0);
+
 pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     open_pending(app, ctx);
     if app.camera_raw.is_none() {
@@ -419,18 +426,16 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     }
     refit_proxy(app, ctx);
     let t = Tokens::get(ctx);
-    let screen = ctx.content_rect();
+    let rect = widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let mut action: Option<&str> = None;
-    egui::Area::new(egui::Id::new("camera-raw-dialog")).order(egui::Order::Foreground).fixed_pos(screen.min).show(ctx, |ui| {
+    widgets::tool_dialog(ctx, egui::Id::new("camera-raw-dialog"), rect, 30.0, |ui, full| {
         let Some(d) = app.camera_raw.as_mut() else { return };
         if d.dirty {
             d.render(ctx);
         }
-        let (full, _) = ui.allocate_exact_size(screen.size(), Sense::click());
         let painter = ui.painter().clone();
-        painter.rect_filled(full, 0.0, t.chrome);
         let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, widgets::tool_dialog_corners(ctx, true, true, true), t.dock);
         painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
         let heading = if d.opened_file.is_some() { format!("Camera Raw ({})", d.layer_name) } else { format!("Camera Raw Filter ({})", d.layer_name) };
         painter.text(title.center(), Align2::CENTER_CENTER, heading, FontId::proportional(13.0), t.text);
@@ -604,7 +609,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         // Footer.
         let foot = ERect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
-        painter.rect_filled(foot, 0.0, t.dock);
+        painter.rect_filled(foot, widgets::tool_dialog_corners(ctx, false, true, true), t.dock);
         painter.line_segment([foot.left_top(), foot.right_top()], Stroke::new(1.0, t.separator));
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
         let ok = if d.opened_file.is_some() { tl!("Open") } else { tl!("OK") };
@@ -707,12 +712,78 @@ mod tests {
         assert!(menu(&mut app, &ctx, "filter.cameraRaw", &json!({"ui": {"set": {"exposure": "x"}}})).unwrap().is_err());
     }
 
+    /// A dialog over the document, not a takeover: its OK button sits inside the centred
+    /// dialog, short of the window's corner.
+    #[test]
+    fn camera_raw_is_a_dialog_over_the_document() {
+        use egui_kittest::kittest::Queryable;
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
+        let mut h =
+            egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).build_ui_state(|ui, app: &mut PhotosuiteApp| show(app, ui.ctx()), app);
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        let ctx = h.ctx.clone();
+        menu(h.state_mut(), &ctx, "filter.cameraRaw", &json!({})).unwrap().unwrap();
+        h.run_steps(3);
+        let ok = h.get_by_label("OK").rect();
+        let dialog = widgets::tool_dialog_rect(&ctx, DIALOG_MAX);
+        assert!(dialog.contains_rect(ok), "OK {ok:?} inside the dialog {dialog:?}");
+        assert!(ok.right() < 1600.0 - 32.0 && ok.bottom() < 1000.0 - 32.0, "not in the window's corner: {ok:?}");
+        // Dragging the title bar moves it, like the other dialogs.
+        let from = pos2(dialog.center().x, dialog.top() + 12.0);
+        h.hover_at(from);
+        h.drag_at(from);
+        h.run_steps(2);
+        for i in 1..=10 {
+            h.hover_at(from + vec2(-8.0, 5.0) * i as f32);
+            h.run_steps(1);
+        }
+        h.drop_at(from + vec2(-80.0, 50.0));
+        h.run_steps(3);
+        let moved = h.get_by_label("OK").rect();
+        assert!(moved.left() < ok.left() - 40.0 && moved.top() > ok.top() + 20.0, "{ok:?} → {moved:?}");
+        // However far it is dragged, it stays on screen.
+        let from = moved.center() - (ok.center() - from);
+        h.hover_at(from);
+        h.drag_at(from);
+        h.run_steps(2);
+        for i in 1..=10 {
+            h.hover_at(from + vec2(-200.0, 200.0) * i as f32);
+            h.run_steps(1);
+        }
+        h.drop_at(from + vec2(-2000.0, 2000.0));
+        h.run_steps(3);
+        let far = h.get_by_label("OK").rect();
+        assert!(far.bottom() <= 1000.0, "{far:?}");
+        // Nor into the title bar: on macOS that is the system's, under the traffic lights, and a
+        // drag there would move the whole window.
+        let from = far.center() - (ok.center() - pos2(dialog.center().x, dialog.top() + 12.0));
+        h.hover_at(from);
+        h.drag_at(from);
+        h.run_steps(2);
+        for i in 1..=10 {
+            h.hover_at(from + vec2(0.0, -200.0) * i as f32);
+            h.run_steps(1);
+        }
+        h.drop_at(from + vec2(0.0, -2000.0));
+        h.run_steps(3);
+        let top = h.get_by_label("OK").rect().bottom() - (ok.bottom() - dialog.top());
+        let bar = crate::panels::title_bar_height(&ctx);
+        assert!((top - bar).abs() < 1.0, "dialog top {top} stops at the title bar ({bar})");
+    }
+
     #[test]
     fn camera_files_open_into_camera_raw_and_cancel_closes_them() {
         let services = crate::Services {
             import: Some(Box::new(|name: &str, _: &[u8]| {
-                let mut d = photosuite_doc::Document::new(name, photosuite_geom::Size::new(32, 24), photosuite_color::ColorMode::Rgb, photosuite_color::SampleType::U16);
-                d.layers.push(photosuite_doc::Layer::new("Background", photosuite_doc::LayerContent::Raster(photosuite_raster::Surface::new(d.pixel_format()))));
+                let mut d = photosuite_doc::Document::new(
+                    name,
+                    photosuite_geom::Size::new(32, 24),
+                    photosuite_color::ColorMode::Rgb,
+                    photosuite_color::SampleType::U16,
+                );
+                d.layers
+                    .push(photosuite_doc::Layer::new("Background", photosuite_doc::LayerContent::Raster(photosuite_raster::Surface::new(d.pixel_format()))));
                 Ok((d, Vec::new()))
             })),
             ..Default::default()

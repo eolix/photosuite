@@ -4,7 +4,7 @@
 //! aberration, vignette, transform, grid) tabs on the right.
 //!
 //! The preview runs the same [`photosuite_algo::lens::correct`] the command does, on a proxy of
-//! the layer sized to the screen. OK runs `filter.lensCorrection` with the dialog's params (one
+//! the layer sized to the dialog (a large modal over the document). OK runs `filter.lensCorrection` with the dialog's params (one
 //! history step; a smart filter on a smart object).
 //!
 //! Control channel: `ui.menu.invoke {"id":"filter.lensCorrection","params":{"ui":{"set":{…},
@@ -124,7 +124,7 @@ pub fn open(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> 
     let canvas = st.doc.bounds();
     let info = st.doc.metadata.exif.as_ref().map(|e| photosuite_algo::exif::read(e));
     let (w, h) = (canvas.width() as usize, canvas.height() as usize);
-    let screen = ctx.content_rect();
+    let screen = crate::widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let fit = ((screen.width() - PANEL_W - STRIP_W - 32.0) / w.max(1) as f32).min((screen.height() - 120.0) / h.max(1) as f32);
     let side = ((w.max(h) as f32 * fit * ctx.pixels_per_point()).round() as usize).clamp(256, 2400);
     let (px, pw, ph) = crate::camera_raw_ui::build_proxy(&surf, canvas, side);
@@ -380,30 +380,31 @@ fn auto_tab(ui: &mut egui::Ui, d: &mut LensDialog) {
     ui.label(egui::RichText::new(note).color(t.text_faint).size(11.5));
 }
 
-/// Draws the dialog (a full-window overlay) while it is open.
+/// The dialog's largest size; smaller windows get a smaller one.
+const DIALOG_MAX: egui::Vec2 = vec2(1280.0, 860.0);
+
+/// Draws the dialog (a large modal over the document) while it is open.
 pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     if app.lens.is_none() {
         return;
     }
     let t = Tokens::get(ctx);
-    let screen = ctx.content_rect();
+    let rect = crate::widgets::tool_dialog_rect(ctx, DIALOG_MAX);
     let mut action: Option<&str> = None;
-    egui::Area::new(egui::Id::new("lens-correction-dialog")).order(egui::Order::Foreground).fixed_pos(screen.min).show(ctx, |ui| {
+    crate::widgets::tool_dialog(ctx, egui::Id::new("lens-correction-dialog"), rect, 34.0, |ui, full| {
         let Some(d) = app.lens.as_mut() else { return };
         if d.dirty {
             d.render(ctx);
         }
-        let (full, _) = ui.allocate_exact_size(screen.size(), Sense::click());
         let painter = ui.painter().clone();
-        painter.rect_filled(full, 0.0, t.chrome);
         let title = ERect::from_min_size(full.min, vec2(full.width(), 34.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, crate::widgets::tool_dialog_corners(ctx, true, true, true), t.dock);
         painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
         painter.text(pos2(title.left() + 16.0, title.center().y), Align2::LEFT_CENTER, tl!("Lens Correction"), crate::theme::semibold(14.0), t.text);
         let body = ERect::from_min_max(pos2(full.left(), title.bottom()), full.max);
         // Tool strip.
         let strip = ERect::from_min_max(body.min, pos2(body.left() + STRIP_W, body.bottom()));
-        painter.rect_filled(strip, 0.0, t.dock);
+        painter.rect_filled(strip, crate::widgets::tool_dialog_corners(ctx, false, true, false), t.dock);
         let mut su = ui.new_child(egui::UiBuilder::new().max_rect(strip.shrink2(vec2(6.0, 10.0))).layout(egui::Layout::top_down(egui::Align::Center)));
         if crate::icons::button(&mut su, "tools-grid-4x4", 28.0, d.show_grid, tl!("Show Grid")).clicked() {
             d.show_grid = !d.show_grid;
@@ -484,10 +485,11 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         // Panel.
         let right = ERect::from_min_max(pos2(body.right() - PANEL_W, body.top()), body.max);
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, crate::widgets::tool_dialog_corners(ctx, false, false, true), t.dock);
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let foot_h = 92.0;
-        let mut pu = ui.new_child(egui::UiBuilder::new().max_rect(ERect::from_min_max(right.min + vec2(14.0, 10.0), pos2(right.right() - 14.0, right.bottom() - foot_h))));
+        let mut pu = ui
+            .new_child(egui::UiBuilder::new().max_rect(ERect::from_min_max(right.min + vec2(14.0, 10.0), pos2(right.right() - 14.0, right.bottom() - foot_h))));
         pu.horizontal(|ui| {
             for (tab, label) in [(Tab::Auto, tl!("Auto Correction")), (Tab::Custom, tl!("Custom"))] {
                 if ui.selectable_label(d.tab == tab, label).clicked() {
@@ -545,7 +547,9 @@ mod tests {
         assert_eq!(r["tab"], "custom");
         // Straighten a line 5° off level: the angle turns it back.
         let a = 5f64.to_radians();
-        let r = menu(&mut app, &ctx, CMD, &json!({"ui": {"straighten": [[0.1, 0.5], [0.1 + 0.8 * a.cos(), 0.5 + 0.8 * a.sin() * 120.0 / 80.0]]}})).unwrap().unwrap();
+        let r = menu(&mut app, &ctx, CMD, &json!({"ui": {"straighten": [[0.1, 0.5], [0.1 + 0.8 * a.cos(), 0.5 + 0.8 * a.sin() * 120.0 / 80.0]]}}))
+            .unwrap()
+            .unwrap();
         let angle = r["params"]["angle"].as_f64().unwrap();
         assert!((angle.abs() - 5.0).abs() < 0.5, "{angle}");
         let r = menu(&mut app, &ctx, CMD, &json!({"ui": {"set": {"vignetteAmount": -60, "greenMagenta": 20}, "tab": "auto"}})).unwrap().unwrap();

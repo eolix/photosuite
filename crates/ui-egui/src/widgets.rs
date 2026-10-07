@@ -336,6 +336,79 @@ fn button_impl(ui: &mut Ui, label: &str, min_width: f32, bg: Color32, fg: Color3
     resp
 }
 
+/// Where dialogs may go: the window below the app's title bar. On macOS the title bar is the
+/// system's (the traffic lights are drawn over it and a drag there moves the whole window), so
+/// a dialog over it would be covered and couldn't be moved.
+pub fn dialog_bounds(ctx: &egui::Context) -> egui::Rect {
+    let screen = ctx.content_rect();
+    let top = (screen.top() + crate::panels::title_bar_height(ctx)).min(screen.bottom());
+    egui::Rect::from_min_max(pos2(screen.left(), top), screen.max)
+}
+
+/// How far to move `rect` so it lies inside `bounds`; its top-left wins when it can't fit.
+pub fn keep_inside(rect: egui::Rect, bounds: egui::Rect) -> Vec2 {
+    if !(rect.is_finite() && bounds.is_finite()) {
+        return Vec2::ZERO;
+    }
+    let axis = |lo: f32, hi: f32, min: f32, max: f32| {
+        if lo < min || hi - lo > max - min {
+            min - lo
+        } else if hi > max {
+            max - hi
+        } else {
+            0.0
+        }
+    };
+    let v = vec2(axis(rect.left(), rect.right(), bounds.left(), bounds.right()), axis(rect.top(), rect.bottom(), bounds.top(), bounds.bottom()));
+    if v.x.is_finite() && v.y.is_finite() { v } else { Vec2::ZERO }
+}
+
+/// Where a large tool dialog (Camera Raw, Lens Correction) sits: centred below the title bar,
+/// at most `max`, with a margin to the window's edges. A dialog over the document, not a takeover.
+pub fn tool_dialog_rect(ctx: &egui::Context, max: Vec2) -> egui::Rect {
+    let bounds = dialog_bounds(ctx);
+    let size = (bounds.size() - vec2(64.0, 48.0)).min(max).max(vec2(480.0, 360.0)).min(bounds.size());
+    egui::Rect::from_center_size(bounds.center(), size)
+}
+
+/// Shows a tool dialog at `rect` as a modal (the app behind takes no input, and isn't dimmed,
+/// like the other dialogs): its shadow and background, `content`, then its border on top.
+/// Dragging its top `title_h` points moves it, as with the other dialogs; it stays on screen,
+/// and keeps its place when it is opened again.
+pub fn tool_dialog<R>(ctx: &egui::Context, id: egui::Id, rect: egui::Rect, title_h: f32, content: impl FnOnce(&mut Ui, egui::Rect) -> R) -> Option<R> {
+    let t = Tokens::get(ctx);
+    let offset_id = id.with("offset");
+    // Kept below the title bar and on screen: the window may have shrunk since it was moved.
+    let bounds = dialog_bounds(ctx);
+    let mut offset = ctx.data(|d| d.get_temp::<Vec2>(offset_id)).unwrap_or_default();
+    offset += keep_inside(rect.translate(offset), bounds);
+    let rect = rect.translate(offset);
+    let area = egui::Area::new(id).order(egui::Order::Foreground).fixed_pos(rect.min);
+    let r = egui::Modal::new(id).area(area).backdrop_color(Color32::TRANSPARENT).frame(egui::Frame::NONE).show(ctx, |ui| {
+        let (full, _) = ui.allocate_exact_size(rect.size(), Sense::click());
+        let title = egui::Rect::from_min_size(full.min, vec2(full.width(), title_h.clamp(0.0, full.height())));
+        let drag = ui.interact(title, id.with("title"), Sense::drag()).drag_delta();
+        if drag != Vec2::ZERO {
+            let moved = offset + drag + keep_inside(rect.translate(drag), bounds);
+            ctx.data_mut(|d| d.insert_temp(offset_id, moved));
+        }
+        let radius = t.radius;
+        ui.painter().add(ctx.global_style().visuals.popup_shadow.as_shape(full, radius));
+        ui.painter().rect_filled(full, radius, t.chrome);
+        let out = content(ui, full);
+        ui.painter().rect_stroke(full, radius, Stroke::new(1.0, t.separator), StrokeKind::Inside);
+        out
+    });
+    Some(r.inner)
+}
+
+/// Corner radius for a tool dialog strip along its top (`top`) or bottom edge.
+pub fn tool_dialog_corners(ctx: &egui::Context, top: bool, left: bool, right: bool) -> egui::CornerRadius {
+    let r = Tokens::get(ctx).radius.round().clamp(0.0, 255.0) as u8;
+    let (l, rr) = (if left { r } else { 0 }, if right { r } else { 0 });
+    if top { egui::CornerRadius { nw: l, ne: rr, sw: 0, se: 0 } } else { egui::CornerRadius { nw: 0, ne: 0, sw: l, se: rr } }
+}
+
 /// Small caps section label.
 pub fn section_label(ui: &mut Ui, text: &str) {
     let t = Tokens::get(ui.ctx());
@@ -450,6 +523,43 @@ pub fn fmt_num2(v: f64) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// Camera Raw and Lens Correction: a centred dialog with room around it, never larger than
+    /// the window, and usable (not collapsed) in a small one.
+    #[test]
+    fn tool_dialogs_are_centred_and_fit_the_window() {
+        let max = egui::vec2(1400.0, 900.0);
+        for (w, h) in [(1920.0, 1200.0), (1440.0, 900.0), (1280.0, 720.0), (800.0, 500.0), (300.0, 200.0)] {
+            let ctx = egui::Context::default();
+            let mut r = egui::Rect::NOTHING;
+            let input = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(w, h))), ..Default::default() };
+            ctx.run_ui(input, |ui| r = super::tool_dialog_rect(ui.ctx(), max)).textures_delta.clear();
+            let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(w, h));
+            assert!(screen.contains_rect(r), "{w}x{h}: {r:?}");
+            if h >= 400.0 {
+                assert!(r.top() >= crate::panels::title_bar_height(&ctx), "{w}x{h}: below the title bar: {r:?}");
+            }
+            assert!((r.center().x - screen.center().x).abs() < 0.5, "{w}x{h}: centred");
+            assert!(r.width() <= max.x && r.height() <= max.y, "{w}x{h}: {r:?}");
+            if w >= 1280.0 {
+                assert!(r.width() < w && r.height() < h, "{w}x{h}: a dialog, not the whole window");
+            }
+        }
+    }
+
+    #[test]
+    fn keep_inside_moves_rects_back_inside_and_prefers_the_top_left() {
+        use egui::{Rect, pos2, vec2};
+        let b = Rect::from_min_max(pos2(0.0, 38.0), pos2(1000.0, 800.0));
+        let r = |x: f32, y: f32, w: f32, h: f32| Rect::from_min_size(pos2(x, y), vec2(w, h));
+        assert_eq!(super::keep_inside(r(100.0, 100.0, 200.0, 200.0), b), vec2(0.0, 0.0));
+        assert_eq!(super::keep_inside(r(100.0, 0.0, 200.0, 200.0), b), vec2(0.0, 38.0), "up into the title bar");
+        assert_eq!(super::keep_inside(r(-50.0, 700.0, 200.0, 200.0), b), vec2(50.0, -100.0));
+        assert_eq!(super::keep_inside(r(900.0, 100.0, 200.0, 200.0), b), vec2(-100.0, 0.0));
+        // Taller than the room: its top goes to the top of the bounds.
+        assert_eq!(super::keep_inside(r(100.0, 300.0, 200.0, 900.0), b), vec2(0.0, -262.0));
+        assert_eq!(super::keep_inside(r(f32::NAN, 0.0, 10.0, 10.0), b), vec2(0.0, 0.0));
+    }
+
     #[test]
     fn two_decimal_numbers_trim_zeros() {
         assert_eq!(super::fmt_num2(1.05), "1.05");

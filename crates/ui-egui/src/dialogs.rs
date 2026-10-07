@@ -161,10 +161,12 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.min_rect().expand(ui.spacing().menu_margin.sum().max_elem() + 2.0)
         });
         shown.push(modal.inner);
-        if drag != egui::Vec2::ZERO {
-            // Keep the whole dialog (and so its title bar) on screen.
-            let room = ((ctx.content_rect().size() - modal.response.rect.size()) / 2.0).max(egui::Vec2::ZERO);
-            ctx.data_mut(|m| m.insert_temp(id, (offset + drag).clamp(-room, room)));
+        // Keep the whole dialog on screen and below the title bar (on macOS the system's: a
+        // dialog there would sit under the traffic lights, and a drag would move the window).
+        // Also when it opens too tall for the room above it.
+        let fix = crate::widgets::keep_inside(modal.response.rect.translate(drag), crate::widgets::dialog_bounds(ctx));
+        if drag != egui::Vec2::ZERO || fix.length() > 0.5 {
+            ctx.data_mut(|m| m.insert_temp(id, offset + drag + fix));
         }
         // Esc cancels (topmost dialog, no popup open). A click outside does nothing: Photoshop keeps
         // the dialog, and the pointer may be panning or zooming the canvas under it.
@@ -301,5 +303,21 @@ mod tests {
         let moved = harness.get_by_label("Layer Style").rect().min - before.min;
         assert!((moved - egui::vec2(-120.0, 80.0)).length() < 1.0, "dialog moved by {moved:?}");
         assert_eq!(harness.state().ui.dialogs.len(), 1, "dragging must not close the dialog");
+
+        // Dragged far up, it stops below the title bar (on macOS the system's: under the traffic
+        // lights, where a drag moves the window).
+        let title = harness.get_by_label("Layer Style").rect();
+        let from = title.center();
+        harness.hover_at(from);
+        harness.drag_at(from);
+        harness.run_steps(2);
+        for i in 1..=10 {
+            harness.hover_at(from + egui::vec2(0.0, -150.0) * i as f32);
+            harness.run_steps(1);
+        }
+        harness.drop_at(from + egui::vec2(0.0, -1500.0));
+        harness.run_steps(3);
+        let top = harness.get_by_label("Layer Style").rect().top();
+        assert!(top >= crate::panels::title_bar_height(&harness.ctx), "title at {top}, under the title bar");
     }
 }
