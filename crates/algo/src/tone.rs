@@ -343,7 +343,9 @@ pub fn hdr_toning(px: &mut [[f32; 4]], w: usize, h: usize, p: &HdrToning) {
             let c = [q[0], q[1], q[2]];
             let l0 = luma(c).max(0.0) + EPS;
             let new_log = mean + (base[i] - mean) * compress + (logl[i] - base[i]) * detail;
-            let mut l1 = (new_log.exp() * exposure).max(0.0).powf(gamma);
+            // The contract is "lower = more contrast", i.e. gamma is the divisor of
+            // the exponent, matching the crate's other gamma controls (hdr.rs, proof_sim.rs).
+            let mut l1 = (new_log.exp() * exposure).max(0.0).powf(1.0 / gamma);
             l1 += p.shadow / 100.0 * (1.0 - l1).powi(3) * 0.5 - p.highlight / 100.0 * l1.powi(3) * 0.5;
             l1 = curve_eval(&sorted, l1.clamp(0.0, 1.0));
             let ratio = l1 / l0;
