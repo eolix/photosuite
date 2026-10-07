@@ -180,6 +180,7 @@ pub fn authorize_engine_command(id: &str, params: &Value) -> Result<(), Automati
                 | "layer.videoLayers.reloadFrame"
                 | "image.applyDataSet"
         )
+        || command_uses_ambient_path(id, params)
         || profile_command_may_read_ambient(id, params)
         || preferences_may_grant_ambient_paths(id, params)
         || params_contain_ambient_path(id, params)
@@ -217,6 +218,7 @@ fn params_contain_ambient_path(id: &str, params: &Value) -> bool {
         "image.adjustments.colorLookup" | "layer.newAdjustmentLayer.colorLookup" | "layer.setAdjustment" => &["file"],
         "filter.distort.displace" => &["mapPath"],
         "layer.quickExportAsPng" | "layer.exportAs" => &["path"],
+        "image.mode.rgb" | "image.mode.grayscale" | "image.mode.cmyk" | "image.mode.lab" => &["profile"],
         "edit.assignProfile" | "edit.convertToProfile" | "edit.profileInfo" | "view.proofSetup" | "view.gamutWarning" => &["profile"],
         "edit.colorSettings" => &["workingRgb", "workingCmyk", "workingGray"],
         _ => &[],
@@ -243,14 +245,27 @@ fn preferences_may_grant_ambient_paths(id: &str, params: &Value) -> bool {
     if id != "prefs.set" {
         return false;
     }
-    let direct = params
-        .get("path")
-        .and_then(Value::as_str)
-        .is_some_and(|path| path == "colorSettings" || path.starts_with("colorSettings.") || path == "scriptEvents" || path.starts_with("scriptEvents."));
-    let batch = params.get("values").and_then(Value::as_object).is_some_and(|values| {
-        values.keys().any(|path| path == "colorSettings" || path.starts_with("colorSettings.") || path == "scriptEvents" || path.starts_with("scriptEvents."))
-    });
+    let direct = params.get("path").and_then(Value::as_str).is_some_and(preference_uses_ambient_filesystem);
+    let batch = params.get("values").and_then(Value::as_object).is_some_and(|values| values.keys().any(|path| preference_uses_ambient_filesystem(path)));
     direct || batch
+}
+
+fn preference_uses_ambient_filesystem(path: &str) -> bool {
+    // The engine skips empty segments (`.scriptEvents.enabled` sets `scriptEvents.enabled`), so
+    // judge the first non-empty one; no segment at all is the whole-preferences update.
+    let Some(section) = path.split('.').find(|segment| !segment.is_empty()) else { return true };
+    matches!(section, "colorSettings" | "scriptEvents" | "historyLog" | "plugIns" | "scratchDisks")
+}
+
+fn command_uses_ambient_path(id: &str, params: &Value) -> bool {
+    match id {
+        "brush.presets.importAbr" | "gradient.presets.importGrd" | "plugin.install" => {
+            // `data` wins over `path` in these commands; any `path` without it reads the filesystem.
+            params.get("data").is_none() && params.get("path").is_some()
+        }
+        "plugin.reload" => true,
+        _ => false,
+    }
 }
 
 fn looks_like_path(value: &str) -> bool {
@@ -440,11 +455,153 @@ mod tests {
         }
         assert!(authorize_engine_command("image.mode.cmyk", &serde_json::json!({})).is_ok());
         assert!(authorize_desktop_engine_command("image.mode.cmyk", &serde_json::json!({})).is_err());
+        assert!(authorize_engine_command("image.mode.rgb", &serde_json::json!({"profile": "/outside/profile.icc"})).is_err());
+        assert!(authorize_engine_command("image.mode.rgb", &serde_json::json!({"profile": "srgb"})).is_ok());
         assert!(authorize_engine_command("filter.distort.displace", &serde_json::json!({"mapPath": "outside.png"})).is_err());
         assert!(authorize_engine_command("layer.setAdjustment", &serde_json::json!({"file": "outside.cube"})).is_err());
         assert!(authorize_engine_command("prefs.set", &serde_json::json!({"path": "colorSettings.workingRgb", "value": "outside.icc"})).is_err());
         assert!(authorize_engine_step("file.open", &serde_json::json!({})).is_err());
         assert!(authorize_engine_step("actions.play", &serde_json::json!({})).is_ok());
         assert!(authorize_desktop_engine_step("file.saveACopy", &serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn automation_rejects_ambient_path_commands_and_preferences() {
+        for (id, params) in [
+            ("brush.presets.importAbr", serde_json::json!({"path": "/outside/set.abr"})),
+            ("gradient.presets.importGrd", serde_json::json!({"path": "/outside/set.grd"})),
+            ("plugin.install", serde_json::json!({"path": "/outside/plugin.wasm"})),
+            ("plugin.reload", serde_json::json!({"path": "/outside/plugins"})),
+            ("plugin.reload", serde_json::json!({})),
+            ("plugin.install", serde_json::json!({"path": " "})),
+        ] {
+            assert!(authorize_engine_command(id, &params).is_err(), "{id}: {params}");
+        }
+        for (id, params) in [
+            ("brush.presets.importAbr", serde_json::json!({"data": "QUJD"})),
+            ("gradient.presets.importGrd", serde_json::json!({"data": "QUJD"})),
+            ("plugin.install", serde_json::json!({"data": "QUJD"})),
+        ] {
+            assert!(authorize_engine_command(id, &params).is_ok(), "{id}: {params}");
+        }
+        for path in [
+            "",
+            "colorSettings",
+            "colorSettings.workingRgb",
+            "scriptEvents",
+            "scriptEvents.enabled",
+            ".scriptEvents",
+            ".scriptEvents.enabled",
+            "historyLog.filePath",
+            ".historyLog.filePath",
+            "plugIns.additionalPluginsFolder",
+            "scratchDisks.disks",
+            ".",
+            "..historyLog.filePath",
+        ] {
+            assert!(authorize_engine_command("prefs.set", &serde_json::json!({"path": path, "value": {}})).is_err(), "{path}");
+        }
+        assert!(
+            authorize_engine_command("prefs.set", &serde_json::json!({"values": {"interface.language": "fr", "historyLog.filePath": "/outside/log"}})).is_err()
+        );
+        assert!(authorize_engine_command("prefs.set", &serde_json::json!({"path": "interface.language", "value": "fr"})).is_ok());
+    }
+
+    #[test]
+    fn registry_filesystem_path_params_are_classified() {
+        let probe = serde_json::json!({
+            "path": "/outside/photosuite-probe",
+            "file": "/outside/photosuite-probe.icc",
+            "mapPath": "/outside/photosuite-probe.png",
+            "profile": "/outside/photosuite-probe.icc",
+            "workingRgb": "/outside/photosuite-probe.icc",
+            "workingCmyk": "/outside/photosuite-probe.icc",
+            "workingGray": "/outside/photosuite-probe.icc",
+            "input": "/outside/photosuite-input",
+            "output": "/outside/photosuite-output",
+            "paths": ["/outside/photosuite-probe.psd"],
+        });
+        let preference_probe = serde_json::json!({"path": ".scriptEvents", "value": {}});
+        let unclassified: Vec<_> = photosuite_engine::command_specs()
+            .iter()
+            .filter(|spec| documents_filesystem_path_params(spec.id, spec.params))
+            .filter(|spec| {
+                let params = if spec.id == "prefs.set" { &preference_probe } else { &probe };
+                authorize_engine_command(spec.id, params).is_ok()
+            })
+            .map(|spec| spec.id)
+            .collect();
+        assert!(unclassified.is_empty(), "filesystem path parameters in the command registry need an automation policy: {unclassified:?}");
+    }
+
+    fn documents_filesystem_path_params(id: &str, params: &str) -> bool {
+        if matches!(id, "prefs.get" | "prefs.reset") {
+            return false;
+        }
+        // These registry descriptions refer to document vector paths, not host files.
+        if matches!(
+            id,
+            "filter.blurGallery.pathBlur"
+                | "filter.render.flame"
+                | "shape.create"
+                | "shape.edit"
+                | "shape.info"
+                | "shape.presets.list"
+                | "shape.presets.new"
+                | "path.list"
+                | "path.info"
+                | "path.set"
+                | "path.transform"
+                | "path.clippingPath.set"
+                | "path.rename"
+                | "select.toWorkPath"
+                | "layer.vectorMask.add"
+                | "layer.vectorMask.edit"
+                | "layer.vectorMask.info"
+                | "paint.symmetryFromPath"
+                | "edit.defineCustomShape"
+                | "layer.combineShapes.unite"
+                | "layer.combineShapes.subtractFrontShape"
+                | "layer.combineShapes.intersectShapeAreas"
+                | "layer.combineShapes.excludeOverlappingShapes"
+                | "layer.combineShapes.mergeShapeComponents"
+        ) {
+            return false;
+        }
+        params.to_ascii_lowercase().contains("path")
+    }
+
+    #[test]
+    fn whole_preferences_update_cannot_enable_automation_script_events() {
+        let mut headless = crate::headless::Headless::new();
+        let result = headless.command_run(
+            "prefs.set",
+            serde_json::json!({
+                "path": "",
+                "value": {
+                    "scriptEvents": {
+                        "enabled": true,
+                        "bindings": [{
+                            "event": "newDocument",
+                            "steps": [["file.saveACopy", {"path": "/outside/canary.psd"}]]
+                        }]
+                    }
+                }
+            }),
+        );
+        assert!(result.is_err());
+
+        for (id, params) in [
+            ("brush.presets.importAbr", serde_json::json!({"path": "/outside/set.abr"})),
+            ("gradient.presets.importGrd", serde_json::json!({"path": "/outside/set.grd"})),
+            ("plugin.install", serde_json::json!({"path": "/outside/plugin.wasm"})),
+            ("plugin.reload", serde_json::json!({"path": "/outside/plugins"})),
+            ("prefs.set", serde_json::json!({"path": "historyLog.filePath", "value": "/outside/log"})),
+            ("prefs.set", serde_json::json!({"values": {"interface.language": "fr", "historyLog.filePath": "/outside/log"}})),
+        ] {
+            assert!(headless.command_run(id, params).is_err(), "{id}");
+        }
+        headless.command_run("file.new", serde_json::json!({"width": 5, "height": 5})).unwrap();
+        assert!(headless.session.file_menu.event_log.is_empty());
     }
 }
