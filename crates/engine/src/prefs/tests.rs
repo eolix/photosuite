@@ -305,3 +305,16 @@ fn gpu_backend_round_trips_and_validates() {
         assert_eq!(GpuBackend::parse(n).map(GpuBackend::name), Some(*n));
     }
 }
+
+/// Preferences saved at version 3 (the six named Anti-Alias methods hidden, "None" not) take
+/// "None" on load, so the Type menu goes away; anything the user re-showed stays shown.
+#[test]
+fn version_3_preferences_take_the_anti_alias_none_item() {
+    let mut s = session();
+    let json = r#"{"menus":{"defaultsVersion":3,"hidden":["type.antiAlias.sharp","type.antiAlias.crisp"],"colors":{}}}"#;
+    s.load_prefs_json(json).unwrap();
+    let hidden = &s.prefs().menus.hidden;
+    assert!(hidden.iter().any(|h| h == "type.antiAlias.none"), "{hidden:?}");
+    assert!(!hidden.iter().any(|h| h == "file.revert"), "items re-shown before stay shown: {hidden:?}");
+    assert_eq!(s.prefs().menus.defaults_version, crate::prefs_hidden::DEFAULTS_VERSION);
+}

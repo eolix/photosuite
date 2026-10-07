@@ -8,7 +8,7 @@
 //! [`HIDDEN_MENU_ADDED`]: preferences saved by an older version take those once, on load.
 
 /// Incremented whenever the lists below change.
-pub const DEFAULTS_VERSION: u32 = 3;
+pub const DEFAULTS_VERSION: u32 = 4;
 
 pub const HIDDEN_MENU_ITEMS: &[&str] = &[
     "edit.checkSpelling",
@@ -76,6 +76,7 @@ pub const HIDDEN_MENU_ITEMS: &[&str] = &[
     "select.sky",
     "select.subject",
     "type.antiAlias.crisp",
+    "type.antiAlias.none",
     "type.antiAlias.sharp",
     "type.antiAlias.smooth",
     "type.antiAlias.strong",
@@ -156,6 +157,8 @@ pub const HIDDEN_MENU_ITEMS: &[&str] = &[
 pub const HIDDEN_MENU_ADDED: &[(u32, &str)] = &[
     (2, "file.saveACopy"),
     (3, "filter.adaptiveWideAngle"),
+    // The engine's own Anti-Alias › None (not in Photoshop's catalogue) brought the Type menu back.
+    (4, "type.antiAlias.none"),
 ];
 
 /// `Tool` enum variant names, as `ToolbarCustomization::hidden` stores them.

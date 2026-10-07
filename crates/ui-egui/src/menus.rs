@@ -744,6 +744,9 @@ fn top_menu_has_items(app: &PhotosuiteApp, top: &str) -> bool {
     let shown = |id: &str| !hidden.iter().any(|h| h == id);
     crate::menu_catalog::CATALOG.iter().any(|(path, _, _, id)| *id != "---" && path.first() == Some(&top) && shown(id))
         || UI_COMMANDS.iter().any(|(id, _, path, _)| path.first() == Some(&top) && shown(id))
+        // The engine's own commands too, as `menu_items` lists them: the macOS menu bar is built
+        // from that list, so leaving them out here made the two bars disagree about a menu.
+        || photosuite_engine::command_specs().iter().any(|c| c.menu.first() == Some(&top) && shown(c.id))
 }
 
 /// Drop separators left stranded by hiding items: runs of adjacent separators collapse to one,
@@ -1238,3 +1241,26 @@ mod open_recent_tests {
         let _ = std::fs::remove_file(&path);
     }
 }
+
+#[cfg(test)]
+mod hidden_menu_tests {
+    use super::*;
+
+    /// PhotoSuite has no Type menu: every item under it ships hidden, the engine's own commands
+    /// (Anti-Alias › None) included, so neither the in-window bar nor the macOS one shows it.
+    /// And both bars agree: a top menu shows exactly when the item list has something in it.
+    #[test]
+    fn type_ships_hidden_and_both_menu_bars_agree() {
+        let app = crate::PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let items = visible_menu_items(&app);
+        let typed: Vec<&str> = items.iter().filter(|i| i.path.first().map(String::as_str) == Some("Type")).map(|i| i.id.as_str()).collect();
+        assert!(typed.is_empty(), "visible under Type: {typed:?}");
+        let tops = visible_top_menus(&app);
+        assert!(!tops.contains(&"Type"));
+        for top in TOP_MENUS {
+            let listed = items.iter().any(|i| i.id != "---" && i.path.first().map(String::as_str) == Some(top));
+            assert_eq!(tops.contains(&top), listed, "{top}: in-window bar and item list disagree");
+        }
+    }
+}
+
