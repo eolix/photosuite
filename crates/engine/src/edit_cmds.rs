@@ -27,10 +27,24 @@ fn has_clip_only(s: &Session) -> std::result::Result<(), String> {
     s.clipboard.as_ref().map(|_| ()).ok_or_else(|| "the clipboard is empty".into())
 }
 
-fn has_pixels(s: &Session) -> std::result::Result<(), String> {
+fn active_layer(s: &Session) -> std::result::Result<&Layer, String> {
     let d = s.active().ok_or("no document open")?;
-    let l = d.active_layer.and_then(|id| d.doc.layer(id)).ok_or("no active layer")?;
-    if l.surface().is_some() && matches!(l.content, LayerContent::Raster(_)) { Ok(()) } else { Err("the active layer has no pixels".into()) }
+    d.active_layer.and_then(|id| d.doc.layer(id)).ok_or_else(|| "no active layer".into())
+}
+
+/// Cut and Layer via Cut edit the pixels, so they need a pixel layer.
+fn has_pixels(s: &Session) -> std::result::Result<(), String> {
+    match active_layer(s)?.content {
+        LayerContent::Raster(_) => Ok(()),
+        LayerContent::Smart(_) => Err("the smart object is not directly editable".into()),
+        _ => Err("the active layer has no pixels".into()),
+    }
+}
+
+/// Copy only reads: any layer that shows pixels will do, so a smart object, type or shape layer
+/// copies what it shows (Photoshop).
+fn has_layer_pixels(s: &Session) -> std::result::Result<(), String> {
+    active_layer(s)?.surface().map(|_| ()).ok_or_else(|| "the active layer has no pixels".into())
 }
 
 fn has_clip(s: &Session) -> std::result::Result<(), String> {
@@ -473,7 +487,7 @@ pub fn specs() -> Vec<CommandSpec> {
             s.edit("Cut Pixels", |doc, _| clear_selected(doc, id, bg))?;
             Ok(r)
         }),
-        spec!("edit.copy", "Copy", &["Edit"], Some("Cmd+C"), "{}", has_pixels, |s, _| copy(s, false)),
+        spec!("edit.copy", "Copy", &["Edit"], Some("Cmd+C"), "{}", has_layer_pixels, |s, _| copy(s, false)),
         spec!("edit.copyMerged", "Copy Merged", &["Edit"], Some("Cmd+Shift+C"), "{}", has_doc, |s, _| copy(s, true)),
         spec!(
             "edit.paste",
@@ -699,6 +713,52 @@ mod tests {
         let d = &s.active().unwrap().doc;
         assert_eq!(d.layers.len(), 3);
         assert!(d.layers[2].name.ends_with("copy"));
+    }
+
+    fn active_content(s: &Session) -> LayerContent {
+        let st = s.active().unwrap();
+        st.doc.layer(st.active_layer.unwrap()).unwrap().content.clone()
+    }
+
+    /// #541: a smart object copies what it shows, with or without a selection, and pastes as
+    /// pixels. Cut edits pixels, so it's refused; Layer via Copy and Duplicate Layer copy the layer.
+    #[test]
+    fn copy_a_smart_object_layer() {
+        let mut s = session();
+        s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+        assert!(s.is_enabled("edit.copy"));
+        assert_eq!(s.execute("edit.copy", json!({})).unwrap()["bounds"], json!([10, 10, 40, 20]), "no selection: the whole layer");
+        s.execute("edit.pasteSpecial.pasteInPlace", json!({})).unwrap();
+        assert!(matches!(active_content(&s), LayerContent::Raster(_)));
+        assert_eq!(active_bounds(&s), Rect::new(10, 10, 50, 30));
+        assert_eq!(
+            s.active().unwrap().doc.layer(s.active().unwrap().active_layer.unwrap()).unwrap().surface().unwrap().pixel(20, 20),
+            vec![1.0, 0.0, 0.0, 1.0]
+        );
+        s.undo();
+        assert!(matches!(active_content(&s), LayerContent::Smart(_)));
+        s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 20})).unwrap();
+        assert_eq!(s.execute("edit.copy", json!({})).unwrap()["bounds"], json!([10, 10, 10, 10]), "only the selected part");
+        let cut = s.execute("edit.cut", json!({})).unwrap_err().to_string();
+        assert!(cut.contains("not directly editable"), "{cut}");
+        assert!(matches!(active_content(&s), LayerContent::Smart(_)));
+        s.execute("select.deselect", json!({})).unwrap();
+        s.execute("layer.new.layerViaCopy", json!({})).unwrap();
+        assert!(matches!(active_content(&s), LayerContent::Smart(_)), "⌘J without a selection duplicates the smart object");
+        s.execute("layer.duplicate", json!({})).unwrap();
+        assert!(matches!(active_content(&s), LayerContent::Smart(_)));
+        assert_eq!(s.active().unwrap().doc.layers.len(), 4);
+    }
+
+    /// Type and shape layers copy their rendered pixels too; groups and adjustments have none.
+    #[test]
+    fn copy_reads_any_layer_that_shows_pixels() {
+        let mut s = session();
+        s.execute("type.create", json!({"text": "Hi", "size": 30, "x": 20, "y": 60})).unwrap();
+        assert!(!s.is_enabled("edit.cut"));
+        assert!(s.execute("edit.copy", json!({})).is_ok());
+        s.execute("layer.groupLayers", json!({})).unwrap();
+        assert!(!s.is_enabled("edit.copy"));
     }
 
     #[test]
