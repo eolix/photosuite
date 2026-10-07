@@ -77,7 +77,10 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             crate::widgets::hairline(ui);
             ui.add_space(8.0);
             match d.kind {
-                DialogKind::NewDocument => crate::new_doc_ui::body(ui, &mut fields),
+                DialogKind::NewDocument => {
+                    let recent = crate::new_doc_ui::recent(app);
+                    crate::new_doc_ui::body(ui, &mut fields, &recent)
+                }
                 DialogKind::About if fields.get("systemInfo").and_then(Value::as_bool) == Some(true) => {
                     let lines = crate::gpu_status::system_info(app);
                     for l in &lines {
@@ -208,6 +211,9 @@ pub fn confirm(app: &mut PhotosuiteApp, id: u64) -> Result<Value, String> {
     match d.kind {
         DialogKind::NewDocument => {
             let r = app.run("file.new", crate::new_doc_ui::command_params(&d.fields));
+            if r.is_ok() {
+                crate::new_doc_ui::remember(app, &d.fields);
+            }
             if let Some(i) = app.session.active_index() {
                 app.ui.views[i].fit_pending = true;
             }

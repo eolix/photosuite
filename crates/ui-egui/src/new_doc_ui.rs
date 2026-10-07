@@ -12,9 +12,10 @@ use crate::{icons, widgets};
 /// A blank-document preset: (name, width px, height px, ppi).
 pub type Preset = (&'static str, u32, u32, f32);
 
-/// Photoshop's New Document categories and their blank-document presets.
+/// Photoshop's New Document categories and their blank-document presets. Recent has none of
+/// its own: it lists the documents created in this dialog ([`recent`]), and is empty until then.
 pub const CATEGORIES: &[(&str, &[Preset])] = &[
-    ("Recent", &[("Default Photoshop Size", 2100, 1500, 300.0), ("HDTV 1080p", 1920, 1080, 72.0)]),
+    ("Recent", &[]),
     (
         "Photo",
         &[
@@ -109,6 +110,90 @@ pub fn apply_preset(f: &mut Map<String, Value>, p: &Preset) {
     f.insert("__unit".into(), json!(if p.3 >= 300.0 { "in" } else { "px" }));
 }
 
+/// How many documents the Recent tab keeps.
+pub const RECENT_MAX: usize = 20;
+
+/// The document settings Recent remembers (`file.new`'s params, plus the preset's name and the
+/// size unit shown).
+const RECENT_KEYS: [&str; 6] = ["width", "height", "resolution", "mode", "depth", "background"];
+
+/// A Recent card: a document made in this dialog, read back from the preferences.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RecentDoc {
+    /// The preset it was made from, or "Custom".
+    pub label: String,
+    pub width: u32,
+    pub height: u32,
+    pub ppi: f32,
+    /// Its settings as dialog fields (sizes, mode, depth, background, size unit).
+    pub fields: Map<String, Value>,
+}
+
+/// One stored entry, or `None` when it is unusable (hand-edited or from another version).
+fn recent_doc(v: &Value) -> Option<RecentDoc> {
+    let o = v.as_object()?;
+    let px = |k: &str| o.get(k).and_then(Value::as_u64).filter(|n| (1..=300_000).contains(n)).map(|n| n as u32);
+    let (width, height) = (px("width")?, px("height")?);
+    // No resolution: `file.new`'s 72 ppi.
+    let ppi = match o.get("resolution") {
+        None => 72.0,
+        Some(r) => r.as_f64().filter(|r| r.is_finite() && (1.0..=30_000.0).contains(r))? as f32,
+    };
+    let mut fields = Map::new();
+    for k in RECENT_KEYS {
+        if let Some(v) = o.get(k) {
+            fields.insert(k.into(), v.clone());
+        }
+    }
+    fields.insert("resolution".into(), json!(ppi));
+    let unit = o.get("unit").and_then(Value::as_str).filter(|u| UNITS.iter().any(|x| x.0 == *u)).unwrap_or("px");
+    fields.insert("__unit".into(), json!(unit));
+    let label = o.get("preset").and_then(Value::as_str).filter(|s| !s.is_empty()).unwrap_or("Custom").to_string();
+    Some(RecentDoc { label, width, height, ppi, fields })
+}
+
+/// The Recent tab's documents, newest first.
+pub fn recent(app: &crate::PhotosuiteApp) -> Vec<RecentDoc> {
+    app.session.prefs().recent_new_documents.iter().filter_map(recent_doc).take(RECENT_MAX).collect()
+}
+
+/// After Create: put this document's settings at the top of Recent (once: making the same
+/// document again moves it up), and keep the newest [`RECENT_MAX`].
+pub fn remember(app: &mut crate::PhotosuiteApp, f: &Map<String, Value>) {
+    let mut entry = Map::new();
+    for k in RECENT_KEYS {
+        if let Some(v) = f.get(k) {
+            entry.insert(k.into(), v.clone());
+        }
+    }
+    if let Some(p) = f.get("__preset").and_then(Value::as_str).filter(|p| !p.starts_with("__")) {
+        entry.insert("preset".into(), json!(p));
+    }
+    if let Some(u) = f.get("__unit").and_then(Value::as_str) {
+        entry.insert("unit".into(), json!(u));
+    }
+    let entry = Value::Object(entry);
+    let Some(doc) = recent_doc(&entry) else { return };
+    app.session.prefs.edit(|p| {
+        let same = |v: &Value| recent_doc(v).is_some_and(|r| r.fields == doc.fields);
+        p.recent_new_documents.retain(|v| !same(v));
+        p.recent_new_documents.insert(0, entry);
+        p.recent_new_documents.truncate(RECENT_MAX);
+    });
+}
+
+/// The New Document dialog's starting fields: the last document made here (Photoshop opens on
+/// it), else the defaults.
+pub fn initial_fields(app: &crate::PhotosuiteApp) -> Map<String, Value> {
+    let mut f = crate::state::UiState::new_document_fields();
+    if let Some(r) = recent(app).into_iter().next() {
+        f.extend(r.fields);
+        // Its card shows as the selected one.
+        f.insert("__preset".into(), json!("__recent0"));
+    }
+    f
+}
+
 /// Fields `file.new` takes (drops the dialog's `__` UI keys).
 pub fn command_params(f: &Map<String, Value>) -> Value {
     Value::Object(f.iter().filter(|(k, _)| !k.starts_with("__")).map(|(k, v)| (k.clone(), v.clone())).collect())
@@ -134,9 +219,37 @@ fn page_icon(ui: &egui::Ui, r: Rect, w: u32, h: u32, t: &Tokens) {
     ui.painter().rect_stroke(page, 1.0, Stroke::new(1.2, t.text_dim), StrokeKind::Inside);
 }
 
-pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+/// One card in the preset grid: what it shows, and the fields a click sets.
+struct Card {
+    /// Unique among the shown cards (the `__preset` it selects).
+    key: String,
+    label: String,
+    width: u32,
+    height: u32,
+    ppi: f32,
+    unit: &'static str,
+    fields: Map<String, Value>,
+}
+
+fn preset_card(p: &Preset) -> Card {
+    let mut fields = Map::new();
+    apply_preset(&mut fields, p);
+    let unit = if p.3 >= 300.0 { "in" } else { "px" };
+    Card { key: p.0.to_string(), label: tl!(p.0).to_string(), width: p.1, height: p.2, ppi: p.3, unit, fields }
+}
+
+fn recent_card(i: usize, r: &RecentDoc) -> Card {
+    let key = format!("__recent{i}");
+    let mut fields = r.fields.clone();
+    fields.insert("__preset".into(), json!(key));
+    let unit = if r.fields.get("__unit").and_then(Value::as_str) == Some("in") { "in" } else { "px" };
+    Card { key, label: tl!(r.label.as_str()).to_string(), width: r.width, height: r.height, ppi: r.ppi, unit, fields }
+}
+
+pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc]) {
     let t = Tokens::get(ui.ctx());
-    let cat = get_s(f, "__category", "Recent");
+    // Recent first, as Photoshop; while it is empty, Film & Video.
+    let cat = get_s(f, "__category", if recent.is_empty() { "Film & Video" } else { "Recent" });
     // Category tabs.
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 18.0;
@@ -154,21 +267,33 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.add_space(6.0);
     widgets::hairline(ui);
     ui.add_space(8.0);
-    let presets = CATEGORIES.iter().find(|c| c.0 == cat).map_or(CATEGORIES[0].1, |c| c.1);
+    let cards: Vec<Card> = if cat == "Recent" {
+        recent.iter().enumerate().map(|(i, r)| recent_card(i, r)).collect()
+    } else {
+        CATEGORIES.iter().find(|c| c.0 == cat).map_or(CATEGORIES[0].1, |c| c.1).iter().map(preset_card).collect()
+    };
     let chosen = get_s(f, "__preset", "");
     ui.horizontal_top(|ui| {
         // Left: preset grid.
         ui.vertical(|ui| {
             ui.set_width(520.0);
-            ui.label(RichText::new(crate::i18n::fmt(tl!("BLANK DOCUMENT PRESETS ({n})"), &[("n", &presets.len().to_string())])).size(11.0).color(t.text_faint));
-            ui.add_space(6.0);
+            // An empty Recent tab is just empty.
+            if !cards.is_empty() {
+                let heading = if cat == "Recent" {
+                    format!("{} ({})", tl!("Recent").to_uppercase(), cards.len())
+                } else {
+                    crate::i18n::fmt(tl!("BLANK DOCUMENT PRESETS ({n})"), &[("n", &cards.len().to_string())])
+                };
+                ui.label(RichText::new(heading).size(11.0).color(t.text_faint));
+                ui.add_space(6.0);
+            }
             let card = vec2(164.0, 112.0);
-            for row in presets.chunks(3) {
+            for row in cards.chunks(3) {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 8.0;
                     for p in row {
                         let (r, resp) = ui.allocate_exact_size(card, Sense::click());
-                        let on = chosen == p.0;
+                        let on = chosen == p.key;
                         ui.painter().rect_filled(
                             r,
                             t.radius,
@@ -183,22 +308,21 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
                         if on {
                             ui.painter().rect_stroke(r, t.radius, Stroke::new(1.5, t.accent), StrokeKind::Inside);
                         }
-                        page_icon(ui, Rect::from_center_size(pos2(r.center().x, r.top() + 34.0), vec2(40.0, 40.0)), p.1, p.2, &t);
-                        ui.painter().text(pos2(r.center().x, r.top() + 72.0), Align2::CENTER_CENTER, tl!(p.0), egui::FontId::proportional(12.0), t.text);
-                        let unit = if p.3 >= 300.0 { "in" } else { "px" };
-                        let size = if unit == "in" {
+                        page_icon(ui, Rect::from_center_size(pos2(r.center().x, r.top() + 34.0), vec2(40.0, 40.0)), p.width, p.height, &t);
+                        ui.painter().text(pos2(r.center().x, r.top() + 72.0), Align2::CENTER_CENTER, &p.label, egui::FontId::proportional(12.0), t.text);
+                        let ppi = widgets::fmt_num(f64::from(p.ppi));
+                        let size = if p.unit == "in" {
                             format!(
-                                "{} x {} in @ {} ppi",
-                                widgets::fmt_num(to_unit(p.1 as f32, "in", p.3) as f64),
-                                widgets::fmt_num(to_unit(p.2 as f32, "in", p.3) as f64),
-                                p.3
+                                "{} x {} in @ {ppi} ppi",
+                                widgets::fmt_num(to_unit(p.width as f32, "in", p.ppi) as f64),
+                                widgets::fmt_num(to_unit(p.height as f32, "in", p.ppi) as f64),
                             )
                         } else {
-                            format!("{} x {} px @ {} ppi", p.1, p.2, p.3)
+                            format!("{} x {} px @ {ppi} ppi", p.width, p.height)
                         };
                         ui.painter().text(pos2(r.center().x, r.top() + 90.0), Align2::CENTER_CENTER, size, egui::FontId::proportional(10.5), t.text_faint);
                         if resp.clicked() {
-                            apply_preset(f, p);
+                            f.extend(p.fields.clone());
                         }
                     }
                 });
@@ -327,6 +451,67 @@ mod tests {
         let d = &s.active().unwrap().doc;
         assert_eq!((d.size.width, d.size.height, d.resolution_dpi), (2480, 3508, 300.0));
     }
+    fn app() -> crate::PhotosuiteApp {
+        crate::PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default())
+    }
+
+    #[test]
+    fn recent_lists_created_documents_newest_first_once_each() {
+        let mut app = app();
+        assert!(recent(&app).is_empty(), "nothing made yet");
+        let mut a = crate::state::UiState::new_document_fields();
+        a.insert("width".into(), json!(640));
+        a.insert("height".into(), json!(480));
+        a.insert("resolution".into(), json!(72.0));
+        remember(&mut app, &a);
+        let mut b = a.clone();
+        let a4 = CATEGORIES.iter().find(|c| c.0 == "Print").unwrap().1.iter().find(|p| p.0 == "A4").unwrap();
+        apply_preset(&mut b, a4);
+        b.insert("mode".into(), json!("cmyk"));
+        b.insert("depth".into(), json!(16));
+        remember(&mut app, &b);
+        let r = recent(&app);
+        assert_eq!(r.iter().map(|d| (d.label.as_str(), d.width, d.height)).collect::<Vec<_>>(), [("A4", 2480, 3508), ("Custom", 640, 480)]);
+        assert_eq!((r[0].fields["mode"].as_str(), r[0].fields["depth"].as_u64(), r[0].fields["__unit"].as_str()), (Some("cmyk"), Some(16), Some("in")));
+        // Making the 640 x 480 one again moves it up instead of adding a copy.
+        remember(&mut app, &a);
+        let r = recent(&app);
+        assert_eq!((r.len(), r[0].width), (2, 640));
+        // The dialog opens on the last one, with the default name.
+        let f = initial_fields(&app);
+        assert_eq!((f["width"].as_u64(), f["height"].as_u64(), f["name"].as_str()), (Some(640), Some(480), Some("Untitled-1")));
+        // It keeps the newest RECENT_MAX.
+        for w in 1..=(RECENT_MAX as u64 + 5) {
+            let mut c = a.clone();
+            c.insert("width".into(), json!(w));
+            remember(&mut app, &c);
+        }
+        let r = recent(&app);
+        assert_eq!((r.len(), r[0].width), (RECENT_MAX, RECENT_MAX as u32 + 5));
+    }
+
+    #[test]
+    fn unusable_stored_entries_are_skipped() {
+        let mut app = app();
+        app.session.prefs.edit(|p| {
+            p.recent_new_documents = vec![
+                json!("junk"),
+                json!({"width": 0, "height": 10, "resolution": 72.0}),
+                json!({"width": 10, "height": 10, "resolution": f64::MAX}),
+                json!({"width": 10, "height": 10, "resolution": "high"}),
+                json!({"width": 99, "height": 77, "resolution": 150.0, "unit": "furlong", "preset": ""}),
+            ]
+        });
+        let r = recent(&app);
+        assert_eq!(r.len(), 1);
+        assert_eq!((r[0].label.as_str(), r[0].width, r[0].fields["__unit"].as_str()), ("Custom", 99, Some("px")));
+        // A dialog whose fields can't make a document records nothing.
+        let mut bad = Map::new();
+        bad.insert("width".into(), json!("wide"));
+        remember(&mut app, &bad);
+        assert_eq!(app.session.prefs().recent_new_documents.len(), 5);
+    }
+
     /// The real dialog (#254): a typed size must reach `file.new`, however it is confirmed.
     mod dialog {
         use super::super::{CATEGORIES, apply_preset};
@@ -463,6 +648,40 @@ mod tests {
             }
             enter(&mut h);
             assert_eq!(created(&h), (512, 512, 72.0));
+        }
+
+        /// Create records the document under Recent; the next dialog opens on it, and its card
+        /// sets every setting back.
+        #[test]
+        fn created_documents_appear_under_recent() {
+            let mut h = harness();
+            // Nothing made yet: the dialog opens on Film & Video, and Recent shows nothing.
+            let film = CATEGORIES.iter().find(|c| c.0 == "Film & Video").map_or(0, |c| c.1.len());
+            assert!(h.query_by_label(&format!("BLANK DOCUMENT PRESETS ({film})")).is_some(), "Film & Video presets show");
+            assert!(h.query_by_label_contains("RECENT").is_none());
+            type_into(&mut h, 0, "640");
+            type_into(&mut h, 1, "480");
+            let mut f = fields(&h);
+            f.insert("mode".into(), serde_json::json!("gray"));
+            set_fields(&mut h, f);
+            enter(&mut h);
+            assert_eq!(created(&h), (640, 480, 72.0));
+            let fields = super::super::initial_fields(h.state());
+            h.state_mut().ui.open_dialog(DialogKind::NewDocument, fields);
+            h.run_steps(3);
+            assert!(h.query_by_label_contains("RECENT (1)").is_some(), "Recent lists it");
+            let f = self::fields(&h);
+            assert_eq!((f["width"].as_u64(), f["mode"].as_str()), (Some(640), Some("gray")), "opens on the last document");
+            assert_eq!(f["__preset"].as_str(), Some("__recent0"), "with its card selected");
+            // Change the size, then click the Recent card: its settings come back.
+            let mut f2 = f.clone();
+            f2.insert("width".into(), serde_json::json!(100));
+            f2.insert("mode".into(), serde_json::json!("rgb"));
+            set_fields(&mut h, f2);
+            let heading = h.get_by_label_contains("RECENT (1)").rect();
+            click_at(&mut h, heading.left_bottom() + egui::vec2(80.0, 60.0));
+            let f = self::fields(&h);
+            assert_eq!((f["width"].as_u64(), f["mode"].as_str()), (Some(640), Some("gray")));
         }
 
         #[test]

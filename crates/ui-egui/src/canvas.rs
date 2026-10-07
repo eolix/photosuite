@@ -1058,7 +1058,8 @@ fn home_sidebar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, rect: Rect) {
             ui.add_space(HOME_LOGO_PT + 36.0);
             let w = inner.width();
             if crate::widgets::primary_button(ui, &new_label, w).clicked() {
-                app.ui.open_dialog(crate::state::DialogKind::NewDocument, crate::state::UiState::new_document_fields());
+                let fields = crate::new_doc_ui::initial_fields(app);
+                app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
             }
             ui.add_space(12.0);
             if crate::widgets::secondary_button(ui, &open_label, w).clicked() {

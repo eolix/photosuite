@@ -3,7 +3,7 @@
 use serde_json::{Value, json};
 
 use crate::PhotosuiteApp;
-use crate::state::{DialogKind, UiState};
+use crate::state::DialogKind;
 
 /// Top-level menus in Photoshop order.
 pub const TOP_MENUS: [&str; 10] = ["File", "Edit", "Image", "Layer", "Type", "Select", "Filter", "View", "Window", "Help"];
@@ -210,7 +210,8 @@ pub(crate) fn invoke_unguarded(app: &mut PhotosuiteApp, ctx: &egui::Context, id:
             Ok(Value::Null)
         }
         "file.new" if params.as_object().is_none_or(|o| o.is_empty()) => {
-            let d = app.ui.open_dialog(DialogKind::NewDocument, UiState::new_document_fields());
+            let fields = crate::new_doc_ui::initial_fields(app);
+            let d = app.ui.open_dialog(DialogKind::NewDocument, fields);
             Ok(json!({"dialog": d}))
         }
         "file.open" => {

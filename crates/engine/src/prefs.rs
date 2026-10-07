@@ -829,6 +829,9 @@ pub struct Preferences {
     pub dialogs: BTreeMap<String, Value>,
     /// File › Scripts › Script Events Manager: event → script bindings.
     pub script_events: crate::automate_cmds::ScriptEvents,
+    /// File › New: the settings of the documents created there, newest first (the New Document
+    /// dialog's Recent tab). JSON owned by the shell.
+    pub recent_new_documents: Vec<Value>,
 }
 
 /// Preferences dialog sections in Photoshop's order: (id, title).
