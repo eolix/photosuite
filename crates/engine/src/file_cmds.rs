@@ -1020,8 +1020,19 @@ fn new_guide_layout(s: &mut Session, p: &Value) -> Result<Value> {
         _ => [0.0; 4],
     };
     let [top, left, bottom, right] = m;
-    let cols = p.get("columns").and_then(Value::as_u64).unwrap_or(0) as u32;
-    let rows = p.get("rows").and_then(Value::as_u64).unwrap_or(0) as u32;
+    let cols = p.get("columns").and_then(Value::as_u64).unwrap_or(0);
+    let rows = p.get("rows").and_then(Value::as_u64).unwrap_or(0);
+    // Each column/row costs a loop iteration plus a duplicate scan, so an
+    // absurd count from the caller would block the app for minutes (#704).
+    // Photoshop's own dialog caps at 32; 1000 is a generous ceiling that
+    // still finishes instantly.
+    const MAX_GUIDE_LINES: u64 = 1000;
+    for (n, what) in [(cols, "columns"), (rows, "rows")] {
+        if n > MAX_GUIDE_LINES {
+            return Err(EngineError::BadParams { cmd: "view.newGuideLayout".into(), msg: format!("{what} must be {MAX_GUIDE_LINES} or fewer (got {n})") });
+        }
+    }
+    let (cols, rows) = (cols as u32, rows as u32);
     let mut v: Vec<f32> = Vec::new();
     let mut h: Vec<f32> = Vec::new();
     let has_margin = m.iter().any(|x| *x != 0.0);
