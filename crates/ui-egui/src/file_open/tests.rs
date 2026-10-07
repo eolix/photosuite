@@ -78,6 +78,40 @@ fn file_open_dialog_sets_path_so_save_writes_in_place() {
 }
 
 #[test]
+fn file_open_dialog_opens_every_selected_path() {
+    let dir = std::env::temp_dir().join(format!("photosuite-issue-595-open-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let paths = ["one.psd", "two.png"].map(|name| {
+        let path = dir.join(name);
+        std::fs::write(&path, b"x").unwrap();
+        path.to_string_lossy().into_owned()
+    });
+    let (mut app, _) = app_with(None, None);
+    let selected = paths.to_vec();
+    app.services.pick_open_paths = Some(Box::new(move || Some(selected.clone())));
+
+    menus::invoke(&mut app, &egui::Context::default(), "file.open", json!({})).unwrap();
+
+    assert_eq!(app.session.documents().len(), 2);
+    assert_eq!(
+        app.session.documents().iter().map(|doc| doc.path.as_deref()).collect::<Vec<_>>(),
+        paths.iter().map(|path| Some(path.as_str())).collect::<Vec<_>>()
+    );
+    assert_eq!(app.ui.recent_files, vec![paths[1].clone(), paths[0].clone()]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn cancelling_multi_file_open_does_not_fall_back_to_single_file_picker() {
+    let (mut app, _) = app_with(Some(("/pics/unexpected.psd".into(), b"x".to_vec())), None);
+    app.services.pick_open_paths = Some(Box::new(|| None));
+
+    menus::invoke(&mut app, &egui::Context::default(), "file.open", json!({})).unwrap();
+
+    assert!(app.session.documents().is_empty());
+}
+
+#[test]
 fn save_writes_every_writable_format_in_place_and_asks_for_the_rest() {
     let (mut app, written) = app_with(None, None);
     let ctx = egui::Context::default();

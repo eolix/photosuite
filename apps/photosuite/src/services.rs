@@ -219,6 +219,13 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         user_resources_dir: config_dir().map(|d| d.join("libraries")),
         recent_thumbs_dir: config_dir().map(|d| d.join("recent-thumbs")),
         gallery_thumbs_file: config_dir().map(|d| d.join("filter-gallery-thumbnails.json")),
+        pick_open_paths: Some(Box::new(|| {
+            rfd::FileDialog::new()
+                .add_filter("All Formats", OPEN_EXTS)
+                .add_filter("PhotoSuite", &["pcraft"])
+                .pick_files()
+                .map(|paths| paths.into_iter().map(|path| path.to_string_lossy().into_owned()).collect())
+        })),
         pick_save: Some(Box::new(|suggested: &str| {
             let p = std::path::Path::new(suggested);
             let mut d = rfd::FileDialog::new();

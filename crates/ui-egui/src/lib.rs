@@ -160,6 +160,8 @@ pub type ExportFn = Box<dyn Fn(&Document, &str, &ExportSettings) -> Result<(Vec<
 /// The picked file's name and its bytes, or why it could not be read (shown like any other open
 /// failure); `None` when the dialog was cancelled.
 pub type PickOpenFn = Box<dyn FnMut() -> Option<(String, Result<Vec<u8>, String>)>>;
+/// File › Open's multi-file picker: the selected paths, `None` when cancelled.
+pub type PickOpenPathsFn = Box<dyn FnMut() -> Option<Vec<String>>>;
 pub type PickSaveFn = Box<dyn FnMut(&str) -> Option<String>>;
 /// Pick one existing file: (filter name, extensions without dots) → its path. For loading
 /// resources such as 3D LUTs, brushes or presets, rather than documents.
@@ -216,8 +218,10 @@ pub struct Services {
     pub import: Option<ImportFn>,
     /// Encode a document for a file name (format chosen by extension).
     pub export: Option<ExportFn>,
-    /// Show an "open file" dialog; returns (name, bytes).
+    /// Show a single-file picker for commands that import one file (Open As, presets, scripts).
     pub pick_open: Option<PickOpenFn>,
+    /// Show File › Open's multi-file picker; returns the selected paths.
+    pub pick_open_paths: Option<PickOpenPathsFn>,
     /// Show a "save file" dialog; returns a path/name to write.
     pub pick_save: Option<PickSaveFn>,
     pub pick_file: Option<PickFileFn>,
@@ -780,9 +784,15 @@ impl PhotosuiteApp {
         Ok(warnings)
     }
 
-    /// File › Open: the platform dialog returns the chosen file's path (native; the web delivers
-    /// picks through the inbox instead).
+    /// File › Open: native platforms return all selected paths; the web delivers its pick through
+    /// the single-file service/inbox instead.
     pub fn open_dialog_file(&mut self) {
+        if let Some(pick_paths) = self.services.pick_open_paths.as_mut() {
+            if let Some(paths) = pick_paths() {
+                self.open_paths(&paths);
+            }
+            return;
+        }
         let Some((path, bytes)) = self.services.pick_open.as_mut().and_then(|f| f()) else { return };
         if let Err(e) = bytes.and_then(|bytes| self.open_file(&path, &bytes)) {
             self.open_failed(&file_open::display_name(&path), &e);
