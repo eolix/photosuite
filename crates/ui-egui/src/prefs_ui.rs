@@ -163,13 +163,12 @@ fn presets_store(app: &mut PhotosuiteApp) {
 fn display_scale(pref: prefs::UiScale, native: Option<f32>, monitor_px: Option<egui::Vec2>) -> f32 {
     let native = native.filter(|v| v.is_finite() && *v > 0.0).unwrap_or(1.0);
     match pref {
-        prefs::UiScale::P100 => 1.0,
-        prefs::UiScale::P200 => 2.0,
         prefs::UiScale::Auto => {
             // A 4K display needs at least 200%; preserve larger system scales.
             let is_4k = monitor_px.is_some_and(|s| s.x.is_finite() && s.y.is_finite() && s.x.min(s.y) >= 2160.0 && s.x.max(s.y) >= 3840.0);
             if is_4k { native.max(2.0) } else { native }
         }
+        fixed => fixed.name().parse::<f32>().map_or(1.0, |pct| pct / 100.0),
     }
 }
 
@@ -795,8 +794,7 @@ fn choice_label(v: &str) -> String {
     match v {
         "cm" => "Centimeters".into(),
         "mm" => "Millimeters".into(),
-        "100" => "100%".into(),
-        "200" => "200%".into(),
+        "75" | "100" | "125" | "150" | "175" | "200" | "250" | "300" => format!("{v}%"),
         "8" => "8 Bits/Channel".into(),
         "16" => "16 Bits/Channel".into(),
         "postScript" => "PostScript (72 points/inch)".into(),
@@ -1630,7 +1628,7 @@ mod tests {
             step(vec2(1920.0, 1080.0), 1.0, 1.0);
             step(vec2(3840.0, 2160.0), 1.5, 2.0);
         }
-        for (pref, expected) in [("200", 2.0), ("100", 1.0), ("auto", 1.5)] {
+        for (pref, expected) in [("200", 2.0), ("125", 1.25), ("150", 1.5), ("100", 1.0), ("auto", 1.5)] {
             app.run("prefs.set", json!({"values": {"interface.uiScale": pref}})).unwrap();
             let mut input = egui::RawInput::default();
             input.viewports.get_mut(&egui::ViewportId::ROOT).unwrap().native_pixels_per_point = Some(1.5);
