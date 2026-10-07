@@ -1019,6 +1019,11 @@ pub fn edit_session_warp(app: &mut PhotosuiteApp, id: &str, params: &serde_json:
     let r = app.session.execute(id, p).map_err(|e| e.to_string())?;
     let raw = r.get("warp").cloned().ok_or_else(|| "warp command returned no mesh".to_string())?;
     let nw: Warp = serde_json::from_value(raw).map_err(|e| e.to_string())?;
+    // A warp-edit command can replace the mesh while pointer input is split across control
+    // requests. Any drag index captured from the old mesh is invalid once that happens.
+    if let Some(pv) = app.transform_preview.as_mut() {
+        pv.warp_drag = None;
+    }
     if let Some(t) = app.ui.transform.as_mut() {
         t.warp = Some(nw);
     }
@@ -2091,6 +2096,25 @@ mod tests {
         begin_warp(&mut app, &ctx).unwrap();
         leave_warp(&mut app);
         assert!(app.ui.transform.as_ref().unwrap().warp.is_none());
+    }
+
+    #[test]
+    fn replacing_the_warp_mesh_cancels_a_pending_point_drag() {
+        let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 32, 32));
+        let ctx = egui::Context::default();
+        begin_warp(&mut app, &ctx).unwrap();
+        for _ in 0..3 {
+            split(&mut app, "edit.transform.splitWarpCrosswise", None).unwrap();
+        }
+
+        pointer(&mut app, ToolEvent::Down { x: 32.0, y: 32.0, pressure: 1.0 }, egui::Modifiers::NONE);
+        assert!(app.transform_preview.as_ref().unwrap().warp_drag.is_some(), "the anchor drag is armed");
+
+        split(&mut app, "edit.transform.removeWarpSplit", None).unwrap();
+        assert!(app.transform_preview.as_ref().unwrap().warp_drag.is_none(), "the old mesh index is discarded");
+
+        // A later control-channel move belongs to the old gesture and must be harmless.
+        pointer(&mut app, ToolEvent::Move { x: 40.0, y: 40.0, pressure: 1.0 }, egui::Modifiers::NONE);
     }
 
     /// A press on a preset warp that misses its points leaves the preset alone (no invisible undo
