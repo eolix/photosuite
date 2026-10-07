@@ -360,9 +360,8 @@ fn opaque_front_hides_back() {
 fn hdr_colour_is_kept_and_edge_tiles_match_scanlines() {
     let (w, h) = (7, 5);
     let counts: Vec<u32> = (0..w * h).map(|p| (p as u32 * 3) % 4).collect();
-    let sample = |p: usize, ci: usize| -> Vec<f32> {
-        (0..(p as u32 * 3) % 4).map(|k| [1.0, 0.25 * k as f32, 0.5, 2.0 + p as f32 / 8.0, 10.0 - k as f32][ci]).collect()
-    };
+    let sample =
+        |p: usize, ci: usize| -> Vec<f32> { (0..(p as u32 * 3) % 4).map(|k| [1.0, 0.25 * k as f32, 0.5, 2.0 + p as f32 / 8.0, 10.0 - k as f32][ci]).collect() };
     for compression in [0u8, 1, 2] {
         let scan = rgba_flat(&gen_deep(w, h, &RGBAZ, compression, None, &counts, &sample));
         let tiled = rgba_flat(&gen_deep(w, h, &RGBAZ, compression, Some((3, 2)), &counts, &sample));
