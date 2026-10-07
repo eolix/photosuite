@@ -254,6 +254,43 @@ fn builder_psd_imports() {
 }
 
 #[test]
+fn group_nesting_past_the_cap_is_rejected() {
+    use photosuite_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
+    let mut b = PsdBuilder::new(4, 4);
+    for _ in 0..101 {
+        b.begin_group(GroupSpec::new("g"));
+    }
+    b.push_layer(LayerSpec::new("deep", 0, 0, 1, 1, PixelData::Rgba8(vec![1, 2, 3, 4])));
+    for _ in 0..101 {
+        b.end_group().unwrap();
+    }
+    let bytes = b.to_bytes().unwrap();
+    let err = import("deep.psd", &bytes).unwrap_err();
+    assert!(err.to_string().contains("nested deeper than 100"), "{err}");
+    // The never-fail converter still returns a document — capped, with a warning
+    // about the part that was not imported (it used to recurse to the file's depth).
+    let (d, warnings) = psd_to_document(&photosuite_psd::PsdFile::from_bytes(&bytes).unwrap());
+    assert_eq!(d.max_group_depth(), 100);
+    assert!(warnings.iter().any(|w| w.contains("deeper than 100")), "{warnings:?}");
+}
+
+#[test]
+fn group_nesting_at_the_cap_imports() {
+    use photosuite_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
+    let mut b = PsdBuilder::new(4, 4);
+    for _ in 0..100 {
+        b.begin_group(GroupSpec::new("g"));
+    }
+    b.push_layer(LayerSpec::new("deep", 0, 0, 1, 1, PixelData::Rgba8(vec![1, 2, 3, 4])));
+    for _ in 0..100 {
+        b.end_group().unwrap();
+    }
+    let r = import("hundred.psd", &b.to_bytes().unwrap()).unwrap();
+    assert_eq!(r.document.max_group_depth(), 100);
+    assert!(!r.warnings.iter().any(|w| w.contains("deeper")), "{:?}", r.warnings);
+}
+
+#[test]
 fn locks_and_labels_from_psd() {
     use photosuite_psd::TaggedBlock;
     let mut f = testgen::small(Version::Psd, Compression::Raw);

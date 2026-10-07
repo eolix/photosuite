@@ -702,6 +702,8 @@ fn build() -> Vec<CommandSpec> {
                         sib.insert(at.min(sib.len()), layer);
                     }
                 }
+                // Moving a group into (or beside) a deeply nested layer can pass the nesting cap.
+                crate::layer_multi_cmds::check_group_depth(doc, "Reorder Layer")?;
                 *active = Some(id);
                 Ok(())
             })?;

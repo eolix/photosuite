@@ -226,6 +226,7 @@ fn artboard_from_layers(s: &mut Session, p: &Value) -> Result<Value> {
         let mut g = Layer::group(name.unwrap_or_else(|| next_artboard_name(doc)), children);
         set_artboard(&mut g, Artboard { rect, background, preset: String::new() });
         let gid = doc.insert_above(None, g);
+        crate::layer_multi_cmds::check_group_depth(doc, "Artboard from Layers")?;
         fit_canvas(doc);
         *active = Some(gid);
         Ok((gid, rect))

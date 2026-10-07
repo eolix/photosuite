@@ -14,10 +14,9 @@ use photosuite_raster::{Surface, Tile, decode_pixel, encode_pixel};
 use crate::manifest::*;
 use crate::{FormatError, Result};
 
-/// Deepest group nesting a bundle may hold (a layer inside this many nested groups is the deepest).
-/// Saving and loading recurse once per level; at this depth both stay within a few hundred KiB of
-/// stack, well inside the 1 MiB main-thread stacks of Windows and wasm.
-pub const MAX_GROUP_DEPTH: usize = 100;
+/// Deepest group nesting a bundle may hold — the one nesting limit every consumer of the layer
+/// tree shares; see [`photosuite_doc::MAX_GROUP_DEPTH`].
+pub use photosuite_doc::MAX_GROUP_DEPTH;
 
 fn too_deep() -> FormatError {
     FormatError::LimitExceeded(format!("layer groups nested deeper than {MAX_GROUP_DEPTH}"))

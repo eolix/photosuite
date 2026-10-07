@@ -612,6 +612,16 @@ fn reverse(s: &mut Session) -> Result<Value> {
     Ok(Value::Null)
 }
 
+/// Refuses an edit that left `doc` nested deeper than [`photosuite_doc::MAX_GROUP_DEPTH`]
+/// groups. Called at the end of a `Session::edit` closure, so an `Err` leaves the document and
+/// history untouched.
+pub(crate) fn check_group_depth(doc: &Document, what: &str) -> Result<()> {
+    if doc.max_group_depth() > photosuite_doc::MAX_GROUP_DEPTH {
+        return Err(EngineError::Other(format!("{what} would nest layers deeper than {} groups", photosuite_doc::MAX_GROUP_DEPTH)));
+    }
+    Ok(())
+}
+
 /// Group Layers (⌘G) / Group from Layers: the explicit layer, or every selected layer, moves
 /// into a new group placed where the top-most of them was. Bottom-to-top order is preserved.
 pub fn group_layers(s: &mut Session, p: &Value) -> Result<Value> {
@@ -633,6 +643,7 @@ pub fn group_layers(s: &mut Session, p: &Value) -> Result<Value> {
             children.push(doc.remove(*id).ok_or(EngineError::NoLayer(*id))?);
         }
         *doc.layer_mut(gid).and_then(Layer::children_mut).ok_or(EngineError::NoLayer(gid))? = children;
+        check_group_depth(doc, "Group Layers")?;
         *active = Some(gid);
         Ok(gid)
     })?;
@@ -1130,6 +1141,24 @@ mod tests {
         select_all(&mut s, &[b, d]);
         s.execute("layer.groupLayers", json!({})).unwrap();
         assert_eq!(doc(&s).layers.len(), 4);
+    }
+
+    #[test]
+    fn grouping_is_capped_at_the_document_nesting_limit() {
+        let mut s = session(8);
+        let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
+        select_all(&mut s, &[a]);
+        for _ in 0..photosuite_doc::MAX_GROUP_DEPTH {
+            s.execute("layer.groupLayers", json!({})).unwrap();
+        }
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+        // One more wrapping group would pass the cap: rejected, document untouched.
+        let err = s.execute("layer.groupLayers", json!({})).unwrap_err();
+        assert!(err.to_string().contains("deeper than 100"), "{err}");
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+        // The rejected call recorded no history step: undo still lands one grouping earlier.
+        s.undo();
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH - 1);
     }
 
     #[test]

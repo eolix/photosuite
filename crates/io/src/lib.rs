@@ -141,6 +141,11 @@ fn import_stages(name: &str, bytes: &[u8], ctl: &photosuite_raster::Interrupt) -
     }
     if is_psd(bytes) {
         let file = PsdFile::from_bytes(bytes)?;
+        // Nesting past the document model's cap could never be saved (.pcraft refuses it) and
+        // would overflow the importer's recursion; reject the file with the actionable limit.
+        if psd_import::group_depth(&file) > photosuite_doc::MAX_GROUP_DEPTH {
+            return Err(IoError::Unsupported(format!("layer groups nested deeper than {}", photosuite_doc::MAX_GROUP_DEPTH)));
+        }
         ctl.check().map_err(|_| IoError::Cancelled)?;
         ctl.progress(0.05);
         let (mut document, warnings) = psd_import::psd_to_document_with(&file, ctl).ok_or(IoError::Cancelled)?;

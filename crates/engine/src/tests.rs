@@ -424,6 +424,47 @@ fn integer_params_accept_json_floats() {
 }
 
 #[test]
+fn move_to_refuses_to_nest_past_the_group_depth_cap() {
+    let mut s = session_with_doc();
+    let deep = s.execute("layer.new.layer", json!({"name": "Deep"})).unwrap()["layer"].as_u64().unwrap();
+    for _ in 0..photosuite_doc::MAX_GROUP_DEPTH - 1 {
+        s.execute("layer.groupLayers", json!({"layer": deep})).unwrap();
+    }
+    // `Deep` sits inside MAX - 1 groups. Moving a two-level group (G2 > G1 > Leaf) beside it
+    // would put `Leaf` at MAX + 1.
+    let path = s.active().unwrap().doc.path_of(photosuite_doc::LayerId(deep)).unwrap();
+    assert_eq!(path.len() - 1, photosuite_doc::MAX_GROUP_DEPTH - 1);
+    let leaf = s.execute("layer.new.layer", json!({"name": "Leaf"})).unwrap()["layer"].as_u64().unwrap();
+    let g1 = s.execute("layer.groupLayers", json!({"layer": leaf})).unwrap()["layer"].as_u64().unwrap();
+    let g = s.execute("layer.groupLayers", json!({"layer": g1})).unwrap()["layer"].as_u64().unwrap();
+    let past = s.active().unwrap().history.past_len();
+    let err = s.execute("layer.moveTo", json!({"layer": g, "target": deep, "position": "above"})).unwrap_err();
+    assert!(err.to_string().contains("deeper than"), "{err}");
+    assert!(s.active().unwrap().doc.max_group_depth() <= photosuite_doc::MAX_GROUP_DEPTH);
+    assert_eq!(s.active().unwrap().history.past_len(), past, "no history step recorded");
+    // A plain layer beside the deepest one still fits.
+    s.execute("layer.moveTo", json!({"layer": leaf, "target": deep, "position": "above"})).unwrap();
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH - 1);
+}
+
+#[test]
+fn artboard_from_layers_refuses_to_nest_past_the_group_depth_cap() {
+    let mut s = session_with_doc();
+    let leaf = s.execute("layer.new.layer", json!({"name": "Leaf"})).unwrap()["layer"].as_u64().unwrap();
+    let mut top = leaf;
+    for _ in 0..photosuite_doc::MAX_GROUP_DEPTH {
+        top = s.execute("layer.groupLayers", json!({"layer": top})).unwrap()["layer"].as_u64().unwrap();
+    }
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+    s.execute("layer.select", json!({"layer": top})).unwrap();
+    let past = s.active().unwrap().history.past_len();
+    let err = s.execute("layer.new.artboardFromLayers", json!({})).unwrap_err();
+    assert!(err.to_string().contains("deeper than"), "{err}");
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+    assert_eq!(s.active().unwrap().history.past_len(), past, "no history step recorded");
+}
+
+#[test]
 fn move_to_reorders_and_nests() {
     let mut s = session_with_doc();
     let a = s.execute("layer.new.layer", json!({"name": "A"})).unwrap()["layer"].as_u64().unwrap();

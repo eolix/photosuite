@@ -371,7 +371,7 @@ impl Ctx<'_> {
         l.vector_mask = Some(vm);
     }
 
-    fn build(&mut self, nodes: &[LayerNode]) -> Vec<Layer> {
+    fn build(&mut self, nodes: &[LayerNode], depth: usize) -> Vec<Layer> {
         let layers = self.file.layers();
         let ctl = self.ctl;
         nodes
@@ -388,7 +388,18 @@ impl Ctx<'_> {
                 }
                 LayerNode::Group { index, children, .. } => {
                     let rec = &layers[*index];
-                    let children = self.build(children);
+                    // The recursion here (and in every later consumer of the tree) is bounded by
+                    // the document model's nesting cap; a deeper subtree is not imported.
+                    let children = if depth >= photosuite_doc::MAX_GROUP_DEPTH {
+                        self.warn(format!(
+                            "group `{}` nests deeper than {} groups; its contents were not imported",
+                            rec.name(),
+                            photosuite_doc::MAX_GROUP_DEPTH
+                        ));
+                        Vec::new()
+                    } else {
+                        self.build(children, depth + 1)
+                    };
                     let sd = rec.section_divider();
                     let expanded = sd.is_none_or(|s| s.kind != photosuite_psd::SectionType::ClosedFolder);
                     let artboard = crate::comps_map::ARTBOARD_KEYS.iter().find_map(|k| rec.block(k)).and_then(|b| crate::comps_map::parse_artboard(&b.data));
@@ -405,18 +416,42 @@ impl Ctx<'_> {
 
 /// Sets `Layer::link_group` from resource 1026's per-record ids (`nodes` and `layers` correspond).
 fn apply_link_groups(nodes: &[LayerNode], layers: &mut [Layer], ids: &[u16]) {
-    for (n, l) in nodes.iter().zip(layers.iter_mut()) {
-        let index = match n {
-            LayerNode::Layer { index } => *index,
-            LayerNode::Group { index, children, .. } => {
-                if let LayerContent::Group(g) = &mut l.content {
-                    apply_link_groups(children, &mut g.children, ids);
+    fn rec(nodes: &[LayerNode], layers: &mut [Layer], ids: &[u16], depth: usize) {
+        for (n, l) in nodes.iter().zip(layers.iter_mut()) {
+            let index = match n {
+                LayerNode::Layer { index } => *index,
+                LayerNode::Group { index, children, .. } => {
+                    // Matches the importer's nesting cap: deeper children were not imported.
+                    if depth < photosuite_doc::MAX_GROUP_DEPTH
+                        && let LayerContent::Group(g) = &mut l.content
+                    {
+                        rec(children, &mut g.children, ids, depth + 1);
+                    }
+                    *index
                 }
-                *index
-            }
-        };
-        l.link_group = ids.get(index).copied().filter(|&g| g != 0).map(u64::from);
+            };
+            l.link_group = ids.get(index).copied().filter(|&g| g != 0).map(u64::from);
+        }
     }
+    rec(nodes, layers, ids, 0);
+}
+
+/// Deepest group nesting of the file's layer records (a layer inside this many groups is the
+/// deepest), computed like `layer_tree`'s stack — iteratively, so no file can make it recurse.
+pub(crate) fn group_depth(file: &PsdFile) -> usize {
+    use photosuite_psd::tagged::SectionType;
+    let (mut open, mut depth) = (0usize, 0usize);
+    for rec in file.layers() {
+        match rec.section_type() {
+            SectionType::BoundingDivider => {
+                open += 1;
+                depth = depth.max(open);
+            }
+            SectionType::OpenFolder | SectionType::ClosedFolder => open = open.saturating_sub(1),
+            _ => {}
+        }
+    }
+    depth
 }
 
 fn preserved_blocks(rec: &LayerRecord) -> Vec<([u8; 4], Arc<Vec<u8>>)> {
@@ -585,7 +620,7 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
         }
     } else if layered {
         let tree = file.layer_tree();
-        doc.layers = cx.build(&tree);
+        doc.layers = cx.build(&tree, 0);
         // Layer › Link Layers: resource 1026 holds one group id per layer record (0 = unlinked).
         if let Some(Ok(photosuite_psd::resources::ResourceData::LayerGroupInfo(groups))) =
             file.resources.iter().find(|r| r.id == ids::LAYER_GROUP_INFO).and_then(photosuite_psd::resources::ImageResource::parsed)

@@ -163,6 +163,14 @@ pub struct Effects {
     pub reference: Option<(f64, f64)>,
 }
 
+/// Deepest group nesting a document may hold: a layer inside this many nested groups is the
+/// deepest legal one. Everything that walks the layer tree (engine lookups, the layers panel,
+/// PSD export, `.pcraft` save and load) recurses once per level, so deeper trees risk
+/// overflowing the 1 MiB main-thread stacks of Windows and wasm. PSD import and the engine
+/// commands that nest layers (`layer.groupLayers`, `layer.moveTo`, Artboard from Layers) enforce
+/// this up front; `photosuite-format` refuses to save deeper trees.
+pub const MAX_GROUP_DEPTH: usize = 100;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Group {
     pub children: Vec<Layer>,
@@ -743,6 +751,27 @@ impl Document {
         Rect::from_size(self.size)
     }
 
+    /// Nesting depth of the deepest layer: 0 for a root-level layer, 1 inside one group, and so
+    /// on. Computed over an explicit stack, so it cannot overflow on any tree it measures.
+    pub fn max_group_depth(&self) -> usize {
+        let mut max = 0;
+        let mut stack: Vec<(&[Layer], usize)> = vec![(&self.layers, 0)];
+        while let Some((layers, depth)) = stack.pop() {
+            if layers.is_empty() {
+                continue;
+            }
+            max = max.max(depth);
+            for l in layers {
+                if let Some(ch) = l.children()
+                    && !ch.is_empty()
+                {
+                    stack.push((ch, depth + 1));
+                }
+            }
+        }
+        max
+    }
+
     /// Depth-first walk yielding `(path, depth, layer)` bottom-to-top.
     pub fn walk(&self) -> Vec<(LayerPath, usize, &Layer)> {
         fn rec<'a>(layers: &'a [Layer], prefix: &mut LayerPath, out: &mut Vec<(LayerPath, usize, &'a Layer)>) {
@@ -867,6 +896,21 @@ mod tests {
         assert_eq!(s.pixel(0, 0), vec![1.0, 1.0, 1.0, 1.0]);
         assert_eq!(s.pixel(99, 49), vec![1.0, 1.0, 1.0, 1.0]);
         assert_eq!(s.pixel(100, 0), vec![0.0; 4]);
+    }
+
+    #[test]
+    fn max_group_depth_counts_nesting_without_recursing() {
+        let mut d = doc();
+        let bg = d.layers[0].id;
+        let mut chain = Layer::raster("L", d.pixel_format());
+        for _ in 0..3 {
+            chain = Layer::group("G", vec![chain]);
+        }
+        d.insert_above(Some(bg), chain);
+        assert_eq!(d.max_group_depth(), 3);
+        // An unfilled group does not add a level (nothing lives inside it).
+        d.insert_above(Some(bg), Layer::group("empty", vec![]));
+        assert_eq!(d.max_group_depth(), 3);
     }
 
     #[test]
