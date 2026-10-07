@@ -31,6 +31,7 @@ pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("view.extras", "Extras", &["View"], Some("Cmd+H")),
     ("view.show.targetPath", "Target Path", &["View", "Show"], Some("Cmd+Shift+H")),
     ("view.screenMode.cycle", "Cycle Screen Mode", &[], Some("F")),
+    ("edit.freeTransformCopy", "Free Transform a Copy", &[], Some("Cmd+Alt+T")),
     ("view.zoomIn", "Zoom In", &["View"], Some("Cmd+=")),
     ("view.zoomOut", "Zoom Out", &["View"], Some("Cmd+-")),
     ("view.fitOnScreen", "Fit on Screen", &["View"], Some("Cmd+0")),
@@ -373,6 +374,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotosuiteApp, ctx: &egui::Context, id:
         | "edit.transform.skew"
         | "edit.transform.distort"
         | "edit.transform.perspective" => crate::transform_tool::begin(app, ctx).map(|_| json!({"transform": app.ui.transform})),
+        "edit.freeTransformCopy" => crate::transform_tool::begin_copy(app, ctx).map(|_| json!({"transform": app.ui.transform})),
         // Edit › Transform › Warp from the menu: interactive Warp mode (with params: the engine).
         "edit.transform.warp" | "layer.smartObjects.warp" if params.as_object().is_none_or(|o| o.is_empty()) => {
             crate::transform_tool::begin_warp(app, ctx).map(|_| json!({"transform": app.ui.transform}))
@@ -499,6 +501,7 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
             app.session.active().is_some()
         }
         "edit.freeTransform"
+        | "edit.freeTransformCopy"
         | "edit.transform.scale"
         | "edit.transform.rotate"
         | "edit.transform.skew"

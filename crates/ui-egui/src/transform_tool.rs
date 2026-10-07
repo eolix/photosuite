@@ -85,8 +85,40 @@ pub fn begin(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String>
         warp: None,
         selection: false,
         target: None,
+        copy: false,
     });
     Ok(())
+}
+
+/// Free Transform on a copy (⌥⌘T, no menu item): duplicates the active layer (with a selection,
+/// its selected pixels, as Layer via Copy) and transforms the copy (#352).
+pub fn begin_copy(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> {
+    let selection = app.session.active().is_some_and(|d| d.doc.selection.is_some());
+    app.run(if selection { "layer.new.layerViaCopy" } else { "layer.duplicate" }, json!({}))?;
+    if let Err(e) = begin(app, ctx) {
+        take_back_copy(app);
+        return Err(e);
+    }
+    if let Some(t) = app.ui.transform.as_mut() {
+        t.copy = true;
+    }
+    Ok(())
+}
+
+/// Undoes the copy a cancelled or failed ⌥⌘T made, leaving nothing to redo.
+fn take_back_copy(app: &mut PhotosuiteApp) {
+    app.session.undo();
+    if let Some(st) = app.session.active_mut() {
+        st.history.clear_redo();
+    }
+    app.sync_views();
+}
+
+/// After ⌥⌘T's transform: the copy and the transform become one history step (the transform's).
+fn fold_copy(app: &mut PhotosuiteApp) {
+    if let Some(st) = app.session.active_mut() {
+        st.history.purge_last();
+    }
 }
 
 /// Free Transform of a targeted unlinked layer mask, alpha channel or Quick Mask by itself: the
@@ -138,6 +170,7 @@ fn begin_lone(
         warp: None,
         selection: false,
         target: Some(target),
+        copy: false,
     });
     Ok(())
 }
@@ -181,6 +214,7 @@ pub fn begin_selection(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(
         warp: None,
         selection: true,
         target: None,
+        copy: false,
     });
     Ok(())
 }
@@ -305,30 +339,40 @@ pub fn commit(app: &mut PhotosuiteApp) {
         }
         return;
     }
-    if let Some(w) = &t.warp {
+    let copy = t.copy;
+    let r = if let Some(w) = &t.warp {
         if w.is_identity() {
             return;
         }
-        if let Err(e) = app.run("edit.transform.warp", json!({"layer": t.layer, "rect": t.rect, "warp": w, "interpolation": t.interpolation})) {
+        app.run("edit.transform.warp", json!({"layer": t.layer, "rect": t.rect, "warp": w, "interpolation": t.interpolation}))
+    } else {
+        if t.quad == corners(t.rect) {
+            return; // untouched: nothing to do and no history step; a ⌥⌘T copy stays
+        }
+        let mut p = json!({"layer": t.layer, "rect": t.rect, "quad": t.quad, "interpolation": t.interpolation});
+        if let Some(target) = t.target {
+            p["target"] = target;
+        }
+        app.run("edit.transform", p)
+    };
+    match r {
+        Ok(_) if copy => fold_copy(app),
+        Ok(_) => {}
+        Err(e) => {
+            if copy {
+                take_back_copy(app);
+            }
             app.ui.status = e;
         }
-        return;
-    }
-    if t.quad == corners(t.rect) {
-        return; // untouched: nothing to do (Photoshop adds no history step either)
-    }
-    let mut p = json!({"layer": t.layer, "rect": t.rect, "quad": t.quad, "interpolation": t.interpolation});
-    if let Some(target) = t.target {
-        p["target"] = target;
-    }
-    if let Err(e) = app.run("edit.transform", p) {
-        app.ui.status = e;
     }
 }
 
 pub fn cancel(app: &mut PhotosuiteApp) {
-    app.ui.transform = None;
+    let copy = app.ui.transform.take().is_some_and(|t| t.copy);
     app.transform_preview = None;
+    if copy {
+        take_back_copy(app);
+    }
 }
 
 /// Which part of the box a document point hits.
@@ -1000,6 +1044,7 @@ mod tests {
             warp: None,
             selection: false,
             target: None,
+            copy: false,
         }
     }
 
@@ -1076,6 +1121,43 @@ mod tests {
         let b = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
         assert!(b.width().abs_diff(32) <= 2 && b.x0.abs_diff(0) <= 1, "{b:?}");
         assert!(app.ui.transform.is_none() && app.transform_preview.is_none());
+    }
+
+    /// #352: ⌥⌘T transforms a copy. OK leaves the original and a moved copy as one history step;
+    /// Cancel leaves no copy and nothing to redo; with a selection the copy holds the selected
+    /// pixels only.
+    #[test]
+    fn free_transform_a_copy() {
+        let ctx = egui::Context::default();
+        let bounds = |app: &PhotosuiteApp, i: usize| app.session.active().unwrap().doc.layers[i].surface().unwrap().content_bounds();
+        let mut app = app_with_square(64, photosuite_geom::Rect::new(8, 8, 24, 24));
+        let (layers, steps) = (app.session.active().unwrap().doc.layers.len(), app.session.active().unwrap().history.past_len());
+        crate::menus::invoke(&mut app, &ctx, "edit.freeTransformCopy", json!({})).unwrap();
+        assert!(app.ui.transform.as_ref().unwrap().copy);
+        assert!(!crate::menus::is_enabled(&app, "edit.freeTransformCopy"), "one transform at a time");
+        // Esc: the copy goes too.
+        cancel(&mut app);
+        let st = app.session.active().unwrap();
+        assert_eq!((st.doc.layers.len(), st.history.past_len()), (layers, steps));
+        assert!(!st.history.can_redo(), "nothing to redo");
+        // OK: original in place, a moved copy, one step.
+        crate::menus::invoke(&mut app, &ctx, "edit.freeTransformCopy", json!({})).unwrap();
+        if let Some(t) = app.ui.transform.as_mut() {
+            t.quad = t.quad.map(|[x, y]| [x + 20.0, y]);
+        }
+        commit(&mut app);
+        let st = app.session.active().unwrap();
+        assert_eq!((st.doc.layers.len(), st.history.past_len()), (layers + 1, steps + 1));
+        assert_eq!(bounds(&app, layers - 1), photosuite_geom::Rect::new(8, 8, 24, 24), "the original stays");
+        assert_eq!(bounds(&app, layers), photosuite_geom::Rect::new(28, 8, 44, 24), "the copy moved");
+        app.session.undo();
+        assert_eq!(app.session.active().unwrap().doc.layers.len(), layers, "one undo removes copy and move");
+        // With a selection: Layer via Copy, so only the selected pixels are copied.
+        app.run("select.rect", json!({"x": 8, "y": 8, "width": 8, "height": 16})).unwrap();
+        crate::menus::invoke(&mut app, &ctx, "edit.freeTransformCopy", json!({})).unwrap();
+        assert_eq!(app.ui.transform.as_ref().unwrap().rect, [8.0, 8.0, 16.0, 24.0]);
+        cancel(&mut app);
+        assert_eq!(app.session.active().unwrap().doc.layers.len(), layers);
     }
 
     fn app_with_square(size: u32, fill: photosuite_geom::Rect) -> PhotosuiteApp {

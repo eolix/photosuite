@@ -498,6 +498,10 @@ pub struct TransformSession {
     /// the Quick Mask by itself (`None`: the layer, with its linked masks).
     #[serde(default)]
     pub target: Option<serde_json::Value>,
+    /// Free Transform on a copy (⌥⌘T): the copy was made for this session, so Cancel takes it back
+    /// and OK folds it into the transform's history step (#352).
+    #[serde(default)]
+    pub copy: bool,
 }
 
 /// In-progress inline type editing (Type tool). Offsets are character indices.
