@@ -133,6 +133,86 @@ fn clicking_outside_a_dialog_keeps_it_open_and_the_canvas_pans_and_zooms() {
     assert!(h.state().ui.dialogs.is_empty());
 }
 
+fn press(h: &mut Harness<'static, PhotosuiteApp>, p: Pos2, pressed: bool) {
+    h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+}
+
+fn picker_color(h: &Harness<'static, PhotosuiteApp>) -> String {
+    let d = h.state().ui.dialogs.last().unwrap();
+    d.fields.get("color").and_then(serde_json::Value::as_str).unwrap().to_string()
+}
+
+/// The Color Picker's eyedropper, as in Photoshop: over the image the pointer is a pipette, and a
+/// click or drag there samples into the picker's new colour, whatever the tool. OK applies it.
+#[test]
+fn color_picker_samples_the_image_under_its_pipette() {
+    let mut h = harness();
+    h.state_mut().run("shape.create", json!({"kind": "rect", "rect": [0, 0, 200, 300], "fill": "#ff0000"})).unwrap();
+    h.state_mut().run("shape.create", json!({"kind": "rect", "rect": [200, 0, 200, 300], "fill": "#00ff00"})).unwrap();
+    // 400 %: the image covers the whole canvas, red on the left of the dialog, green on its right.
+    let v = &mut h.state_mut().ui.views[0];
+    (v.zoom, v.center, v.fit_pending) = (4.0, [200.0, 150.0], false);
+    crate::color_picker_ui::open(h.state_mut(), "foreground");
+    h.run_steps(3);
+    let r = h.state().last_canvas_rect;
+    let (red, green) = (pos2(r.left() + 60.0, r.center().y), pos2(r.right() - 60.0, r.center().y));
+    assert_eq!(doc_at(&h, red)[0] < 200.0, doc_at(&h, green)[0] > 200.0);
+    let foreground = h.state().session.tools.foreground;
+
+    h.hover_at(red);
+    h.run_steps(1);
+    assert_eq!(h.output().platform_output.cursor_icon, egui::CursorIcon::None, "the pipette replaces the pointer");
+    h.hover_at(r.center());
+    h.run_steps(1);
+    assert_ne!(h.output().platform_output.cursor_icon, egui::CursorIcon::None, "over the dialog it is the normal pointer");
+
+    // A click samples; the press and release may land in one frame (`ui.click`).
+    h.hover_at(red);
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton { pos: red, button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    press(&mut h, red, false);
+    assert_eq!(picker_color(&h), "#ff0000");
+    assert_eq!(h.state().session.tools.foreground, foreground, "only OK sets the foreground");
+
+    // A drag keeps sampling, skipping the dialog on the way.
+    press(&mut h, red, true);
+    for i in 1..=6 {
+        h.hover_at(red + (green - red) * (i as f32 / 6.0));
+        h.run_steps(1);
+    }
+    press(&mut h, green, false);
+    assert_eq!(picker_color(&h), "#00ff00");
+
+    // Space-drag still pans instead of sampling.
+    h.hover_at(red);
+    h.run_steps(1);
+    let c0 = h.state().ui.views[0].center;
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+    press(&mut h, red, true);
+    h.hover_at(red + vec2(40.0, 0.0));
+    h.run_steps(1);
+    press(&mut h, red + vec2(40.0, 0.0), false);
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    let c1 = h.state().ui.views[0].center;
+    assert!((c1[0] - (c0[0] - 10.0)).abs() < 0.5, "space-drag pans by 40 pt at 400 %: {c0:?} -> {c1:?}");
+    assert_eq!(picker_color(&h), "#00ff00");
+
+    // With the Hand tool a click samples too (the tool doesn't matter); OK applies the sample.
+    h.state_mut().ui.tool = crate::state::Tool::Hand;
+    h.hover_at(red);
+    h.run_steps(1);
+    press(&mut h, red, true);
+    press(&mut h, red, false);
+    assert_eq!(picker_color(&h), "#ff0000");
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().ui.dialogs.is_empty());
+    assert_eq!(h.state().session.tools.foreground, [1.0, 0.0, 0.0, 1.0]);
+}
+
 /// Type tool (#206): Alt+←/→ at a collapsed caret kerns the pair before it by 20/1000 em (100
 /// with ⌘/Ctrl), one history step per press; ⌘/Ctrl+←/→ moves by word; Alt+Shift+→ extends
 /// the selection by a word.

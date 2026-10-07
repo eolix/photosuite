@@ -87,6 +87,21 @@ pub fn paint(ui: &egui::Ui, rect: Rect, name: &str, size: f32, tint: Color32) {
     image(name, size, tint).paint_at(ui, r);
 }
 
+/// An icon as the pointer, above every window: `name` with its hotspot `hot` (a fraction of the
+/// icon box) on `p`, white with a dark outline so it reads on any image. The caller hides the OS
+/// cursor (`CursorIcon::None`).
+pub fn cursor(ctx: &egui::Context, name: &str, p: egui::Pos2, hot: Vec2, size: f32) {
+    let rect = Rect::from_min_size(p - hot * size, Vec2::splat(size));
+    let area = egui::Area::new(egui::Id::new("pc-icon-cursor")).order(egui::Order::Tooltip).fixed_pos(rect.min).constrain(false).interactable(false);
+    area.show(ctx, |ui| {
+        let outline = image(name, size, Color32::from_black_alpha(200));
+        for (dx, dy) in [(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0), (-1.0, -1.0), (1.0, 1.0), (-1.0, 1.0), (1.0, -1.0)] {
+            outline.paint_at(ui, rect.translate(egui::vec2(dx, dy)));
+        }
+        image(name, size, Color32::WHITE).paint_at(ui, rect);
+    });
+}
+
 pub fn tool_icon(t: Tool) -> &'static str {
     match t {
         Tool::Move => "tools-move",

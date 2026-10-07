@@ -2,6 +2,8 @@
 //! for the selected component (H, S, B, R, G or B radio), new/current swatches, and HSB, RGB, Lab,
 //! CMYK and hex fields. The colour lives in the dialog fields (`color` as `#rrggbb`, plus the HSB
 //! floats so hue survives greys), so `ui.dialog.set` drives it; OK runs `tools.setColors`.
+//! While it is the top dialog the image is its eyedropper, as in Photoshop: the pointer over the
+//! canvas is a pipette, and a click or drag there samples into the new colour ([`sample_at`]).
 
 use egui::{Color32, Mesh, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use serde_json::{Map, Value, json};
@@ -138,6 +140,21 @@ pub fn open_for_command(app: &mut PhotosuiteApp, label: &str, rgb: [f32; 3], com
 
 pub fn owns(f: &Map<String, Value>) -> bool {
     f.contains_key("__colorPicker")
+}
+
+/// The Color Picker, when it is the top dialog (another dialog opened over it takes the input).
+pub fn top(app: &PhotosuiteApp) -> Option<u64> {
+    app.ui.dialogs.last().filter(|d| owns(&d.fields)).map(|d| d.id)
+}
+
+/// Eyedropper: the top Color Picker's new colour becomes the image's composite colour at document
+/// point (x, y). Off the image or over transparency nothing changes.
+pub fn sample_at(app: &mut PhotosuiteApp, x: f64, y: f64) {
+    let Some(id) = top(app) else { return };
+    let Some(rgb) = crate::canvas::composite_color(app, x, y) else { return };
+    if let Some(d) = app.ui.dialog_mut(id) {
+        set_rgb(&mut d.fields, rgb, Keep::Nothing);
+    }
 }
 
 /// The colour in every model the dialog shows.
@@ -512,5 +529,47 @@ mod tests {
         let fields = d.fields.clone();
         confirm(&mut app, &fields).unwrap();
         assert_eq!(hex([app.session.tools.background[0], app.session.tools.background[1], app.session.tools.background[2]]), "#3366cc");
+    }
+
+    fn dialog_color(app: &PhotosuiteApp, id: u64) -> &str {
+        app.ui.dialogs.iter().find(|d| d.id == id).and_then(|d| d.fields.get("color")).and_then(Value::as_str).unwrap()
+    }
+
+    #[test]
+    fn the_top_picker_samples_the_image() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 40, "height": 20, "background": "transparent"})).unwrap();
+        app.run("shape.create", json!({"kind": "rect", "rect": [0, 0, 20, 20], "fill": "#ff0000"})).unwrap();
+        app.run("shape.create", json!({"kind": "rect", "rect": [20, 0, 10, 20], "fill": "#00ff00"})).unwrap();
+        let id = open(&mut app, "foreground");
+        assert_eq!(top(&app), Some(id));
+        sample_at(&mut app, 25.5, 5.5);
+        assert_eq!(dialog_color(&app, id), "#00ff00");
+        assert_eq!(app.ui.dialog_mut(id).unwrap().fields["__orig"], json!("#000000"), "the current colour stays");
+        // Off the image or over transparency nothing changes.
+        for (x, y) in [(35.0, 5.0), (-3.0, 5.0), (5.0, 20.0), (1e12, -1e12), (f64::NAN, f64::INFINITY)] {
+            sample_at(&mut app, x, y);
+            assert_eq!(dialog_color(&app, id), "#00ff00", "({x}, {y})");
+        }
+
+        // Agents: `ui.pointer` samples into the picker instead of driving the tool.
+        app.ui.tool = crate::state::Tool::Brush;
+        let rev = app.session.active().unwrap().revision;
+        let ctx = egui::Context::default();
+        let events = json!([{"kind": "down", "x": 5, "y": 5}, {"kind": "up", "x": 5, "y": 5}]);
+        let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"events": events}));
+        let _ = crate::control::handle(&mut app, &ctx, &req);
+        assert_eq!(dialog_color(&app, id), "#ff0000");
+        assert_eq!(app.session.active().unwrap().revision, rev, "the Brush must not paint");
+        assert_eq!(app.session.tools.foreground, [0.0, 0.0, 0.0, 1.0], "only OK sets the foreground");
+
+        // A dialog opened over the picker takes the input.
+        let about = app.ui.open_dialog(DialogKind::About, Map::new());
+        assert_eq!(top(&app), None);
+        sample_at(&mut app, 25.0, 5.0);
+        assert_eq!(dialog_color(&app, id), "#ff0000");
+        app.ui.close_dialog(about);
+        sample_at(&mut app, 25.0, 5.0);
+        assert_eq!(dialog_color(&app, id), "#00ff00");
     }
 }

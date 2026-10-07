@@ -574,7 +574,9 @@ impl PhotosuiteMcp {
         }
     }
 
-    #[tool(description = "Bridge mode: send pointer events (document coordinates) to the active tool.")]
+    #[tool(
+        description = "Bridge mode: send pointer events (document coordinates) to the active tool; with a Color Picker open they sample the image into it instead."
+    )]
     async fn ui_pointer(&self, Parameters(p): Parameters<PointerParams>) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => {

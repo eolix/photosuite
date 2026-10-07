@@ -119,6 +119,31 @@ pub fn frame<R>(
     modal
 }
 
+/// A click or drag with the primary button started on the free canvas under an open dialog, Space
+/// not held: where the pointer is this frame. The press itself counts even when it is released in
+/// the same frame (a quick click, `ui.click`); the drag only while it stays on the free canvas.
+pub fn free_press(ctx: &egui::Context, canvas: egui::Rect) -> Option<egui::Pos2> {
+    if egui::Popup::is_any_open(ctx) {
+        return None;
+    }
+    let rects = rects(ctx);
+    let free = |p: egui::Pos2| canvas.contains(p) && !rects.iter().any(|r| r.contains(p));
+    ctx.input(|i| {
+        if i.key_down(egui::Key::Space) {
+            return None;
+        }
+        let pressed = i.events.iter().rev().find_map(|e| match e {
+            egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, .. } => Some(*pos),
+            _ => None,
+        });
+        if let Some(p) = pressed {
+            return free(p).then_some(p);
+        }
+        let held = i.pointer.primary_down() && i.pointer.press_origin().is_some_and(free);
+        i.pointer.latest_pos().filter(|p| held && free(*p))
+    })
+}
+
 pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     let dialogs = app.ui.dialogs.clone();
     let mut shown = Vec::new();
