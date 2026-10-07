@@ -1371,20 +1371,25 @@ fn apply_image(s: &mut Session, p: &Value) -> Result<Value> {
         let colors = sf.mode.color_channels();
         let mut v = surf.read_region(area);
         for (i, px) in v.chunks_exact_mut(n).enumerate() {
+            let base_a = if sf.alpha { px[colors].clamp(0.0, 1.0) } else { 1.0 };
             let mut w = weight(i);
-            if preserve && sf.alpha {
-                w *= px[colors].clamp(0.0, 1.0);
+            if preserve {
+                w *= base_a;
             }
             if w <= 0.0 {
                 continue;
             }
+            // Painted over the layer like a brush: the blend only acts where the layer has
+            // pixels (where it is transparent the source shows as is), and the alpha grows by
+            // source-over, so applying to an empty layer copies the source in any mode.
+            let out_a = if preserve { base_a } else { w + base_a * (1.0 - w) };
             for (c, b) in px[..colors].iter_mut().enumerate() {
                 let top = src.get(c).unwrap_or(&src[0])[i];
-                *b += (blending.apply(*b, top) - *b) * w;
+                let blended = top + (blending.apply(*b, top) - top) * base_a;
+                *b = if preserve { *b + (blended - *b) * w } else { (w * blended + base_a * (1.0 - w) * *b) / out_a };
             }
-            // Painting a transparent pixel makes it opaque, as Apply Image does on layers.
-            if !preserve && sf.alpha {
-                px[colors] = px[colors].max(w);
+            if sf.alpha {
+                px[colors] = out_a;
             }
         }
         surf.write_region(area, &v);
