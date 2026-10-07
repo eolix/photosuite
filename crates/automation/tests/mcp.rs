@@ -399,6 +399,10 @@ async fn filesystem_policy_rejects_absolute_and_escaping_paths_before_effects() 
 // ---------------------------------------------------------------------------
 
 async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
+    fake_app_with_screenshot(None).await
+}
+
+async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, tokio::task::JoinHandle<Vec<Value>>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();
     let h = tokio::spawn(async move {
@@ -430,8 +434,10 @@ async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
                 }
                 "ui.pointer" => json!({"id": id, "ok": true, "result": req["params"]}),
                 "ui.screenshot" => {
-                    let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
-                    let bytes = photosuite_codecs::encode(&img, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+                    let bytes = screenshot_png.clone().unwrap_or_else(|| {
+                        let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
+                        photosuite_codecs::encode(&img, photosuite_codecs::Format::Png, &Default::default()).unwrap()
+                    });
                     let png = base64::engine::general_purpose::STANDARD.encode(bytes);
                     json!({"id": id, "ok": true, "result": {"mimeType": "image/png", "base64": png}})
                 }
@@ -470,6 +476,44 @@ async fn bridge_forwards_to_control_protocol() {
     assert!(text(&e).contains("unknown tool"));
     let r = call(&client, "doc_select", json!({"index": 0})).await;
     assert_eq!(r.is_error, Some(true));
+
+    client.cancel().await.unwrap();
+    app.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
+    use photosuite_automation::budgets::MAX_PNG_BYTES;
+
+    let (width, height) = (1400, 1000);
+    let mut pixels = vec![0; width * height * 4];
+    let mut state = 0x6d2b_79f5_u32;
+    for pixel in &mut pixels {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        *pixel = state as u8;
+    }
+    let image = photosuite_codecs::Image::from_u8(width as u32, height as u32, photosuite_codecs::ChannelLayout::Rgba, pixels).unwrap();
+    let source_png = photosuite_codecs::encode(&image, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+    assert!(source_png.len() > MAX_PNG_BYTES, "fixture must exceed the PNG budget");
+
+    let (addr, app) = fake_app_with_screenshot(Some(source_png)).await;
+    let client = connect(PhotosuiteMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+
+    for (tool, args) in [("ui_screenshot", json!({"max_side": 32})), ("doc_render_preview", json!({"max_side": 32}))] {
+        let reply = call(&client, tool, args).await;
+        assert_ne!(reply.is_error, Some(true), "{tool}: {}", text(&reply));
+        let img = reply.content.iter().find_map(|content| content.as_image()).expect("preview image");
+        let png = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
+        assert!(png.len() <= MAX_PNG_BYTES, "{tool} returned {} bytes", png.len());
+        let decoded = photosuite_codecs::decode(&png).unwrap();
+        assert_eq!(decoded.dimensions(), (32, 22), "{tool}");
+    }
+
+    let full_size = call(&client, "ui_screenshot", json!({})).await;
+    assert_eq!(full_size.is_error, Some(true));
+    assert!(text(&full_size).contains("automation PNG exceeds"), "{}", text(&full_size));
 
     client.cancel().await.unwrap();
     app.abort();

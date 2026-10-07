@@ -309,14 +309,14 @@ impl PhotosuiteMcp {
             Ok(bytes) => bytes,
             Err(error) => return Ok(fail(format!("app screenshot data: {error}"))),
         };
-        if let Err(error) = check_png(bytes.len()) {
-            return Ok(fail(error));
-        }
         let bytes = match downscale_png(&bytes, max_side.unwrap_or(0)) {
             Ok(Some(small)) => small,
             Ok(None) => bytes,
             Err(error) => return Ok(fail(error)),
         };
+        if let Err(error) = check_png(bytes.len()) {
+            return Ok(fail(error));
+        }
         Ok(png_result(&bytes, "screenshot of the live app window".into()))
     }
 }
@@ -699,6 +699,7 @@ mod tests {
     fn bridge_screenshot_decode_limits_apply_even_without_downscaling() {
         let image = photosuite_codecs::Image::from_u8(8193, 1, photosuite_codecs::ChannelLayout::Rgba, vec![0; 8193 * 4]).unwrap();
         let png = photosuite_codecs::encode(&image, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+        assert!(downscale_png(b"not a png", 32).is_err());
         assert!(downscale_png(&png, 0).is_err());
         assert!(downscale_png(&png, 1024).is_err());
     }
