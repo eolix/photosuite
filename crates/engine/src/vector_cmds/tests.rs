@@ -279,6 +279,74 @@ fn fill_and_stroke_path_on_pixel_layer() {
 }
 
 #[test]
+fn clipping_path_requires_saved_path_and_tracks_rename_delete() {
+    let mut s = session(60, 60, 8);
+    assert!(s.execute("path.clippingPath.set", json!({})).is_err());
+    assert!(s.execute("path.clippingPath.set", json!({"name":"missing"})).is_err());
+    s.execute("path.set", json!({"name":"Cutout","path":{"subpaths":[{"knots":[[1,1],[20,1],[20,20]]}]}})).unwrap();
+    assert!(s.execute("path.clippingPath.set", json!({"name":"Cutout","flatness":-1})).is_err());
+    assert!(s.execute("path.clippingPath.set", json!({"name":"Cutout","flatness":"bad"})).is_err());
+    s.execute("path.clippingPath.set", json!({"name":"Cutout","flatness":2.5})).unwrap();
+    assert_eq!(doc(&s).clipping_path.as_ref().unwrap().name, "Cutout");
+    assert_eq!(doc(&s).clipping_path.as_ref().unwrap().flatness, 2.5);
+    s.execute("path.rename", json!({"name":"Cutout","to":"Final"})).unwrap();
+    assert_eq!(doc(&s).clipping_path.as_ref().unwrap().name, "Final");
+    s.execute("path.clippingPath.clear", json!({})).unwrap();
+    assert!(doc(&s).clipping_path.is_none());
+    assert!(s.undo());
+    assert_eq!(doc(&s).clipping_path.as_ref().unwrap().name, "Final");
+    s.execute("path.delete", json!({"name":"Final"})).unwrap();
+    assert!(doc(&s).clipping_path.is_none());
+}
+
+#[test]
+fn transform_work_saved_and_shape_paths() {
+    let mut s = session(100, 100, 8);
+    let path = json!({"subpaths":[{"knots":[[4,5],[20,5],[20,20]]}]});
+    s.execute("path.set", json!({"path":path})).unwrap();
+    assert!(s.execute("path.transform", json!({})).is_err());
+    assert!(s.execute("path.transform", json!({"matrix":[1,0,0,1,"bad",0]})).is_err());
+    assert!(s.execute("path.transform", json!({"matrix":[1,0,0,1,1e30,0]})).is_err());
+    s.execute("path.transform", json!({"matrix":[1,0,0,1,10,7]})).unwrap();
+    assert_eq!(doc(&s).work_path.as_ref().unwrap().subpaths[0].knots[0].anchor, Point::new(14.0, 12.0));
+    s.execute("path.set", json!({"name":"Saved","path":path})).unwrap();
+    s.execute("path.transform", json!({"name":"Saved","matrix":[2,0,0,2,0,0]})).unwrap();
+    assert_eq!(doc(&s).paths[0].path.subpaths[0].knots[0].anchor, Point::new(8.0, 10.0));
+    s.execute("path.transform", json!({"name":"Saved","translateX":3,"translateY":-2})).unwrap();
+    assert_eq!(doc(&s).paths[0].path.subpaths[0].knots[0].anchor, Point::new(11.0, 8.0));
+    let id = s.execute("shape.create", json!({"kind":"rect","rect":[10,10,20,20]})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("path.transform", json!({"name":"layer","layer":id,"matrix":[1,0,0,1,5,0]})).unwrap();
+    assert_eq!(shape(&s, id).path.subpaths[0].knots[0].anchor.x, 15.0);
+    assert!(shape(&s, id).cache.is_some());
+}
+
+#[test]
+fn copy_and_paste_shape_fill_and_stroke() {
+    let mut s = session(100, 100, 8);
+    assert!(!s.is_enabled("path.style.copyFill"));
+    assert!(!s.is_enabled("path.style.pasteFill"));
+    assert!(s.execute("path.style.copyFill", json!({})).is_err());
+    assert!(s.execute("path.style.pasteFill", json!({})).is_err());
+    let source =
+        s.execute("shape.create", json!({"kind":"rect","rect":[10,10,20,20],"fill":"#ff0000","stroke":{"width":3,"color":"#0000ff"}})).unwrap()["layer"]
+            .as_u64()
+            .unwrap();
+    assert!(s.is_enabled("path.style.copyFill"));
+    assert!(s.is_enabled("path.style.copyStroke"));
+    s.execute("path.style.copyFill", json!({})).unwrap();
+    s.execute("path.style.copyStroke", json!({})).unwrap();
+    let target = s.execute("shape.create", json!({"kind":"rect","rect":[40,40,20,20],"fill":"#00ff00"})).unwrap()["layer"].as_u64().unwrap();
+    assert!(s.is_enabled("path.style.pasteFill"));
+    assert!(s.is_enabled("path.style.pasteStroke"));
+    s.execute("path.style.pasteFill", json!({})).unwrap();
+    s.execute("path.style.pasteStroke", json!({})).unwrap();
+    assert_eq!(shape(&s, source).fill, shape(&s, target).fill);
+    assert_eq!(shape(&s, source).stroke, shape(&s, target).stroke);
+    assert!(s.undo());
+    assert!(shape(&s, target).stroke.is_none());
+}
+
+#[test]
 fn vector_mask_commands_and_compositing() {
     let mut s = session(100, 100, 8);
     s.execute("layer.new.layer", json!({})).unwrap();

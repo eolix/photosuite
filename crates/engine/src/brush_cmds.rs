@@ -215,6 +215,7 @@ fn erase_locked(brush: &mut BrushSettings, lock: bool, bg: [f32; 4]) {
 fn stroke_with(s: &mut Session, p: &Value, label: &str, brush: BrushSettings, pts: Vec<StrokePoint>, auto_erase: bool) -> Result<Value> {
     let bg = s.tools.background;
     let fg = brush.color;
+    let symmetry = s.active().and_then(|st| st.symmetry_path.clone());
     let (id, brush, zoom) = stroke_target(s, p, brush)?;
     let dmg = s.edit(label, |doc, _| {
         let sel = doc.selection.clone();
@@ -224,7 +225,24 @@ fn stroke_with(s: &mut Session, p: &Value, label: &str, brush: BrushSettings, pt
         if auto_erase {
             apply_auto_erase(&mut brush, surf, pts.first(), fg, bg);
         }
-        Ok(render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom))
+        let damage = if let Some(axis) = &symmetry {
+            let reflected = axis.reflect_points(&pts);
+            if crate::symmetry_cmds::SymmetryAxis::has_distinct_mirror(&pts, &reflected) {
+                let pre = surf.clone();
+                let mut original = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+                original.push(&pts);
+                original.finish();
+                let mut mirror = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+                mirror.push(&reflected);
+                mirror.finish();
+                original.composite_union(&mirror, &pre, surf, sel.as_ref(), lock)
+            } else {
+                render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom)
+            }
+        } else {
+            render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom)
+        };
+        Ok(damage)
     })?;
     Ok(damage_json(s, dmg))
 }
@@ -281,6 +299,8 @@ pub struct LiveStroke {
     /// Jitter seed to pass to `paint.stroke`.
     pub seed: u64,
     renderer: StrokeRenderer,
+    mirror: Option<(crate::symmetry_cmds::SymmetryAxis, StrokeRenderer)>,
+    mirror_distinct: bool,
     pre: Surface,
     sel: Option<Surface>,
     lock: bool,
@@ -317,15 +337,18 @@ impl LiveStroke {
             apply_auto_erase(&mut brush, surf, pts.first(), fg, s.tools.background);
         }
         let renderer = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+        let mirror = s.active().and_then(|st| st.symmetry_path.clone()).map(|axis| (axis, StrokeRenderer::new(&brush, Some(surf.format()), zoom)));
         let pre = surf.clone();
-        let mut live = Self { doc: std::sync::Arc::new(doc), seed, renderer, pre, sel, lock, layer, params: p.clone(), tail: Rect::EMPTY };
+        let mut live =
+            Self { doc: std::sync::Arc::new(doc), seed, renderer, mirror, mirror_distinct: false, pre, sel, lock, layer, params: p.clone(), tail: Rect::EMPTY };
         live.push(&pts)?;
         Ok(live)
     }
 
     /// Everything the stroke has touched so far.
     pub fn bounds(&self) -> Rect {
-        self.renderer.bounds().union(&self.tail)
+        let bounds = self.renderer.bounds().union(&self.tail);
+        if self.mirror_distinct { self.mirror.as_ref().map_or(bounds, |(_, renderer)| bounds.union(&renderer.bounds())) } else { bounds }
     }
 
     /// Render more points; returns the rectangle that changed. The doc shows the stroke as
@@ -334,7 +357,28 @@ impl LiveStroke {
     /// nothing new appears on release.
     pub fn push(&mut self, pts: &[StrokePoint]) -> Result<Rect> {
         self.renderer.push(pts);
+        if let Some((axis, mirror)) = &mut self.mirror {
+            let reflected = axis.reflect_points(pts);
+            self.mirror_distinct |= crate::symmetry_cmds::SymmetryAxis::has_distinct_mirror(pts, &reflected);
+            mirror.push(&reflected);
+        }
         let (surf, _) = crate::channel_cmds::target_surface(std::sync::Arc::make_mut(&mut self.doc), self.layer, &self.params)?;
+        if let (true, Some((_, mirror))) = (self.mirror_distinct, &mut self.mirror) {
+            // Preview the finished strokes through one coverage buffer. Shared axis pixels
+            // therefore receive the brush opacity once, exactly like the final commit.
+            let old = self.tail;
+            let mut original_preview = self.renderer.clone();
+            original_preview.finish();
+            let mut mirror_preview = mirror.clone();
+            mirror_preview.finish();
+            let bounds = original_preview.bounds().union(&mirror_preview.bounds()).union(&old);
+            if !bounds.is_empty() {
+                surf.write_region(bounds, &self.pre.read_region(bounds));
+            }
+            let damage = original_preview.composite_union(&mirror_preview, &self.pre, surf, self.sel.as_ref(), self.lock);
+            self.tail = bounds;
+            return Ok(damage.union(&bounds));
+        }
         let mut dmg = Rect::EMPTY;
         let old = std::mem::replace(&mut self.tail, Rect::EMPTY);
         if !old.is_empty() {

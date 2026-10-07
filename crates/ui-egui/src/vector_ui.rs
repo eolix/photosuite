@@ -679,6 +679,47 @@ pub fn paths_footer(ctx: &egui::Context) -> Option<Rect> {
     ctx.data(|d| d.get_temp(footer_id()))
 }
 
+/// Commands offered by a Paths row's context menu. The row's path is passed explicitly so a
+/// right-click acts on that row even when another path is selected in the panel.
+fn path_context_actions(entry: &PathEntry, doc: &Document) -> Vec<(&'static str, &'static str, Value)> {
+    let key = match entry.kind {
+        PathRow::Work => "work".to_string(),
+        PathRow::Layer => "layer".to_string(),
+        PathRow::Saved => entry.name.clone(),
+    };
+    let mut actions = vec![
+        ("Make Selection", "path.toSelection", json!({"name": key})),
+        ("Fill Path", "path.fill", json!({"name": key})),
+        ("Stroke Path", "path.stroke", json!({"name": key, "tool": "brush"})),
+    ];
+    if entry.kind == PathRow::Work {
+        let mut n = doc.paths.len().saturating_add(1);
+        while doc.paths.iter().any(|p| p.name == format!("Path {n}")) {
+            n = n.saturating_add(1);
+            if n == usize::MAX {
+                break;
+            }
+        }
+        actions.push(("Save Path", "path.rename", json!({"name": "work", "to": format!("Path {n}")})));
+    } else {
+        let mut n = 1usize;
+        while doc.paths.iter().any(|p| p.name == format!("{} copy {n}", entry.name)) {
+            n = n.saturating_add(1);
+            if n == usize::MAX {
+                break;
+            }
+        }
+        let copy_name = format!("{} copy {n}", entry.name);
+        actions.push(("Duplicate Path", "path.set", json!({"name": copy_name, "path": photosuite_engine::vector_cmds::path_json(&entry.path)})));
+    }
+    if entry.kind != PathRow::Layer {
+        actions.push(("Delete Path", "path.delete", json!({"name": key})));
+    } else if entry.name.ends_with(" Vector Mask") {
+        actions.push(("Delete Vector Mask", "layer.vectorMask.delete", json!({})));
+    }
+    actions
+}
+
 pub fn paths_panel(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
@@ -733,6 +774,18 @@ pub fn paths_panel(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                     let n = doc.paths.len() + 1;
                     action = Some(("path.rename", json!({"name": "work", "to": format!("Path {n}")})));
                 }
+                resp.context_menu(|ui| {
+                    ui.set_min_width(190.0);
+                    let entry = PathEntry { name: name.clone(), path: path.clone(), kind: *kind };
+                    let can_paint = app.session.active().and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id))).is_some_and(|l| l.surface().is_some());
+                    for (label, cmd, params) in path_context_actions(&entry, &doc) {
+                        let enabled = !matches!(cmd, "path.fill" | "path.stroke") || can_paint;
+                        if ui.add_enabled(enabled, egui::Button::new(tl!(label))).clicked() {
+                            action = Some((cmd, params));
+                            ui.close();
+                        }
+                    }
+                });
                 ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.separator));
             }
         },
@@ -788,6 +841,49 @@ mod tests {
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.sync_views();
         app
+    }
+
+    #[test]
+    fn paths_context_menu_uses_the_clicked_row_and_dispatches_commands() {
+        let mut app = app();
+        let path = json!({"subpaths": [{"closed": true, "knots": [
+            {"anchor": [10, 10], "in": [10, 10], "out": [10, 10]},
+            {"anchor": [80, 10], "in": [80, 10], "out": [80, 10]},
+            {"anchor": [80, 80], "in": [80, 80], "out": [80, 80]}
+        ]}]});
+        app.run("path.set", json!({"name": "First", "path": path})).unwrap();
+        app.run("path.set", json!({"name": "Second", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let first = path_rows(doc, None).into_iter().find(|r| r.name == "First").unwrap();
+        let entries = path_context_actions(&first, doc);
+        assert_eq!(entries[0].1, "path.toSelection");
+        assert_eq!(entries[0].2["name"], "First");
+        assert!(entries.iter().all(|(_, id, _)| photosuite_engine::commands::find(id).is_some()));
+        let (_, id, params) = entries.into_iter().find(|(_, id, _)| *id == "path.toSelection").unwrap();
+        app.run(id, params).unwrap();
+        assert!(app.session.active().unwrap().doc.selection.is_some());
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("path.toSelection"));
+
+        app.run("path.set", json!({"name": "First copy 1", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let first = path_rows(doc, None).into_iter().find(|r| r.name == "First").unwrap();
+        let (_, _, duplicate) = path_context_actions(&first, doc).into_iter().find(|(_, id, _)| *id == "path.set").unwrap();
+        assert_eq!(duplicate["name"], "First copy 2", "duplicate must not overwrite an existing path");
+    }
+
+    #[test]
+    fn work_path_context_save_and_layer_path_deletion_rules() {
+        let mut app = app();
+        let path = json!({"subpaths": []});
+        app.run("path.set", json!({"name": "work", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let work = path_rows(doc, None).into_iter().find(|r| r.kind == PathRow::Work).unwrap();
+        let entries = path_context_actions(&work, doc);
+        assert!(entries.iter().any(|(_, id, _)| *id == "path.rename"));
+        assert!(!entries.iter().any(|(_, id, _)| *id == "path.set"));
+        let layer = PathEntry { kind: PathRow::Layer, ..work };
+        let entries = path_context_actions(&layer, doc);
+        assert!(!entries.iter().any(|(_, id, _)| *id == "path.delete"));
     }
 
     #[test]

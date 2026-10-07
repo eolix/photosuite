@@ -10,6 +10,9 @@
 //!
 //! `--script` is a JSON array of `[method, params]` control-protocol calls (see
 //! docs/control-protocol.md), applied in order with a few frames between them.
+//! `--right-click-at X,Y` opens a screen-space context menu after the script, including panel
+//! and document-tab menus that are outside the document-coordinate control pointer.
+//! `--click-at X,Y` opens a screen-space menu (for example the top Select menu) after the script.
 
 use photosuite_ui_egui::control::{ControlRequest, Outcome, handle};
 use photosuite_ui_egui::{PhotosuiteApp, Services};
@@ -99,6 +102,18 @@ fn main() {
         if timing {
             eprintln!("{:>8.1} ms  {label}", t0.elapsed().as_secs_f64() * 1000.0);
         }
+    }
+    for (flag, button) in [("--click-at", egui::PointerButton::Primary), ("--right-click-at", egui::PointerButton::Secondary)] {
+        let Some((x, y)) = arg(&args, flag).and_then(|s| s.split_once(',').and_then(|(x, y)| Some((x.parse::<f32>().ok()?, y.parse::<f32>().ok()?)))) else {
+            continue;
+        };
+        let pos = egui::pos2(x, y);
+        harness.event(egui::Event::PointerMoved(pos));
+        harness.step();
+        harness.event(egui::Event::PointerButton { pos, button, pressed: true, modifiers: egui::Modifiers::NONE });
+        harness.step();
+        harness.event(egui::Event::PointerButton { pos, button, pressed: false, modifiers: egui::Modifiers::NONE });
+        harness.run_steps(4);
     }
     let t_settle = std::time::Instant::now();
     while t_settle.elapsed() < std::time::Duration::from_millis(settle_ms) {

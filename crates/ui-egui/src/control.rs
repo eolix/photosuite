@@ -14,7 +14,7 @@
 //! - `ui.dialog.open {kind, fields?}` (kinds: newDocument, about, layerStyle {effect?}, colorPicker {target: foreground|background}, command {command}) / `ui.dialog.set {dialog, field, value}` / `ui.dialog.confirm {dialog, wait?}` / `ui.dialog.cancel {dialog}`
 //! - `ui.dialog.apply {dialog}`: commit Preferences changes without closing the dialog
 //! - `ui.window.open {document?}` / `ui.window.close {window}`: extra document windows
-//! - `ui.pointer {events: [{kind: down|move|up, x, y, pressure?, tiltX?, tiltY?, rotation?}], modifiers?, button?}`: drive the active tool in document coordinates (`button: "secondary"` = the right button: opens the Brush Preset picker, or erases with Preferences › Tools › Right-click with painting tools = erase)
+//! - `ui.pointer {events: [{kind: down|move|up, x, y, pressure?, tiltX?, tiltY?, rotation?}], modifiers?, button?}`: drive the active tool in document coordinates (`button: "secondary"` opens the tool's canvas context menu or Brush Preset picker, or erases with Preferences › Tools › Right-click with painting tools = erase)
 //! - `ui.click {x, y, button?, count?}` / `ui.move {x, y}`: synthetic pointer input in screen points
 //! - `ui.key {key, command?, shift?, alt?, ctrl?}` / `ui.type {text}`: synthetic keyboard input
 //! - `ui.resize {width, height}`: resize the main window
@@ -139,6 +139,25 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
     let u = |k: &str| p.get(k).and_then(Value::as_u64);
     let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
     match req.method.as_str() {
+        "ui.context.choose" => {
+            let Some(id) = s("id") else { return err("missing `id`") };
+            let Some(menu) = app.ui.canvas_tool_menu.as_ref() else { return err("no canvas context menu is open") };
+            let listed = if menu.tool == crate::state::Tool::Pen {
+                crate::canvas_tool_menu::PEN_MENU.iter().flatten().any(|(_, command)| *command == id)
+            } else {
+                crate::canvas_tool_menu::menu_entries(menu).iter().any(|(_, command)| *command == id)
+            };
+            if !listed || !crate::canvas_tool_menu::entry_enabled(app, menu, id) {
+                return err("context action is unavailable");
+            }
+            if let Some(authorize) = app.services.automation_command.as_ref()
+                && let Err(error) = authorize(id, &json!({}))
+            {
+                return err(error);
+            }
+            crate::canvas_tool_menu::choose(app, ctx, id);
+            ok(json!({"command": id, "dialog": app.ui.dialogs.last().map(|d| d.id)}))
+        }
         "engine.execute" | "ui.menu.invoke" => {
             let Some(id) = s("command").or(s("id")) else { return err("missing `command`") };
             let params = p.get("params").cloned().unwrap_or(json!({}));
@@ -414,7 +433,14 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                     // Right-click with the Move tool, or ⌘/Ctrl+right-click: list the layers there.
                     if crate::layer_pick_ui::is_gesture(app.ui.tool, mods) {
                         if down {
+                            app.ui.canvas_tool_menu = None;
                             crate::layer_pick_ui::open(app, screen_point(app, x, y), x, y);
+                        }
+                        continue;
+                    }
+                    if crate::canvas_tool_menu::applies(app.ui.tool) {
+                        if down {
+                            crate::canvas_tool_menu::open(app, app.ui.tool, screen_point(app, x, y));
                         }
                         continue;
                     }
@@ -564,6 +590,22 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
         "toolOptions": app.ui.tool_options,
         "textEdit": app.ui.text_edit,
         "layerMenu": app.ui.layer_menu,
+        "canvasToolMenu": app.ui.canvas_tool_menu.as_ref().map(|menu| {
+            json!({
+                "pos": menu.pos,
+                "tool": menu.tool,
+                "entries": if menu.tool == crate::state::Tool::Pen {
+                    crate::canvas_tool_menu::PEN_MENU.iter().map(|row| match row {
+                        Some((label, id)) => json!({"label": label, "id": id, "enabled": crate::canvas_tool_menu::entry_enabled(app, menu, id)}),
+                        None => json!({"separator": true}),
+                    }).collect::<Vec<_>>()
+                } else {
+                    crate::canvas_tool_menu::menu_entries(menu).iter().map(|&(label, id)| {
+                        json!({"label": label, "id": id, "enabled": crate::canvas_tool_menu::entry_enabled(app, menu, id)})
+                    }).collect::<Vec<_>>()
+                }
+            })
+        }),
         "panels": app.ui.panels,
         "views": app.ui.views,
         "dialogs": dialogs,
@@ -624,6 +666,57 @@ mod tests {
             Outcome::Done(v) => v,
             _ => panic!("{method}: expected an immediate reply"),
         }
+    }
+
+    #[test]
+    fn right_pointer_opens_agent_visible_selection_menu() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
+        app.run("select.rect", json!({"x": 1, "y": 1, "width": 8, "height": 8})).unwrap();
+        let result = call(
+            &mut app,
+            &ctx,
+            "ui.pointer",
+            json!({
+                "tool": "RectMarquee", "button": "secondary",
+                "events": [{"kind": "down", "x": 4, "y": 4}, {"kind": "up", "x": 4, "y": 4}]
+            }),
+        );
+        assert_eq!(result.get("ok"), Some(&Value::Bool(true)));
+        let inspected = call(&mut app, &ctx, "ui.inspect", json!({}));
+        let entries = inspected.pointer("/result/canvasToolMenu/entries").and_then(Value::as_array).unwrap();
+        assert!(entries.iter().any(|entry| entry.get("id") == Some(&json!("select.inverse")) && entry.get("enabled") == Some(&json!(true))));
+        assert!(app.session.active().unwrap().doc.selection.is_some(), "right-click must not edit selection");
+    }
+
+    #[test]
+    fn agent_can_inspect_and_choose_pen_make_selection_from_full_context_menu() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
+        app.run("path.set", json!({"name":"work","path":{"subpaths":[{"closed":true,"knots":[[2,2],[20,2],[20,20]]}]}})).unwrap();
+        let expected_pos = screen_point(&app, 8.0, 8.0);
+        let result = call(
+            &mut app,
+            &ctx,
+            "ui.pointer",
+            json!({
+                "tool": "Pen", "button": "secondary", "events": [{"kind":"down","x":8,"y":8},{"kind":"up","x":8,"y":8}]
+            }),
+        );
+        assert_eq!(result["ok"], true);
+        let inspected = call(&mut app, &ctx, "ui.inspect", json!({}));
+        assert_eq!(app.ui.canvas_tool_menu.as_ref().unwrap().pos, expected_pos);
+        let entries = inspected.pointer("/result/canvasToolMenu/entries").and_then(Value::as_array).unwrap();
+        assert_eq!(entries.iter().filter(|row| row.get("separator") == Some(&json!(true))).count(), 9);
+        assert!(entries.iter().any(|row| row.get("id") == Some(&json!("path.toSelection")) && row.get("enabled") == Some(&json!(true))));
+        assert_eq!(call(&mut app, &ctx, "ui.context.choose", json!({"id":"file.new"}))["ok"], false);
+        let chosen = call(&mut app, &ctx, "ui.context.choose", json!({"id":"path.toSelection"}));
+        assert_eq!(chosen["ok"], true);
+        let dialog = chosen["result"]["dialog"].as_u64().unwrap();
+        assert_eq!(call(&mut app, &ctx, "ui.dialog.confirm", json!({"dialog":dialog}))["ok"], true);
+        assert!(app.session.active().unwrap().doc.selection.is_some());
     }
 
     #[test]

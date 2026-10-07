@@ -602,6 +602,9 @@ pub struct UiState {
     /// ⌘/Ctrl+right-click with any tool (`layer_pick_ui`, #307).
     #[serde(default)]
     pub layer_menu: Option<crate::layer_pick_ui::LayerMenu>,
+    /// Selection-tool context menu opened by a plain canvas right-click.
+    #[serde(default)]
+    pub canvas_tool_menu: Option<crate::canvas_tool_menu::CanvasToolMenu>,
     /// Smoothing is a per-tool option (Brush and Eraser each keep theirs): the tool whose
     /// smoothing the session brush holds, and the other tools' saved values.
     #[serde(default)]
@@ -708,6 +711,7 @@ impl Default for UiState {
             vector_mask_target: false,
             brush_picker: None,
             layer_menu: None,
+            canvas_tool_menu: None,
             smoothing_tool: None,
             tool_smoothing: Vec::new(),
             clone_source: None,

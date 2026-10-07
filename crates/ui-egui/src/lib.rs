@@ -32,6 +32,7 @@ pub mod camera_raw_ui;
 pub mod lens_ui;
 pub mod magnetic_ui;
 pub mod canvas;
+pub mod canvas_tool_menu;
 pub mod recent;
 pub mod channel_view;
 pub mod channels_panel;

@@ -1002,6 +1002,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn select_menu_contains_every_selection_context_action_and_more() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
+        app.run("select.rect", json!({"x": 2, "y": 2, "width": 8, "height": 8})).unwrap();
+        let items = menu_items(&app);
+        let top: Vec<_> = items.iter().filter(|i| i.path.len() == 1 && i.path.first().is_some_and(|p| p == "Select")).collect();
+        // Context actions live somewhere under Select (Feather stays in Select > Modify, as in the
+        // reference menus).
+        let select: Vec<_> = items.iter().filter(|i| i.path.first().is_some_and(|p| p == "Select")).collect();
+        for &(label, id) in crate::canvas_tool_menu::entries(true).iter().chain(crate::canvas_tool_menu::entries(false)) {
+            assert!(select.iter().any(|i| i.id == id && i.label == label), "Select menu missing {label} ({id})");
+        }
+        assert!(top.iter().any(|i| i.id == "select.all"));
+        assert!(top.iter().any(|i| i.id == "select.colorRange"));
+        assert!(
+            items.iter().any(|i| i.id == "select.modify.feather" && i.path.iter().map(String::as_str).eq(["Select", "Modify"])),
+            "keep the Photoshop Modify route"
+        );
+        assert!(!top.iter().any(|i| i.id == "select.modify.feather"), "no extra top-level Feather");
+    }
+
+    #[test]
     fn menu_bar_labels_have_horizontal_padding_and_open_menus() {
         use egui_kittest::{Harness, kittest::Queryable};
 
