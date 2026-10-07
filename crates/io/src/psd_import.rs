@@ -721,7 +721,7 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
     // Slices (resource 1050), after layer ids are known; the raw data stays for verbatim export.
     crate::slices_map::import(&mut doc);
     // Character and paragraph styles from the type layers' engine data.
-    crate::text_styles_map::import(&mut doc);
+    cx.warnings.extend(crate::text_styles_map::import(&mut doc));
 
     if ctl.cancelled() {
         return None;

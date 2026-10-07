@@ -310,7 +310,7 @@ fn normalize_runs<S: Clone>(text: &str, runs: Vec<(usize, S)>, base: S) -> Vec<(
         if at >= total {
             break;
         }
-        let mut end = (at + len).min(total);
+        let mut end = at.saturating_add(len).min(total);
         while !text.is_char_boundary(end) {
             end += 1;
         }
@@ -875,6 +875,34 @@ mod tests {
         assert_eq!(d.pixel_format(), PixelFormat::new(ColorMode::Cmyk, SampleType::U16, true));
         let b = Document::new("b", Size::new(1, 1), ColorMode::Bitmap, SampleType::U8);
         assert_eq!(b.pixel_format().mode, ColorMode::Grayscale);
+    }
+
+    #[test]
+    fn text_runs_with_maximal_lengths_normalize_to_text_length() {
+        let t = TextLayer {
+            text: "ab".into(),
+            runs: vec![
+                text::TextRun { len: 1, style: text::CharStyle::default() },
+                text::TextRun { len: usize::MAX, style: text::CharStyle { size_pt: 24.0, ..Default::default() } },
+            ],
+            paragraphs: vec![
+                text::ParagraphRun { len: 1, style: text::ParagraphStyle::default() },
+                text::ParagraphRun { len: usize::MAX, style: text::ParagraphStyle { align: text::TextAlign::Center, ..Default::default() } },
+            ],
+            ..Default::default()
+        };
+
+        let chars = t.char_runs();
+        assert_eq!(chars.iter().map(|r| r.len).sum::<usize>(), t.text.len());
+        assert_eq!(chars.len(), 2);
+        assert_eq!(chars[1].len, 1);
+        assert_eq!(chars[1].style.size_pt, 24.0);
+
+        let paragraphs = t.paragraph_runs();
+        assert_eq!(paragraphs.iter().map(|r| r.len).sum::<usize>(), t.text.len());
+        assert_eq!(paragraphs.len(), 2);
+        assert_eq!(paragraphs[1].len, 1);
+        assert_eq!(paragraphs[1].style.align, text::TextAlign::Center);
     }
 
     #[test]

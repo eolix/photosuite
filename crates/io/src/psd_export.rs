@@ -1257,7 +1257,10 @@ fn document_to_psd_nested(doc: &Document, opts: &PsdExportOptions, depth: u32) -
         global_blocks.push(tb);
     }
     let comps_resource = ex.comps.is_some().then(|| crate::comps_map::write_comps_resource(doc));
-    let slices_resource = crate::slices_map::export_resource(doc, &ex.layer_ids);
+    let (slices_resource, slices_warning) = crate::slices_map::export_resource(doc, &ex.layer_ids);
+    if let Some(warning) = slices_warning {
+        ex.warnings.push(warning);
+    }
     for (id, name, data) in &doc.metadata.psd_resources {
         // Layer comps: the preserved list while unchanged, else regenerated (or dropped) below.
         if *id == crate::comps_map::LAYER_COMPS && comps_resource.is_some() {

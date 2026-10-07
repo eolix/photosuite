@@ -22,6 +22,10 @@ fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
     EngineError::BadParams { cmd: cmd.into(), msg: msg.into() }
 }
 
+fn exhausted_id() -> EngineError {
+    EngineError::Other("slice id space exhausted".into())
+}
+
 // ---------- predicates ----------
 
 fn has_doc(s: &Session) -> std::result::Result<(), String> {
@@ -200,7 +204,7 @@ fn target(s: &mut Session, p: &Value, cmd: &str, promote: bool) -> Result<u32> {
         None if promote => {
             let rect = r.rect;
             s.edit("Promote to User Slice", |doc, _| {
-                let id = doc.slices.next_id();
+                let id = doc.slices.next_id().ok_or_else(exhausted_id)?;
                 doc.slices.list.push(Slice { id, rect, ..Default::default() });
                 Ok(id)
             })
@@ -238,7 +242,7 @@ fn new_slice(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(cmd, "the slice is outside the canvas"));
     }
     let id = s.edit("Slice", |doc, _| {
-        let id = doc.slices.next_id();
+        let id = doc.slices.next_id().ok_or_else(exhausted_id)?;
         let mut sl = Slice { id, rect, ..Default::default() };
         apply_options(&mut sl, p, cmd)?;
         sl.rect = rect;
@@ -275,7 +279,7 @@ fn from_guides(s: &mut Session) -> Result<Value> {
         // Photoshop replaces every existing slice.
         doc.slices.list.clear();
         for r in rects {
-            let id = doc.slices.next_id();
+            let id = doc.slices.next_id().ok_or_else(exhausted_id)?;
             doc.slices.list.push(Slice { id, rect: r, ..Default::default() });
         }
         Ok(())
@@ -369,13 +373,23 @@ fn divide(s: &mut Session, p: &Value) -> Result<Value> {
         doc.slices.list.retain(|sl| sl.id != id);
         let mut ids = Vec::new();
         let mut parts = Vec::new();
+        let mut next_id = doc.slices.next_id();
         for j in 0..down {
             for i in 0..across {
                 let x0 = r.x0 + (r.width() as i32 * i) / across;
                 let x1 = r.x0 + (r.width() as i32 * (i + 1)) / across;
                 let y0 = r.y0 + (r.height() as i32 * j) / down;
                 let y1 = r.y0 + (r.height() as i32 * (j + 1)) / down;
-                let nid = if ids.is_empty() { id } else { doc.slices.next_id().max(ids.iter().copied().max().unwrap_or(0) + 1) };
+                let nid = if ids.is_empty() {
+                    id
+                } else {
+                    let mut candidate = next_id.ok_or_else(exhausted_id)?;
+                    if candidate == id {
+                        candidate = candidate.checked_add(1).ok_or_else(exhausted_id)?;
+                    }
+                    next_id = candidate.checked_add(1);
+                    candidate
+                };
                 ids.push(nid);
                 // The first part keeps the original's options; the others start fresh.
                 let base = if parts.is_empty() { Slice { origin: SliceOrigin::User, layer: None, ..src.clone() } } else { Slice::default() };
@@ -409,7 +423,7 @@ fn layer_based(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(EngineError::Other("Could not create a layer based slice because the layer is empty".into()));
     }
     let id = s.edit("New Layer Based Slice", |doc, _| {
-        let id = doc.slices.next_id();
+        let id = doc.slices.next_id().ok_or_else(exhausted_id)?;
         let text = |k: &str| p.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
         doc.slices.list.push(Slice {
             id,

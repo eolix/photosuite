@@ -158,3 +158,28 @@ fn slices_round_trip_through_psd_and_pcraft() {
         assert_eq!(ls.rect, Rect::new(50, 40, 70, 60));
     }
 }
+
+#[test]
+fn exhausted_slice_ids_fail_without_mutating_document_or_history() {
+    let mut s = session(8);
+    s.edit("loaded max slice", |doc, _| {
+        doc.slices.list.push(Slice { id: 1, rect: Rect::new(10, 10, 20, 20), ..Default::default() });
+        doc.slices.list.push(Slice { id: u32::MAX, rect: Rect::new(10, 10, 20, 20), ..Default::default() });
+        Ok(())
+    })
+    .unwrap();
+    let past = s.active().unwrap().history.past_len();
+    let revision = s.active().unwrap().revision;
+
+    for (command, params) in [
+        ("slice.new", json!({"rect": [30, 30, 10, 10]})),
+        ("slice.divide", json!({"slice": 1, "horizontal": 1, "vertical": 2})),
+        ("slice.promote", json!({"number": 1})),
+    ] {
+        assert!(s.execute(command, params).unwrap_err().to_string().contains("slice id space exhausted"), "{command}");
+        assert_eq!(doc(&s).slices.list.len(), 2, "{command}");
+        assert!(doc(&s).slices.get(u32::MAX).is_some(), "{command}");
+        assert_eq!(s.active().unwrap().history.past_len(), past, "{command}");
+        assert_eq!(s.active().unwrap().revision, revision, "{command}");
+    }
+}

@@ -3,7 +3,9 @@
 mod common;
 use common::*;
 use photosuite_color::{ColorMode, SampleType};
-use photosuite_doc::{Document, Layer, LayerId};
+use photosuite_doc::text::{CharStyle, ParagraphStyle, TextRun};
+use photosuite_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer};
 use photosuite_format::*;
 use photosuite_raster::Rgba8Image;
 
@@ -100,6 +102,37 @@ fn nesting_beyond_the_load_limit_is_refused_at_save() {
 fn empty_document_roundtrips() {
     let doc = Document::new("empty", photosuite_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     assert_eq!(load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap(), doc);
+}
+
+#[test]
+fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
+    let mut doc = Document::new("exhausted", photosuite_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    doc.slices.list.push(Slice { id: u32::MAX, ..Default::default() });
+    doc.text_styles.character.push(CharacterStyleDef { id: u32::MAX, ..Default::default() });
+    doc.text_styles.paragraph.push(ParagraphStyleDef { id: u32::MAX, ..Default::default() });
+    doc.layers.push(Layer::new(
+        "Text",
+        LayerContent::Text(TextLayer {
+            text: "ab".into(),
+            runs: vec![TextRun { len: 1, style: CharStyle::default() }, TextRun { len: usize::MAX, style: CharStyle { size_pt: 24.0, ..Default::default() } }],
+            paragraphs: vec![
+                photosuite_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
+                photosuite_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
+            ],
+            ..Default::default()
+        }),
+    ));
+
+    let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
+    let loaded = load_from_bytes(&bytes).unwrap();
+    assert_eq!(loaded.slices.next_id(), None);
+    assert_eq!(loaded.text_styles.next_char_id(), None);
+    assert_eq!(loaded.text_styles.next_para_id(), None);
+    let LayerContent::Text(text) = &loaded.layers.last().unwrap().content else { panic!("text layer must roundtrip") };
+    assert_eq!(text.char_runs().iter().map(|r| r.len).sum::<usize>(), text.text.len());
+    assert_eq!(text.char_runs()[1].len, 1);
+    assert_eq!(text.char_runs()[1].style.size_pt, 24.0);
+    assert_eq!(text.paragraph_runs().iter().map(|r| r.len).sum::<usize>(), text.text.len());
 }
 
 #[test]
