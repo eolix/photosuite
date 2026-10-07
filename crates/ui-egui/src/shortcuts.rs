@@ -298,6 +298,17 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     // `tools.swapColors`), dispatched above with any Keyboard Shortcuts override.
     let pressed = |k: Key| ctx.input_mut(|i| i.consume_key(Modifiers::NONE, k));
     // Enter / Escape commit or cancel in-progress tool state (polygonal lasso, crop).
+    if crate::lasso_ui::active(app) {
+        let mods = ctx.input(|i| i.modifiers);
+        if ctx.input_mut(|i| i.consume_key(mods, Key::Escape)) {
+            app.drag = None;
+            return;
+        }
+        if ctx.input_mut(|i| i.consume_key(mods, Key::Enter)) {
+            crate::lasso_ui::commit(app);
+            return;
+        }
+    }
     if !app.ui.polygon.is_empty() || app.ui.crop_rect.is_some() {
         // Magnetic Lasso: Enter closes along the edge; Backspace / Delete drop the last anchor.
         if crate::magnetic_ui::active(app) {

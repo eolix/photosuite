@@ -654,7 +654,7 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                             opt_label(ui, tl!("Frequency"));
                             widgets::value_field(ui, &mut o.magnetic_frequency, 0.0..=100.0, "", 52.0);
                         }
-                        if matches!(app.ui.tool, Tool::PolygonLasso | Tool::MagneticLasso) && !app.ui.polygon.is_empty() {
+                        if crate::lasso_ui::active(app) || (matches!(app.ui.tool, Tool::PolygonLasso | Tool::MagneticLasso) && !app.ui.polygon.is_empty()) {
                             hint(
                                 ui,
                                 &crate::i18n::fmt(
@@ -662,6 +662,8 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                                     &[("key", &crate::shortcuts::pretty("Enter"))],
                                 ),
                             );
+                        } else if app.ui.tool == Tool::Lasso {
+                            hint(ui, tl!("Hold Alt while drawing for straight segments"));
                         }
                     }
                     Tool::MagicWand => {
@@ -849,10 +851,9 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                     Tool::Hand => hint(ui, "Drag to pan  ·  hold Space with any tool"),
                     Tool::Lasso | Tool::PolygonLasso => hint(
                         ui,
-                        &format!(
-                            "Drag (lasso) or click points (polygonal) · {} add · {} subtract",
-                            crate::shortcuts::pretty("Shift"),
-                            crate::shortcuts::pretty("Alt")
+                        &crate::i18n::fmt(
+                            tl!("Drag or click polygon points · hold Alt during lasso for straight segments · {add} add · {sub} before drawing subtracts"),
+                            &[("add", &crate::shortcuts::pretty("Shift")), ("sub", &crate::shortcuts::pretty("Alt"))],
                         ),
                     ),
                     Tool::Crop => hint(

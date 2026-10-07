@@ -68,6 +68,7 @@ pub const APP_NAME: &str = "PhotoSuite";
 mod icon_data;
 pub mod icons;
 pub mod jobs_ui;
+pub mod lasso_ui;
 pub mod layer_menu_ui;
 pub mod layer_pick_ui;
 pub mod layer_props_ui;
@@ -635,6 +636,7 @@ impl PhotosuiteApp {
 
     /// Keep one view per document.
     pub fn sync_views(&mut self) {
+        crate::lasso_ui::cancel_stale(self);
         let n = self.session.documents().len();
         self.ui.views.resize_with(n, Default::default);
         self.ui.windows.retain(|w| w.document < n);

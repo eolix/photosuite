@@ -77,6 +77,7 @@ pub fn badge(app: &PhotosuiteApp, tool: Tool, m: egui::Modifiers) -> Option<Badg
     if !is_selection_tool(tool) {
         return None;
     }
+    let m = app.drag.as_ref().filter(|d| d.tool == Tool::Lasso && tool == Tool::Lasso).map_or(m, |d| d.modifiers);
     Badge::from_mode(selection_mode(tool, app.ui.selection_mode, m))
 }
 

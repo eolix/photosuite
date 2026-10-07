@@ -52,11 +52,12 @@ pub struct Drag {
     /// A marquee or lasso drag that started inside the selection moves it instead of drawing:
     /// `Some(false)` moves the outline, `Some(true)` moves the floating piece (`select.float`).
     pub sel_move: Option<bool>,
+    pub lasso: Option<crate::lasso_ui::Lasso>,
 }
 
 impl Drag {
     pub fn new(tool: Tool, start: [f64; 2], points: Vec<[f64; 3]>, modifiers: egui::Modifiers, erase: bool) -> Self {
-        Self { tool, start, points, modifiers, erase, constrain: None, live: modifiers, released: egui::Modifiers::NONE, reposition: false, sel_move: None }
+        Self { tool, start, points, modifiers, erase, constrain: None, live: modifiers, released: egui::Modifiers::NONE, reposition: false, sel_move: None, lasso: None }
     }
 
     /// Reposition: move the start and every point so the last one lands on `to` (same size).
@@ -77,7 +78,7 @@ impl Drag {
     }
 
     /// Record the modifiers of a pointer event.
-    fn track(&mut self, mods: egui::Modifiers) {
+    pub(crate) fn track(&mut self, mods: egui::Modifiers) {
         self.live = mods;
         self.released.shift |= !mods.shift;
         self.released.alt |= !mods.alt;
@@ -1769,6 +1770,10 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
         {
             crate::canvas_tool_menu::open_transform(app, [p.x, p.y]);
         }
+        if tool == Tool::Lasso {
+            crate::lasso_ui::canvas_input(app, &ctx, &xf, &response);
+            (buttons.started, buttons.dragged, buttons.stopped, buttons.clicked) = (false, false, false, false);
+        }
         // Right-click with the Move tool, or ⌘/Ctrl+right-click: the layers under the pointer.
         if response.secondary_clicked()
             && !transforming
@@ -2277,7 +2282,10 @@ fn draw_drag_preview(app: &mut PhotosuiteApp, painter: &egui::Painter, xf: &View
             }
         }
         Tool::Lasso | Tool::Patch => {
-            let pts: Vec<Pos2> = d.points.iter().map(|p| xf.to_screen(p[0] as f32, p[1] as f32)).collect();
+            let mut pts: Vec<Pos2> = d.points.iter().map(|p| xf.to_screen(p[0] as f32, p[1] as f32)).collect();
+            if let Some(lasso) = &d.lasso {
+                pts.push(xf.to_screen(lasso.cursor[0] as f32, lasso.cursor[1] as f32));
+            }
             crate::tool_feedback::draw_ants(painter, &pts, false);
         }
         Tool::Gradient => {
@@ -2426,6 +2434,9 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     }
     // Gradient tool, live mode: draw and edit Gradient Fill layers.
     if crate::gradient_ui::pointer(app, ev, mods) {
+        return;
+    }
+    if crate::lasso_ui::pointer(app, ev, mods) {
         return;
     }
     let tool = app.ui.tool;
@@ -2643,7 +2654,7 @@ fn finish_selection_drag(app: &mut PhotosuiteApp, floating: bool, start: [f64; 2
     }
 }
 
-fn finish_gesture(app: &mut PhotosuiteApp, d: Drag) {
+pub(crate) fn finish_gesture(app: &mut PhotosuiteApp, d: Drag) {
     let end = d.points.last().copied().unwrap_or([d.start[0], d.start[1], 1.0]);
     if let Some(floating) = d.sel_move {
         finish_selection_drag(app, floating, d.start, [end[0], end[1]]);
