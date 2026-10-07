@@ -948,7 +948,8 @@ fn path_fill(s: &mut Session, p: &Value) -> Result<Value> {
     s.edit("Fill Path", |doc, _| {
         let area = doc.bounds();
         let r = vector::fill_rasterizer(&path, vector::DEFAULT_TOLERANCE);
-        let area = r.pixel_bounds().map_or(area, |b| b.inflate(feather.ceil() as i32 * 2).intersect(&area));
+        let feather_pad = (feather.ceil() as i32).saturating_mul(2);
+        let area = r.pixel_bounds().map_or(area, |b| b.inflate(feather_pad).intersect(&area));
         if area.is_empty() {
             return Ok(());
         }
