@@ -1744,14 +1744,30 @@ fn layer_row(
             actions.push(("ui.maskTarget".into(), json!(false)));
         }
     }
-    // Double-click the name to rename in place (Photoshop ergonomics). The Background can't be
-    // renamed while it's locked, so a double-click turns it into a normal layer instead.
+    // Double-click: the name renames in place; the Background, which can't be renamed while
+    // it's locked, becomes a normal layer; an adjustment or fill thumbnail opens its settings and
+    // a Smart Object thumbnail its contents; anywhere else on the row opens Layer Style (#350).
+    // The first click already made this the active layer.
     if resp.double_clicked() {
+        let pos = resp.interact_pointer_pos();
+        let on = |r: Rect| pos.is_some_and(|p| r.expand(2.0).contains(p));
         if crate::doc_props_ui::is_background(doc, l) {
             actions.push(("layer.new.layerFromBackground".into(), json!({})));
-        } else if let Some(done) = crate::layer_row_ui::start_rename(ctx, l.id.0, &l.name) {
-            // One rename at a time: starting this one commits any other (#314).
-            actions.push(done);
+        } else if name_rect.is_some_and(on) {
+            if let Some(done) = crate::layer_row_ui::start_rename(ctx, l.id.0, &l.name) {
+                // One rename at a time: starting this one commits any other (#314).
+                actions.push(done);
+            }
+        } else if pos.and_then(|p| masks.hit(p)).is_none() {
+            let id = match &l.content {
+                LayerContent::Adjustment(_) | LayerContent::Fill(_) if on(thumb) => "layer.layerContentOptions",
+                LayerContent::Smart(_) if on(thumb) => "layer.smartObjects.editContents",
+                _ => "layer.layerStyle.blendingOptions",
+            };
+            if crate::menus::is_enabled(app, id) {
+                // Null params: run like the menu item, dialog included.
+                actions.push((id.into(), Value::Null));
+            }
         }
     }
     let edit_rect = Rect::from_min_max(pos2(x - 3.0, rect.center().y - 11.0), pos2(name_right.max(x + 40.0), rect.center().y + 11.0));
