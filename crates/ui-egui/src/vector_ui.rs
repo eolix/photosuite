@@ -495,7 +495,7 @@ fn swatch(ui: &mut egui::Ui, fill: Option<&photosuite_doc::Fill>, tip: &str) -> 
     ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, t.field_border), egui::StrokeKind::Outside);
     let resp = resp.on_hover_text(tip);
     let mut out = None;
-    egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+    crate::widgets::swatch_popup(&resp).show(|ui| {
         let mut c = current.unwrap_or(Color32::BLACK);
         if egui::color_picker::color_picker_color32(ui, &mut c, egui::color_picker::Alpha::Opaque) {
             out = Some(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
@@ -845,6 +845,67 @@ mod tests {
         path_selection_finish(&mut app, [50.0, 50.0], [60.0, 55.0]);
         let wp = app.session.active().unwrap().doc.work_path.clone().unwrap();
         assert_eq!((wp.subpaths[0].knots[0].anchor.x, wp.subpaths[0].knots[0].anchor.y), (30.0, 25.0));
+    }
+
+    /// #534: dragging in a shape's fill picker, opened from the Properties panel at the right edge
+    /// of the window, keeps the picker in place (it flipped from side to side as its width
+    /// followed the colour readouts, which moved it under the pointer).
+    #[test]
+    fn shape_colour_picker_stays_put_while_dragging() {
+        use egui::{PointerButton, vec2};
+        use egui_kittest::kittest::Queryable;
+        let mut app = app();
+        let id = app.run("shape.create", json!({"kind": "rect", "rect": [10, 10, 100, 60], "fill": "#3070c0"})).unwrap()["layer"].as_u64().unwrap();
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(1440.0, 900.0)).build_ui_state(
+            move |ui, app: &mut PhotosuiteApp| {
+                // Fonts set up after the first frame only apply from the next one.
+                if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    return;
+                }
+                egui::Panel::right("properties").resizable(false).exact_size(285.0).show(ui, |ui| shape_properties(app, ui, photosuite_doc::LayerId(id)));
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Midnight);
+        h.run_steps(4);
+        let label = h.query_all(egui_kittest::kittest::by().label("Fill").include_labels()).next().expect("the Fill label").rect();
+        // The swatch is right of its label.
+        let swatch = egui::pos2(label.right() + 17.0, label.center().y);
+        let press = |h: &mut egui_kittest::Harness<'_, PhotosuiteApp>, pos, pressed| {
+            h.event(egui::Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+            h.step();
+        };
+        h.hover_at(swatch);
+        h.step();
+        press(&mut h, swatch, true);
+        press(&mut h, swatch, false);
+        h.run_steps(3);
+        let popup = |h: &egui_kittest::Harness<'_, PhotosuiteApp>| {
+            h.ctx.memory(|m| m.areas().visible_layer_ids().into_iter().filter(|l| l.order == egui::Order::Foreground).find_map(|l| m.area_rect(l.id)))
+        };
+        let opened = popup(&h).expect("the picker opened");
+        let fill = |h: &egui_kittest::Harness<'_, PhotosuiteApp>| {
+            let st = h.state().session.active().unwrap();
+            match &st.doc.layer(photosuite_doc::LayerId(id)).unwrap().content {
+                LayerContent::Shape(sh) => sh.fill.clone(),
+                _ => None,
+            }
+        };
+        let before = fill(&h);
+        // Drag across the picker's colour area.
+        let start = opened.min + vec2(60.0, opened.height() * 0.5);
+        h.hover_at(start);
+        h.step();
+        press(&mut h, start, true);
+        for i in 1..=10 {
+            h.event(egui::Event::PointerMoved(start + vec2(i as f32 * 5.0, i as f32)));
+            h.step();
+            let r = popup(&h).expect("the picker stays open");
+            assert_eq!(r.left_top(), opened.left_top(), "step {i}: the picker moved from {opened:?} to {r:?}");
+            assert!(h.ctx.content_rect().contains_rect(r), "step {i}: {r:?} runs off the window");
+        }
+        press(&mut h, start, false);
+        assert_ne!(fill(&h), before, "the drag picked a colour");
     }
 }
 

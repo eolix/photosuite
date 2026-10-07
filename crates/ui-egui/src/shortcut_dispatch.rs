@@ -11,7 +11,7 @@ use egui::{Key, KeyboardShortcut};
 use serde_json::json;
 
 use crate::PhotosuiteApp;
-use crate::shortcuts::{consume, parse};
+use crate::shortcuts::{key_matches, parse};
 
 /// What a dispatched shortcut did (kept for tests and `ui.inspect`-style debugging).
 #[derive(Clone, Debug, PartialEq)]
@@ -156,25 +156,47 @@ impl Focus {
     }
 }
 
-/// The command whose shortcut was pressed this frame (its key press consumed), if any.
-/// While typing (inline type), clipboard and select-all shortcuts belong to the text.
-pub fn pressed_command(app: &PhotosuiteApp, ctx: &egui::Context, focus: Focus, editing: bool) -> Option<String> {
+/// What decides which keys [`crate::shortcuts::handle`] gives the shortcuts: an open menu, a
+/// dialog, the unsaved-changes prompt, a warp or the Filter Gallery, inline type.
+fn key_owner(app: &PhotosuiteApp, ctx: &egui::Context) -> (bool, usize, bool, bool, bool) {
+    let distort = app.distort.active() || app.distort.gallery.is_some();
+    (crate::menu_nav::is_open(ctx), app.ui.dialogs.len(), app.discard.is_some(), distort, app.ui.text_edit.is_some())
+}
+
+/// Dispatch this frame's shortcut presses in the order they arrived (⌘Z then ⌘S undoes, then
+/// saves the undone state; #440), consuming each. A press matching several bindings goes to the
+/// first in table order (⇧⌘Z before ⌘Z). Stops after a shortcut that hands the keyboard to
+/// someone else (opens a dialog, a prompt, a menu or inline type), leaving the later presses to
+/// it. While typing (inline type), clipboard and select-all shortcuts belong to the text.
+/// Returns true when a shortcut was dispatched.
+pub fn dispatch_pressed(app: &mut PhotosuiteApp, ctx: &egui::Context, focus: Focus, editing: bool) -> bool {
     // Building the table walks the registry: only do it when a key went down.
     if !ctx.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Key { pressed: true, .. }))) {
-        return None;
+        return false;
     }
-    for (id, sc) in bindings(app) {
-        if !focus.allows(&sc) {
-            continue;
-        }
-        if editing && matches!(id.as_str(), "edit.copy" | "edit.cut" | "edit.paste" | "edit.copyMerged" | "select.all" | "edit.pasteSpecial.pasteInPlace") {
-            continue;
-        }
-        if consume(ctx, &sc) {
-            return Some(id);
+    const TEXT_OWNED: [&str; 6] = ["edit.copy", "edit.cut", "edit.paste", "edit.copyMerged", "select.all", "edit.pasteSpecial.pasteInPlace"];
+    let table: Vec<(String, KeyboardShortcut)> =
+        bindings(app).into_iter().filter(|(id, sc)| focus.allows(sc) && !(editing && TEXT_OWNED.contains(&id.as_str()))).collect();
+    let command = |e: &egui::Event| match e {
+        egui::Event::Key { key, pressed: true, modifiers, .. } => table.iter().find(|(_, sc)| key_matches(sc, *key, *modifiers)).map(|(id, _)| id.clone()),
+        _ => None,
+    };
+    let mut ran = false;
+    loop {
+        let next = ctx.input_mut(|i| {
+            let (at, id) = i.events.iter().enumerate().find_map(|(at, e)| Some((at, command(e)?)))?;
+            i.events.remove(at);
+            Some(id)
+        });
+        let Some(id) = next else { break };
+        let owner = key_owner(app, ctx);
+        dispatch(app, ctx, &id);
+        ran = true;
+        if key_owner(app, ctx) != owner {
+            break;
         }
     }
-    None
+    ran
 }
 
 /// Why `id` can't run now (the engine's reason when it has one).

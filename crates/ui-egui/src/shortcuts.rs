@@ -155,6 +155,20 @@ fn nav_keys(app: &mut PhotosuiteApp, ctx: &egui::Context) -> bool {
     false
 }
 
+/// The key press a clipboard event stands for outside text fields, with `mods` held: Copy, Cut
+/// and Paste are ⌘C, ⌘X and ⌘V (with ⇧/⌥ as held). On Windows egui-winit also sends Cut for
+/// Shift+Delete, which is Edit › Fill here (#530): a Cut with ⇧ and without Ctrl is that key.
+fn clipboard_press(e: &egui::Event, mods: Modifiers, is_windows: bool) -> Option<(Key, Modifiers)> {
+    let held = if mods.command { mods } else { Modifiers::COMMAND };
+    match e {
+        egui::Event::Copy => Some((Key::C, held)),
+        egui::Event::Cut if is_windows && mods.shift && !mods.command => Some((Key::Delete, mods)),
+        egui::Event::Cut => Some((Key::X, held)),
+        egui::Event::Paste(_) => Some((Key::V, held)),
+        _ => None,
+    }
+}
+
 /// egui-winit turns ⌘C / ⌘X / ⌘V into `Event::Copy` / `Cut` / `Paste` and drops the key press, and
 /// drops ⌘V entirely when the clipboard holds no text (an image). Outside text fields, give the
 /// pixel commands their key presses back: Copy/Cut/Paste become ⌘C/⌘X/⌘V presses (with ⇧/⌥ as
@@ -191,14 +205,7 @@ pub fn clipboard_keys(ctx: &egui::Context, typing: bool, raw: &mut egui::RawInpu
         if let egui::Event::ModifiersChanged(m) | egui::Event::Key { modifiers: m, .. } = &e {
             mods = *m;
         }
-        let held = if mods.command { mods } else { Modifiers::COMMAND };
-        let key = match &e {
-            egui::Event::Copy => Some(Key::C),
-            egui::Event::Cut => Some(Key::X),
-            egui::Event::Paste(_) => Some(Key::V),
-            _ => None,
-        };
-        if let Some(key) = key {
+        if let Some((key, held)) = clipboard_press(&e, mods, cfg!(target_os = "windows")) {
             if key == Key::V {
                 ctx.data_mut(|d| d.insert_temp(seen, true));
             }
@@ -231,7 +238,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     if app.distort.liquify.is_some() && !ctx.text_edit_focused() {
         crate::liquify_ui::keys(app, ctx);
     }
-    use crate::shortcut_dispatch::{Focus, dispatch, pressed_command};
+    use crate::shortcut_dispatch::{Focus, dispatch_pressed};
     let focus = Focus::of(ctx);
     // Dialogs (and Liquify's panel while one of its controls has focus) keep canvas zoom; a
     // focused text field keeps its keys.
@@ -245,9 +252,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     if focus == Focus::Text {
         // A focused field keeps its typing and editing keys; menu shortcuts (⌘J, ⌘S, F7…) still
         // fire, as in Photoshop.
-        if let Some(id) = pressed_command(app, ctx, focus, false) {
-            dispatch(app, ctx, &id);
-        }
+        dispatch_pressed(app, ctx, focus, false);
         return;
     }
     // Liquify / Puppet Warp / Perspective Warp: ↩ commits, Esc cancels.
@@ -283,8 +288,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     // Inline type editing eats text and navigation keys; ⌘-shortcuts still reach the menus.
     let editing = crate::type_tool::handle_keys(app, ctx);
     // Registry, UI and menu-catalogue shortcuts (see [`crate::shortcut_dispatch::bindings`]).
-    if let Some(id) = pressed_command(app, ctx, focus, editing) {
-        dispatch(app, ctx, &id);
+    if dispatch_pressed(app, ctx, focus, editing) {
         return;
     }
     if editing {
@@ -475,6 +479,38 @@ mod tests {
         let mut r = raw(vec![egui::Event::Paste("x".into())], Modifiers::COMMAND);
         clipboard_keys(&ctx, true, &mut r);
         assert!(matches!(r.events.as_slice(), [_, egui::Event::Paste(_)]));
+    }
+
+    /// #530: egui-winit sends Cut for Shift+Delete on Windows; on the canvas it opens Fill.
+    #[test]
+    fn windows_shift_delete_fills_instead_of_cutting() {
+        let shift = Modifiers::SHIFT;
+        let ctrl = Modifiers::CTRL | Modifiers::COMMAND;
+        let app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        let bound = |held| {
+            let (key, mods) = clipboard_press(&egui::Event::Cut, held, true)?;
+            assert_eq!((key, mods), (Key::Delete, held));
+            crate::shortcut_dispatch::bindings(&app).into_iter().find(|(_, sc)| key_matches(sc, key, mods)).map(|(id, _)| id)
+        };
+        assert_eq!(bound(shift).as_deref(), Some("edit.fill"));
+        // ⇧⌥Delete keeps ⌥: fill with the foreground, keeping transparency.
+        assert_eq!(bound(shift | Modifiers::ALT).as_deref(), Some("edit.fillForegroundPreserve"));
+        // Ctrl+X (and Ctrl+Shift+X) still cut; elsewhere a Cut is always ⌘X.
+        assert_eq!(clipboard_press(&egui::Event::Cut, ctrl, true), Some((Key::X, ctrl)));
+        assert_eq!(clipboard_press(&egui::Event::Cut, ctrl | shift, true), Some((Key::X, ctrl | shift)));
+        assert_eq!(clipboard_press(&egui::Event::Cut, shift, false), Some((Key::X, Modifiers::COMMAND)));
+        // Shift+Insert pastes on Windows.
+        assert_eq!(clipboard_press(&egui::Event::Paste("x".into()), shift, true), Some((Key::V, Modifiers::COMMAND)));
+        // Through the raw-input hook on this platform; a text field keeps its Cut.
+        let ctx = egui::Context::default();
+        let cut = || egui::RawInput { events: vec![egui::Event::ModifiersChanged(shift), egui::Event::Cut], ..Default::default() };
+        let mut r = cut();
+        clipboard_keys(&ctx, false, &mut r);
+        let want = if cfg!(target_os = "windows") { Key::Delete } else { Key::X };
+        assert!(matches!(r.events.as_slice(), [_, egui::Event::Key { key, pressed: true, .. }] if *key == want), "{:?}", r.events);
+        let mut r = cut();
+        clipboard_keys(&ctx, true, &mut r);
+        assert!(matches!(r.events.as_slice(), [_, egui::Event::Cut]));
     }
 
     #[cfg(target_os = "linux")]

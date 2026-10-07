@@ -847,7 +847,7 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     ui.painter().rect_filled(rect, 2.0, Color32::from_rgb(q(c[0]), q(c[1]), q(c[2])));
     ui.painter().rect_stroke(rect, 2.0, Stroke::new(1.0, t.field_border), egui::StrokeKind::Outside);
     let resp = resp.on_hover_text(tl!("Set the text color"));
-    egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+    crate::widgets::swatch_popup(&resp).show(|ui| {
         let mut col = Color32::from_rgb(q(c[0]), q(c[1]), q(c[2]));
         if egui::color_picker::color_picker_color32(ui, &mut col, egui::color_picker::Alpha::Opaque) {
             apply(app, ui.ctx(), json!({"color": format!("#{:02x}{:02x}{:02x}", col.r(), col.g(), col.b())}));
@@ -1152,7 +1152,7 @@ fn type_sections(app: &mut PhotosuiteApp, ui: &mut egui::Ui, character: bool, pa
                 ui.painter().rect_filled(rect, t.radius_sm, Color32::from_rgb(q(rgb[0]), q(rgb[1]), q(rgb[2])));
                 ui.painter().rect_stroke(rect, t.radius_sm, Stroke::new(1.0, t.field_border), egui::StrokeKind::Inside);
                 let resp = resp.on_hover_text(tl!("Text color"));
-                egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+                crate::widgets::swatch_popup(&resp).show(|ui| {
                     let mut col = Color32::from_rgb(q(rgb[0]), q(rgb[1]), q(rgb[2]));
                     if egui::color_picker::color_picker_color32(ui, &mut col, egui::color_picker::Alpha::Opaque) {
                         apply(app, ui.ctx(), json!({"color": format!("#{:02x}{:02x}{:02x}", col.r(), col.g(), col.b())}));

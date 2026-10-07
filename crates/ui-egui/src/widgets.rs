@@ -417,6 +417,36 @@ pub fn dropdown<T: PartialEq + Clone>(ui: &mut Ui, id: &str, current: &mut T, op
     changed
 }
 
+/// The colour picker popup of a colour swatch: a click on `swatch` toggles it, a click outside
+/// closes it. While open, its left edge stays where it first showed (at the swatch, or further
+/// left when the window edge needs it), below the swatch or above it as room allows. The picker's
+/// width follows its value readouts, and placing it anew every frame moved it under the pointer,
+/// flipping it from side to side near the right edge of the window (#534).
+pub fn swatch_popup(swatch: &Response) -> egui::Popup<'static> {
+    // Room for the readouts to widen after the picker opened.
+    const SLACK: f32 = 32.0;
+    let popup = egui::Popup::from_toggle_button_response(swatch).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+    let ctx = &swatch.ctx;
+    let key = popup.get_id().with("left");
+    if !popup.is_open() {
+        ctx.data_mut(|d| d.remove::<f32>(key));
+        return popup;
+    }
+    // Its width is known from the frame after it opened (egui sizes it unseen first).
+    let left = ctx.data(|d| d.get_temp::<f32>(key)).or_else(|| {
+        let width = popup.get_expected_size()?.x;
+        let screen = ctx.content_rect();
+        let left = swatch.rect.left().min(screen.right() - width - SLACK).max(screen.left());
+        ctx.data_mut(|d| d.insert_temp(key, left));
+        Some(left)
+    });
+    let Some(left) = left else { return popup };
+    popup
+        .anchor(Rect::from_x_y_ranges(left..=left, swatch.rect.y_range()))
+        .align(egui::RectAlign::BOTTOM_START)
+        .align_alternatives(&[egui::RectAlign::TOP_START])
+}
+
 /// Paint a small checkerboard (transparency) in `rect`.
 pub fn checker(painter: &egui::Painter, rect: Rect, cell: f32) {
     painter.rect_filled(rect, 0.0, Color32::from_gray(250));
