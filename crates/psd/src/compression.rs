@@ -10,9 +10,16 @@ use crate::error::{PsdError, Result};
 use crate::header::{Version, row_bytes};
 use crate::io::{Reader, WriteExt};
 
-/// Maximum number of decoded bytes a single decode call may produce. Guards
-/// against decompression bombs from tiny inputs.
-pub const MAX_DECODED_BYTES: u64 = 1 << 31;
+/// Maximum number of decoded bytes a single decode call may produce: 8 GiB on
+/// 64-bit targets, 2 GiB elsewhere (the same budget as `photosuite-codecs`'
+/// default `Limits::max_alloc`).
+///
+/// The decoders bound their output by their input on their own (RLE expands
+/// at most 64x, Raw needs every byte present), so this is a backstop against
+/// decompression bombs, not the main guard. It has to fit real PSBs: a
+/// 30000² RGB merged image is 2.7 GB, and a 33000² 16-bit layer channel is
+/// 2.2 GB, both of which a 2 GiB cap turned into empty layers (#375).
+pub const MAX_DECODED_BYTES: u64 = if cfg!(target_pointer_width = "64") { 8 << 30 } else { 2 << 30 };
 
 /// Compression method stored before channel / image data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -201,7 +208,10 @@ pub fn decode_planes(compression: Compression, data: &[u8], layout: &PlaneLayout
             if data.len() < total {
                 return Err(PsdError::UnexpectedEof { offset: data.len(), needed: total - data.len() });
             }
-            Ok(data[..total].to_vec())
+            let mut out = Vec::new();
+            out.try_reserve_exact(total).map_err(|_| PsdError::LimitExceeded("not enough memory for the decoded channel data"))?;
+            out.extend_from_slice(&data[..total]);
+            Ok(out)
         }
         Compression::Rle => decode_rle(data, layout, total),
         Compression::Zip => zip_decompress(data, total),
@@ -302,7 +312,9 @@ fn decode_rle(data: &[u8], layout: &PlaneLayout, total: usize) -> Result<Vec<u8>
     if (total as u64) > (r.remaining() as u64).saturating_mul(64) {
         return Err(PsdError::Decompress("RLE data too short for declared size".into()));
     }
-    let mut out = Vec::with_capacity(total);
+    // Up to MAX_DECODED_BYTES: report a machine without that much memory instead of aborting.
+    let mut out = Vec::new();
+    out.try_reserve_exact(total).map_err(|_| PsdError::LimitExceeded("not enough memory for the decoded channel data"))?;
     for c in counts {
         let row = r.bytes(c)?;
         packbits::decode_into(row, rb, &mut out)?;
@@ -342,10 +354,29 @@ pub fn zip_compress(data: &[u8]) -> Vec<u8> {
 
 /// Decompresses a zlib stream, requiring at least `expected` output bytes and
 /// returning exactly `expected`.
+///
+/// The output is reserved fallibly and read in chunks, never past `expected`
+/// bytes, so a stream declaring a huge size reports an error on a machine
+/// without that much memory instead of aborting.
 pub fn zip_decompress(data: &[u8], expected: usize) -> Result<Vec<u8>> {
-    let dec = flate2::read::ZlibDecoder::new(data);
-    let mut out = Vec::with_capacity(expected.min(data.len().saturating_mul(1032)));
-    dec.take(expected as u64).read_to_end(&mut out).map_err(|e| PsdError::Decompress(e.to_string()))?;
+    const OOM: PsdError = PsdError::LimitExceeded("not enough memory for the decoded channel data");
+    const CHUNK: usize = 1 << 20;
+    let mut dec = flate2::read::ZlibDecoder::new(data).take(u64::try_from(expected).unwrap_or(u64::MAX));
+    let mut out = Vec::new();
+    // Deflate expands at most ~1032:1, so this is the most a valid stream can need.
+    out.try_reserve_exact(expected.min(data.len().saturating_mul(1032))).map_err(|_| OOM)?;
+    let mut buf = vec![0u8; CHUNK.min(expected).max(1)];
+    loop {
+        let n = match dec.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(PsdError::Decompress(e.to_string())),
+        };
+        let chunk = buf.get(..n).ok_or_else(|| PsdError::Decompress("zlib reader overran its buffer".into()))?;
+        out.try_reserve(n).map_err(|_| OOM)?;
+        out.extend_from_slice(chunk);
+    }
     if out.len() < expected {
         return Err(PsdError::Decompress(format!("zlib stream produced {} of {} bytes", out.len(), expected)));
     }
@@ -451,6 +482,34 @@ mod tests {
         let dec = packbits::decode(&enc, src.len()).unwrap();
         assert_eq!(dec, src, "encoded: {enc:?}");
         enc
+    }
+
+    #[test]
+    fn zip_absurd_declared_size_is_an_error() {
+        let z = zip_compress(&[7u8; 64]);
+        for expected in [1usize << 40, usize::MAX / 2, usize::MAX] {
+            assert!(zip_decompress(&z, expected).is_err(), "expected {expected}");
+        }
+        // Through decode_planes: a tiny ZIP channel claiming a huge (but capped) plane.
+        let l = layout(1, 1 << 16, 1 << 15, 8, Version::Psb);
+        assert!(decode_planes(Compression::Zip, &z, &l).is_err());
+        assert!(decode_planes(Compression::ZipPrediction, &z, &l).is_err());
+        // Past MAX_DECODED_BYTES.
+        let l = layout(4, 1 << 20, 1 << 20, 32, Version::Psb);
+        assert!(decode_planes(Compression::Zip, &z, &l).is_err());
+        // Garbage that is not zlib at all.
+        assert!(zip_decompress(&[0xff; 16], 1 << 30).is_err());
+    }
+
+    #[test]
+    fn zip_decompress_exact_and_truncated() {
+        let src: Vec<u8> = (0..3_000_000u32).map(|i| (i % 251) as u8).collect();
+        let z = zip_compress(&src);
+        assert_eq!(zip_decompress(&z, src.len()).unwrap(), src);
+        // Asking for fewer bytes returns exactly that many.
+        assert_eq!(zip_decompress(&z, 1000).unwrap(), &src[..1000]);
+        assert!(zip_decompress(&z, src.len() + 1).is_err());
+        assert!(zip_decompress(&z, 0).unwrap().is_empty());
     }
 
     #[test]
@@ -642,6 +701,16 @@ mod tests {
         let l = layout(56, 300_000, 300_000, 32, Version::Psb);
         assert!(matches!(l.decoded_len(), Err(PsdError::LimitExceeded(_))));
         assert!(decode_planes(Compression::Rle, &[0; 16], &l).is_err());
+    }
+
+    /// Real PSBs go past 2 GiB in one decode (#375): a 30000² RGB merged image and a 33000²
+    /// 16-bit layer channel. Only checks the limit, so nothing is allocated.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn decoded_len_allows_large_psb_planes() {
+        assert_eq!(layout(3, 30_000, 30_000, 8, Version::Psb).decoded_len().unwrap(), 2_700_000_000);
+        assert_eq!(layout(1, 33_000, 33_000, 16, Version::Psb).decoded_len().unwrap(), 2_178_000_000);
+        assert!(layout(4, 40_000, 40_000, 16, Version::Psb).decoded_len().is_err());
     }
 
     #[test]

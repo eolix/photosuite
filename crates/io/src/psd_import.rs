@@ -127,6 +127,12 @@ impl Ctx<'_> {
             planes.push(self.channel_plane(rec, c as i16, name));
         }
         planes.push(self.channel_plane(rec, CHANNEL_TRANSPARENCY, name));
+        // A channel that is in the file but could not be decoded leaves the layer empty, as the
+        // warning says. Filling in for it would paint an opaque black layer over the document.
+        let ids = (0..self.cc as i16).chain([CHANNEL_TRANSPARENCY]);
+        if ids.zip(&planes).any(|(id, p)| p.is_none() && rec.channel(id).is_some()) {
+            return Surface::new(self.fmt);
+        }
         let refs: Vec<Option<&[u8]>> = planes.iter().map(|p| p.as_deref()).collect();
         let mut fill: Vec<Vec<u8>> = vec![zero_sample(s); self.cc];
         fill.push(max_sample(s));

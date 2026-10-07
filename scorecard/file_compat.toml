@@ -162,9 +162,9 @@ note = "No corpus step in ci.yml; in progress in #190"
 [[item]]
 id = "FILE-216-2"
 target = "Large-file fixtures: 20 MP, 150-layer, generated 2 GB PSD and 4-5 GB PSB stress tests"
-status = "missing"
+status = "partial"
 issue = 216
-note = "Only banded.rs covers a >8 MP synthetic export"
+note = "4-5 GB PSB fixtures: psd example big_psb writes them (raw and RLE, planes past 2 GiB), io example big_psb_check opens and checks them; opt-in io tests/large_psb.rs (2.5 GB merged image). No 2 GB PSD, 150-layer or 20 MP fixture, nothing in CI"
 
 [[item]]
 id = "FILE-216-3"
