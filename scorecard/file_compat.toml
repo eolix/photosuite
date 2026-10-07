@@ -17,7 +17,7 @@ id = "FILE-215-2"
 target = "Smart Filters survive PSD save and re-open (filterFX descriptor read and written)"
 status = "partial"
 issue = 215
-note = "smart_map.rs: 14 filters mapped both ways, others kept verbatim, mask in FEid; io tests/smart_corpus.rs. PhotoSuite-only filters (Twirl, Liquify…) are left out of filterFX with a warning"
+note = "smart_map.rs: 14 filters plus a verified Camera Raw subset mapped both ways, others kept verbatim, mask in FEid; io tests/smart_corpus.rs. PhotoSuite-only filters (Twirl, Liquify…) and unmapped Camera Raw settings are left out of filterFX with a warning"
 
 [[item]]
 id = "FILE-215-3"
@@ -87,7 +87,7 @@ id = "FILE-215-12"
 target = "Camera Raw dialog shows a histogram; settings persist as a PSD Smart Filter"
 status = "partial"
 issue = 215
-note = "No histogram; lens_cmds.rs:268 stores an in-app Smart Filter, PSD drops it"
+note = "Histogram in the Camera Raw dialog (camera_raw_ui). PSD: WB/Light/Presence, curves, HSL, grading, detail, grain and vignette map to a live Smart Filter (io camera_raw_map.rs) with descriptor preservation; HDR, remaining settings and Photoshop acceptance still open"
 
 [[item]]
 id = "FILE-215-13"

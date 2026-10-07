@@ -32,6 +32,9 @@ use serde_json::{Map, Value as J, json};
 
 use crate::blocks::{enum_of, get_desc, num};
 
+#[path = "camera_raw_map.rs"]
+mod camera_raw;
+
 /// Command id of a Photoshop smart filter PhotoSuite does not implement. Its params hold the
 /// filter's name, Photoshop filter id and descriptor (`psd`, hex); it renders as a pass-through.
 pub const UNSUPPORTED_FILTER: &str = "psd.unsupportedFilter";
@@ -302,7 +305,12 @@ pub fn filter_from_item(item: &Descriptor) -> SmartFilter {
     let class = fltr.map(|f| String::from_utf8_lossy(f.class_id.as_bytes()).into_owned());
     let filter_id = int(item, "filterID").unwrap_or(0);
     let class = class.or_else(|| KNOWN.iter().find(|k| k.filter_id == filter_id).map(|k| k.class.to_string()));
-    let (command, params) = match class.as_deref().and_then(|c| known_params(c, fltr)) {
+    let known = if class.as_deref() == Some(camera_raw::CLASS) {
+        camera_raw::import_params(item).map(|p| (camera_raw::COMMAND, p))
+    } else {
+        class.as_deref().and_then(|c| known_params(c, fltr))
+    };
+    let (command, params) = match known {
         Some((c, p)) => (c.to_string(), p),
         None => {
             let name = text_of(item, "Nm  ").unwrap_or_default();
@@ -432,6 +440,12 @@ fn fltr_for(k: &Known, p: &J) -> Result<Option<Descriptor>, String> {
 
 /// The `filterFXList` item for one smart filter, or why it can't be written.
 pub fn item_for_filter(f: &SmartFilter) -> Result<Descriptor, String> {
+    if f.command == camera_raw::COMMAND {
+        let mut d = camera_raw::export_item(&f.params)?;
+        set(&mut d, "blendOptions", blend_options(f));
+        set(&mut d, "enab", Value::Boolean(f.visible));
+        return Ok(d);
+    }
     if f.command == UNSUPPORTED_FILTER {
         let raw = f.params.get("psd").and_then(J::as_str).and_then(from_hex).ok_or("its Photoshop data is missing")?;
         let mut d = Descriptor::from_bytes(&raw).map_err(|e| format!("its Photoshop data is unreadable ({e})"))?;

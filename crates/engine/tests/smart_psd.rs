@@ -144,6 +144,131 @@ fn smart_objects_and_filters_survive_psd() {
     }
 }
 
+#[test]
+fn camera_raw_psd_filters_survive_re_editing_native_save_and_undo() {
+    for depth in [8, 16, 32] {
+        let mut s = session(depth);
+        s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+        s.execute("filter.blur.gaussianBlur", json!({"radius": 1})).unwrap();
+        s.execute("select.rect", json!({"x": 10, "y": 8, "width": 50, "height": 40})).unwrap();
+        s.execute(
+            "filter.cameraRaw",
+            json!({
+                "exposure": 1.15, "contrast": -38, "highlights": 35, "shadows": -50, "whites": 49, "blacks": -34,
+                "curveDarks": -21, "curveLights": 38, "hslHue": [-50, 0, 29, 1, 0, 0, 0, 0],
+                "temperature": -26, "tint": -25, "texture": -31, "clarity": 30, "dehaze": -34, "vibrance": 33, "saturation": 33,
+                "sharpenAmount": 43, "sharpenRadius": 1.2, "sharpenDetail": 36, "sharpenMasking": 30,
+                "noiseLuminance": 47, "noiseLuminanceDetail": 50, "noiseColor": 25, "noiseColorDetail": 50,
+                "gradeShadows": {"hue": 117, "sat": 52, "lum": -24}, "gradeMidtones": {"hue": 51, "sat": 51, "lum": 41},
+                "gradeHighlights": {"hue": 316, "sat": 70, "lum": 28}, "gradeGlobal": {"hue": 20, "sat": 61, "lum": 45},
+                "gradeBlending": 36, "gradeBalance": 35, "grainAmount": 45, "grainSize": 25, "grainRoughness": 50,
+                "pointCurve": [[0, 0], [146, 102], [255, 255]], "pointCurveRed": [[0, 0], [90, 174], [255, 255]],
+                "pointCurveGreen": [[0, 0], [162, 122], [255, 255]], "pointCurveBlue": [[0, 0], [129, 202], [255, 255]]
+            }),
+        )
+        .unwrap();
+        s.execute("select.deselect", json!({})).unwrap();
+        s.execute("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap();
+        let before = s.active().unwrap().doc.clone();
+        let out = photosuite_io::export(&before, "psd", &Default::default()).unwrap();
+        assert!(out.warnings.is_empty(), "{:?}", out.warnings);
+        assert!(structure_errors(&out.bytes).is_empty());
+        let back = photosuite_io::import("camera-raw.psd", &out.bytes).unwrap().document;
+        let (layer, imported) = smart(&back);
+        let (_, original) = smart(&before);
+        let mask_values = |sm: &SmartObject| {
+            let mut values = Vec::new();
+            sm.filter_mask.as_ref().unwrap().values_into(before.bounds(), &mut values);
+            values
+        };
+        assert_eq!(imported.smart_filters.len(), 3);
+        assert_eq!(imported.smart_filters[1].command, "filter.cameraRaw");
+        assert_eq!(mask_values(&imported), mask_values(&original));
+        let expected = photosuite_engine::lens_cmds::raw_params("filter.cameraRaw", &original.smart_filters[1].params).unwrap();
+        let actual = photosuite_engine::lens_cmds::raw_params("filter.cameraRaw", &imported.smart_filters[1].params).unwrap();
+        assert_eq!(actual, expected, "{depth}-bit");
+        let template = imported.smart_filters[1].params["__cameraRawPsd"].clone();
+        let mut edited = Session::new();
+        edited.add_document(back, None);
+        edited.execute("layer.smartFilter.setParams", json!({"layer": layer, "index": 1, "params": {"exposure": 0, "curveLights": 0}})).unwrap();
+        assert_eq!(smart(&edited.active().unwrap().doc).1.smart_filters[1].params["__cameraRawPsd"], template);
+        let changed = edited.active().unwrap().doc.clone();
+        edited.undo();
+        assert_eq!(smart(&edited.active().unwrap().doc).1.smart_filters[1].params["exposure"], imported.smart_filters[1].params["exposure"]);
+        edited.redo();
+        assert_eq!(*edited.active().unwrap().doc, *changed);
+        let native = photosuite_format::save_to_bytes(&changed, &Default::default()).unwrap();
+        let native_back = photosuite_format::load_from_bytes(&native).unwrap();
+        assert_eq!(smart(&native_back).1.smart_filters, smart(&changed).1.smart_filters);
+        let out = photosuite_io::export(&native_back, "psd", &Default::default()).unwrap();
+        assert!(out.warnings.is_empty(), "{:?}", out.warnings);
+        assert!(structure_errors(&out.bytes).is_empty());
+        let back = photosuite_io::import("edited.psd", &out.bytes).unwrap().document;
+        let (_, after) = smart(&back);
+        assert_eq!(after.smart_filters.len(), 3);
+        let params = photosuite_engine::lens_cmds::raw_params("filter.cameraRaw", &after.smart_filters[1].params).unwrap();
+        assert_eq!((params.exposure, params.curve_lights), (0.0, 0.0));
+        assert_eq!(params.hsl_hue, expected.hsl_hue);
+        assert_eq!(mask_values(&after), mask_values(&original));
+        let mut unfiltered = after.clone();
+        unfiltered.smart_filters.clear();
+        assert!(photosuite_engine::smart_cmds::render(&back, &unfiltered).unwrap().is_some());
+    }
+}
+
+/// Private, user-supplied files remain outside the repository. Set PHOTOSUITE_CAMERA_RAW_PSD
+/// to check a Camera Raw fixture and PHOTOSUITE_SMART_PSD_OUT to retain exports for manual checks.
+#[test]
+#[ignore = "requires a user-supplied Camera Raw PSD"]
+fn camera_raw_psd_fixture() {
+    let path = std::env::var("PHOTOSUITE_CAMERA_RAW_PSD").expect("set PHOTOSUITE_CAMERA_RAW_PSD");
+    let bytes = std::fs::read(&path).unwrap();
+    let imported = photosuite_io::import("fixture.psd", &bytes).unwrap();
+    let (_, sm) = smart(&imported.document);
+    let index = sm
+        .smart_filters
+        .iter()
+        .position(|f| {
+            photosuite_io::smart_map::item_for_filter(f).ok().is_some_and(
+                |item| matches!(item.get("Fltr"), Some(photosuite_psd::descriptor::Value::Descriptor(d)) if d.class_id.is("Adobe Camera Raw Filter")),
+            )
+        })
+        .expect("a Camera Raw filter");
+    let original_item = photosuite_io::smart_map::item_for_filter(&sm.smart_filters[index]).unwrap();
+    let out = photosuite_io::export(&imported.document, "psd", &Default::default()).unwrap();
+    assert!(!out.warnings.iter().any(|w| w.contains("smart filter")), "{:?}", out.warnings);
+    assert!(structure_errors(&out.bytes).is_empty());
+    keep("camera-raw-roundtrip.psd", &out.bytes);
+    let back = photosuite_io::import("roundtrip.psd", &out.bytes).unwrap().document;
+    let (layer, _) = smart(&back);
+    assert_eq!(photosuite_io::smart_map::item_for_filter(&smart(&back).1.smart_filters[index]).unwrap(), original_item);
+    let native = photosuite_format::save_to_bytes(&back, &Default::default()).unwrap();
+    assert_eq!(smart(&photosuite_format::load_from_bytes(&native).unwrap()).1.smart_filters, smart(&back).1.smart_filters);
+    if sm.smart_filters[index].command == photosuite_io::smart_map::UNSUPPORTED_FILTER {
+        assert_eq!(smart(&back).1.smart_filters[index].command, photosuite_io::smart_map::UNSUPPORTED_FILTER);
+        println!("Camera Raw settings survive PSD and native saves; active unmapped controls keep this filter opaque");
+        return;
+    }
+    let mut s = Session::new();
+    s.add_document(back, None);
+    s.execute("layer.smartFilter.setParams", json!({"layer": layer, "index": index, "params": {"exposure": 0.5}})).unwrap();
+    let out = photosuite_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap();
+    assert!(!out.warnings.iter().any(|w| w.contains("smart filter")), "{:?}", out.warnings);
+    assert!(structure_errors(&out.bytes).is_empty());
+    keep("camera-raw-edited.psd", &out.bytes);
+    let back = photosuite_io::import("edited.psd", &out.bytes).unwrap().document;
+    let after = &smart(&back).1.smart_filters[index];
+    assert_eq!(after.params["exposure"], 0.5);
+    let mut expected = original_item;
+    let mut fltr = match expected.get("Fltr").unwrap() {
+        photosuite_psd::descriptor::Value::Descriptor(d) => d.clone(),
+        _ => panic!("Fltr must be a descriptor"),
+    };
+    fltr.items.iter_mut().find(|(key, _)| key.is("Ex12")).unwrap().1 = photosuite_psd::descriptor::Value::Double(0.5);
+    expected.items.iter_mut().find(|(key, _)| key.is("Fltr")).unwrap().1 = photosuite_psd::descriptor::Value::Descriptor(fltr);
+    assert_eq!(photosuite_io::smart_map::item_for_filter(after).unwrap(), expected, "only Exposure changes");
+}
+
 /// Every colour model: the smart object, its filters and the filter cache's unfiltered pixels
 /// (in the document's model, CMYK inverted and 16-bit Lab scaled as in layer channels) survive.
 #[test]
