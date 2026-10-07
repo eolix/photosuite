@@ -190,7 +190,9 @@ const WEB_FORMATS: [(&str, &str); 7] =
 /// File › Save As adds the whole-document formats, saved through [`PhotosuiteApp::save_as`]: the
 /// document takes the new path and is marked saved. The web formats below them write one
 /// optimised file through `file.export.saveForWebLegacy`, then retarget the document the same way.
-const DOC_FORMATS: [(&str, &str); 6] = [("psd", "PSD"), ("psb", "PSB"), ("pcraft", "PhotoSuite (.pcraft)"), ("tif", "TIFF"), ("exr", "OpenEXR"), ("pdf", "PDF")];
+/// The native .pcraft format isn't offered (PSD is the document format); a .pcraft file that is
+/// opened still saves back in place, and the engine and CLI still write it.
+const DOC_FORMATS: [(&str, &str); 5] = [("psd", "PSD"), ("psb", "PSB"), ("tif", "TIFF"), ("exr", "OpenEXR"), ("pdf", "PDF")];
 
 /// File › Save As's formats: the document formats and the web ones, in alphabetical order of the
 /// name shown. (Save for Web (Legacy) keeps Photoshop's order.)
@@ -886,6 +888,7 @@ mod tests {
         assert_eq!(labels, sorted);
         assert_eq!(labels.len(), DOC_FORMATS.len() + WEB_FORMATS.len(), "every format is still offered");
         assert_eq!(labels.first(), Some(&"GIF"));
+        assert!(save_as_formats().iter().all(|(k, _)| *k != "pcraft"), ".pcraft isn't offered");
     }
 
     #[test]

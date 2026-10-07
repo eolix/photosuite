@@ -125,7 +125,7 @@ each under its own licence (see [Licences](#licences)).
 
 | | Open | Save |
 |:---|:---|:---|
-| **Layered** | PSD, PSB, PhotoSuite (`.pcraft`) | PSD, PSB, PhotoSuite (`.pcraft`) |
+| **Layered** | PSD, PSB, PhotoSuite (`.pcraft`) | PSD, PSB |
 | **Raster** | PNG, JPEG, WebP, TIFF, GIF, BMP, TGA, ICO, QOI, OpenEXR, Radiance HDR, PBM/PGM/PPM/PAM/PFM | PNG, JPEG, WebP (lossy and lossless), TIFF, OpenEXR, GIF, PNG-8, WBMP |
 | **Document** | PDF (a page, as pixels) | PDF (flattened) |
 | **Camera raw** | DNG, CR2, CR3, NEF, NRW, ARW, PEF, ORF, RW2, RAF | — |
