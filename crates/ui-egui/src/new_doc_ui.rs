@@ -275,7 +275,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
     let chosen = get_s(f, "__preset", "");
     // A fixed body height, so the dialog keeps its size from tab to tab with room to breathe;
     // the preset grid scrolls inside it. Smaller windows get a shorter body.
-    let body_h = (ui.ctx().content_rect().height() - 220.0).clamp(300.0, 500.0);
+    let body_h = (ui.ctx().content_rect().height() - 220.0).clamp(300.0, 400.0);
     ui.horizontal_top(|ui| {
         // Left: preset grid.
         ui.vertical(|ui| {
@@ -342,7 +342,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
             ui.label(RichText::new(tl!("PRESET DETAILS")).size(11.0).color(t.text_faint));
             ui.add_space(4.0);
             let mut name = get_s(f, "name", tl!("Untitled-1"));
-            if ui.add(egui::TextEdit::singleline(&mut name).desired_width(250.0).font(egui::FontId::proportional(15.0))).changed() {
+            if ui.add(egui::TextEdit::singleline(&mut name).desired_width(250.0).font(egui::FontId::proportional(13.0))).changed() {
                 f.insert("name".into(), json!(name));
             }
             ui.add_space(8.0);

@@ -70,12 +70,24 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                 ui.set_min_width(w);
                 ui.set_max_width(w);
             }
-            let t = ui.add(egui::Label::new(egui::RichText::new(&title).font(crate::theme::semibold(15.0))).selectable(false)).rect;
-            let bar = egui::Rect::from_min_max(t.min, egui::pos2(ui.max_rect().right(), t.bottom()));
-            drag = ui.interact(bar, id.with("title"), egui::Sense::drag()).drag_delta();
-            ui.add_space(4.0);
-            crate::widgets::hairline(ui);
-            ui.add_space(8.0);
+            // Title bar: a strip across the dialog's top in the window title bar's colour, its
+            // bottom edge the separator. Painted behind the title, so its slot is reserved first.
+            let tk = crate::theme::Tokens::get(ui.ctx());
+            let margin = ui.spacing().menu_margin;
+            let strip = ui.painter().clone().with_clip_rect(ui.ctx().content_rect());
+            let strip_bg = strip.add(egui::Shape::Noop);
+            ui.add_space(1.0);
+            let t = ui.add(egui::Label::new(egui::RichText::new(&title).font(crate::theme::semibold(13.0)).color(tk.text)).selectable(false)).rect;
+            let frame_top = ui.max_rect().top() - f32::from(margin.top);
+            let band = egui::Rect::from_min_max(
+                egui::pos2(ui.max_rect().left() - f32::from(margin.left), frame_top),
+                egui::pos2(ui.max_rect().right() + f32::from(margin.right), t.bottom() + 7.0),
+            );
+            let r = ui.visuals().menu_corner_radius;
+            strip.set(strip_bg, egui::Shape::rect_filled(band, egui::CornerRadius { nw: r.nw, ne: r.ne, sw: 0, se: 0 }, tk.chrome));
+            strip.line_segment([band.left_bottom(), band.right_bottom()], egui::Stroke::new(1.0, tk.separator));
+            drag = ui.interact(band, id.with("title"), egui::Sense::drag()).drag_delta();
+            ui.add_space(band.bottom() - t.bottom() + 10.0);
             match d.kind {
                 DialogKind::NewDocument => {
                     let recent = crate::new_doc_ui::recent(app);
