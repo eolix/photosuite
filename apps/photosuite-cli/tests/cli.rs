@@ -218,6 +218,38 @@ fn mcp_stdio_handshake_and_tool_call() {
     let _ = child.wait();
 }
 
+/// `--format` mapping two inputs to one name fails the second instead of overwriting the first (#420).
+#[test]
+fn batch_fails_inputs_that_share_an_output_name() {
+    let d = tmp("batch-collide");
+    let input = d.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    write_png(&input.join("a.png"), 8, 4, 3);
+    // Same stem in other formats; `A.tif` differs only in case.
+    let img = photosuite_codecs::Image::from_u8(8, 4, photosuite_codecs::ChannelLayout::Rgb, vec![90; 96]).unwrap();
+    for (name, format) in [("a.bmp", photosuite_codecs::Format::Bmp), ("A.tif", photosuite_codecs::Format::Tiff)] {
+        std::fs::write(input.join(name), photosuite_codecs::encode(&img, format, &Default::default()).unwrap()).unwrap();
+    }
+    let actions = d.join("actions.json");
+    std::fs::write(&actions, r#"[{"command":"image.adjustments.invert"}]"#).unwrap();
+    let out_dir = d.join("out");
+    let o = bin().args(["batch", "--actions"]).arg(&actions).arg("--in").arg(&input).arg("--out").arg(&out_dir).args(["--format", "png"]).output().unwrap();
+    let (out, err) = (String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+    assert!(
+        !o.status.success(),
+        "a lost result must fail the run
+{out}
+{err}"
+    );
+    assert!(out.contains("1 succeeded, 2 failed"), "{out}");
+    assert_eq!(err.matches("not written").count(), 2, "{err}");
+    assert_eq!(std::fs::read_dir(&out_dir).unwrap().count(), 1);
+    // Keeping each file's format, every input gets its own output.
+    let out_dir = d.join("same");
+    let (out, _) = ok(bin().args(["batch", "--actions"]).arg(&actions).arg("--in").arg(&input).arg("--out").arg(&out_dir));
+    assert!(out.contains("3 succeeded, 0 failed"), "{out}");
+}
+
 #[test]
 fn droplet_runs_an_action_on_files() {
     let d = tmp("droplet");

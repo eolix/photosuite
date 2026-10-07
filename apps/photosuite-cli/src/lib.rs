@@ -276,11 +276,14 @@ fn batch(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
         std::fs::read_dir(&in_dir).map_err(|e| format!("{}: {e}", in_dir.display()))?.flatten().map(|e| e.path()).filter(|p| is_input(p)).collect();
     inputs.sort();
     let (mut ok, mut failed) = (0, 0);
+    let mut written = photosuite_engine::file_cmds::OutputClaims::default();
     for input in &inputs {
         let ext = a.get("--format").map(str::to_owned).or_else(|| input.extension().map(|e| e.to_string_lossy().into_owned())).unwrap_or_else(|| "png".into());
         let stem = input.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let target = out_dir.join(format!("{stem}.{ext}"));
+        let target_text = target.to_string_lossy();
         let r = (|| -> Result<Vec<String>, String> {
+            written.check(&target_text)?;
             let mut h = Headless::trusted_local();
             h.open(input).map_err(|e| e.to_string())?;
             for (id, p) in &actions {
@@ -292,6 +295,7 @@ fn batch(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
         match r {
             Ok(ws) => {
                 ok += 1;
+                written.record(&target_text, &input.to_string_lossy());
                 let _ = writeln!(out, "ok    {} -> {}", input.display(), target.display());
                 warn_all(err, &ws);
             }

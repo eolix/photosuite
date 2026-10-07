@@ -418,3 +418,53 @@ fn only_layered_files_save_in_place() {
     assert_eq!(extension("dir/Photo.JPEG").as_deref(), Some("jpeg"));
     assert_eq!(extension("my.dir/name"), None);
 }
+
+/// Two inputs with one output name: the first result is kept and the second is an error, never
+/// a silent overwrite listed as written (#422).
+#[test]
+fn batch_reports_inputs_that_share_an_output_name() {
+    let dir = tmp("collide");
+    let input = join(&dir, "in");
+    std::fs::create_dir_all(&input).unwrap();
+    png(&input, "a.png", 8, 8, "#ff0000");
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 8, "height": 8, "background": "#0000ff"})).unwrap();
+    save_doc(doc(&s), &join(&input, "a.jpg"), None).unwrap();
+    png(&input, "B.png", 8, 8, "#00ff00");
+    png(&input, "b.tif", 8, 8, "#00ff00");
+    for (cmd, extra) in [
+        ("file.automate.batch", json!({"steps": [], "format": "jpg"})),
+        ("file.scripts.imageProcessor", json!({})),
+        ("file.automate.lensCorrection", json!({"format": "jpg"})),
+    ] {
+        let out = join(&dir, cmd);
+        let mut p = extra;
+        p["input"] = json!(input);
+        p["output"] = json!(out);
+        let r = s.execute(cmd, p).unwrap();
+        let files = r["files"].as_array().unwrap();
+        let errors = r["errors"].as_array().unwrap();
+        // `a.*` and `B.png`/`b.tif` (names that differ only in case) each collide once.
+        assert_eq!((files.len(), errors.len()), (2, 2), "{cmd}: {r}");
+        assert!(errors.iter().all(|e| e["error"].as_str().unwrap().contains("not written")), "{r}");
+        let mut written: Vec<_> = files.iter().map(|f| f.as_str().unwrap().to_lowercase()).collect();
+        written.dedup();
+        assert_eq!(written.len(), 2, "each listed file is distinct: {r}");
+    }
+    // Keeping each file's format, nothing collides.
+    let out = join(&dir, "same");
+    let r = s.execute("file.automate.batch", json!({"steps": [], "input": input, "output": out})).unwrap();
+    assert_eq!((r["files"].as_array().unwrap().len(), r["errors"].as_array().unwrap().len()), (4, 0), "{r}");
+    // A droplet over two folders holding the same name.
+    let other = join(&dir, "other");
+    std::fs::create_dir_all(&other).unwrap();
+    png(&other, "a.png", 8, 8, "#ffffff");
+    let droplet = join(&dir, "d.pcdroplet");
+    std::fs::write(&droplet, json!({"photosuiteDroplet": 1, "name": "d", "action": {"steps": []}, "options": {"format": "png"}}).to_string()).unwrap();
+    let out = join(&dir, "droplet");
+    let r = s.execute("file.automate.runDroplet", json!({"droplet": droplet, "input": [join(&input, "a.png"), other], "output": out})).unwrap();
+    assert_eq!((r["files"].as_array().unwrap().len(), r["errors"].as_array().unwrap().len()), (1, 1), "{r}");
+    let kept = photosuite_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
+    let px = photosuite_compose::render(&kept, Rect::new(1, 1, 2, 2)).px[0];
+    assert!(px[0] > 0.99 && px[1] < 0.01, "the first input's result is kept: {px:?}");
+}

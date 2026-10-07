@@ -637,29 +637,52 @@ pub(crate) fn process_files(
 ) -> Value {
     let mut files = Vec::new();
     let mut errors = Vec::new();
+    let mut written = OutputClaims::default();
     for path in inputs {
-        let r = (|| -> Result<String> {
+        let ext =
+            if format == "same" { path.rsplit('.').next().unwrap_or("png").to_ascii_lowercase() } else { format.trim_start_matches('.').to_ascii_lowercase() };
+        let out = join(output, &format!("{}{suffix}.{ext}", stem(path)));
+        let r = (|| -> Result<()> {
+            written.check(&out).map_err(EngineError::Other)?;
             let bytes = read_file(path)?;
             let mut scratch = Session::new();
             let doc = import(&file_name(path), &bytes)?;
             scratch.add_document(doc, Some(path.clone()));
             f(&mut scratch)?;
-            let ext = if format == "same" {
-                path.rsplit('.').next().unwrap_or("png").to_ascii_lowercase()
-            } else {
-                format.trim_start_matches('.').to_ascii_lowercase()
-            };
-            let out = join(output, &format!("{}{suffix}.{ext}", stem(path)));
             let d = scratch.active().ok_or(EngineError::NoDocument)?;
             save_doc(&d.doc, &out, quality)?;
-            Ok(out)
+            Ok(())
         })();
         match r {
-            Ok(out) => files.push(out),
+            Ok(()) => {
+                written.record(&out, path);
+                files.push(out);
+            }
             Err(e) => errors.push(json!({"file": path, "error": e.to_string()})),
         }
     }
     json!({"files": files, "errors": errors})
+}
+
+/// The output paths a batch run has written, so a later input whose output name matches an
+/// earlier one's (`a.png` and `a.jpg` saved as JPEG, or the same name in two input folders) is
+/// reported instead of silently replacing that result (#420, #422). Names are compared ignoring
+/// case, because macOS and Windows file systems do.
+#[derive(Default)]
+pub struct OutputClaims(std::collections::HashMap<String, String>);
+
+impl OutputClaims {
+    /// `Err` (naming the earlier input) when `out` was already written in this run.
+    pub fn check(&self, out: &str) -> std::result::Result<(), String> {
+        match self.0.get(&out.to_lowercase()) {
+            Some(first) => Err(format!("not written: {out} already holds the result of {first} from this run (same output name)")),
+            None => Ok(()),
+        }
+    }
+    /// Remember that `input`'s result was written to `out`.
+    pub fn record(&mut self, out: &str, input: &str) {
+        self.0.insert(out.to_lowercase(), input.to_string());
+    }
 }
 
 fn batch(_s: &mut Session, p: &Value) -> Result<Value> {
@@ -1112,7 +1135,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Batch…",
             &["File", "Automate"],
             None,
-            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?} → {files, errors}"##,
+            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             batch
         ),
@@ -1121,7 +1144,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Image Processor…",
             &["File", "Scripts"],
             None,
-            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors}"##,
+            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             image_processor
         ),
