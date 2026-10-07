@@ -1525,7 +1525,7 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
     }
 
     // Selection outline: true boundary, animated marching ants (cached per revision).
-    if let Some(sel) = doc.selection.as_ref().filter(|_| app.ui.view.shows(app.ui.view.show.selection_edges)) {
+    if let Some(sel) = doc.selection.as_ref().filter(|_| app.ui.view.shows(app.ui.view.show.selection_edges) && !polygon_replaces_selection(app)) {
         // Trace at display resolution over the visible part only; key by the mask's tile identity
         // (not the document revision) so unrelated edits don't re-trace it.
         let step = (1.0 / view.zoom.max(1e-3)).log2().floor().exp2().clamp(1.0, 64.0) as u32;
@@ -1736,6 +1736,10 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
                 }
                 // A click with the (temporary) Hand does nothing, never the tool underneath.
                 Tool::Hand => {}
+                // Double-clicking closes the polygonal lasso: the first click placed the last
+                // vertex (or already closed it), so the second never starts a new polygon. egui
+                // reports it as a triple click when a vertex went down shortly before.
+                Tool::PolygonLasso if response.double_clicked() || response.triple_clicked() => commit_polygon(app),
                 _ => {
                     if tool == Tool::Move && app.ui.transform.is_none() {
                         begin_transform_controls_at(app, &ctx, &xf, p);
@@ -2338,15 +2342,7 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
                     return;
                 }
                 Tool::PolygonLasso => {
-                    // Click adds a vertex; clicking near the first vertex closes the polygon.
-                    let close = app.ui.polygon.first().is_some_and(|p0| {
-                        app.ui.polygon.len() >= 3 && ((p0[0] - x).powi(2) + (p0[1] - y).powi(2)).sqrt() < 8.0 / app.current_zoom().max(0.01) as f64
-                    });
-                    if close {
-                        commit_polygon(app, mods);
-                    } else {
-                        app.ui.polygon.push([x, y]);
-                    }
+                    polygon_click(app, x, y, mods);
                     return;
                 }
                 Tool::Type if crate::type_tool::pointer_down(app, x, y, mods.shift) => return,
@@ -2520,15 +2516,40 @@ pub fn extra_windows(app: &mut PhotosuiteApp, ctx: &egui::Context) {
 
 /// Selection mode from the options bar, overridden by modifier keys (⇧ add, ⌥ subtract, ⇧⌥ intersect).
 /// The cursor badge announces the same mode (`tool_feedback`).
-fn selection_mode(app: &PhotosuiteApp, m: egui::Modifiers) -> &'static str {
+pub(crate) fn selection_mode(app: &PhotosuiteApp, m: egui::Modifiers) -> &'static str {
     crate::tool_feedback::selection_mode(Tool::Lasso, app.ui.selection_mode, m)
 }
 
-/// Close the polygonal lasso and make the selection.
-pub fn commit_polygon(app: &mut PhotosuiteApp, mods: egui::Modifiers) {
+/// A polygonal lasso click adds a vertex; clicking near the first vertex closes the polygon. The
+/// first click fixes the selection mode; a new-selection polygon hides the old outline while it is
+/// drawn, and replaces it in one history step when it closes.
+fn polygon_click(app: &mut PhotosuiteApp, x: f64, y: f64, mods: egui::Modifiers) {
+    let close = app
+        .ui
+        .polygon
+        .first()
+        .is_some_and(|p0| app.ui.polygon.len() >= 3 && ((p0[0] - x).powi(2) + (p0[1] - y).powi(2)).sqrt() < 8.0 / app.current_zoom().max(0.01) as f64);
+    if close {
+        commit_polygon(app);
+        return;
+    }
+    if app.ui.polygon.is_empty() {
+        app.ui.polygon_mode = selection_mode(app, mods).into();
+    }
+    app.ui.polygon.push([x, y]);
+}
+
+/// A new-selection polygonal lasso is being drawn, so the selection it will replace is hidden.
+pub fn polygon_replaces_selection(app: &PhotosuiteApp) -> bool {
+    !app.ui.polygon.is_empty() && app.ui.polygon_mode == "replace"
+}
+
+/// Close the polygonal lasso and make the selection in the mode it started in.
+pub fn commit_polygon(app: &mut PhotosuiteApp) {
     let pts = std::mem::take(&mut app.ui.polygon);
+    let mode = std::mem::take(&mut app.ui.polygon_mode);
     if pts.len() >= 3 {
-        let mode = selection_mode(app, mods);
+        let mode = if mode.is_empty() { selection_mode(app, egui::Modifiers::NONE).to_owned() } else { mode };
         let _ = app.run("select.lasso", json!({"points": pts, "mode": mode, "antiAlias": app.ui.tool_options.anti_alias}));
     }
 }

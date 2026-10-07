@@ -659,6 +659,10 @@ pub struct UiState {
     /// In-progress polygonal lasso vertices (document coordinates).
     #[serde(default)]
     pub polygon: Vec<[f64; 2]>,
+    /// The selection mode the polygonal lasso started in ("replace", "add", ...), set by the
+    /// modifiers held at its first click.
+    #[serde(default)]
+    pub polygon_mode: String,
     /// Crop tool rectangle being edited [x0, y0, x1, y1] (document coordinates).
     #[serde(default)]
     pub crop_rect: Option<[f64; 4]>,
@@ -722,6 +726,7 @@ impl Default for UiState {
             selection_mode: 0,
             tool_options: ToolOptions::default(),
             polygon: Vec::new(),
+            polygon_mode: String::new(),
             crop_rect: None,
             next_id: 1,
             status: String::new(),

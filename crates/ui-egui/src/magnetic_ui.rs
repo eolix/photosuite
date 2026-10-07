@@ -148,7 +148,11 @@ pub fn close(app: &mut PhotosuiteApp, mods: egui::Modifiers) {
         app.ui.polygon.extend(pts);
     }
     app.magnetic = None;
-    crate::canvas::commit_polygon(app, mods);
+    // The magnetic lasso takes its selection mode from the keys held as it closes.
+    if app.ui.polygon_mode.is_empty() {
+        app.ui.polygon_mode = crate::canvas::selection_mode(app, mods).to_owned();
+    }
+    crate::canvas::commit_polygon(app);
 }
 
 /// Backspace / Delete: drop the last anchor (and the wire to it); the first one cancels.

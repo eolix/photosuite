@@ -312,7 +312,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         }
         if pressed(Key::Enter) {
             if !app.ui.polygon.is_empty() {
-                crate::canvas::commit_polygon(app, Modifiers::NONE);
+                crate::canvas::commit_polygon(app);
             } else {
                 crate::canvas::commit_crop(app);
             }
@@ -321,6 +321,7 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         if pressed(Key::Escape) {
             app.ui.polygon.clear();
             app.magnetic = None;
+            app.ui.polygon_mode.clear();
             app.ui.crop_rect = None;
             app.crop.drag = None;
             return;
