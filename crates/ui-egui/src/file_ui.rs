@@ -192,6 +192,14 @@ const WEB_FORMATS: [(&str, &str); 7] =
 /// optimised file through `file.export.saveForWebLegacy`, then retarget the document the same way.
 const DOC_FORMATS: [(&str, &str); 6] = [("psd", "PSD"), ("psb", "PSB"), ("pcraft", "PhotoSuite (.pcraft)"), ("tif", "TIFF"), ("exr", "OpenEXR"), ("pdf", "PDF")];
 
+/// File › Save As's formats: the document formats and the web ones, in alphabetical order of the
+/// name shown. (Save for Web (Legacy) keeps Photoshop's order.)
+fn save_as_formats() -> Vec<(&'static str, &'static str)> {
+    let mut v: Vec<(&str, &str)> = DOC_FORMATS.iter().chain(WEB_FORMATS.iter()).copied().collect();
+    v.sort_by_key(|(_, label)| label.to_lowercase());
+    v
+}
+
 fn is_doc_format(fmt: &str) -> bool {
     DOC_FORMATS.iter().any(|(k, _)| *k == fmt)
 }
@@ -494,8 +502,7 @@ fn web_body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, f: &mut Map<String, Valu
             }
             ui.add_space(4.0);
             if save_as {
-                let formats: Vec<(&str, &str)> = DOC_FORMATS.iter().chain(WEB_FORMATS.iter()).copied().collect();
-                dropdown_str(ui, "web-format", f, "format", &formats, 230.0);
+                dropdown_str(ui, "web-format", f, "format", &save_as_formats(), 230.0);
             } else {
                 dropdown_str(ui, "web-format", f, "format", &WEB_FORMATS, 230.0);
             }
@@ -869,6 +876,16 @@ mod tests {
         let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 120, "height": 80, "name": "web"})).unwrap();
         (app, egui::Context::default())
+    }
+
+    #[test]
+    fn save_as_lists_its_formats_alphabetically() {
+        let labels: Vec<&str> = save_as_formats().iter().map(|(_, l)| *l).collect();
+        let mut sorted = labels.clone();
+        sorted.sort_by_key(|l| l.to_lowercase());
+        assert_eq!(labels, sorted);
+        assert_eq!(labels.len(), DOC_FORMATS.len() + WEB_FORMATS.len(), "every format is still offered");
+        assert_eq!(labels.first(), Some(&"GIF"));
     }
 
     #[test]
