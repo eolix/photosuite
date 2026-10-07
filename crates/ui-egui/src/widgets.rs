@@ -447,6 +447,23 @@ pub fn swatch_popup(swatch: &Response) -> egui::Popup<'static> {
         .align_alternatives(&[egui::RectAlign::TOP_START])
 }
 
+pub fn dropdown_with_tooltips<T: PartialEq + Clone>(ui: &mut Ui, id: &str, current: &mut T, options: &[(T, &str, &str)], width: f32) -> bool {
+    let label = options.iter().find(|(v, _, _)| v == current).map(|(_, l, _)| tl!(l)).unwrap_or("—");
+    let mut changed = false;
+    let response = egui::ComboBox::from_id_salt(id).selected_text(label).width(width).height(420.0).icon(chevron_icon).show_ui(ui, |ui| {
+        for (v, l, tip) in options {
+            if ui.selectable_label(v == current, tl!(l)).on_hover_text(tl!(tip)).clicked() {
+                *current = v.clone();
+                changed = true;
+            }
+        }
+    });
+    if let Some((_, _, tip)) = options.iter().find(|(v, _, _)| v == current) {
+        let _ = response.response.on_hover_text(tl!(tip));
+    }
+    changed
+}
+
 /// Paint a small checkerboard (transparency) in `rect`.
 pub fn checker(painter: &egui::Painter, rect: Rect, cell: f32) {
     painter.rect_filled(rect, 0.0, Color32::from_gray(250));

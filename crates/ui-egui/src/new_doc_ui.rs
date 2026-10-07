@@ -74,6 +74,8 @@ pub const CATEGORIES: &[(&str, &[Preset])] = &[
     ),
 ];
 
+const DEPTH_OPTIONS: &[(u64, &str, &str)] = &[(8, "8 bit", "Integer"), (16, "16 bit", "Integer"), (32, "32 bit (float)", "Floating point")];
+
 /// Width/Height units: (key, label, units per inch; 0 = pixels).
 pub const UNITS: &[(&str, &str, f32)] =
     &[("px", "Pixels", 0.0), ("in", "Inches", 1.0), ("cm", "Centimeters", 2.54), ("mm", "Millimeters", 25.4), ("pt", "Points", 72.0), ("pica", "Picas", 6.0)];
@@ -410,7 +412,8 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
                     f.insert("mode".into(), json!(mode));
                 }
                 let mut depth = f.get("depth").and_then(Value::as_u64).unwrap_or(8);
-                if widgets::dropdown(ui, "nd-depth", &mut depth, &[(8u64, "8 bit"), (16, "16 bit"), (32, "32 bit")], 120.0) {
+                let depth_options: Vec<(u64, &str, &str)> = DEPTH_OPTIONS.iter().map(|(bits, label, tooltip)| (*bits, *label, *tooltip)).collect();
+                if widgets::dropdown_with_tooltips(ui, "nd-depth", &mut depth, &depth_options, 120.0) {
                     f.insert("depth".into(), json!(depth));
                 }
             });
@@ -441,6 +444,16 @@ mod tests {
         assert_eq!(from_unit(7.0, "in", 300.0), 2100.0);
         assert_eq!(from_unit(2.54, "cm", 300.0), 300.0);
         assert_eq!(to_unit(640.0, "px", 72.0), 640.0);
+    }
+
+    #[test]
+    fn new_document_depth_labels_and_tooltips_are_translated() {
+        for lang in crate::i18n::Lang::all().filter(|lang| lang.code() != "en") {
+            for (_, label, tooltip) in DEPTH_OPTIONS {
+                assert_ne!(crate::i18n::tr(lang, label), *label, "{}: {label}", lang.code());
+                assert_ne!(crate::i18n::tr(lang, tooltip), *tooltip, "{}: {tooltip}", lang.code());
+            }
+        }
     }
 
     #[test]
