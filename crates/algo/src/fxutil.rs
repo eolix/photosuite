@@ -172,7 +172,17 @@ pub(crate) fn gauss_box_radii(sigma: f32) -> [usize; 3] {
     let wl = wl.max(1);
     let wu = wl + 2;
     let m = ((12.0 * sigma * sigma - n * (wl * wl) as f32 - 4.0 * n * wl as f32 - 3.0 * n) / (-4.0 * wl as f32 - 4.0)).round().clamp(0.0, n) as usize;
-    std::array::from_fn(|i| if i < m { (wl as usize - 1) / 2 } else { (wu as usize - 1) / 2 })
+    let mut radii = std::array::from_fn(|i| if i < m { (wl as usize - 1) / 2 } else { (wu as usize - 1) / 2 });
+    // Kovesi's rounded triple degenerates below sigma ~ 0.577: `wl` floors to 1 and every
+    // radius becomes 0, so the passes would be no-ops and callers with documented small
+    // sigmas (Camera Raw `sharpenRadius` 0.5, colour noise, HDR Toning `radius` 1) would
+    // silently change nothing (issue #706). One radius-1 pass is the smallest real blur;
+    // it only engages where the ideal widths are already at their floor, leaving larger
+    // sigmas exactly as the paper prescribes.
+    if radii.iter().all(|&r| r == 0) {
+        radii[0] = 1;
+    }
+    radii
 }
 
 /// Approximate Gaussian blur (three box passes) of an interleaved buffer.
