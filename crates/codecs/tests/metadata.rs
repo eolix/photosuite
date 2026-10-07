@@ -155,6 +155,45 @@ fn jpeg_multi_segment_icc() {
     }
 }
 
+/// A layered document's XMP can list every document ever placed in it and the text of every type
+/// layer: far more than the 64 KB one JPEG segment holds. The JPEG is still written, with that
+/// bookkeeping left out of the XMP; metadata too large even then is dropped with a warning.
+#[test]
+fn jpeg_with_oversized_metadata_still_encodes() {
+    let ancestors: String = (0..3000).map(|i| format!("<rdf:li>xmp.did:{i:032x}</rdf:li>")).collect();
+    let texts: String = (0..400)
+        .map(|i| format!("<rdf:li rdf:parseType=\"Resource\"><ps:LayerName>Layer {i}</ps:LayerName><ps:LayerText>Words on layer {i}</ps:LayerText></rdf:li>"))
+        .collect();
+    let xmp = format!(
+        "<?xpacket begin=\"\u{feff}\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description rdf:about=\"\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" xmlns:ps=\"http://example.com/ps/1.0/\" xmp:CreatorTool=\"synthetic\"><ps:DocumentAncestors>\n<rdf:Bag>{ancestors}</rdf:Bag></ps:DocumentAncestors><ps:TextLayers><rdf:Bag>{texts}</rdf:Bag></ps:TextLayers><ps:DocumentAncestorsNote/></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>"
+    );
+    assert!(xmp.len() > 120_000, "{}", xmp.len());
+    for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
+        let mut img = test_image(ChannelLayout::Rgb, sample);
+        img.meta.xmp = Some(xmp.clone());
+        let bytes = encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
+        let back = decode(&bytes).unwrap().meta.xmp.unwrap();
+        assert!(back.contains("xmp:CreatorTool=\"synthetic\"") && back.ends_with("<?xpacket end=\"w\"?>"), "{sample:?}");
+        assert!(!back.contains("DocumentAncestors>") && !back.contains("TextLayers"), "{sample:?}");
+        assert!(back.contains("<ps:DocumentAncestorsNote/>"), "{sample:?}: a longer name is not the element");
+        assert!(!fidelity_warnings(&img, Format::Jpeg).iter().any(|w| matches!(w, FidelityWarning::MetadataTooLarge { .. })));
+        // Formats without a segment limit keep the packet whole.
+        assert_eq!(decode(&encode(&img, Format::Png, &EncodeOptions::default()).unwrap()).unwrap().meta.xmp.as_deref(), Some(xmp.as_str()));
+    }
+    // Still too large: the JPEG is written without it.
+    let mut img = test_image(ChannelLayout::Rgb, SampleType::U8);
+    let big = format!("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><!-- {} --></x:xmpmeta>", "x".repeat(70_000));
+    let mut exif = sample_exif();
+    exif.resize(70_000, 0);
+    img.meta.xmp = Some(big.clone());
+    img.meta.exif = Some(exif);
+    let back = decode(&encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap()).unwrap();
+    assert!(back.meta.xmp.is_none() && back.meta.exif.is_none());
+    let w = fidelity_warnings(&img, Format::Jpeg);
+    assert!(w.contains(&FidelityWarning::MetadataTooLarge { what: "XMP", bytes: big.len() }), "{w:?}");
+    assert!(w.contains(&FidelityWarning::MetadataTooLarge { what: "EXIF", bytes: 70_000 }), "{w:?}");
+}
+
 #[test]
 fn embed_flags_disable_metadata() {
     let img = rich_image(ChannelLayout::Rgb);

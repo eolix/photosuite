@@ -303,15 +303,12 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
         {
             enc.set_density(jpeg_encoder::Density::Inch { x: x.round().min(65535.0) as u16, y: y.round().min(65535.0) as u16 });
         }
-        if let Some(exif) = &img.meta.exif {
-            // The pixels are written as they are shown: never let a viewer rotate them again.
-            let mut seg = EXIF_HEADER.to_vec();
-            seg.extend_from_slice(&upright_exif(exif));
+        // Metadata too large for its one segment is left out (and reported by the fidelity
+        // warnings) rather than failing the whole export.
+        if let Some(seg) = img.meta.exif.as_deref().and_then(exif_segment) {
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
-        if let Some(xmp) = &img.meta.xmp {
-            let mut seg = XMP_HEADER.to_vec();
-            seg.extend_from_slice(upright_xmp(xmp).as_bytes());
+        if let Some(seg) = img.meta.xmp.as_deref().and_then(xmp_segment) {
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
     }
@@ -322,4 +319,64 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     }
     enc.encode(img.data(), w16, h16, ct).map_err(e)?;
     Ok(out)
+}
+
+/// The most data one APP segment holds (its 16-bit length counts its own two bytes).
+const MAX_SEGMENT: usize = 65533;
+
+/// XMP properties (local names, any namespace prefix) that only describe the layered document:
+/// every document ever placed in it, the text of every type layer. A flat image doesn't need them,
+/// and they alone can outgrow a segment.
+const LAYERED_ONLY_XMP: [&str; 2] = ["DocumentAncestors", "TextLayers"];
+
+/// The EXIF APP1 segment, or `None` when it doesn't fit in one segment.
+pub(crate) fn exif_segment(exif: &[u8]) -> Option<Vec<u8>> {
+    // The pixels are written as they are shown: never let a viewer rotate them again.
+    let seg = [EXIF_HEADER, upright_exif(exif).as_ref()].concat();
+    (seg.len() <= MAX_SEGMENT).then_some(seg)
+}
+
+/// The XMP APP1 segment. When the packet doesn't fit in one segment, the layered-document
+/// properties are left out; `None` when it still doesn't fit.
+pub(crate) fn xmp_segment(xmp: &str) -> Option<Vec<u8>> {
+    let xmp = upright_xmp(xmp);
+    let seg = |x: &str| [XMP_HEADER, x.as_bytes()].concat();
+    if XMP_HEADER.len() + xmp.len() <= MAX_SEGMENT {
+        return Some(seg(&xmp));
+    }
+    let trimmed = LAYERED_ONLY_XMP.iter().fold(xmp.into_owned(), |x, name| remove_element(&x, name));
+    (XMP_HEADER.len() + trimmed.len() <= MAX_SEGMENT).then(|| seg(&trimmed))
+}
+
+/// `xmp` without its `<prefix:name …>…</prefix:name>` and `<prefix:name …/>` elements. Unbalanced
+/// markup is kept as is.
+fn remove_element(xmp: &str, name: &str) -> String {
+    let local = format!(":{name}");
+    let mut out = String::with_capacity(xmp.len());
+    let mut rest = xmp;
+    while let Some(j) = rest.find(&local) {
+        let head = rest.get(..j).unwrap_or_default();
+        let prefix_len = head.bytes().rev().take_while(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.')).count();
+        let lt = j - prefix_len;
+        let after = rest.get(j + local.len()..).unwrap_or_default();
+        // An opening tag of exactly this name (not a closing tag, an attribute or a longer name).
+        let opening = prefix_len > 0 && lt > 0 && rest.get(lt - 1..lt) == Some("<");
+        if !opening || !after.starts_with(['>', '/', ' ', '\t', '\r', '\n']) {
+            out.push_str(rest.get(..j + local.len()).unwrap_or_default());
+            rest = after;
+            continue;
+        }
+        let Some(gt) = after.find('>') else { break };
+        let end = if after.get(..gt).is_some_and(|s| s.ends_with('/')) {
+            gt + 1
+        } else {
+            let close = format!("</{}{local}>", rest.get(lt..j).unwrap_or_default());
+            let Some(c) = after.find(&close) else { break };
+            c + close.len()
+        };
+        out.push_str(rest.get(..lt - 1).unwrap_or_default());
+        rest = after.get(end..).unwrap_or_default();
+    }
+    out.push_str(rest);
+    out
 }
