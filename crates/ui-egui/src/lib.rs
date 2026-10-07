@@ -508,8 +508,22 @@ impl PhotosuiteApp {
     pub fn set_wgpu(&mut self, rs: eframe::egui_wgpu::RenderState) {
         // Preferences › Performance › cache tile size (PHOTOSUITE_GPU_TILE still overrides).
         let tile = self.session.prefs().performance.cache_tile_size;
-        let gpu = gpu_canvas::GpuCanvas::with_tile(&rs, Some(tile));
-        self.perf.gpu_info.set_adapter(&gpu.adapter_info());
+        // Escaped driver/setup panics must leave the session and CPU canvas alive.
+        self.perf.gpu_info.set_adapter(&rs.adapter.get_info());
+        let gpu = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gpu_canvas::GpuCanvas::with_tile(&rs, Some(tile)))) {
+            Ok(gpu) => gpu,
+            Err(payload) => {
+                let detail = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+                    .unwrap_or_else(|| "GPU canvas initialization failed".into());
+                self.perf.gpu_info.canvas = "cpu".into();
+                self.perf.gpu_info.fallback = Some(detail.clone());
+                gpu_status::queue_fallback_notice(self, detail);
+                return;
+            }
+        };
         self.perf.gpu_info.canvas = "gpu".into();
         self.gpu = Some(gpu);
         self.prefs_rt.gpu_style = None;
@@ -1005,6 +1019,7 @@ impl eframe::App for PhotosuiteApp {
         wide_angle_ui::show(self, &ctx);
         canvas::extra_windows(self, &ctx);
         notices::show(self, &ctx);
+        gpu_status::show_fallback(self, &ctx);
         // A device lost while drawing this frame: switch to the CPU canvas before the next one.
         gpu_status::check(self, &ctx);
         self.automation_input = false;

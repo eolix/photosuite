@@ -538,6 +538,7 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
         "status": app.ui.status,
         "statusError": app.ui.status_error,
         "notices": app.ui.notices,
+        "gpuFallbackNotice": app.ui.gpu_fallback_notice,
         "frame": app.frame,
         "session": photosuite_engine::inspect::session(&app.session),
         "document": app.session.active().map(photosuite_engine::inspect::document),

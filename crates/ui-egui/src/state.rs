@@ -671,6 +671,9 @@ pub struct UiState {
     /// Non-blocking notices (import/export warnings, files that couldn't open), newest last.
     #[serde(default)]
     pub notices: Vec<crate::notices::Notice>,
+    /// Pending GPU fallback warning, visible to automation.
+    #[serde(default)]
+    pub gpu_fallback_notice: Option<String>,
     /// Status bar info field, Home screen (see `chrome_ui`).
     #[serde(default)]
     pub chrome: crate::chrome_ui::ChromeState,
@@ -724,6 +727,7 @@ impl Default for UiState {
             status: String::new(),
             status_error: false,
             notices: Vec::new(),
+            gpu_fallback_notice: None,
             chrome: Default::default(),
         }
     }

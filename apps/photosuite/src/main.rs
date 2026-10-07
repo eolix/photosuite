@@ -145,13 +145,13 @@ fn main() -> eframe::Result {
     // driver moves to a safer one), and lock this start's marker until the first frames render.
     let t_sentinel = std::time::Instant::now();
     let os = gpu_startup::Os::current();
-    let (pref, _) = gpu_startup::read_prefs(services::prefs_file().as_deref());
+    let (pref, mode) = gpu_startup::read_rendering_prefs(services::prefs_file().as_deref());
     let (previous, sentinel) = match services::config_dir() {
         Some(dir) => gpu_startup::Sentinel::begin(&dir),
         None => (gpu_startup::Previous::Clean, None),
     };
     let env_backend = std::env::var("WGPU_BACKEND").ok();
-    let plan = gpu_startup::plan(pref, previous.crashed(), env_backend.as_deref(), safe_gpu, os);
+    let plan = gpu_startup::plan_with_mode(pref, mode, previous.crashed(), env_backend.as_deref(), safe_gpu, os);
     if let Some(m) = previous.crashed() {
         log::warn!("the previous start didn't finish (GPU backend {}, adapter {:?}); {}", m.backend, m.adapter, plan.reason.as_deref().unwrap_or(""));
     }
@@ -171,11 +171,15 @@ fn main() -> eframe::Result {
     gpu_startup::configure(&mut options.wgpu_options.wgpu_setup, &plan, os, sentinel.clone(), gpu_note.clone());
     let sentinel_ms = t_sentinel.elapsed().as_secs_f64() * 1000.0;
     log::info!("GPU startup: {:?} ({sentinel_ms:.2} ms)", plan);
+    let retry_cpu = !safe_gpu && plan.backend != photosuite_engine::prefs::GpuBackend::Cpu;
+    let app_created = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let created_in_callback = app_created.clone();
     let started_sentinel = sentinel.clone();
     let result = eframe::run_native(
         "PhotoSuite",
         options,
         Box::new(move |cc| {
+            created_in_callback.store(true, std::sync::atomic::Ordering::Relaxed);
             let automation = control.as_ref().map(|(_, _, workspace)| workspace.clone());
             let mut services = services::native(automation);
             services.preset_store = presets;
@@ -194,13 +198,21 @@ fn main() -> eframe::Result {
             let info = &mut app.perf.gpu_info;
             info.preference = pref.name().to_string();
             info.selected = if plan.env.is_some() { "env".into() } else { plan.backend.name().to_string() };
-            info.fallback = plan.reason.clone().or_else(|| gpu_note.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone());
+            info.fallback = match (plan.reason.clone(), gpu_note.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()) {
+                (Some(reason), Some(note)) => Some(format!("{reason}. {note}")),
+                (reason, note) => reason.or(note),
+            };
             info.canvas = "cpu".into();
             if let Some(rs) = cc.wgpu_render_state.clone() {
                 app.perf.gpu_info.set_adapter(&rs.adapter.get_info());
-                if plan.backend != photosuite_engine::prefs::GpuBackend::Cpu
+                let software_window = rs.adapter.get_info().device_type == eframe::wgpu::DeviceType::Cpu;
+                if software_window && mode != photosuite_engine::prefs::RenderingMode::Cpu {
+                    app.perf.gpu_info.fallback = Some("No compatible hardware graphics adapter; using software graphics.".into());
+                }
+                if !software_window
+                    && plan.backend != photosuite_engine::prefs::GpuBackend::Cpu
                     && std::env::var_os("PHOTOSUITE_CPU_CANVAS").is_none()
-                    && app.session.prefs().performance.use_gpu
+                    && app.session.prefs().performance.effective_rendering_mode() != photosuite_engine::prefs::RenderingMode::Cpu
                 {
                     app.set_wgpu(rs);
                 } else {
@@ -208,12 +220,32 @@ fn main() -> eframe::Result {
                     let _ = photosuite_ui_egui::gpu_canvas::DeviceHealth::watch(&rs.device);
                 }
             }
+            let fallback_reason = std::env::var("PHOTOSUITE_GPU_STARTUP_FAILURE").ok().or_else(|| {
+                (app.perf.gpu_info.canvas == "cpu" && mode != photosuite_engine::prefs::RenderingMode::Cpu)
+                    .then(|| app.perf.gpu_info.fallback.clone())
+                    .flatten()
+            });
+            if let Some(reason) = fallback_reason {
+                photosuite_ui_egui::gpu_status::queue_fallback_notice(&mut app, &reason);
+            }
             app.perf.span("gpuSentinel", sentinel_ms);
             // Once the first frames rendered: clear the marker, and keep a crash fallback.
+            let remember_cpu =
+                std::env::var_os("PHOTOSUITE_GPU_STARTUP_FAILURE").is_some() || (plan.remember && plan.backend == photosuite_engine::prefs::GpuBackend::Cpu);
             let remember = plan.remember.then_some(plan.backend);
             app.on_started(move |app| {
                 if let Some(s) = started_sentinel.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take() {
                     s.finish();
+                }
+                if remember_cpu
+                    && let Err(error) = app.run(
+                        "prefs.set",
+                        serde_json::json!({"values": {
+                            "performance.renderingMode": "cpu", "performance.useGpu": false
+                        }}),
+                    )
+                {
+                    log::warn!("couldn't remember CPU recovery: {error}");
                 }
                 if let Some(b) = remember
                     && app.session.prefs().performance.gpu_backend != b
@@ -260,6 +292,26 @@ fn main() -> eframe::Result {
         && let Some(s) = sentinel.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take()
     {
         s.finish();
+    }
+    // Retry in a fresh process: winit event loops cannot be recreated reliably in-process.
+    // Only renderer initialization failures qualify; never restart after editing has begun.
+    if retry_cpu && !app_created.load(std::sync::atomic::Ordering::Relaxed) && matches!(&result, Err(eframe::Error::Wgpu(_))) {
+        let reason = result.as_ref().err().map(ToString::to_string).unwrap_or_default();
+        if let Some(s) = sentinel.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take() {
+            s.finish();
+        }
+        if let Ok(exe) = std::env::current_exe() {
+            let launched = std::process::Command::new(exe)
+                .args(std::env::args_os().skip(1))
+                .arg("--safe-gpu")
+                .env_remove("WGPU_BACKEND")
+                .env("PHOTOSUITE_GPU_STARTUP_FAILURE", &reason)
+                .spawn();
+            match launched {
+                Ok(_) => return Ok(()),
+                Err(error) => log::error!("could not start CPU compatibility mode: {error}"),
+            }
+        }
     }
     result
 }

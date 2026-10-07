@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use eframe::{egui_wgpu, wgpu};
-use photosuite_engine::prefs::GpuBackend;
+use photosuite_engine::prefs::{GpuBackend, RenderingMode};
 use serde_json::{Value, json};
 
 /// The marker's file name in the config directory.
@@ -154,6 +154,19 @@ pub fn plan(pref: GpuBackend, crashed: Option<&Marker>, env: Option<&str>, safe_
     Plan { backend: pref, env: None, reason: None, remember: false }
 }
 
+/// Resolve the rendering policy before the window exists. Explicit GPU/Automatic selections
+/// reset a legacy CPU backend to automatic; CPU keeps software-preferred window presentation.
+pub fn plan_with_mode(pref: GpuBackend, mode: RenderingMode, crashed: Option<&Marker>, env: Option<&str>, safe_gpu: bool, os: Os) -> Plan {
+    let backend = match mode {
+        RenderingMode::Cpu => GpuBackend::Cpu,
+        RenderingMode::Auto | RenderingMode::Gpu if pref == GpuBackend::Cpu => GpuBackend::Auto,
+        _ => pref,
+    };
+    let env = if safe_gpu || mode == RenderingMode::Cpu { None } else { env };
+    let crashed = if mode == RenderingMode::Cpu { None } else { crashed };
+    plan(backend, crashed, env, safe_gpu, os)
+}
+
 /// Instance backends for `plan` (`None`: egui's default, which honours `WGPU_BACKEND`).
 pub fn backends(plan: &Plan, os: Os) -> Option<wgpu::Backends> {
     if plan.env.is_some() {
@@ -211,8 +224,7 @@ fn rank(a: &Candidate, backend: GpuBackend, os: Os) -> (u8, u8) {
 
 /// The adapter to use among `adapters` (`None` when there is none).
 pub fn pick(adapters: &[Candidate], backend: GpuBackend, os: Os) -> Option<usize> {
-    let any_ok = adapters.iter().any(|a| a.surface_ok);
-    adapters.iter().enumerate().filter(|(_, a)| a.surface_ok || !any_ok).min_by_key(|(i, a)| (rank(a, backend, os), *i)).map(|(i, _)| i)
+    adapters.iter().enumerate().filter(|(_, a)| a.surface_ok).min_by_key(|(i, a)| (rank(a, backend, os), *i)).map(|(i, _)| i)
 }
 
 /// Whether picking `chosen` applied the Intel-on-Windows DX12 default (a Vulkan adapter of the
@@ -250,6 +262,10 @@ pub fn configure(setup: &mut egui_wgpu::WgpuSetup, plan: &Plan, os: Os, sentinel
                     })
                     .collect();
                 let i = pick(&cands, backend, os).ok_or_else(|| "no graphics adapter found".to_string())?;
+                if backend == GpuBackend::Cpu && cands.get(i).is_some_and(|c| c.device_type != wgpu::DeviceType::Cpu) {
+                    *note.lock().unwrap_or_else(PoisonError::into_inner) =
+                        Some("CPU image rendering; no software graphics adapter is available, so the window uses hardware graphics".into());
+                }
                 if backend == GpuBackend::Auto && intel_dx12_applied(&cands, i, os) {
                     *note.lock().unwrap_or_else(PoisonError::into_inner) =
                         Some("Intel graphics on Windows: using DirectX 12 (the Intel Vulkan driver is known to crash)".into());
@@ -357,14 +373,15 @@ impl Sentinel {
     }
 }
 
-/// `performance.gpuBackend` and `performance.useGpu` from the preferences file, read before the
-/// app (and its full preference load) exists. Unreadable values are the defaults.
-pub fn read_prefs(path: Option<&Path>) -> (GpuBackend, bool) {
+/// Read the policy leniently at startup, including old settings without renderingMode.
+pub fn read_rendering_prefs(path: Option<&Path>) -> (GpuBackend, RenderingMode) {
     let v: Value = path.and_then(|p| std::fs::read_to_string(p).ok()).and_then(|t| serde_json::from_str(&t).ok()).unwrap_or(Value::Null);
     let perf = v.get("performance");
     let backend = perf.and_then(|p| p.get("gpuBackend")).and_then(Value::as_str).and_then(GpuBackend::parse).unwrap_or_default();
     let use_gpu = perf.and_then(|p| p.get("useGpu")).and_then(Value::as_bool).unwrap_or(true);
-    (backend, use_gpu)
+    let explicit = perf.and_then(|p| p.get("renderingMode")).and_then(Value::as_str).and_then(RenderingMode::parse);
+    let mode = explicit.unwrap_or(if !use_gpu || backend == GpuBackend::Cpu { RenderingMode::Cpu } else { RenderingMode::Auto });
+    (backend, mode)
 }
 
 #[cfg(test)]
@@ -374,6 +391,17 @@ mod tests {
 
     fn crashed(backend: &str, adapter_backend: &str) -> Marker {
         Marker { backend: backend.into(), adapter: "Intel(R) UHD Graphics".into(), adapter_backend: adapter_backend.into(), ..Default::default() }
+    }
+
+    #[test]
+    fn cpu_policy_ignores_hardware_backend_override() {
+        let p = plan_with_mode(Vulkan, RenderingMode::Cpu, None, Some("vulkan"), false, Os::Windows);
+        assert_eq!(p.backend, Cpu);
+        assert!(p.env.is_none());
+        assert_eq!(plan_with_mode(Vulkan, RenderingMode::Cpu, Some(&crashed("vulkan", "vulkan")), None, false, Os::Windows).backend, Cpu);
+        let p = plan_with_mode(Auto, RenderingMode::Gpu, None, Some("vulkan"), true, Os::Windows);
+        assert_eq!(p.backend, Cpu);
+        assert!(p.env.is_none());
     }
 
     #[test]
@@ -475,6 +503,21 @@ mod tests {
     }
 
     #[test]
+    fn adapters_must_present_even_when_none_support_the_surface() {
+        let mut a = cand(INTEL, wgpu::DeviceType::IntegratedGpu, wgpu::Backend::Dx12);
+        a.surface_ok = false;
+        assert_eq!(pick(&[a], Auto, Os::Windows), None);
+        assert_eq!(pick(&[a], Cpu, Os::Windows), None);
+    }
+
+    #[test]
+    fn explicit_policy_overrides_legacy_cpu_backend() {
+        assert_eq!(plan_with_mode(Cpu, RenderingMode::Gpu, None, None, false, Os::Mac).backend, Auto);
+        assert_eq!(plan_with_mode(Metal, RenderingMode::Cpu, None, None, false, Os::Mac).backend, Cpu);
+        assert_eq!(plan_with_mode(Auto, RenderingMode::Gpu, None, None, true, Os::Mac).backend, Cpu);
+    }
+
+    #[test]
     fn marker_round_trip_and_lenient_parse() {
         let m = Marker {
             backend: "auto".into(),
@@ -556,14 +599,16 @@ mod tests {
         let dir = temp_dir("prefs");
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("preferences.json");
-        assert_eq!(read_prefs(None), (Auto, true));
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(None), (Auto, RenderingMode::Auto));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
         std::fs::write(&p, r#"{"performance": {"gpuBackend": "dx12", "useGpu": false}, "interface": {}}"#).unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Dx12, false));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Dx12, RenderingMode::Cpu));
         std::fs::write(&p, r#"{"performance": {"gpuBackend": "quantum"}}"#).unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
+        std::fs::write(&p, r#"{"performance": {"useGpu": false, "renderingMode": "gpu"}}"#).unwrap();
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Gpu));
         std::fs::write(&p, "{not json").unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

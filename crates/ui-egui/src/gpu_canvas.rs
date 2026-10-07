@@ -840,7 +840,17 @@ impl GpuInfo {
             format!("Driver: {}", or(&self.driver, "unknown")),
             format!("GPU backend preference: {}", or(&self.preference, "auto")),
             format!("Selected at launch: {}", or(&self.selected, "auto")),
-            format!("Canvas renderer: {}", if self.canvas == "gpu" { "GPU" } else { "CPU" }),
+            format!("Image compositor: {}", if self.canvas == "gpu" { "GPU" } else { "CPU" }),
+            format!(
+                "Window renderer: {}",
+                if self.device_type == "cpu" {
+                    "Software adapter"
+                } else if self.adapter.is_empty() {
+                    "Unknown"
+                } else {
+                    "Graphics adapter"
+                }
+            ),
         ];
         if let Some(f) = &self.fallback {
             v.push(format!("Fallback: {f}"));

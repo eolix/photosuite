@@ -112,9 +112,10 @@ fn app_switches_to_the_cpu_canvas_and_keeps_the_documents() {
     let app = h.state();
     assert!(!app.gpu_active(), "still on the GPU canvas");
     assert_eq!(app.session.documents().len(), 1, "document kept");
-    let n = app.ui.notices.last().expect("notice");
-    assert_eq!(n.title, gpu_status::LOST_MESSAGE);
-    assert!(n.error);
+    assert_eq!(app.ui.status, gpu_status::LOST_MESSAGE);
+    assert!(app.ui.status_error);
+    assert!(app.ui.gpu_fallback_notice.as_deref().unwrap_or("").contains("killed by the OS"));
+    assert!(app.ui.notices.is_empty(), "one recovery warning, no duplicate notice");
     assert!(app.perf.gpu_info.lost.as_deref().unwrap_or("").contains("killed by the OS"));
     assert_eq!(app.perf.gpu_info.canvas, "cpu");
     // The CPU path draws the document: a refresh after the loss is a CPU one.
@@ -158,7 +159,7 @@ fn system_info_lists_the_graphics_state() {
     app.perf.gpu_info.fallback = Some("the previous start didn't finish on vulkan; using dx12".into());
     let lines = gpu_status::system_info(&app);
     let text = lines.join("\n");
-    for want in ["Graphics adapter: Test GPU", "Backend: dx12", "Selected at launch: dx12", "Fallback: the previous start", "Canvas renderer: CPU"] {
+    for want in ["Graphics adapter: Test GPU", "Backend: dx12", "Selected at launch: dx12", "Fallback: the previous start", "Image compositor: CPU"] {
         assert!(text.contains(want), "{want} missing from\n{text}");
     }
     let v = gpu_status::system_info_json(&app);
