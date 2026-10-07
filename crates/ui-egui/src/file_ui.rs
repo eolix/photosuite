@@ -75,12 +75,10 @@ pub fn invoke(app: &mut PhotosuiteApp, ctx: &egui::Context, id: &str, params: &V
             json!({"units": ["inches", "cm", "pixels"], "mode": ["rgb", "gray", "cmyk", "lab"]}),
         ),
         "file.automate.createDroplet" => {
-            let a = &app.ui.actions;
-            let action = a.selected.and_then(|i| a.list.get(i)).or(a.list.first());
-            let Some(action) = action else {
+            let Some(action) = crate::actions::selected_action(app) else {
                 return Some(Err("record an action in the Actions panel first".into()));
             };
-            let steps: Vec<Value> = action.steps.iter().map(|(id, p)| json!([id, p])).collect();
+            let steps = crate::actions::action_steps(action);
             let name = action.name.clone();
             form(
                 app,

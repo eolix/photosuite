@@ -659,9 +659,9 @@ pub struct UiState {
     /// Layers panel kind filter ("pixel", "adjustment", "type", "shape", "smart"); empty = all.
     #[serde(default)]
     pub layer_filter: Vec<String>,
-    /// Recorded actions (Actions panel).
+    /// Actions panel: which row is selected and which are expanded. The list lives on the session.
     #[serde(default)]
-    pub actions: crate::actions::Actions,
+    pub actions: crate::actions::ActionsUi,
     /// Layer Comps panel: the selected comp (by comp id).
     #[serde(default)]
     pub layer_comp_selected: Option<u32>,

@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod actions_cmds;
 pub mod adjust_cmds;
 pub mod adjust_params;
 pub mod align_cmds;
@@ -312,8 +313,14 @@ pub struct Session {
     /// event log (see `automate_cmds`).
     pub file_menu: automate_cmds::FileMenuState,
     /// Persistent brush preset store (desktop only; `None` keeps presets session-only, as in
-    /// headless and test sessions). See `preset_store`.
+    /// headless and test sessions). See `preset_store`. The same store holds the Actions list.
     pub preset_store: Option<preset_store::PresetStore>,
+    /// Window › Actions. The list persists with the preset store when one is attached.
+    pub actions: actions_cmds::ActionState,
+    /// Per-step gate for `actions.play`. Untrusted sessions (MCP, the control channel) install
+    /// the same check a top-level command sees. `None` runs every step, which is what a local
+    /// UI and `photosuite-cli run` do.
+    pub authorize: Option<fn(&str, &serde_json::Value) -> Result<()>>,
     /// Background jobs (see [`jobs`]).
     jobs: jobs::Jobs,
 }

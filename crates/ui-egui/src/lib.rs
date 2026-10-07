@@ -253,6 +253,10 @@ pub struct Services {
     pub automation_read: Option<AutomationReadFn>,
     pub automation_write: Option<AutomationWriteFn>,
     pub automation_command: Option<AutomationCommandFn>,
+    /// Same policy as [`Self::automation_command`], as a function pointer the engine calls for
+    /// each step of `actions.play`. Installed on the session only while a control request or
+    /// an automation-driven [`PhotosuiteApp::run`] runs, so a local play of a recorded `file.*` step still works.
+    pub automation_authorize: Option<fn(&str, &serde_json::Value) -> photosuite_engine::Result<()>>,
     /// Encode an RGBA8 image as PNG (used for screenshots and `ui.render`).
     pub encode_png: Option<EncodePngFn>,
     /// Open a URL in the system browser (native). Falls back to `ctx.open_url` (web) when unset.
@@ -593,6 +597,19 @@ impl PhotosuiteApp {
 
     /// Run an engine command, reporting errors in the status bar.
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        // Automation input also gates every step a command runs on its behalf (`actions.play`).
+        let gate = if self.automation_input && self.session.authorize.is_none() { self.services.automation_authorize } else { None };
+        if gate.is_some() {
+            self.session.authorize = gate;
+        }
+        let result = self.run_command(id, params);
+        if gate.is_some() {
+            self.session.authorize = None;
+        }
+        result
+    }
+
+    fn run_command(&mut self, id: &str, params: Value) -> Result<Value, String> {
         let clip_read = std::mem::take(&mut self.clip_read_for_paste);
         if self.automation_input
             && let Some(authorize) = self.services.automation_command.as_ref()

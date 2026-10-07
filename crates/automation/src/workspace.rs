@@ -201,6 +201,17 @@ pub fn authorize_desktop_engine_command(id: &str, params: &Value) -> Result<(), 
     Ok(())
 }
 
+/// [`authorize_engine_command`] as the function pointer [`photosuite_engine::Session::authorize`]
+/// stores. `actions.play` calls it for every nested step.
+pub fn authorize_engine_step(id: &str, params: &Value) -> photosuite_engine::Result<()> {
+    authorize_engine_command(id, params).map_err(|e| photosuite_engine::EngineError::Other(e.to_string()))
+}
+
+/// [`authorize_desktop_engine_command`] as a [`photosuite_engine::Session::authorize`] hook.
+pub fn authorize_desktop_engine_step(id: &str, params: &Value) -> photosuite_engine::Result<()> {
+    authorize_desktop_engine_command(id, params).map_err(|e| photosuite_engine::EngineError::Other(e.to_string()))
+}
+
 fn params_contain_ambient_path(id: &str, params: &Value) -> bool {
     let keys: &[&str] = match id {
         "image.adjustments.colorLookup" | "layer.newAdjustmentLayer.colorLookup" | "layer.setAdjustment" => &["file"],
@@ -432,5 +443,8 @@ mod tests {
         assert!(authorize_engine_command("filter.distort.displace", &serde_json::json!({"mapPath": "outside.png"})).is_err());
         assert!(authorize_engine_command("layer.setAdjustment", &serde_json::json!({"file": "outside.cube"})).is_err());
         assert!(authorize_engine_command("prefs.set", &serde_json::json!({"path": "colorSettings.workingRgb", "value": "outside.icc"})).is_err());
+        assert!(authorize_engine_step("file.open", &serde_json::json!({})).is_err());
+        assert!(authorize_engine_step("actions.play", &serde_json::json!({})).is_ok());
+        assert!(authorize_desktop_engine_step("file.saveACopy", &serde_json::json!({})).is_err());
     }
 }

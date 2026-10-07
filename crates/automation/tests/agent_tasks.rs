@@ -265,3 +265,68 @@ async fn agent_edits_text_by_position() {
     c.cancel().await.unwrap();
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+async fn connect_headless(headless: photosuite_automation::Headless) -> Conn {
+    let (s, c) = tokio::io::duplex(1 << 20);
+    tokio::spawn(async move {
+        let backend = photosuite_automation::Backend::Headless(std::sync::Arc::new(std::sync::Mutex::new(headless)));
+        if let Ok(running) = PhotosuiteMcp::with_backend(backend).serve(s).await {
+            let _ = running.waiting().await;
+        }
+    });
+    Client.serve(c).await.expect("client init")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_records_and_replays_an_action() {
+    let dir = tmp("actions");
+    let c = connect(&dir).await;
+    let listed = tool(&c, "command_list", json!({"filter": "actions."})).await;
+    let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|item| item.get("id").and_then(Value::as_str)).collect();
+    for id in ["actions.list", "actions.get", "actions.record", "actions.stop", "actions.play", "actions.delete"] {
+        assert!(ids.contains(&id), "{id} missing from {ids:?}");
+    }
+
+    run(&c, "file.new", json!({"width": 32, "height": 32, "background": "white"})).await;
+    run(&c, "actions.record", json!({"name": "Red"})).await;
+    run(&c, "layer.new.layer", json!({})).await;
+    run(&c, "select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 8})).await;
+    run(&c, "edit.fill", json!({"color": "#ff0000"})).await;
+    let stopped = run(&c, "actions.stop", json!({})).await;
+    assert_eq!(stopped["steps"], 3, "{stopped}");
+    let got = run(&c, "actions.get", json!({"action": "Red"})).await;
+    assert_eq!(got["steps"][0][0], "layer.new.layer");
+    assert_eq!(got["steps"][1][0], "select.rect");
+    assert_eq!(got["steps"][2][0], "edit.fill");
+
+    run(&c, "file.new", json!({"width": 32, "height": 32, "background": "white"})).await;
+    let played = run(&c, "actions.play", json!({"action": "Red"})).await;
+    assert_eq!(played["ran"], 3, "{played}");
+    assert!(played.get("failed").is_none(), "{played}");
+    let px = pixel(&c, 2, 2).await;
+    assert!(close(&px, &[1.0, 0.0, 0.0, 1.0], 1e-4), "{px:?}");
+
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_play_refuses_a_recorded_file_open() {
+    let dir = tmp("actions-auth");
+    let workspace = AuthorizedWorkspace::new(Some(&dir), Some(&dir)).expect("test workspace");
+    let mut headless = photosuite_automation::Headless::with_workspace(workspace);
+    headless.session.actions.list.push(photosuite_engine::actions_cmds::Action {
+        name: "Open".into(),
+        steps: vec![("file.open".into(), json!({"path": "/etc/passwd"})), ("layer.new.layer".into(), json!({}))],
+    });
+    let c = connect_headless(headless).await;
+    let played = run(&c, "actions.play", json!({"action": "Open"})).await;
+    assert_eq!(played["ran"], 0, "{played}");
+    assert_eq!(played["failed"]["step"], 0, "{played}");
+    assert_eq!(played["failed"]["id"], "file.open", "{played}");
+    assert!(played["failed"]["error"].as_str().unwrap_or("").contains("disabled"), "{played}");
+    let session = tool(&c, "session_list", json!({})).await;
+    assert!(session["documents"].as_array().is_some_and(|d| d.is_empty()), "{session}");
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}

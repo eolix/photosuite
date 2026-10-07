@@ -194,6 +194,8 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
     let automation_write = automation.clone().map(|workspace| {
         Box::new(move |path: &str, bytes: &[u8]| workspace.write(path, bytes).map_err(|error| error.to_string())) as photosuite_ui_egui::AutomationWriteFn
     });
+    let step: fn(&str, &serde_json::Value) -> photosuite_engine::Result<()> = photosuite_automation::workspace::authorize_desktop_engine_step;
+    let automation_authorize = automation.is_some().then_some(step);
     let automation_command = automation.map(|_| {
         Box::new(|id: &str, params: &serde_json::Value| {
             photosuite_automation::workspace::authorize_desktop_engine_command(id, params).map_err(|error| error.to_string())
@@ -250,6 +252,7 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         automation_read,
         automation_write,
         automation_command,
+        automation_authorize,
         encode_png: Some(Box::new(|w, h, rgba| {
             let img = Image::from_u8(w, h, ChannelLayout::Rgba, rgba.to_vec()).map_err(|e| e.to_string())?;
             photosuite_codecs::encode(&img, photosuite_codecs::Format::Png, &EncodeOptions::default()).map_err(|e| e.to_string())

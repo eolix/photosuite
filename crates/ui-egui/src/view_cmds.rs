@@ -900,12 +900,10 @@ fn front(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<Val
             json!({"format": ["jpg", "png", "psd", "tiff"]}),
         ),
         "file.automate.batch" => {
-            let a = &app.ui.actions;
-            let action = a.selected.and_then(|i| a.list.get(i)).or(a.list.first());
-            let Some(action) = action else {
+            let Some(action) = crate::actions::selected_action(app) else {
                 return Some(Err("record an action in the Actions panel first".into()));
             };
-            let steps: Vec<Value> = action.steps.iter().map(|(id, p)| json!([id, p])).collect();
+            let steps = crate::actions::action_steps(action);
             let name = action.name.clone();
             dialog(
                 app,

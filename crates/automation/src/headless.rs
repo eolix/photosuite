@@ -9,8 +9,14 @@ use photosuite_format::PcraftWriter;
 use photosuite_io::ExportOptions;
 use serde_json::{Value, json};
 
-use crate::workspace::authorize_engine_command;
+use crate::workspace::{authorize_engine_command, authorize_engine_step};
 use crate::{AuthorizedWorkspace, AutomationError, files};
+
+fn untrusted(filesystem: Filesystem) -> Headless {
+    let mut session = Session::new();
+    session.authorize = Some(authorize_engine_step);
+    Headless { session, writers: HashMap::new(), filesystem }
+}
 
 enum Filesystem {
     Denied,
@@ -28,7 +34,7 @@ pub struct Headless {
 
 impl Default for Headless {
     fn default() -> Self {
-        Self { session: Session::new(), writers: HashMap::new(), filesystem: Filesystem::Denied }
+        untrusted(Filesystem::Denied)
     }
 }
 
@@ -39,14 +45,16 @@ impl Headless {
     }
 
     /// Create a session for an explicit local CLI invocation. The CLI caller,
-    /// not a remote automation client, supplies these host paths.
+    /// not a remote automation client, supplies these host paths. Nested
+    /// `actions.play` steps are not re-checked: this caller is already trusted.
     pub fn trusted_local() -> Self {
         Self { session: Session::new(), writers: HashMap::new(), filesystem: Filesystem::TrustedLocal }
     }
 
     /// Create an automation session with capability-scoped file access.
+    /// Each step of `actions.play` is checked with [`authorize_engine_step`].
     pub fn with_workspace(workspace: AuthorizedWorkspace) -> Self {
-        Self { session: Session::new(), writers: HashMap::new(), filesystem: Filesystem::Workspace(workspace) }
+        untrusted(Filesystem::Workspace(workspace))
     }
 
     /// Apply background jobs that finished since the last request, so every request (save,
