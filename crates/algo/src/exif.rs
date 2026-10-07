@@ -94,9 +94,11 @@ impl Tiff<'_> {
 pub fn read(exif: &[u8]) -> CameraInfo {
     let b = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif);
     let mut info = CameraInfo::default();
+    // TIFF's 42, and the variants raw files use for the same layout: Panasonic RW2 (0x55) and
+    // Olympus ORF ("RO", "RS").
     let le = match b.get(..4) {
-        Some([b'I', b'I', 42, 0]) => true,
-        Some([b'M', b'M', 0, 42]) => false,
+        Some([b'I', b'I', 42 | 0x55, 0] | [b'I', b'I', b'R', b'O' | b'S']) => true,
+        Some([b'M', b'M', 0, 42] | [b'M', b'M', b'O', b'R']) => false,
         _ => return info,
     };
     let t = Tiff { b, le };
@@ -130,7 +132,8 @@ pub fn read(exif: &[u8]) -> CameraInfo {
     info
 }
 
-/// Builds a little-endian EXIF payload (used by tests and by synthetic fixtures).
+/// Builds a little-endian EXIF payload: what `read` returns, written back (a raw file's camera
+/// and exposure kept on its document; tests and synthetic fixtures).
 pub fn build(info: &CameraInfo) -> Vec<u8> {
     // IFD0: Make, Model, ExifIFD pointer; Exif IFD: the rest. Data area after the IFDs.
     let mut ifd0: Vec<(u16, u16, u32, Vec<u8>)> = Vec::new();
@@ -140,9 +143,14 @@ pub fn build(info: &CameraInfo) -> Vec<u8> {
         v.push(0);
         v
     };
+    // Fractions as cameras write them: 1/n below one (a 1/8000 s shutter), else n/10000.
     let rational = |v: f64| {
-        let d = 10000u32;
-        let mut b = ((v * d as f64).round() as u32).to_le_bytes().to_vec();
+        let (n, d) = if v > 0.0 && v < 1.0 && (1.0 / v - (1.0 / v).round()).abs() < 1e-3 {
+            (1u32, (1.0 / v).round() as u32)
+        } else {
+            ((v * 10000.0).round() as u32, 10000u32)
+        };
+        let mut b = n.to_le_bytes().to_vec();
         b.extend_from_slice(&d.to_le_bytes());
         b
     };
@@ -212,6 +220,38 @@ pub fn build(info: &CameraInfo) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn written_info_reads_back_with_camera_fractions() {
+        let info = CameraInfo {
+            make: Some("Canon".into()),
+            model: Some("Canon EOS R5".into()),
+            lens: Some("RF24-70mm F2.8 L IS USM".into()),
+            exposure_time: Some(1.0 / 8000.0),
+            f_number: Some(2.8),
+            iso: Some(400.0),
+            focal_length: Some(35.0),
+            focal_length_35mm: Some(35.0),
+        };
+        let back = read(&build(&info));
+        assert_eq!(back.exposure_time, Some(1.0 / 8000.0), "1/8000 s stays exact");
+        assert_eq!((back.make, back.model, back.lens), (info.make, info.model, info.lens));
+        assert_eq!((back.f_number, back.focal_length), (Some(2.8), Some(35.0)));
+    }
+
+    /// Raw files with TIFF's layout under another header: Panasonic RW2 and Olympus ORF.
+    #[test]
+    fn raw_tiff_header_variants_are_read() {
+        let b = build(&CameraInfo { make: Some("Panasonic".into()), model: Some("DC-G9".into()), ..Default::default() });
+        for magic in [[b'I', b'I', 0x55, 0], [b'I', b'I', b'R', b'O'], [b'I', b'I', b'R', b'S']] {
+            let mut v = b.clone();
+            v[..4].copy_from_slice(&magic);
+            assert_eq!(read(&v).model.as_deref(), Some("DC-G9"), "{magic:?}");
+        }
+        let mut junk = b.clone();
+        junk[..4].copy_from_slice(b"IIxx");
+        assert_eq!(read(&junk), CameraInfo::default());
+    }
 
     #[test]
     fn round_trips_and_survives_garbage() {

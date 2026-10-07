@@ -89,3 +89,23 @@ fn truncated_raws_do_not_panic() {
         let _ = import("x.nef", &b[..n]);
     }
 }
+
+/// A raw file keeps its camera on the document, as an opened JPEG does (Lens Correction's Auto
+/// tab and Camera Raw read it): from its own TIFF tags, or the decoder's make and model.
+#[test]
+fn raw_files_keep_their_camera_as_exif() {
+    let (w, h) = (40, 24);
+    let mut spec = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535));
+    spec.make = "Canon".into();
+    spec.model = "Canon EOS R5".into();
+    let r = import("shot.dng", &spec.build()).unwrap();
+    let exif = r.document.metadata.exif.as_ref().expect("EXIF kept");
+    let info = photosuite_algo::exif::read(exif);
+    assert_eq!((info.make.as_deref(), info.model.as_deref()), (Some("Canon"), Some("Canon EOS R5")));
+    // Panasonic RW2's TIFF variant (IIU) too.
+    let (w, h) = (40, 20);
+    let rw2 = photosuite_raw::testgen::rw2(w, h, &mosaic(&scene(w, h), w, [0, 1, 1, 2], 128, 4095), 12);
+    let r = import("P1000001.RW2", &rw2).unwrap();
+    let info = photosuite_algo::exif::read(r.document.metadata.exif.as_ref().expect("EXIF kept"));
+    assert_eq!(info.make.as_deref(), Some("Panasonic"));
+}

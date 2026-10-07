@@ -24,6 +24,8 @@ photosuite-psd = { workspace = true }
 photosuite-codecs = { workspace = true }
 # PDF pages as pixels (pure Rust, Apache-2.0 OR MIT).
 hayro = "0.8"
+# EXIF (camera, lens, exposure) read from and written for camera raw files.
+photosuite-algo = { workspace = true }
 photosuite-raw = { workspace = true }
 photosuite-text = { workspace = true }
 photosuite-paint = { workspace = true }

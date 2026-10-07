@@ -4157,6 +4157,7 @@ name = "photosuite-io"
 version = "0.9.18"
 dependencies = [
  "hayro",
+ "photosuite-algo",
  "photosuite-cms",
  "photosuite-codecs",
  "photosuite-color",

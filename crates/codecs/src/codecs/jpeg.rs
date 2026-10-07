@@ -122,6 +122,14 @@ fn luma_table(seg: &[u8]) -> Option<[u16; 64]> {
     None
 }
 
+/// A JPEG's EXIF block (the APP1 segment's TIFF data), without decoding the image.
+pub fn exif(bytes: &[u8]) -> Option<Vec<u8>> {
+    if bytes.get(0..2) != Some(&[0xFF, 0xD8]) {
+        return None;
+    }
+    scan_metadata(bytes).exif
+}
+
 /// ITU-T T.81 Annex K luminance table (the IJG base table `jpeg-encoder` scales too).
 const ANNEX_K_LUMA: [u16; 64] = [
     16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109,
@@ -139,13 +147,12 @@ pub fn estimate_quality(bytes: &[u8]) -> Option<u8> {
     let table = scan_metadata(bytes).luma_quant?;
     // Compare sums: they don't depend on the table's (zig-zag or natural) order.
     let have: u32 = table.iter().map(|&v| u32::from(v)).sum();
-    (1u8..=100)
-        .min_by_key(|&q| {
-            let q = u32::from(q);
-            let scale = if q < 50 { 5000 / q } else { 200 - 2 * q };
-            let want: u32 = ANNEX_K_LUMA.iter().map(|&v| ((u32::from(v) * scale + 50) / 100).clamp(1, 255)).sum();
-            want.abs_diff(have)
-        })
+    (1u8..=100).min_by_key(|&q| {
+        let q = u32::from(q);
+        let scale = if q < 50 { 5000 / q } else { 200 - 2 * q };
+        let want: u32 = ANNEX_K_LUMA.iter().map(|&v| ((u32::from(v) * scale + 50) / 100).clamp(1, 255)).sum();
+        want.abs_diff(have)
+    })
 }
 
 fn err(e: impl std::fmt::Display) -> CodecError {

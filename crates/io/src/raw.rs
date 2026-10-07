@@ -27,6 +27,31 @@ pub fn import_raw(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
     import_raw_with(name, bytes, &DevelopOptions { limits: limits(), ..Default::default() })
 }
 
+/// A raw file's camera, lens and exposure as an EXIF block for its document, the way an opened
+/// JPEG or PSD keeps its own (Lens Correction's Auto tab and Camera Raw read it; saving keeps it).
+/// From the file's TIFF structure where it has one (CR2, NEF, ARW, DNG, PEF, RW2, ORF), else the
+/// embedded preview's (CR3, RAF), with the decoder's make and model filling any gap.
+pub(crate) fn camera_exif(bytes: &[u8], info: &photosuite_raw::RawInfo) -> Option<Vec<u8>> {
+    use photosuite_algo::exif;
+    let mut ci = exif::read(bytes);
+    if (ci.make.is_none() || ci.lens.is_none() || ci.focal_length.is_none())
+        && let Some(e) = photosuite_raw::embedded_preview(bytes).and_then(|p| codecs::jpeg_exif(p.jpeg))
+    {
+        let p = exif::read(&e);
+        ci.make = ci.make.or(p.make);
+        ci.model = ci.model.or(p.model);
+        ci.lens = ci.lens.or(p.lens);
+        ci.exposure_time = ci.exposure_time.or(p.exposure_time);
+        ci.f_number = ci.f_number.or(p.f_number);
+        ci.iso = ci.iso.or(p.iso);
+        ci.focal_length = ci.focal_length.or(p.focal_length);
+        ci.focal_length_35mm = ci.focal_length_35mm.or(p.focal_length_35mm);
+    }
+    ci.make = ci.make.or_else(|| info.make.clone());
+    ci.model = ci.model.or_else(|| info.model.clone());
+    (ci != exif::CameraInfo::default()).then(|| exif::build(&ci))
+}
+
 /// Develops a raw file with explicit settings.
 pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Result<ImportResult, IoError> {
     let format = photosuite_raw::identify(bytes).map(|f| f.name()).unwrap_or("camera raw");
@@ -35,6 +60,7 @@ pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Resul
             let img = Image::from_u16(dev.width, dev.height, ChannelLayout::Rgb, &dev.rgb)?;
             let mut r = image_to_document(name, &img)?;
             r.document.icc_profile = Some(Arc::new(photosuite_cms::Builtin::ProPhotoCompat.profile().to_bytes().to_vec()));
+            r.document.metadata.exif = camera_exif(bytes, &dev.info).map(Arc::new);
             // "Canon" + "Canon EOS 80D" reads as "Canon EOS 80D".
             let camera = match (dev.info.make.as_deref(), dev.info.model.as_deref()) {
                 (Some(make), Some(model)) if model.to_ascii_lowercase().starts_with(&make.to_ascii_lowercase()) => model.to_string(),

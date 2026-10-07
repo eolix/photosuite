@@ -281,3 +281,16 @@ fn webp_lossless_or_lossy_is_read_back() {
     assert_eq!(webp_is_lossless(b"RIFF\x04\x00\x00\x00WEBP"), None);
     assert_eq!(webp_is_lossless(&[]), None);
 }
+
+#[test]
+fn jpeg_exif_is_read_without_decoding() {
+    let mut img = synth(8, 8, ChannelLayout::Rgb, SampleType::U8, 2, 0.5);
+    let exif = b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec();
+    img.meta.exif = Some(exif.clone());
+    let bytes = encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
+    assert_eq!(jpeg_exif(&bytes), Some(exif));
+    assert_eq!(jpeg_exif(&bytes[..2]), None);
+    assert_eq!(jpeg_exif(b"not a jpeg"), None);
+    let plain = encode(&synth(8, 8, ChannelLayout::Rgb, SampleType::U8, 2, 0.5), Format::Jpeg, &EncodeOptions::default()).unwrap();
+    assert_eq!(jpeg_exif(&plain), None);
+}

@@ -23,6 +23,7 @@ pub mod web;
 
 pub use crate::codecs::png::encode_indexed as encode_png_indexed;
 pub use crate::codecs::jpeg::estimate_quality as jpeg_quality;
+pub use crate::codecs::jpeg::exif as jpeg_exif;
 pub use crate::codecs::webp::is_lossless as webp_is_lossless;
 pub use crate::error::CodecError;
 pub use crate::fidelity::{FidelityWarning, fidelity_warnings, fidelity_warnings_with};

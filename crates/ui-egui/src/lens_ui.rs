@@ -77,7 +77,14 @@ fn defaults() -> Map<String, Value> {
 
 impl LensDialog {
     pub fn describe(&self) -> Value {
-        json!({"layer": self.layer.0, "params": Value::Object(self.params.clone()), "tab": if self.tab == Tab::Auto { "auto" } else { "custom" }, "proxy": [self.pw, self.ph], "renderMs": self.render_ms})
+        json!({
+            "layer": self.layer.0,
+            "params": Value::Object(self.params.clone()),
+            "tab": if self.tab == Tab::Auto { "auto" } else { "custom" },
+            "camera": {"maker": self.maker, "model": self.model},
+            "proxy": [self.pw, self.ph],
+            "renderMs": self.render_ms,
+        })
     }
 
     fn num(&self, k: &str) -> f32 {
@@ -154,14 +161,17 @@ pub fn open(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String> 
         line: None,
         render_ms: 0.0,
     };
-    // The photograph's own camera and lens, when the profiles know them (Auto Correction).
+    // The photograph's own camera, whenever the profiles know it (even with no profile for its
+    // lens: it used to be shown only when the lens matched too), and its lens (Auto Correction).
+    if let (Some(db), Some(i)) = (photosuite_engine::lens_cmds::lens_database(), d.info.as_ref())
+        && let Some(c) = db.match_camera(i.make.as_deref(), i.model.as_deref())
+    {
+        d.maker = c.maker.clone();
+        d.model = c.model.clone();
+    }
     if let (Some(db), Some(i)) = (photosuite_engine::lens_cmds::lens_database(), d.info.as_ref())
         && let Some(cal) = db.for_photo(i)
     {
-        if let Some(c) = db.match_camera(i.make.as_deref(), i.model.as_deref()) {
-            d.maker = c.maker.clone();
-            d.model = c.model.clone();
-        }
         d.params.insert("profile".into(), json!("measured"));
         d.params.insert("lens".into(), json!(cal.lens));
         d.tab = Tab::Auto;
@@ -533,6 +543,29 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The Auto tab names the photo's camera from its EXIF, also when no profile matches its lens
+    /// (the camera used to be shown only together with a lens).
+    #[test]
+    fn auto_tab_names_the_camera_without_a_matching_lens() {
+        let db = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../resources/lensfun/lens-database.json")).unwrap();
+        photosuite_engine::lens_cmds::set_lens_database_json(&db).unwrap();
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        let ctx = egui::Context::default();
+        app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
+        let exif = photosuite_algo::exif::build(&photosuite_algo::exif::CameraInfo {
+            make: Some("NIKON CORPORATION".into()),
+            model: Some("NIKON Z 6".into()),
+            lens: Some("A Lens Nobody Measured 37mm".into()),
+            focal_length: Some(37.0),
+            ..Default::default()
+        });
+        std::sync::Arc::make_mut(&mut app.session.active_mut().unwrap().doc).metadata.exif = Some(std::sync::Arc::new(exif));
+        let r = menu(&mut app, &ctx, CMD, &json!({})).unwrap().unwrap();
+        assert_eq!(r["camera"], json!({"maker": "Nikon", "model": "Nikon Z 6"}), "{r}");
+        assert_eq!(r["tab"], "custom", "no profile for that lens");
+        menu(&mut app, &ctx, CMD, &json!({"ui": {"cancel": true}})).unwrap().unwrap();
+    }
 
     #[test]
     fn dialog_previews_and_commits_the_command() {
