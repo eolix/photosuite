@@ -359,3 +359,18 @@ fn bench_load_500_sampled_presets() {
     let rename = t0.elapsed();
     eprintln!("500 sampled presets: {:.1} MB on disk; write {write:?}, load {load:?}, rename {rename:?}", bytes as f64 / 1e6);
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_store_directory_that_does_not_exist_yet_opens_without_warnings() {
+    // Windows reports a file under a missing directory as "path not found" (os error 3), not
+    // "file not found"; both mean an empty store, as on a first launch.
+    let parent = TempDir::new("missing-store");
+    let dir = parent.0.join("not-created-yet");
+    assert!(!dir.exists());
+    let opened = open_dir(&dir);
+    assert!(opened.warnings.is_empty(), "{:?}", opened.warnings);
+    assert!(opened.actions.is_empty());
+    let err = DirBackend::new(&dir).read(ACTIONS_FILE, MAX_ACTIONS_BYTES).unwrap_err();
+    assert!(missing_file(&err), "{err}");
+}
