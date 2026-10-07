@@ -124,7 +124,14 @@ impl Mapping {
         for (x, y) in pts {
             (x0, y0, x1, y1) = (x0.min(x), y0.min(y), x1.max(x), y1.max(y));
         }
-        Rect::new(x0.floor() as i32 - 2, y0.floor() as i32 - 2, x1.ceil() as i32 + 2, y1.ceil() as i32 + 2)
+        // Input-derived coordinates can be arbitrarily large (issue #716): clamp to the
+        // i32 range before casting (an out-of-range `as` cast saturates, and the apron
+        // add would then overflow), and apply the apron with saturating arithmetic.
+        let apron = |v: f64, pad: i32| {
+            let v = v.clamp(i32::MIN as f64, i32::MAX as f64);
+            (v as i32).saturating_add(pad)
+        };
+        Rect::new(apron(x0.floor(), -2), apron(y0.floor(), -2), apron(x1.ceil(), 2), apron(y1.ceil(), 2))
     }
 }
 
@@ -393,4 +400,28 @@ pub fn specs() -> Vec<CommandSpec> {
             journal: true,
         },
     ]
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_rect_clamps_huge_sources() {
+        // Issue repro: a 3e9 source with a rotation makes the mapping a resample,
+        // so source_rect sees mapped coordinates far outside i32. Must clamp, not
+        // overflow (debug panic) or wrap (release, inverted rect).
+        let m = Mapping { source: (3_000_000_000.0, 0.0), anchor: (10.0, 10.0), m: transform_matrix([100.0, 100.0], 45.0, false, false) };
+        let r = m.source_rect(Rect::new(0, 0, 24, 16));
+        assert!(r.x0 <= r.x1 && r.y0 <= r.y1, "rect must stay ordered: {r:?}");
+        // A negative source must clamp the same way.
+        let m = Mapping { source: (-3_000_000_000.0, 0.0), anchor: (10.0, 10.0), m: transform_matrix([100.0, 100.0], 45.0, false, false) };
+        let r = m.source_rect(Rect::new(0, 0, 24, 16));
+        assert!(r.x0 <= r.x1 && r.y0 <= r.y1, "rect must stay ordered: {r:?}");
+    }
+
+    #[test]
+    fn source_rect_normal_case_unchanged() {
+        let m = Mapping { source: (200.0, 0.0), anchor: (10.0, 10.0), m: [1.0, 0.0, 0.0, 1.0] };
+        assert_eq!(m.source_rect(Rect::new(0, 0, 24, 16)), Rect::new(188, -12, 216, 8));
+    }
 }
