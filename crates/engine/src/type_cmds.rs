@@ -282,6 +282,8 @@ fn push_merge<S: PartialEq>(out: &mut Vec<(usize, S)>, len: usize, st: S) {
 
 /// Applies `f` to the character style of bytes `a..b` (splitting runs at the edges).
 pub fn style_range(t: &mut TextLayer, a: usize, b: usize, f: &dyn Fn(&mut CharStyle)) {
+    // A reversed range styles nothing; `b < a` would underflow the styled run's length (#714).
+    let b = b.max(a);
     let runs = t.char_runs();
     if t.text.is_empty() {
         let mut st = runs.into_iter().next().map(|r| r.style).unwrap_or_default();
@@ -563,8 +565,15 @@ pub fn specs() -> Vec<CommandSpec> {
                 let name = p.get("name").and_then(Value::as_str).map(str::to_string);
                 check_kerning(p).map_err(|m| bad("type.edit", m))?;
                 if let Some(Value::Array(runs)) = p.get("runs") {
-                    for r in runs {
+                    for (i, r) in runs.iter().enumerate() {
                         check_kerning(r).map_err(|m| bad("type.edit", m))?;
+                        // Checked before anything changes, so a bad run leaves the layer untouched (#714).
+                        let start = r.get("start").and_then(Value::as_u64).unwrap_or(0);
+                        if let Some(end) = r.get("end").and_then(Value::as_u64)
+                            && end < start
+                        {
+                            return Err(bad("type.edit", format!("runs[{i}]: `end` ({end}) is before `start` ({start})")));
+                        }
                     }
                 }
                 let kern_pair = match p.get("kernPair") {
@@ -1006,6 +1015,39 @@ mod tests {
         assert_eq!(s.active().unwrap().history.entries().len(), steps + 1);
         assert!(s.undo());
         assert_eq!(text_layer(&s, id).runs[0].style.size_pt, 20.0);
+    }
+
+    #[test]
+    fn edit_rejects_a_reversed_runs_range() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Hello world", "size": 20})).unwrap()["layer"].as_u64().unwrap();
+        let before = text_layer(&s, id).char_runs();
+        let steps = s.active().unwrap().history.entries().len();
+        for runs in [
+            json!([{"start": 5, "end": 2, "fauxBold": true}]),
+            json!([{"start": 0, "end": 3, "fauxBold": true}, {"start": 8, "end": 7}]),
+            json!([{"end": 0, "start": 1}]),
+        ] {
+            let e = s.execute("type.edit", json!({"layer": id, "runs": runs})).unwrap_err();
+            assert!(matches!(e, EngineError::BadParams { .. }) && e.to_string().contains("is before `start`"), "{e}");
+        }
+        // Nothing changed and nothing was recorded, not even the valid run before the bad one.
+        assert_eq!(text_layer(&s, id).char_runs(), before);
+        assert_eq!(s.active().unwrap().history.entries().len(), steps);
+        // The same range the right way round still styles it.
+        s.execute("type.edit", json!({"layer": id, "runs": [{"start": 2, "end": 5, "fauxBold": true}]})).unwrap();
+        let runs = text_layer(&s, id).char_runs();
+        assert_eq!(runs.iter().map(|r| (r.len, r.style.faux_bold)).collect::<Vec<_>>(), [(2, false), (3, true), (6, false)]);
+    }
+
+    #[test]
+    fn style_range_reversed_is_a_no_op() {
+        let mut t = TextLayer::default();
+        replace_text(&mut t, 0, 0, "Hello world");
+        let before = t.char_runs();
+        style_range(&mut t, 5, 2, &|s| s.size_pt = 40.0);
+        assert_eq!(t.char_runs(), before);
+        assert_eq!(t.runs.iter().map(|r| r.len).sum::<usize>(), t.text.len());
     }
 
     #[test]
