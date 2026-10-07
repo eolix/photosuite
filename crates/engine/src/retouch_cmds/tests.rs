@@ -538,3 +538,134 @@ fn smudge_across_a_transparent_edge_has_no_dark_fringe() {
         assert!(n > 5, "depth {depth}: colour dragged into the transparent area");
     }
 }
+
+/// `texture` with a solid red blemish over `x0..x0+8`, `y 20..28`.
+fn blemished(x0: i32) -> impl Fn(i32, i32) -> [f32; 4] {
+    move |x, y| if (x0..x0 + 8).contains(&x) && (20..28).contains(&y) { [1.0, 0.0, 0.0, 1.0] } else { texture(x, y) }
+}
+
+/// Every pixel of `rect` (x0, y0, x1, y1) is within `t` of the clean texture.
+fn assert_repaired(s: &Session, rect: (i32, i32, i32, i32), t: f32, what: &str) {
+    for y in rect.1..rect.3 {
+        for x in rect.0..rect.2 {
+            let (got, want) = (rgba(s, x, y), texture(x, y));
+            for c in 0..4 {
+                assert!((got[c] - want[c]).abs() < t, "{what} at {x},{y} channel {c}: {got:?} want {want:?}");
+            }
+        }
+    }
+}
+
+#[test]
+fn patch_source_repairs_the_selection_with_texture_from_the_drag_target() {
+    for depth in DEPTHS {
+        let mut s = session(96, 48, depth, "rgb");
+        paint_layer(&mut s, blemished(40));
+        s.execute("select.rect", json!({"x": 36, "y": 16, "width": 16, "height": 16})).unwrap();
+        let r = s.execute("paint.patch", json!({"offset": [-30, 2]})).unwrap();
+        assert_eq!(r["offset"], json!([-30, 2]));
+        // Gradient plus noise: the membrane fits the source's colour to the surroundings, the noise
+        // comes from the source, so the repair is close to (not exactly) the clean texture.
+        assert_repaired(&s, (36, 16, 52, 32), 0.07, &format!("depth {depth}"));
+        // Outside the selection nothing changed, including the sampled area.
+        for (x, y) in [(35, 20), (52, 25), (10, 20), (44, 40)] {
+            let (got, want) = (rgba(&s, x, y), texture(x, y));
+            assert!((got[0] - want[0]).abs() <= tol(depth), "depth {depth} untouched {x},{y}: {got:?}");
+        }
+        // One undo step restores the blemish.
+        s.execute("edit.undo", json!({})).unwrap();
+        assert_eq!(rgba(&s, 44, 24)[1], 0.0, "depth {depth}: undo brings the blemish back");
+    }
+}
+
+#[test]
+fn patch_destination_repairs_the_drag_target_from_the_selection() {
+    let mut s = session(96, 48, 16, "rgb");
+    paint_layer(&mut s, blemished(40));
+    // Select clean texture and drag it onto the blemish.
+    s.execute("select.rect", json!({"x": 6, "y": 16, "width": 16, "height": 16})).unwrap();
+    s.execute("paint.patch", json!({"offset": [30, 0], "mode": "destination"})).unwrap();
+    assert_repaired(&s, (36, 16, 52, 32), 0.07, "destination");
+    // The selected (source) pixels stay as they were.
+    let (got, want) = (rgba(&s, 10, 20), texture(10, 20));
+    assert!((got[1] - want[1]).abs() < 1e-3, "source untouched: {got:?}");
+}
+
+#[test]
+fn patch_at_the_canvas_edge_stays_opaque_and_matches() {
+    // The blemish touches the left edge; the solve must not pull in the empty pixels beyond it.
+    let mut s = session(64, 48, 8, "rgb");
+    paint_layer(&mut s, blemished(0));
+    s.execute("select.rect", json!({"x": 0, "y": 16, "width": 12, "height": 16})).unwrap();
+    s.execute("paint.patch", json!({"offset": [30, 0]})).unwrap();
+    assert_repaired(&s, (0, 16, 12, 32), 0.07, "edge");
+}
+
+#[test]
+fn patch_follows_a_feathered_selection_and_a_mask_target() {
+    let mut s = session(96, 48, 8, "rgb");
+    paint_layer(&mut s, blemished(40));
+    s.execute("select.rect", json!({"x": 36, "y": 16, "width": 16, "height": 16, "ellipse": true, "feather": 2})).unwrap();
+    s.execute("paint.patch", json!({"offset": [-30, 0]})).unwrap();
+    // The blemish (well inside the ellipse) is gone, a corner outside the ellipse is untouched.
+    assert_repaired(&s, (42, 22, 46, 26), 0.07, "feathered");
+    let (got, want) = (rgba(&s, 36, 16), texture(36, 16));
+    assert!((got[0] - want[0]).abs() <= tol(8), "corner outside the ellipse: {got:?}");
+    // Patching the layer mask works like any retouch target.
+    s.execute("layer.layerMask.revealAll", json!({})).unwrap();
+    s.execute("paint.patch", json!({"offset": [-30, 0], "target": "mask"})).unwrap();
+}
+
+#[test]
+fn patch_fails_gracefully() {
+    let mut s = session(64, 48, 8, "rgb");
+    assert!(s.execute("paint.patch", json!({"offset": [10, 0]})).is_err(), "no selection");
+    s.execute("select.rect", json!({"x": 10, "y": 10, "width": 10, "height": 10})).unwrap();
+    for p in [
+        json!({}),
+        json!({"offset": [10]}),
+        json!({"offset": "far"}),
+        json!({"offset": [1e300, 0]}),
+        json!({"offset": [0, 0]}),
+        json!({"offset": [10, 0], "mode": "bogus"}),
+        json!({"offset": [60, 0]}),
+        json!({"offset": [0, -30]}),
+        json!({"offset": [10, 0], "target": "mask"}),
+        json!({"offset": [10, 0], "target": {"channel": 7}}),
+        json!({"offset": [10, 0], "layer": 999}),
+    ] {
+        assert!(s.execute("paint.patch", p.clone()).is_err(), "{p}");
+    }
+    assert!(s.execute("paint.patch", json!({"offset": [10, 0]})).is_ok());
+}
+
+#[test]
+fn patch_preview_matches_the_command_and_its_coarse_solve_is_close() {
+    let mut s = session(160, 96, 16, "rgb");
+    paint_layer(&mut s, blemished(100));
+    s.execute("select.rect", json!({"x": 80, "y": 4, "width": 60, "height": 60, "ellipse": true, "feather": 3})).unwrap();
+    let p = json!({"offset": [-70, 20]});
+    let rev = s.active().unwrap().revision;
+    let id = s.active().unwrap().active_layer.unwrap();
+    let layer = |d: &Document, x, y| d.layer(id).unwrap().surface().unwrap().rgba(x, y);
+    let (exact, dmg) = patch_preview(&s, &p, u64::MAX, 1).unwrap();
+    let (coarse, _) = patch_preview(&s, &p, 64, 1).unwrap();
+    assert!(dmg.contains(104, 24) && !dmg.contains(20, 24), "{dmg:?}");
+    assert_eq!(s.active().unwrap().revision, rev, "the preview records nothing");
+    s.execute("paint.patch", p).unwrap();
+    let committed = s.active().unwrap().doc.clone();
+    let mut worst = 0.0f32;
+    for y in 0..96 {
+        for x in 0..160 {
+            let (e, c, d) = (layer(&exact, x, y), layer(&coarse, x, y), layer(&committed, x, y));
+            for k in 0..4 {
+                assert!((e[k] - d[k]).abs() < 1e-6, "step 1 is the command at {x},{y}");
+                worst = worst.max((c[k] - d[k]).abs());
+            }
+        }
+    }
+    // 64 cells over a ~64² patch: an 8× coarser membrane. Measured worst pixel 0.022 (under six
+    // 8-bit steps), all in the colour fit: the texture is exact.
+    assert!(worst < 0.03, "coarse preview off by {worst}");
+    assert!(patch_preview(&s, &json!({"offset": [500, 0]}), 64, 1).is_err());
+}
