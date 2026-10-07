@@ -201,6 +201,22 @@ pub fn command_params(f: &Map<String, Value>) -> Value {
     Value::Object(f.iter().filter(|(k, _)| !k.starts_with("__")).map(|(k, v)| (k.clone(), v.clone())).collect())
 }
 
+/// Set the resolution (pixels/inch) the way Photoshop's New Document does (#758): with Width/Height
+/// in a physical unit the physical size is kept and the pixel count changes; in pixels the pixels
+/// are kept.
+pub fn set_resolution(f: &mut Map<String, Value>, new_ppi: f32) {
+    let old_ppi = get_f(f, "resolution", 72.0);
+    f.insert("resolution".into(), json!(new_ppi));
+    if get_s(f, "__unit", "px") == "px" || !(old_ppi > 0.0 && new_ppi > 0.0) || old_ppi == new_ppi {
+        return;
+    }
+    let scale = new_ppi / old_ppi;
+    let (w, h) = (get_f(f, "width", 1920.0), get_f(f, "height", 1080.0));
+    f.insert("width".into(), px_value(w * scale));
+    f.insert("height".into(), px_value(h * scale));
+    f.remove("__preset");
+}
+
 fn get_f(f: &Map<String, Value>, k: &str, d: f32) -> f32 {
     f.get(k).and_then(Value::as_f64).map_or(d, |v| v as f32)
 }
@@ -385,7 +401,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, recent: &[RecentDoc])
                 let per_cm = get_s(f, "__resUnit", "in") == "cm";
                 let mut r = if per_cm { ppi / 2.54 } else { ppi };
                 if widgets::value_field(ui, &mut r, 1.0..=30_000.0, "", 110.0).changed() {
-                    f.insert("resolution".into(), json!(if per_cm { r * 2.54 } else { r }));
+                    set_resolution(f, if per_cm { r * 2.54 } else { r });
                 }
                 let mut ru = get_s(f, "__resUnit", "in");
                 if widgets::dropdown(ui, "nd-resunit", &mut ru, &[("in".to_string(), tl!("Pixels/Inch")), ("cm".to_string(), tl!("Pixels/Centimeter"))], 120.0)
@@ -444,6 +460,25 @@ mod tests {
         assert_eq!(from_unit(7.0, "in", 300.0), 2100.0);
         assert_eq!(from_unit(2.54, "cm", 300.0), 300.0);
         assert_eq!(to_unit(640.0, "px", 72.0), 640.0);
+    }
+
+    #[test]
+    fn resolution_keeps_physical_size_in_physical_units_and_pixels_in_px() {
+        let a4 = CATEGORIES.iter().find(|c| c.0 == "Print").unwrap().1.iter().find(|p| p.0 == "A4").unwrap();
+        let mut f = crate::state::UiState::new_document_fields();
+        apply_preset(&mut f, a4);
+        f.insert("__unit".into(), json!("in"));
+        set_resolution(&mut f, 150.0);
+        let p = command_params(&f);
+        assert_eq!((p["width"].clone(), p["height"].clone(), p["resolution"].clone()), (json!(1240), json!(1754), json!(150.0)));
+        assert!(!f.contains_key("__preset"));
+
+        let mut f = crate::state::UiState::new_document_fields();
+        apply_preset(&mut f, a4);
+        f.insert("__unit".into(), json!("px"));
+        set_resolution(&mut f, 150.0);
+        let p = command_params(&f);
+        assert_eq!((p["width"].clone(), p["height"].clone(), p["resolution"].clone()), (json!(2480), json!(3508), json!(150.0)));
     }
 
     #[test]
