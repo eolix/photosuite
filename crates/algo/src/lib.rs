@@ -20,6 +20,7 @@
 
 mod artistic;
 mod artistic_fx;
+mod cutout;
 mod blur;
 mod blur2;
 pub mod camera_raw;
@@ -540,6 +541,12 @@ impl FilterParams {
         self.halo() == Halo::Bounds
     }
 
+    /// Whether the filter works on the whole image in one piece (it can't be split into tiles):
+    /// a Filter Gallery stack with Cutout, which segments the image as a whole.
+    pub fn one_piece(&self) -> bool {
+        matches!(self, FilterParams::FilterGallery { effects } if artistic_fx::whole_image(effects))
+    }
+
     /// Human-readable name.
     pub fn label(&self) -> &'static str {
         match self {
@@ -638,6 +645,8 @@ fn halo_ext(p: &FilterParams) -> Halo {
         FilterParams::PathBlur { paths } => r(paths.iter().map(|p| p.speed.abs()).fold(0.0, f32::max) / 2.0 + 1.0),
         FilterParams::Custom { .. } => r(2.0),
         FilterParams::DeInterlace { .. } => r(1.0),
+        // Cutout segments the whole image at once.
+        FilterParams::FilterGallery { effects } if artistic_fx::whole_image(effects) => Halo::Bounds,
         FilterParams::FilterGallery { effects } => Halo::Radius(artistic_fx::reach(effects)),
         _ => Halo::Radius(0),
     }
@@ -866,6 +875,9 @@ pub fn apply_in(surface: &Surface, params: &FilterParams, area: Rect, bounds: Re
 /// Results do not depend on the tiling, so wide-halo filters use bigger tiles to keep the
 /// re-read margin (and its cost) below ~2× the tile area.
 fn auto_tile(params: &FilterParams) -> i32 {
+    if params.one_piece() {
+        return i32::MAX;
+    }
     match params.halo() {
         Halo::Radius(r) => TILE.max((2 * r + 63) / 64 * 64).min(2048),
         Halo::Bounds => TILE,
@@ -895,10 +907,10 @@ pub fn apply_tiled(
     while y < area.y1 {
         let mut x = area.x0;
         while x < area.x1 {
-            tiles.push(Rect::new(x, y, (x + tile).min(area.x1), (y + tile).min(area.y1)));
-            x += tile;
+            tiles.push(Rect::new(x, y, x.saturating_add(tile).min(area.x1), y.saturating_add(tile).min(area.y1)));
+            x = x.saturating_add(tile);
         }
-        y += tile;
+        y = y.saturating_add(tile);
     }
     let run = |t: &Rect| -> (Rect, Vec<f32>) {
         let owned;
@@ -942,7 +954,9 @@ pub fn apply_tiled(
     let threads = rayon::current_num_threads();
     #[cfg(target_arch = "wasm32")]
     let threads = 1;
-    let per_tile = (tile.max(1) as usize).pow(2) * fmt.channels() * std::mem::size_of::<f32>();
+    // The real tile's size: a one-piece filter asks for one tile as large as the area.
+    let side = (tile.max(1) as u32).min(area.width().max(area.height()).max(1)) as usize;
+    let per_tile = side.saturating_mul(side).saturating_mul(fmt.channels() * std::mem::size_of::<f32>());
     let group = (RESULT_BUDGET / per_tile.max(1)).max(threads).max(1);
     for chunk in tiles.chunks(group) {
         #[cfg(not(target_arch = "wasm32"))]

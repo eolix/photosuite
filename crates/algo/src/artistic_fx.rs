@@ -384,7 +384,8 @@ pub(crate) fn effect_reach(e: &GalleryEffect) -> i32 {
     let g = |k: &str| e.get(k);
     match e.filter {
         F::ColoredPencil => 2,
-        F::Cutout => gs(cutout_sigma(e)),
+        // Runs on the whole image ([`whole_image`]): no margin to read.
+        F::Cutout => 0,
         F::DryBrush | F::Fresco => kuwahara_reach(1 + g("brushSize") as usize) + gs(1.0) + 2,
         F::FilmGrain | F::DiffuseGlow | F::ChalkCharcoal | F::Reticulation | F::Grain | F::MosaicTiles | F::Texturizer => 0,
         F::RoughPastels => (g("strokeLength") / 2.0) as i32 + 2,
@@ -426,9 +427,6 @@ pub(crate) fn effect_reach(e: &GalleryEffect) -> i32 {
     }
 }
 
-fn cutout_sigma(e: &GalleryEffect) -> f32 {
-    0.5 + e.get("edgeSimplicity") * (1.1 - 0.3 * e.get("edgeFidelity"))
-}
 fn daubs_radius(e: &GalleryEffect) -> usize {
     let wide = matches!(e.choice("brushType"), "wideSharp" | "wideBlurry");
     let r = e.get("brushSize") / 2.0 * if wide { 1.5 } else { 1.0 };
@@ -448,6 +446,11 @@ fn patch_size(e: &GalleryEffect) -> f32 {
 }
 fn glass_cell(e: &GalleryEffect) -> f32 {
     e.get("cellSize") * 1.6 + 1.0
+}
+
+/// Whether a stack has to see the whole image at once: Cutout segments it as a whole.
+pub(crate) fn whole_image(effects: &[GalleryEffect]) -> bool {
+    effects.iter().any(|e| e.filter == F::Cutout)
 }
 
 /// Total reach of a stack of effects.
@@ -504,14 +507,7 @@ fn apply(e: &GalleryEffect, win: &mut Win, ctx: &Ctx) {
             }
         }
         F::Cutout => {
-            blur3(&mut win.c, w, h, cutout_sigma(e));
-            let levels = g("numberOfLevels").round();
-            for p in &mut win.c {
-                // Flat tones per luminance level, keeping each region's hue.
-                let l = lum(p).max(1e-4);
-                let k = posterize(l, levels) / l;
-                *p = map(*p, |v| posterize(clamp01(v * k), levels * 2.0));
-            }
+            win.c = crate::cutout::cutout(&win.c, w, h, g("numberOfLevels"), g("edgeSimplicity"), g("edgeFidelity"));
         }
         F::DryBrush | F::Fresco => {
             let fresco = e.filter == F::Fresco;

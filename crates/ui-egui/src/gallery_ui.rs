@@ -3,8 +3,10 @@
 //! selected effect's filter and settings, and the effect-layer stack (new, delete, reorder,
 //! show/hide). The stack is applied bottom to top.
 //!
-//! The preview runs the same algorithm as the command on the visible part of the layer
-//! (downsampled when zoomed out). OK runs `filter.filterGallery {effects:[...]}`, one history
+//! The preview runs the same algorithm as the command, at full size: on the visible part of the
+//! layer, or on the whole layer for an effect that works on the whole image (Cutout). Only the
+//! result is scaled down for display, never the image filtered: size-dependent effects (Cutout's
+//! regions, brush and cell sizes) would otherwise look different from what OK applies. OK runs `filter.filterGallery {effects:[...]}`, one history
 //! step (a smart filter on smart objects). Everything is drivable over the control channel with
 //! `filter.filterGallery {"ui": {...}}` while the dialog is open.
 
@@ -74,6 +76,8 @@ pub struct GalleryDialog {
     center: [f32; 2],
     tex: Option<TextureHandle>,
     shown: Option<(u64, ERect)>,
+    /// The whole layer filtered (one-piece stacks such as Cutout), keyed by the stack.
+    full: Option<(u64, Surface)>,
     thumb_src: Surface,
     thumbs: Vec<Option<TextureHandle>>,
     pub preview_ms: f64,
@@ -169,6 +173,54 @@ fn image(surf: &Surface, w: usize, h: usize) -> egui::ColorImage {
     egui::ColorImage::new([w, h], px.iter().map(|p| Color32::from_rgba_unmultiplied(p[0], p[1], p[2], if alpha { p[3] } else { 255 })).collect())
 }
 
+/// The preview of `vis` shown at 1 / `k`: filtered at full size, only the result scaled down.
+/// A stack that works on the whole image (Cutout) is run on the whole layer, once per stack.
+fn preview_image(d: &mut GalleryDialog, params: &Value, vis: Rect, k: u32) -> Option<egui::ColorImage> {
+    let effects = photosuite_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
+    if (FilterParams::FilterGallery { effects }).one_piece() {
+        let mut ph = std::collections::hash_map::DefaultHasher::new();
+        params.to_string().hash(&mut ph);
+        let key = ph.finish();
+        if d.full.as_ref().is_none_or(|(k0, _)| *k0 != key) {
+            d.full = Some((key, render(&d.src, params)));
+        }
+        return d.full.as_ref().map(|(_, full)| shrink(full, vis, k));
+    }
+    let crop = sample(&d.src, vis, 1);
+    let out = render(&crop, params);
+    Some(shrink(&out, Rect::new(0, 0, vis.width() as i32, vis.height() as i32), k))
+}
+
+/// `r` of `surf` scaled down by `k` for display, each displayed pixel the mean of its k × k block.
+fn shrink(surf: &Surface, r: Rect, k: u32) -> egui::ColorImage {
+    let k = k.max(1) as usize;
+    let (sw, sh) = (r.width() as usize, r.height() as usize);
+    let (w, h) = (sw.div_ceil(k).max(1), sh.div_ceil(k).max(1));
+    let mut acc = vec![[0u32; 5]; w * h];
+    let mut row = vec![[0u8; 4]; sw];
+    for y in 0..sh {
+        surf.read_rgba8_into(Rect::new(r.x0, r.y0 + y as i32, r.x1, r.y0 + y as i32 + 1), &mut row);
+        let line = &mut acc[(y / k) * w..(y / k + 1) * w];
+        for (x, p) in row.iter().enumerate() {
+            let a = &mut line[x / k];
+            for c in 0..4 {
+                a[c] += u32::from(p[c]);
+            }
+            a[4] += 1;
+        }
+    }
+    let alpha = surf.format().alpha;
+    let px = acc
+        .iter()
+        .map(|a| {
+            let n = a[4].max(1);
+            let v = |c: usize| (a[c] / n) as u8;
+            Color32::from_rgba_unmultiplied(v(0), v(1), v(2), if alpha { v(3) } else { 255 })
+        })
+        .collect();
+    egui::ColorImage::new([w, h], px)
+}
+
 /// Opens the dialog on the active layer, starting from the last gallery stack used.
 pub fn open(app: &mut PhotosuiteApp) -> Result<(), String> {
     let (layer, src, _) = crate::distort_ui::active_pixels(app)?;
@@ -217,6 +269,7 @@ pub fn open(app: &mut PhotosuiteApp) -> Result<(), String> {
         center: [(canvas.x0 + canvas.x1) as f32 / 2.0, (canvas.y0 + canvas.y1) as f32 / 2.0],
         tex: None,
         shown: None,
+        full: None,
         thumb_src,
         thumbs: vec![None; GalleryFilter::ALL.len()],
         preview_ms: 0.0,
@@ -311,10 +364,7 @@ fn update_preview(d: &mut GalleryDialog, ctx: &egui::Context, area: ERect) {
         return;
     }
     let t0 = crate::gpu_canvas::now_ms();
-    let small = sample(&d.src, vis, k);
-    let out = render(&small, &params);
-    let (w, hgt) = (vis.width().div_ceil(k) as usize, vis.height().div_ceil(k) as usize);
-    let img = image(&out, w, hgt);
+    let Some(img) = preview_image(d, &params, vis, k) else { return };
     match &mut d.tex {
         Some(t) => t.set(img, egui::TextureOptions::LINEAR),
         None => d.tex = Some(ctx.load_texture("gallery-preview", img, egui::TextureOptions::LINEAR)),
@@ -639,6 +689,44 @@ mod tests {
         assert_eq!(app.distort.gallery.as_ref().unwrap().effects.len(), 2);
         control(&mut app, &json!({"cancel": true})).unwrap();
         assert_eq!(app.session.active().unwrap().history.past_len(), before + 1, "cancel records nothing");
+    }
+
+    /// Zoomed out, the preview is the applied result scaled down: Cutout is run on the full-size
+    /// layer, not on a shrunk copy (which loses the detail its region sizes are measured in).
+    #[test]
+    fn zoomed_out_preview_is_the_full_size_result_scaled_down() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.session.execute("file.new", json!({"width": 240, "height": 160})).unwrap();
+        app.session.execute("layer.new.layer", json!({})).unwrap();
+        app.session
+            .edit("paint", |doc, active| {
+                let s = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
+                for y in 0..160 {
+                    for x in 0..240 {
+                        // Small cells (5 px) on a dark ground, in a few colours.
+                        let cell = (x % 9 < 5) && (y % 9 < 5);
+                        let p = if cell { [0.2 + (x / 9 % 3) as f32 * 0.35, 0.3, 0.9 - (y / 9 % 3) as f32 * 0.3, 1.0] } else { [0.05, 0.05, 0.06, 1.0] };
+                        s.write_pixel(x, y, &p);
+                    }
+                }
+                Ok(())
+            })
+            .unwrap();
+        app.sync_views();
+        open(&mut app).unwrap();
+        control(&mut app, &json!({"filter": "cutout", "params": {"numberOfLevels": 4, "edgeSimplicity": 0, "edgeFidelity": 3}})).unwrap();
+        let d = app.distort.gallery.as_mut().unwrap();
+        let params = d.params();
+        let vis = d.canvas;
+        let k = 4;
+        let preview = preview_image(d, &params, vis, k).unwrap();
+        let expected = shrink(&render(&d.src, &params), vis, k);
+        assert_eq!(preview.size, expected.size);
+        assert_eq!(preview.pixels, expected.pixels, "the preview is the full-size result, scaled");
+        // Filtering a shrunk copy instead loses the cells.
+        let shrunk_first = render(&sample(&d.src, vis, k), &params);
+        let lost = image(&shrunk_first, expected.size[0], expected.size[1]);
+        assert_ne!(lost.pixels, expected.pixels);
     }
 
     #[test]
