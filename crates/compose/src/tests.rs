@@ -1152,6 +1152,25 @@ fn levels_work_on_whole_levels() {
     }
 }
 
+// The oracle corpus' rgb32 levels.psd: input 15..230, gamma 1.3, output 10..245. In a
+// 32-bit document neither range clips and the gamma is a plain power curve mirrored below black:
+// 0.0497 → 3 (the clipped curve gives 10), 0.9473 → 255 (245). Integer documents still clip.
+#[test]
+fn levels_dont_clip_in_32_bit() {
+    let ch = LevelsChannel { in_black: 15.0 / 255.0, in_white: 230.0 / 255.0, gamma: 1.3, out_black: 10.0 / 255.0, out_white: 245.0 / 255.0 };
+    let adj = Adjustment::Levels { master: ch, per_channel: Default::default(), space: Default::default(), black: LevelsChannel::default() };
+    let level = |depth, v| {
+        let mut b = Buffer::filled(Rect::new(0, 0, 1, 1), [v, v, v, 1.0]);
+        adjust::apply_depth(&adj, &mut b, adjust::Transfer::Srgb, Some(depth));
+        (b.px[0][0] * 255.0).round()
+    };
+    for (v, want) in [(0.0, 0.0), (0.0497, 3.0), (0.0976, 32.0), (0.4508, 140.0), (0.9473, 255.0), (1.0, 255.0)] {
+        assert_eq!(level(SampleType::F32, v), want, "{v}");
+    }
+    assert_eq!(level(SampleType::U8, 0.0), 10.0);
+    assert_eq!(level(SampleType::U8, 1.0), 245.0);
+}
+
 // Exposure linearises RGB documents through a 2.2 power, not the sRGB curve: Photoshop lifts 76
 // to 134 with an offset of 0.1738 (psd-tools adjustment_nested_composition_4).
 #[test]

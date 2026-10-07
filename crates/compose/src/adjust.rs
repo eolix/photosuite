@@ -3,6 +3,7 @@
 //! Formulas are documented approximations of Photoshop behaviour. Exact matching is tuned in
 //! milestone M7 against Photoshop-rendered PSD composites (the oracle in `testkit`).
 
+use photosuite_color::SampleType;
 use photosuite_color::convert::rgb_to_gray;
 use photosuite_doc::Adjustment;
 use photosuite_doc::adjust::{CurvePoint, HueRange, LevelsChannel, ToneSpace};
@@ -68,10 +69,10 @@ pub fn apply_with(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer) {
     apply_depth(adj, buf, transfer, None);
 }
 
-/// Applies an adjustment with the document's tone transfer, on samples with `quantum` steps
-/// per unit (the document's integer depth, see `adjustment_quantum`): Levels then works on
-/// whole levels like Photoshop's (see [`levels_q`]).
-pub fn apply_depth(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, quantum: Option<f32>) {
+/// Applies an adjustment with the document's tone transfer, in a document of `depth` (`None`:
+/// unrounded). Integer depths work on whole levels like Photoshop's (see [`levels_q`] and
+/// `adjustment_quantum`), 32-bit documents get its float Levels (see [`levels_float`]).
+pub fn apply_depth(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, depth: Option<SampleType>) {
     match adj {
         Adjustment::Invert => map_rgb(buf, |c| [1.0 - c[0], 1.0 - c[1], 1.0 - c[2]]),
         Adjustment::Threshold { level } => {
@@ -119,7 +120,7 @@ pub fn apply_depth(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, quant
             })
         }
         Adjustment::Levels { space, .. } | Adjustment::Curves { space, .. } => {
-            let luts = tone_luts_q(adj, quantum);
+            let luts = tone_luts_depth(adj, depth);
             match space {
                 ToneSpace::Rgb => map_rgb(buf, |c| std::array::from_fn(|i| lut(&luts[i], c[i]))),
                 ToneSpace::Cmyk | ToneSpace::Lab => map_rgb(buf, |c| tone_in_space(*space, &luts, c)),
@@ -245,6 +246,19 @@ pub fn tone_luts_q(adj: &Adjustment, quantum: Option<f32>) -> [Vec<f32>; 4] {
             [row(&per_channel[0]), row(&per_channel[1]), row(&per_channel[2]), row(if *space == ToneSpace::Cmyk { black } else { &[] })]
         }
         _ => std::array::from_fn(|_| (0..LUT_SIZE).map(x).collect()),
+    }
+}
+
+/// [`tone_luts_q`] in a document of `depth` (`None`: unrounded). 32-bit Levels use
+/// [`levels_float`], sampled on 0..1 and kept in 0..1 like every adjustment result here.
+pub fn tone_luts_depth(adj: &Adjustment, depth: Option<SampleType>) -> [Vec<f32>; 4] {
+    match (adj, depth) {
+        (Adjustment::Levels { master, per_channel, space: ToneSpace::Rgb, .. }, Some(SampleType::F32)) => {
+            let x = |k: usize| k as f32 / (LUT_SIZE - 1) as f32;
+            let row = |c: &LevelsChannel| (0..LUT_SIZE).map(|k| levels_float(c, levels_float(master, x(k))).clamp(0.0, 1.0)).collect();
+            [row(&per_channel[0]), row(&per_channel[1]), row(&per_channel[2]), (0..LUT_SIZE).map(x).collect()]
+        }
+        _ => tone_luts_q(adj, depth.and_then(crate::adjustment_quantum)),
     }
 }
 
@@ -522,6 +536,16 @@ pub fn levels_q(ch: &LevelsChannel, v: f32, quantum: Option<f32>) -> f32 {
     } else {
         u.powf(1.0 / g)
     };
+    ch.out_black + t * (ch.out_white - ch.out_black)
+}
+
+/// [`levels`] in a 32-bit document. Neither the input is clipped to the input range nor the result
+/// to the output range there, and the midtone gamma is a plain power curve, mirrored below the
+/// black point (the oracle corpus' rgb32 and gray32 levels.psd: within 0.5/255, 10/255 off with
+/// the clipped curve).
+pub fn levels_float(ch: &LevelsChannel, v: f32) -> f32 {
+    let t = (v - ch.in_black) / (ch.in_white - ch.in_black).max(1e-6);
+    let t = t.signum() * t.abs().powf(1.0 / ch.gamma.max(0.01));
     ch.out_black + t * (ch.out_white - ch.out_black)
 }
 
