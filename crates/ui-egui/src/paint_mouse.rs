@@ -224,6 +224,38 @@ mod tests {
     }
 
     #[test]
+    fn shift_click_connects_to_the_previous_brush_stroke() {
+        use egui::{Event, Modifiers};
+
+        let mut h = harness(None);
+        let (_, end) = drag(&mut h, PointerButton::Primary);
+        let previous = h
+            .state()
+            .session
+            .journal
+            .iter()
+            .rev()
+            .find(|(id, _)| id == "paint.stroke")
+            .map(|(_, p)| p["points"].as_array().unwrap().last().unwrap().clone())
+            .unwrap();
+        let target = end + vec2(120.0, 80.0);
+        h.event(Event::PointerMoved(target));
+        h.run_steps(1);
+        for pressed in [true, false] {
+            h.event(Event::PointerButton { pos: target, button: PointerButton::Primary, pressed, modifiers: Modifiers::SHIFT });
+            h.run_steps(2);
+        }
+
+        let strokes = strokes(&h);
+        assert_eq!(strokes.len(), 2, "a Shift-click commits one connected stroke");
+        let points = strokes[1]["points"].as_array().unwrap();
+        assert_eq!(points.len(), 2, "a click has the previous endpoint and clicked endpoint");
+        assert_eq!(points[0][0], previous[0]);
+        assert_eq!(points[0][1], previous[1]);
+        assert!(alpha_at(&h, end + vec2(60.0, 40.0)) > 0.9, "the segment between the strokes is painted");
+    }
+
+    #[test]
     fn right_click_opens_the_brush_picker_and_never_paints() {
         let mut h = harness(None);
         let undo = h.state().session.active().unwrap().history.past_len();

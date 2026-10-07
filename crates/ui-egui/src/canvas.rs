@@ -304,6 +304,16 @@ fn pointer_moves(events: &[egui::Event], button: egui::PointerButton, down_at_st
     out
 }
 
+/// Modifiers attached to the pointer event itself. Some input sources provide these without a
+/// separate `ModifiersChanged` event, so use them for click gestures before falling back to the
+/// frame-wide modifier state.
+fn pointer_button_modifiers(events: &[egui::Event], button: egui::PointerButton) -> Option<egui::Modifiers> {
+    events.iter().rev().find_map(|e| match e {
+        egui::Event::PointerButton { button: b, modifiers, .. } if *b == button => Some(*modifiers),
+        _ => None,
+    })
+}
+
 /// Abstract tool event, produced by the mouse or by automation (`ui.pointer`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ToolEvent {
@@ -1838,10 +1848,12 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
         if buttons.clicked
             && let Some(p) = response.interact_pointer_pos()
         {
+            let click_button = if app.secondary_erase { PointerButton::Secondary } else { PointerButton::Primary };
+            let click_mods = ui.input(|i| pointer_button_modifiers(&i.events, click_button)).unwrap_or(mods);
             let d = xf.to_doc(p);
             match tool {
                 Tool::Zoom => {
-                    let nz = zoom_step(view.zoom, if zoom_out(mods.alt) { -1 } else { 1 });
+                    let nz = zoom_step(view.zoom, if zoom_out(click_mods.alt) { -1 } else { 1 });
                     zoom_about(&mut view, &xf, p, nz);
                 }
                 // A click with the (temporary) Hand does nothing, never the tool underneath.
@@ -1854,8 +1866,8 @@ pub fn canvas_view(app: &mut PhotosuiteApp, ui: &mut egui::Ui, idx: usize, rect:
                     if tool == Tool::Move && app.ui.transform.is_none() {
                         begin_transform_controls_at(app, &ctx, &xf, p);
                     }
-                    tool_event(app, ToolEvent::Down { x: d[0], y: d[1], pressure: 1.0 }, mods);
-                    tool_event(app, ToolEvent::Up { x: d[0], y: d[1] }, mods);
+                    tool_event(app, ToolEvent::Down { x: d[0], y: d[1], pressure: 1.0 }, click_mods);
+                    tool_event(app, ToolEvent::Up { x: d[0], y: d[1] }, click_mods);
                 }
             }
         }
