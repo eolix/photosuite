@@ -85,6 +85,10 @@ fn range_param(text: &str, p: &Value) -> (usize, usize) {
 /// Photoshop's manual kerning range (1/1000 em).
 pub const KERN_MIN: f64 = -1000.0;
 pub const KERN_MAX: f64 = 10_000.0;
+pub const TYPE_SIZE_MIN_PT: f64 = 0.1;
+pub const TYPE_SIZE_MAX_PT: f64 = 1296.0;
+pub const TRACKING_MIN: f64 = -1000.0;
+pub const TRACKING_MAX: f64 = 10_000.0;
 
 /// Validates the `kerning` key of character params: a number in [`KERN_MIN`]..=[`KERN_MAX`] or
 /// `"metrics"`, `"optical"`, `"off"` (`"none"`, `"0"`).
@@ -98,6 +102,23 @@ pub fn check_kerning(p: &Value) -> std::result::Result<(), String> {
         Some(Value::String(v)) if matches!(v.to_ascii_lowercase().as_str(), "metrics" | "optical" | "off" | "none" | "0") => Ok(()),
         Some(_) => Err("kerning must be a number (1/1000 em) or \"metrics\", \"optical\" or \"off\"".into()),
     }
+}
+
+/// Validates text metrics that can otherwise exceed the rasterizer's supported range.
+pub fn check_size_tracking(p: &Value) -> std::result::Result<(), String> {
+    if let Some(v) = p.get("size") {
+        match v.as_f64() {
+            Some(size) if size.is_finite() && (TYPE_SIZE_MIN_PT..=TYPE_SIZE_MAX_PT).contains(&size) => {}
+            _ => return Err(format!("size must be between {TYPE_SIZE_MIN_PT} and {TYPE_SIZE_MAX_PT} pt")),
+        }
+    }
+    if let Some(v) = p.get("tracking") {
+        match v.as_f64() {
+            Some(tracking) if tracking.is_finite() && (TRACKING_MIN..=TRACKING_MAX).contains(&tracking) => {}
+            _ => return Err(format!("tracking must be between {TRACKING_MIN} and {TRACKING_MAX} (1/1000 em)")),
+        }
+    }
+    Ok(())
 }
 
 /// Applies character-style keys from JSON. Returns true if any key was present.
@@ -501,7 +522,7 @@ fn info(s: &Session, p: &Value) -> Result<Value> {
     }))
 }
 
-const CHAR_PARAMS: &str = r##""font":str,"fontStyle":str,"weight":100..900,"italic":bool,"size":pt,"color":"#rrggbb"|[r,g,b,a],"tracking":1/1000em,"leading":pt|"auto","baselineShift":pt,"horizontalScale":%,"verticalScale":%,"underline":bool,"strikethrough":bool,"fauxBold":bool,"fauxItalic":bool,"kerning":1/1000em (manual, after each character)|"metrics"|"optical"|"off","caps":"normal|small|all","ligatures":bool,"discretionaryLigatures":bool,"features":{"ss01":1},"variations":{"wght":650},"language":str"##;
+const CHAR_PARAMS: &str = r##""font":str,"fontStyle":str,"weight":100..900,"italic":bool,"size":0.1..=1296 pt,"color":"#rrggbb"|[r,g,b,a],"tracking":-1000..=10000 (1/1000 em),"leading":pt|"auto","baselineShift":pt,"horizontalScale":%,"verticalScale":%,"underline":bool,"strikethrough":bool,"fauxBold":bool,"fauxItalic":bool,"kerning":1/1000em (manual, after each character)|"metrics"|"optical"|"off","caps":"normal|small|all","ligatures":bool,"discretionaryLigatures":bool,"features":{"ss01":1},"variations":{"wght":650},"language":str"##;
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
@@ -514,6 +535,7 @@ pub fn specs() -> Vec<CommandSpec> {
             enabled: has_doc,
             journal: true,
             run: |s, p| {
+                check_size_tracking(p).map_err(|m| bad("type.create", m))?;
                 let text = norm_text(p.get("text").and_then(Value::as_str).unwrap_or(""));
                 // Type › Save Default Type Styles sets the starting styles; the colour is always
                 // the foreground colour, as in Photoshop.
@@ -564,6 +586,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 let id = layer_id(s, p)?;
                 let name = p.get("name").and_then(Value::as_str).map(str::to_string);
                 check_kerning(p).map_err(|m| bad("type.edit", m))?;
+                check_size_tracking(p).map_err(|m| bad("type.edit", m))?;
                 if let Some(Value::Array(runs)) = p.get("runs") {
                     for (i, r) in runs.iter().enumerate() {
                         check_kerning(r).map_err(|m| bad("type.edit", m))?;
@@ -574,6 +597,7 @@ pub fn specs() -> Vec<CommandSpec> {
                         {
                             return Err(bad("type.edit", format!("runs[{i}]: `end` ({end}) is before `start` ({start})")));
                         }
+                        check_size_tracking(r).map_err(|m| bad("type.edit", m))?;
                     }
                 }
                 let kern_pair = match p.get("kernPair") {
@@ -684,6 +708,7 @@ pub fn specs() -> Vec<CommandSpec> {
             run: |s, p| {
                 let id = layer_id(s, p)?;
                 check_kerning(p).map_err(|m| bad("type.setStyle", m))?;
+                check_size_tracking(p).map_err(|m| bad("type.setStyle", m))?;
                 with_text_layer(s, p, "Set Type Style", |t, _, _| {
                     let (a, b) = range_param(&t.text, p);
                     let mut probe = CharStyle::default();
@@ -824,6 +849,30 @@ mod tests {
         s.execute("layer.translate", json!({"layer": id, "dx": 5, "dy": 3})).unwrap();
         let t = text_layer(&s, id);
         assert_ne!(t.cache.as_ref().unwrap().content_bounds(), photosuite_geom::Rect::new(15, 13, 35, 33));
+    }
+
+    #[test]
+    fn absurd_type_size_and_tracking_are_rejected_as_bad_params() {
+        let mut s = session();
+        assert!(matches!(
+            s.execute("type.create", json!({"text": "abc", "size": 1e30})),
+            Err(EngineError::BadParams { cmd, .. }) if cmd == "type.create"
+        ));
+
+        let id = s.execute("type.create", json!({"text": "abc", "size": 12})).unwrap()["layer"].as_u64().unwrap();
+        let before = text_layer(&s, id);
+        for params in [json!({"layer": id, "tracking": 1e30}), json!({"layer": id, "runs": [{"start": 0, "end": 3, "tracking": 1e30}]})] {
+            assert!(matches!(
+                s.execute("type.edit", params),
+                Err(EngineError::BadParams { cmd, .. }) if cmd == "type.edit"
+            ));
+            assert_eq!(text_layer(&s, id).runs, before.runs);
+        }
+        assert!(matches!(
+            s.execute("type.setStyle", json!({"layer": id, "tracking": 1e30})),
+            Err(EngineError::BadParams { cmd, .. }) if cmd == "type.setStyle"
+        ));
+        assert_eq!(text_layer(&s, id).runs, before.runs);
     }
 
     #[test]
