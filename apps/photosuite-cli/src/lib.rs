@@ -34,8 +34,9 @@ USAGE:
   photosuite-cli serve [--port <port>] [--control-token <64-hex> | --control-token-file <path>]
       [--automation-read-root <dir>] [--automation-write-root <dir>]
       Keep one headless session open and answer JSON lines ({\"id\",\"method\",\"params\"}) on stdio,
-      or on 127.0.0.1:<port>. Methods: engine.execute, engine.commands, doc.open/new/save/inspect/render/
-      select/close, session.list, batch, methods (docs/control-protocol.md#headless-server).
+      or on 127.0.0.1:<port>. Methods: engine.execute, jobs.list/cancel, engine.commands,
+      doc.open/new/save/inspect/render/select/close, session.list, batch, methods
+      (docs/control-protocol.md#headless-server).
 ";
 
 struct Args {

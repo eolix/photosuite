@@ -5,7 +5,8 @@
 //! loopback TCP port.
 //!
 //! Methods (camelCase params):
-//! - `engine.execute {command, params?}` / `engine.commands {filter?}`
+//! - `engine.execute {command, params?, wait?}` / `engine.commands {filter?}`
+//! - `jobs.list` / `jobs.cancel {job?}`: background jobs (#210)
 //! - `session.list`, `doc.open {path}`, `doc.new {…file.new params}`,
 //!   `doc.save {path?, format?, quality?, index?}`, `doc.inspect {index?}`,
 //!   `doc.render {index?, maxSide?, path?}` (writes a PNG to `path`, else
@@ -30,6 +31,8 @@ use crate::{AutomationError, Headless};
 /// Method names served by [`Headless::handle`].
 pub const METHODS: &[&str] = &[
     "engine.execute",
+    "jobs.list",
+    "jobs.cancel",
     "engine.commands",
     "session.list",
     "doc.open",
@@ -469,6 +472,22 @@ mod tests {
         let rendered = h.handle("doc.render", json!({"maxSide": 0})).unwrap();
         let png = base64::engine::general_purpose::STANDARD.decode(rendered["base64"].as_str().unwrap()).unwrap();
         assert_eq!(photosuite_codecs::decode(&png).unwrap().dimensions(), (2049, 1));
+    }
+
+    #[test]
+    fn methods_lists_the_job_methods_and_every_listed_name_is_served() {
+        let mut h = Headless::new();
+        let listed = h.handle("methods", Value::Null).unwrap();
+        let listed: Vec<&str> = listed.as_array().unwrap().iter().map(|m| m.as_str().unwrap()).collect();
+        assert_eq!(listed, METHODS);
+        // The job methods `engine.execute {"wait": false}` depends on are discoverable (#414).
+        assert!(listed.contains(&"jobs.list") && listed.contains(&"jobs.cancel"));
+        for m in METHODS {
+            if let Err(e) = h.handle(m, Value::Null) {
+                assert!(!e.to_string().contains("unknown method"), "{m} is listed but not served: {e}");
+            }
+        }
+        assert!(h.handle("jobs.nope", Value::Null).unwrap_err().to_string().contains("unknown method"));
     }
 
     #[test]
