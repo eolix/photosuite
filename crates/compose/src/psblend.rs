@@ -258,4 +258,28 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn generic_vivid_light_and_hard_mix_composites_match_photoshop() {
+        let cases = [
+            (BlendMode::HardMix, 0.0, 1.0),
+            (BlendMode::HardMix, 1.0, 0.0),
+            (BlendMode::HardMix, 0.6, 0.4),
+            (BlendMode::HardMix, 0.6, 0.3),
+            (BlendMode::VividLight, 1.0, 0.0),
+            (BlendMode::VividLight, 0.0, 1.0),
+            (BlendMode::VividLight, 0.75, 0.25),
+            (BlendMode::VividLight, 0.25, 0.75),
+        ];
+
+        for (mode, cb, cs) in cases {
+            let backdrop = [cb, cb, cb, 1.0];
+            let source = [cs, cs, cs, 1.0];
+            let generic = generic::composite(mode, backdrop, source, 1.0);
+            let photoshop = composite(mode, backdrop, source, 1.0);
+            for channel in 0..4 {
+                assert!((generic[channel] - photoshop[channel]).abs() < 1e-6, "{mode:?} Cb={cb} Cs={cs}: {generic:?} != {photoshop:?}");
+            }
+        }
+    }
 }
