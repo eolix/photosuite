@@ -175,8 +175,13 @@ fn transpose(buf: &[f32], w: usize, h: usize, n: usize) -> Vec<f32> {
 
 /// Gaussian blur by three box passes per axis over a premultiplied window.
 fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
+    box_passes(src, out, alpha, &boxes_for_gauss(sigma, 3))
+}
+
+/// Box blurs of the given (odd) widths, one after another along each axis, over a premultiplied
+/// window; running sums make the cost independent of the widths.
+fn box_passes(src: &Image, out: Rect, alpha: bool, boxes: &[usize]) -> Vec<f32> {
     let n = src.ch;
-    let boxes = boxes_for_gauss(sigma, 3);
     let margin: i32 = boxes.iter().map(|w| (*w as i32 - 1) / 2).sum::<i32>() + 1;
     let win = Rect::new(out.x0 - margin, out.y0 - margin, out.x1 + margin, out.y1 + margin);
     let (ww, wh) = (win.width() as usize, win.height() as usize);
@@ -197,11 +202,11 @@ fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
     #[cfg(target_arch = "wasm32")]
     p.chunks_mut(ww * n).enumerate().for_each(|(y, row)| fill(y, row));
     premultiply(&mut p, n, alpha);
-    for w in &boxes {
+    for w in boxes {
         box_rows(&mut p, ww, n, (w - 1) / 2);
     }
     let mut t = transpose(&p, ww, wh, n);
-    for w in &boxes {
+    for w in boxes {
         box_rows(&mut t, wh, n, (w - 1) / 2);
     }
     let p = transpose(&t, wh, ww, n);
@@ -217,8 +222,12 @@ fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
 
 pub(crate) fn boxed(src: &Image, out: Rect, ctx: &Ctx, radius: f32) -> Vec<f32> {
     let r = radius.max(0.0).round() as usize;
-    let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
-    conv_sep(src, out, &k, &k, ctx.alpha)
+    // Running sums cost the same at any radius; the direct kernel is quicker for the smallest.
+    if r <= 4 {
+        let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
+        return conv_sep(src, out, &k, &k, ctx.alpha);
+    }
+    box_passes(src, out, ctx.alpha, &[2 * r + 1])
 }
 
 fn average_samples(src: &Image, out: Rect, ctx: &Ctx, mut offsets: impl FnMut(f32, f32, &mut Vec<(f32, f32)>)) -> Vec<f32> {
@@ -360,5 +369,29 @@ mod tests {
         let err = exact.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
         assert!(err < 0.02, "max error {err}");
         assert_eq!(boxes_for_gauss(10.0, 3).len(), 3);
+    }
+
+    #[test]
+    fn box_passes_match_the_direct_box_kernel() {
+        // Noisy RGBA with varying alpha, so premultiplication and every channel are exercised.
+        for r in [5usize, 17, 60] {
+            let (w, h, m) = (40, 24, r as i32 + 2);
+            let src_rect = Rect::new(-m, -m, w + m, h + m);
+            let mut img = Image::new(src_rect, 4);
+            let mut s = 0x9e37_79b9u32;
+            for v in img.data.iter_mut() {
+                s ^= s << 13;
+                s ^= s >> 17;
+                s ^= s << 5;
+                *v = (s % 256) as f32 / 255.0;
+            }
+            let out = Rect::new(0, 0, w, h);
+            let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
+            let direct = conv_sep(&img, out, &k, &k, true);
+            let ctx = Ctx { bounds: src_rect, mode: crate::ColorMode::Rgb, alpha: true };
+            let fast = boxed(&img, out, &ctx, r as f32);
+            let err = direct.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(err < 1e-5, "radius {r}: max error {err}");
+        }
     }
 }
