@@ -757,6 +757,15 @@ fn apply(app: &mut PhotosuiteApp, ctx: &egui::Context, props: serde_json::Value)
     let _ = app.run("type.setStyle", p);
 }
 
+/// While characters are selected in a type layer, a new foreground colour (Color and Swatches
+/// panels, the Color Picker) recolours them, in the editing session's history step.
+pub fn foreground_changed(app: &mut PhotosuiteApp) {
+    let Some((layer, Some(range))) = target(app) else { return };
+    let Some(ed) = app.ui.text_edit.as_ref() else { return };
+    let p = json!({"layer": layer, "range": range, "color": hex(app.session.tools.foreground), "coalesce": ed.session});
+    let _ = app.run("type.setStyle", p);
+}
+
 /// Photoshop's Type options bar.
 pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());

@@ -365,3 +365,49 @@ fn vertical_type_caret_selection_and_arrows_follow_the_columns() {
     }
     assert_eq!(super::flow_key(egui::Key::ArrowUp, false), egui::Key::ArrowUp);
 }
+
+fn rgb_at(app: &PhotosuiteApp, id: LayerId, ci: usize) -> [u8; 4] {
+    let t = text(app, id);
+    let b = t.text.char_indices().nth(ci).map_or(t.text.len(), |(b, _)| b);
+    let mut at = 0;
+    for r in t.char_runs() {
+        if b < at + r.len {
+            return r.style.color.to_rgba8();
+        }
+        at += r.len;
+    }
+    [0; 4]
+}
+
+/// A new foreground colour recolours the selected characters only, inside the editing session's
+/// history step; with nothing selected (a caret, or not editing) the type keeps its colour.
+#[test]
+fn foreground_colour_recolours_only_selected_type() {
+    let mut app = new_app();
+    let id =
+        LayerId(app.run("type.create", json!({"text": "Hello world", "size": 40, "x": 300, "y": 420, "color": "#000000"})).unwrap()["layer"].as_u64().unwrap());
+    app.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
+    super::foreground_changed(&mut app);
+    assert_eq!(rgb_at(&app, id, 0), [0, 0, 0, 255], "not editing: unchanged");
+    let edit = |caret, anchor| crate::state::TextEdit {
+        layer: id.0,
+        caret,
+        anchor,
+        session: "s".into(),
+        created: false,
+        dragging: false,
+        resize: None,
+        preedit: None,
+    };
+    app.ui.text_edit = Some(edit(3, 3));
+    super::foreground_changed(&mut app);
+    assert_eq!(rgb_at(&app, id, 0), [0, 0, 0, 255], "a caret: unchanged");
+    let steps = app.session.active().unwrap().history.entries().len();
+    app.ui.text_edit = Some(edit(11, 6));
+    super::foreground_changed(&mut app);
+    app.run("tools.setColors", json!({"foreground": "#00ff00"})).unwrap();
+    super::foreground_changed(&mut app);
+    assert_eq!((rgb_at(&app, id, 0), rgb_at(&app, id, 5)), ([0, 0, 0, 255], [0, 0, 0, 255]));
+    assert_eq!((rgb_at(&app, id, 6), rgb_at(&app, id, 10)), ([0, 255, 0, 255], [0, 255, 0, 255]));
+    assert_eq!(app.session.active().unwrap().history.entries().len(), steps + 1, "one step for the session");
+}

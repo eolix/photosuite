@@ -1252,6 +1252,7 @@ fn swatches(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         let c = [s[0] as f32 / 255.0, s[1] as f32 / 255.0, s[2] as f32 / 255.0, 1.0];
         if resp.clicked() {
             app.session.tools.foreground = c;
+            crate::type_tool::foreground_changed(app);
         }
         if resp.secondary_clicked() {
             app.session.tools.background = c;
@@ -1272,16 +1273,19 @@ fn color_picker(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let mut s = hsva0.s * 100.0;
     let mut v = hsva0.v * 100.0;
     let hue = widgets::hue_stops();
-    widgets::slider_row(ui, tl!("Hue"), &mut h, 0.0..=360.0, "°", Some(&hue));
+    let mut changed = widgets::slider_row(ui, tl!("Hue"), &mut h, 0.0..=360.0, "°", Some(&hue)).changed();
     let sat_stops =
         [egui::ecolor::Hsva::new(hsva0.h, 0.0, hsva0.v.max(0.2), 1.0), egui::ecolor::Hsva::new(hsva0.h, 1.0, hsva0.v.max(0.2), 1.0)].map(Color32::from);
-    widgets::slider_row(ui, tl!("Saturation"), &mut s, 0.0..=100.0, "%", Some(&sat_stops));
+    changed |= widgets::slider_row(ui, tl!("Saturation"), &mut s, 0.0..=100.0, "%", Some(&sat_stops)).changed();
     let val_stops = [Color32::BLACK, Color32::from(egui::ecolor::Hsva::new(hsva0.h, hsva0.s, 1.0, 1.0))];
-    widgets::slider_row(ui, tl!("Brightness"), &mut v, 0.0..=100.0, "%", Some(&val_stops));
+    changed |= widgets::slider_row(ui, tl!("Brightness"), &mut v, 0.0..=100.0, "%", Some(&val_stops)).changed();
     let hsva = egui::ecolor::Hsva::new(h / 360.0, s / 100.0, v / 100.0, 1.0);
-    if hsva != hsva0 {
+    // Only an edit counts: the h/s/v round trip isn't exact, so comparing values would rewrite
+    // the foreground (and recolour selected type) every frame.
+    if changed {
         app.session.tools.foreground = hsva_srgb(hsva);
         ui.data_mut(|d| d.insert_temp(key, hsva));
+        crate::type_tool::foreground_changed(app);
     }
     let [r, g, b, _] = hsva.to_srgba_unmultiplied();
     let t = Tokens::get(ui.ctx());
@@ -2220,6 +2224,7 @@ fn color_field(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         ui.painter().add(egui::Shape::convex_polygon(tri, t.text, Stroke::NONE));
         if fresp.dragged() || fresp.clicked() || sresp.dragged() || sresp.clicked() {
             app.session.tools.foreground = hsva_srgb(hsva);
+            crate::type_tool::foreground_changed(app);
             ui.data_mut(|d| d.insert_temp(key, hsva.h));
         }
     });
@@ -2532,5 +2537,61 @@ mod lock_tests {
         app.run("layer.setProps", json!({"locks": {"transparency": true}})).unwrap();
         click_lock(&mut app);
         assert!(!app.session.active().unwrap().doc.layers[0].locks.transparency);
+    }
+}
+
+#[cfg(test)]
+mod swatch_type_tests {
+    use super::*;
+    use egui::Modifiers;
+    use egui_kittest::Harness;
+
+    /// Clicking a swatch while characters are selected recolours them, not just the foreground.
+    #[test]
+    fn clicking_a_swatch_recolours_selected_type() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 400, "height": 200})).unwrap();
+        let id = app.run("type.create", json!({"text": "Hello world", "size": 40, "x": 20, "y": 100, "color": "#ffffff"})).unwrap()["layer"].as_u64().unwrap();
+        app.ui.tool = Tool::Type;
+        app.ui.text_edit =
+            Some(crate::state::TextEdit { layer: id, caret: 0, anchor: 5, session: "s".into(), created: false, dragging: false, resize: None, preedit: None });
+        let mut h = Harness::builder().with_size(vec2(300.0, 200.0)).build_ui_state(|ui, app: &mut PhotosuiteApp| swatches(app, ui), app);
+        h.run_steps(2);
+        // The first swatch is the top-left cell of the panel's content.
+        let p = h.ctx.input(|i| i.viewport_rect()).min + vec2(12.0, 12.0);
+        h.hover_at(p);
+        h.run_steps(1);
+        h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+        h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+        h.run_steps(2);
+        let s = SWATCHES[0];
+        assert_eq!(h.state().session.tools.foreground, [s[0] as f32 / 255.0, s[1] as f32 / 255.0, s[2] as f32 / 255.0, 1.0]);
+        let st = h.state().session.active().unwrap();
+        let Some(photosuite_doc::LayerContent::Text(t)) = st.doc.layer(photosuite_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
+        let runs = t.char_runs();
+        assert_eq!(runs[0].len, 5, "the selection is its own run");
+        assert_eq!(runs[0].style.color.to_rgba8(), [s[0], s[1], s[2], 255]);
+        assert_eq!(runs[1].style.color.to_rgba8(), [255, 255, 255, 255]);
+    }
+
+    /// The HSB sliders only act on an edit. Their h/s/v round trip isn't exact for every colour
+    /// (#D8452E isn't), and comparing values used to rewrite the foreground every frame, which
+    /// would recolour selected type the moment it was selected.
+    #[test]
+    fn idle_hsb_sliders_leave_the_foreground_and_selected_type_alone() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 400, "height": 200})).unwrap();
+        let id = app.run("type.create", json!({"text": "Hello world", "size": 40, "x": 20, "y": 100, "color": "#ffffff"})).unwrap()["layer"].as_u64().unwrap();
+        app.run("tools.setColors", json!({"foreground": "#d8452e"})).unwrap();
+        let fg = app.session.tools.foreground;
+        app.ui.tool = Tool::Type;
+        app.ui.text_edit =
+            Some(crate::state::TextEdit { layer: id, caret: 0, anchor: 5, session: "s".into(), created: false, dragging: false, resize: None, preedit: None });
+        let mut h = Harness::builder().with_size(vec2(300.0, 300.0)).build_ui_state(|ui, app: &mut PhotosuiteApp| color_picker(app, ui), app);
+        h.run_steps(4);
+        assert_eq!(h.state().session.tools.foreground, fg);
+        let st = h.state().session.active().unwrap();
+        let Some(photosuite_doc::LayerContent::Text(t)) = st.doc.layer(photosuite_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
+        assert_eq!(t.char_runs().len(), 1, "still one white run");
     }
 }

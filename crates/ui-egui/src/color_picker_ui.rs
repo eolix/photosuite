@@ -406,7 +406,11 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
         p["color"] = json!(color);
         return app.run(cmd, p);
     }
-    app.run("tools.setColors", json!({ target: color }))
+    let r = app.run("tools.setColors", json!({ target: color }))?;
+    if target == "foreground" {
+        crate::type_tool::foreground_changed(app);
+    }
+    Ok(r)
 }
 
 #[cfg(test)]
