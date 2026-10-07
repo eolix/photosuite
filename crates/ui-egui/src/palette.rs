@@ -142,6 +142,9 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                     }
                     if enter && let Some(h) = hits.get(sel).filter(|h| h.4) {
                         run = Some(h.1.clone());
+                        // dialogs::show runs later in the same frame and would read this Enter as
+                        // its OK button, instantly closing the dialog we are about to open (#536).
+                        ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
                     }
                     if esc {
                         app.ui.palette_open = false;
@@ -173,7 +176,12 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
 
 #[cfg(test)]
 mod tests {
+    use egui::{Event, Key, Modifiers, vec2};
+    use egui_kittest::Harness;
+    use serde_json::json;
+
     use super::fuzzy_score;
+    use crate::PhotosuiteApp;
 
     #[test]
     fn fuzzy_ranks_prefix_and_contiguous_higher() {
@@ -181,5 +189,41 @@ mod tests {
         assert!(fuzzy_score("gblur", "Gaussian Blur").is_some());
         assert!(fuzzy_score("xyz", "Gaussian Blur").is_none());
         assert_eq!(fuzzy_score("", "anything"), Some(0));
+    }
+
+    /// #536: Edit › Search → "Keyboard Shortcuts" must open the dialog, with and without a document.
+    #[test]
+    fn palette_opens_the_keyboard_shortcuts_dialog() {
+        for with_doc in [false, true] {
+            let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
+                PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+                PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default())
+            });
+            if with_doc {
+                h.state_mut().run("file.new", json!({"width": 64, "height": 64})).unwrap();
+                h.state_mut().sync_views();
+            }
+            let ctx = h.ctx.clone();
+            crate::menus::invoke(h.state_mut(), &ctx, "edit.search", json!({})).unwrap();
+            h.run_steps(2);
+            assert!(h.state().ui.palette_open, "Edit > Search opens the palette (with_doc={with_doc})");
+            h.event(Event::Text("keyboard shortcuts".into()));
+            h.run_steps(2);
+            h.event(Event::Key { key: Key::Enter, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+            h.run_steps(3);
+            let app = h.state();
+            assert!(!app.ui.palette_open, "Enter closes the palette (with_doc={with_doc})");
+            let dialog = app
+                .ui
+                .dialogs
+                .iter()
+                .find(|d| d.fields.get("__prefsui").and_then(|v| v.as_str()) == Some("shortcuts"))
+                .map(|d| d.id)
+                .unwrap_or_else(|| panic!("#536: the Keyboard Shortcuts dialog did not open (with_doc={with_doc})"));
+            // The dialog keeps its own Enter: a second press is its OK and closes it.
+            h.event(Event::Key { key: Key::Enter, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+            h.run_steps(3);
+            assert!(h.state().ui.dialogs.iter().all(|d| d.id != dialog), "a second Enter closes the dialog as its OK (with_doc={with_doc})");
+        }
     }
 }
