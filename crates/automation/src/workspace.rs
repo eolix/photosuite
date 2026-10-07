@@ -408,7 +408,11 @@ mod tests {
     #[test]
     fn filesystem_commands_fail_closed() {
         for id in [
+            "file.open",
             "file.openAs",
+            "file.save",
+            "file.saveAs",
+            "file.saveACopy",
             "file.export.saveForWebLegacy",
             "pattern.import",
             "layer.smartObjects.exportContents",
@@ -420,6 +424,10 @@ mod tests {
             assert!(authorize_engine_command(id, &serde_json::json!({})).is_err());
         }
         assert!(authorize_engine_command("file.new", &serde_json::json!({})).is_ok());
+        // The UI-level examples in docs/control-protocol.md.
+        for id in ["view.zoomIn", "window.theme.pro", "edit.search"] {
+            assert!(authorize_desktop_engine_command(id, &serde_json::json!({})).is_ok(), "{id}");
+        }
         assert!(authorize_engine_command("image.mode.cmyk", &serde_json::json!({})).is_ok());
         assert!(authorize_desktop_engine_command("image.mode.cmyk", &serde_json::json!({})).is_err());
         assert!(authorize_engine_command("filter.distort.displace", &serde_json::json!({"mapPath": "outside.png"})).is_err());
