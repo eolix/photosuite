@@ -370,6 +370,10 @@ pub fn title_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                     })
                     .inner;
             });
+            // The system title bar already shows it (Windows, Linux): don't say it twice.
+            if app.os_title_bar {
+                return;
+            }
             let font = theme::medium(13.0);
             let galley = ui.painter().layout_no_wrap(title.clone(), font.clone(), t.text_dim);
             if let Some(x) = title_x(full.center().x, menus_right, controls_left, galley.size().x) {
@@ -408,6 +412,31 @@ fn title_x(center: f32, menus_right: f32, controls_left: f32, width: f32) -> Opt
 #[cfg(test)]
 mod title_tests {
     use super::title_x;
+
+    /// Is "PhotoSuite - Untitled" among the text the title bar paints?
+    fn paints_window_title(os_title_bar: bool) -> bool {
+        let mut app = crate::PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", serde_json::json!({"width": 8, "height": 8, "name": "Untitled"})).unwrap();
+        app.os_title_bar = os_title_bar;
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 200.0)).build_ui_state(
+            |ui, app: &mut crate::PhotosuiteApp| {
+                if app.fonts_ready {
+                    super::title_bar(app, ui);
+                }
+            },
+            app,
+        );
+        crate::PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        h.state_mut().fonts_ready = true;
+        h.run_steps(2);
+        h.output().shapes.iter().any(|c| matches!(&c.shape, egui::Shape::Text(t) if t.galley.text().starts_with("PhotoSuite - ")))
+    }
+
+    #[test]
+    fn the_window_title_is_not_repeated_under_a_system_title_bar() {
+        assert!(paints_window_title(false), "macOS (integrated title bar) and the web show it");
+        assert!(!paints_window_title(true), "Windows and Linux: the system title bar shows it");
+    }
 
     #[test]
     fn title_sits_left_and_never_overlaps_menus_or_controls() {

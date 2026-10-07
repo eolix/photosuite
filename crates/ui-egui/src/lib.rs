@@ -272,6 +272,9 @@ pub struct PhotosuiteApp {
     styled: bool,
     /// Whether the window uses an integrated (transparent) macOS title bar.
     pub integrated_titlebar: bool,
+    /// The operating system draws a title bar above the window (Windows, Linux), which already
+    /// shows "PhotoSuite - name", so the in-window bar doesn't repeat it. Set by the shell.
+    pub os_title_bar: bool,
     /// The platform draws the menus itself (the macOS system menu bar), so the in-window bar
     /// is not drawn. Set by the shell after it installs a native menu.
     pub native_menu_bar: bool,
@@ -394,6 +397,7 @@ impl PhotosuiteApp {
             frame: 0,
             styled: false,
             integrated_titlebar: false,
+            os_title_bar: false,
             native_menu_bar: false,
             fonts_ready: false,
             last_canvas_rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0)),

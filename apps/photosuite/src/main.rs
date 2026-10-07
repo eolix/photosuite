@@ -182,6 +182,8 @@ fn main() -> eframe::Result {
             let mut app = PhotosuiteApp::new(Session::new(), services);
             app.bundled = photosuite_ui_egui::bundled::State::new(services::bundled_libraries());
             app.integrated_titlebar = cfg!(target_os = "macos");
+            // Windows and Linux keep the system title bar, which shows the window title.
+            app.os_title_bar = !cfg!(target_os = "macos");
             if let Ok(Some(icc)) = monitor.recv_timeout(std::time::Duration::from_secs(2)) {
                 app.session.color.monitor_profile = Some(std::sync::Arc::new(icc));
             }
