@@ -431,7 +431,7 @@ fn lens_batch(_s: &mut Session, p: &Value) -> Result<Value> {
         // Batch default: the EXIF-driven profile, as Photoshop's dialog suggests.
         m.entry("profile").or_insert(json!("auto"));
     }
-    let r = crate::file_cmds::process_files(&inputs, &output, &format, crate::file_cmds::f64_param(p, "quality"), "", &|scratch| {
+    let r = crate::file_cmds::process_files(&inputs, &output, &format, crate::file_cmds::SaveOpts::from_params(p), "", &|scratch| {
         if scratch.active().is_some_and(|d| d.doc.layers.len() > 1) {
             scratch.execute("layer.flattenImage", json!({}))?;
         }

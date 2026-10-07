@@ -517,3 +517,32 @@ fn droplet_runs_an_action_on_files() {
     let o = bin().arg("droplet").arg(d.join("a.png")).arg(d.join("b.png")).output().unwrap();
     assert!(!o.status.success(), "not a droplet");
 }
+
+#[test]
+fn tiff_output_is_flat_unless_tiff_layers_is_given() {
+    let d = tmp("tiff-layers");
+    let layer_count = |path: &std::path::Path| -> usize {
+        let (info, _) = ok(bin().arg("info").arg(path));
+        let v: Value = serde_json::from_str(&info).unwrap();
+        v["layers"].as_array().unwrap().len()
+    };
+    for (name, flag, layers) in [("flat.tif", None, 1), ("layered.tif", Some("--tiff-layers"), 2)] {
+        let out = d.join(name);
+        let mut cmd = bin();
+        cmd.args(["run", "--new", r#"{"width":16,"height":16}"#]).args(["--cmd", "layer.new.layer", "--params", r#"{"name":"Ink"}"#]);
+        if let Some(flag) = flag {
+            cmd.arg(flag);
+        }
+        ok(cmd.arg("--out").arg(&out));
+        assert_eq!(layer_count(&out), layers, "{name}");
+    }
+    // convert honours the same flag.
+    let src = d.join("layered.tif");
+    let flat = d.join("converted.tif");
+    ok(bin().arg("convert").arg(&src).arg(&flat));
+    assert_eq!(layer_count(&flat), 1);
+    let kept = d.join("kept.tif");
+    ok(bin().arg("convert").arg(&src).arg(&kept).arg("--tiff-layers"));
+    assert_eq!(layer_count(&kept), 2);
+    std::fs::remove_dir_all(d).unwrap();
+}

@@ -164,17 +164,45 @@ pub(crate) fn import(name: &str, bytes: &[u8]) -> Result<Document> {
     photosuite_io::import(name, bytes).map(|r| r.document).map_err(|e| EngineError::Other(format!("{name}: {e}")))
 }
 
-/// Encodes `doc` for `path`'s extension. `quality` is Photoshop's 0–12 JPEG scale.
-pub(crate) fn encode(doc: &Document, path: &str, quality: Option<f64>) -> Result<(Vec<u8>, Vec<String>)> {
-    let mut opts = photosuite_io::ExportOptions::default();
-    if let Some(q) = quality {
+/// What a headless save writes beyond the format: JPEG quality and TIFF layers.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct SaveOpts {
+    /// Photoshop's 0–12 JPEG scale.
+    pub quality: Option<f64>,
+    /// TIFF: keep the layers. Off unless a command's params ask (`"tiffLayers": true`).
+    pub tiff_layers: bool,
+}
+
+impl SaveOpts {
+    /// `quality` and `tiffLayers` from a command's params.
+    pub(crate) fn from_params(p: &Value) -> Self {
+        SaveOpts { quality: f64_param(p, "quality"), tiff_layers: p.get("tiffLayers").and_then(Value::as_bool).unwrap_or(false) }
+    }
+
+    pub(crate) fn or_quality(mut self, q: f64) -> Self {
+        self.quality = self.quality.or(Some(q));
+        self
+    }
+}
+
+impl From<Option<f64>> for SaveOpts {
+    fn from(quality: Option<f64>) -> Self {
+        SaveOpts { quality, ..Default::default() }
+    }
+}
+
+/// Encodes `doc` for `path`'s extension.
+pub(crate) fn encode(doc: &Document, path: &str, save: impl Into<SaveOpts>) -> Result<(Vec<u8>, Vec<String>)> {
+    let save = save.into();
+    let mut opts = photosuite_io::ExportOptions { tiff_layers: save.tiff_layers, ..Default::default() };
+    if let Some(q) = save.quality {
         opts.encode.jpeg_quality = (q.clamp(0.0, 12.0) / 12.0 * 99.0 + 1.0).round() as u8;
     }
     photosuite_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
 }
 
-pub(crate) fn save_doc(doc: &Document, path: &str, quality: Option<f64>) -> Result<Vec<String>> {
-    let (bytes, warnings) = encode(doc, path, quality)?;
+pub(crate) fn save_doc(doc: &Document, path: &str, save: impl Into<SaveOpts>) -> Result<Vec<String>> {
+    let (bytes, warnings) = encode(doc, path, save)?;
     write_file(path, &bytes)?;
     Ok(warnings)
 }
@@ -269,7 +297,7 @@ fn save_a_copy(s: &mut Session, p: &Value) -> Result<Value> {
         let px = flattened(&doc, fmt);
         doc.layers = vec![Layer::new("Background", LayerContent::Raster(px))];
     }
-    let warnings = save_doc(&doc, &path, f64_param(p, "quality"))?;
+    let warnings = save_doc(&doc, &path, SaveOpts::from_params(p))?;
     Ok(json!({"path": path, "warnings": warnings}))
 }
 
@@ -629,14 +657,7 @@ pub(crate) fn batch_inputs(p: &Value, cmd: &str) -> Result<Vec<String>> {
 
 /// Opens each input in a scratch session, runs `f` on it and saves it to `output` as `format`
 /// (`"same"` keeps the input's extension). Errors per file are collected, not fatal.
-pub(crate) fn process_files(
-    inputs: &[String],
-    output: &str,
-    format: &str,
-    quality: Option<f64>,
-    suffix: &str,
-    f: &dyn Fn(&mut Session) -> Result<()>,
-) -> Value {
+pub(crate) fn process_files(inputs: &[String], output: &str, format: &str, save: SaveOpts, suffix: &str, f: &dyn Fn(&mut Session) -> Result<()>) -> Value {
     let mut files = Vec::new();
     let mut errors = Vec::new();
     let mut written = OutputClaims::default();
@@ -652,7 +673,7 @@ pub(crate) fn process_files(
             scratch.add_document(doc, Some(path.clone()));
             f(&mut scratch)?;
             let d = scratch.active().ok_or(EngineError::NoDocument)?;
-            save_doc(&d.doc, &out, quality)?;
+            save_doc(&d.doc, &out, save)?;
             Ok(())
         })();
         match r {
@@ -697,7 +718,7 @@ fn batch(_s: &mut Session, p: &Value) -> Result<Value> {
     let inputs = batch_inputs(p, cmd)?;
     let output = str_param(p, "output", cmd)?.to_string();
     let format = p.get("format").and_then(Value::as_str).unwrap_or("same").to_string();
-    let r = process_files(&inputs, &output, &format, f64_param(p, "quality"), "", &|scratch| {
+    let r = process_files(&inputs, &output, &format, SaveOpts::from_params(p), "", &|scratch| {
         for (id, params) in &steps {
             scratch.execute(id, params.clone())?;
         }
@@ -716,7 +737,7 @@ fn image_processor(_s: &mut Session, p: &Value) -> Result<Value> {
         (w, h) => Some(json!({"width": w.unwrap_or(1e9), "height": h.unwrap_or(1e9), "dontEnlarge": true})),
     };
     let to_srgb = p.get("convertToSrgb").and_then(Value::as_bool).unwrap_or(false);
-    let r = process_files(&inputs, &output, &format, f64_param(p, "quality").or(Some(8.0)), "", &|scratch| {
+    let r = process_files(&inputs, &output, &format, SaveOpts::from_params(p).or_quality(8.0), "", &|scratch| {
         if to_srgb && scratch.active().is_some_and(|d| d.doc.mode != ColorMode::Rgb) {
             scratch.execute("image.mode.rgb", json!({}))?;
         }
@@ -873,7 +894,7 @@ fn layers_to_files(s: &mut Session, p: &Value) -> Result<Value> {
         only.clipped = false;
         one.layers = vec![only];
         let path = join(&dir, &format!("{}_{:04}_{}.{format}", sanitize(&prefix), i, sanitize(&l.name)));
-        save_doc(&one, &path, f64_param(p, "quality"))?;
+        save_doc(&one, &path, SaveOpts::from_params(p))?;
         files.push(path);
     }
     Ok(json!({"files": files}))
@@ -1071,7 +1092,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Save a Copy…",
             &["File"],
             Some("Cmd+Alt+S"),
-            r##"{"path":str (format from the extension),"quality":0..12? (JPEG),"layers":bool=true}"##,
+            r##"{"path":str (format from the extension),"quality":0..12? (JPEG),"layers":bool=true,"tiffLayers":bool=false (TIFF: keep the layers; flat by default)}"##,
             native_doc,
             save_a_copy
         ),
@@ -1137,7 +1158,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Batch…",
             &["File", "Automate"],
             None,
-            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
+            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?,"tiffLayers":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             batch
         ),
@@ -1146,7 +1167,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Image Processor…",
             &["File", "Scripts"],
             None,
-            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
+            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"tiffLayers":bool=false,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             image_processor
         ),
@@ -1174,7 +1195,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Layers to Files…",
             &["File", "Export"],
             None,
-            r##"{"dir":folder,"format":"png|jpg|psd|tiff|…"="png","prefix":str=document name,"visibleOnly":bool=true,"quality":0..12?} → {files}"##,
+            r##"{"dir":folder,"format":"png|jpg|psd|tiff|…"="png","prefix":str=document name,"visibleOnly":bool=true,"quality":0..12?,"tiffLayers":bool=false} → {files}"##,
             native_doc,
             layers_to_files
         ),

@@ -83,6 +83,9 @@ pub struct SaveParams {
     /// JPEG quality 1..100 for lossy exports.
     #[serde(default)]
     pub quality: Option<u8>,
+    /// TIFF: keep the layers (Photoshop layer data). Off by default: a flat TIFF.
+    #[serde(default, rename = "tiffLayers")]
+    pub tiff_layers: bool,
     #[serde(default)]
     pub index: Option<usize>,
 }
@@ -657,7 +660,7 @@ impl PhotosuiteMcp {
         }
         let Some(r) = self
             .headless_op(move |h| {
-                let mut opts = photosuite_io::ExportOptions::default();
+                let mut opts = photosuite_io::ExportOptions { tiff_layers: p.tiff_layers, ..Default::default() };
                 if let Some(q) = p.quality {
                     opts.encode.jpeg_quality = q.clamp(1, 100);
                 }

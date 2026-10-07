@@ -99,7 +99,7 @@ fn every_compression_keeps_the_layers() {
     use photosuite_codecs::TiffCompression;
     let d = gen_doc(ColorMode::Rgb, SampleType::U16, Features::PIXELS);
     for c in [TiffCompression::None, TiffCompression::Lzw, TiffCompression::Deflate, TiffCompression::PackBits] {
-        let mut opts = ExportOptions::default();
+        let mut opts = ExportOptions { tiff_layers: true, ..Default::default() };
         opts.encode.tiff_compression = c;
         let r = export(&d, "x.tiff", &opts).unwrap();
         let back = import("x.tiff", &r.bytes).unwrap().document;
@@ -164,7 +164,7 @@ fn transparency_is_straight_in_the_composite() {
 fn big_documents_use_the_psb_signature() {
     // Forcing PSB stands in for a > 30000 px document.
     let d = gen_doc(ColorMode::Rgb, SampleType::U8, Features::PIXELS);
-    let r = export(&d, "x.tif", &ExportOptions { force_psb: true, ..Default::default() }).unwrap();
+    let r = export(&d, "x.tif", &ExportOptions { force_psb: true, tiff_layers: true, ..Default::default() }).unwrap();
     let (_, layers) = tags(&r.bytes);
     assert!(layers.unwrap().starts_with(photosuite_psd::tiff::SIGNATURE_PSB));
     let back = import("x.tif", &r.bytes).unwrap().document;
@@ -263,4 +263,14 @@ fn damaged_layer_data_opens_flattened() {
             let _ = import(name, &b);
         }
     }
+}
+
+#[test]
+fn default_export_options_write_a_flat_tiff() {
+    // Scripted and agent saves (CLI, batch, MCP) build on the defaults: layers only on request.
+    let d = gen_doc(ColorMode::Rgb, SampleType::U8, Features::PIXELS);
+    assert!(tiff_layers::would_write_layers(&d));
+    let r = export(&d, "x.tif", &ExportOptions::default()).unwrap();
+    assert_eq!(tags(&r.bytes), (None, None));
+    assert_eq!(import("x.tif", &r.bytes).unwrap().document.layers.len(), 1);
 }

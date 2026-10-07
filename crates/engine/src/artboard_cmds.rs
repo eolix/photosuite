@@ -14,7 +14,7 @@ use photosuite_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, color_param, int};
-use crate::file_cmds::{encode, f64_param, join, native_doc, sanitize, save_doc, stem, str_param, write_file};
+use crate::file_cmds::{SaveOpts, encode, f64_param, join, native_doc, sanitize, save_doc, stem, str_param, write_file};
 use crate::{EngineError, Result, Session};
 
 /// Artboard size presets (name, width, height) in pixels, Photoshop's common devices and pages.
@@ -347,7 +347,7 @@ fn artboards_to_files(s: &mut Session, p: &Value) -> Result<Value> {
         let Some(one) = artboard_document(&doc, id) else { continue };
         let name = if prefix.is_empty() { sanitize(&one.name) } else { format!("{}_{}", sanitize(&prefix), sanitize(&one.name)) };
         let path = join(&dir, &format!("{name}.{format}"));
-        save_doc(&one, &path, f64_param(p, "quality"))?;
+        save_doc(&one, &path, SaveOpts::from_params(p))?;
         files.push(path);
     }
     if files.is_empty() {

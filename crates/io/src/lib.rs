@@ -99,22 +99,18 @@ pub struct ExportResult {
     pub warnings: Vec<String>,
 }
 
-/// Export options.
-#[derive(Debug, Clone)]
+/// Export options. The default writes a flat TIFF: callers that keep layers ask for them.
+#[derive(Debug, Clone, Default)]
 pub struct ExportOptions {
     /// Codec options for flat formats.
     pub encode: EncodeOptions,
     /// Write PSB even for `.psd` names when the document is small.
     pub force_psb: bool,
-    /// TIFF: keep the layers (Photoshop layer data in tag 37724). `false` is Photoshop's
-    /// "Discard Layers and Save a Copy": a flat TIFF.
+    /// TIFF: keep the layers (Photoshop layer data in tag 37724). Off by default, so scripted
+    /// and agent saves (CLI, batch, MCP) write a flat TIFF unless they ask for layers; the app's
+    /// Save As sets it from its Layers option, which keeps them as Photoshop does. `false` is
+    /// Photoshop's "Discard Layers and Save a Copy".
     pub tiff_layers: bool,
-}
-
-impl Default for ExportOptions {
-    fn default() -> Self {
-        ExportOptions { encode: EncodeOptions::default(), force_psb: false, tiff_layers: true }
-    }
 }
 
 /// `true` if `bytes` start with the PSD/PSB signature.
