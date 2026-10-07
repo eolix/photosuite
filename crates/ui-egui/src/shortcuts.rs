@@ -316,6 +316,23 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             return;
         }
     }
+    // ⇧[ and ⇧] step a painting tool's hardness by 25% (#352). First: egui's `consume_key`
+    // ignores ⇧, so the size keys below would take them.
+    if app.ui.tool.is_brushlike() {
+        let hardness = app.session.tools.brush.hardness;
+        let step = |sc: &str| parse(sc).is_some_and(|sc| consume(ctx, &sc));
+        let quarter = (hardness * 4.0).round();
+        let next = if step("Shift+[") {
+            (quarter - 1.0).max(0.0) / 4.0
+        } else if step("Shift+]") {
+            (quarter + 1.0).min(4.0) / 4.0
+        } else {
+            hardness
+        };
+        if next != hardness {
+            let _ = app.run("tools.setBrush", serde_json::json!({ "brush": { "hardness": next } }));
+        }
+    }
     // [ and ] resize the brush through `tools.setBrush` (journaled, drivable).
     let size = app.session.tools.brush.size;
     let next = if pressed(Key::OpenBracket) {
@@ -328,6 +345,8 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     if next != size {
         let _ = app.run("tools.setBrush", serde_json::json!({ "brush": { "size": next } }));
     }
+    // 1–0 set opacity, ⇧1–0 flow or fill (`opacity_keys`).
+    crate::opacity_keys::handle(app, ctx);
 }
 
 #[cfg(test)]
