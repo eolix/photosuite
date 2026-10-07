@@ -1312,13 +1312,18 @@ impl Session {
 
     /// Everything persisted as one JSON document: the preferences plus `colorSettings`.
     pub fn prefs_to_json(&self) -> String {
+        serde_json::to_string_pretty(&self.prefs_value()).unwrap_or_default()
+    }
+
+    /// [`Session::prefs_to_json`] as a JSON tree (frontends merge it with what storage holds).
+    pub fn prefs_value(&self) -> Value {
         let mut v = self.prefs().to_json();
         if let Value::Object(m) = &mut v {
             m.insert("colorSettings".into(), serde_json::to_value(&self.color.settings).unwrap_or(Value::Null));
             m.insert("version".into(), json!(1));
             m.insert("presets".into(), self.presets.to_json(self));
         }
-        serde_json::to_string_pretty(&v).unwrap_or_default()
+        v
     }
 
     /// Restore preferences saved by [`Session::prefs_to_json`]. Missing keys keep their

@@ -23,14 +23,15 @@ pub struct Notice {
     pub error: bool,
 }
 
-/// Show a notice (newest last).
-pub fn post(app: &mut PhotosuiteApp, title: impl Into<String>, lines: Vec<String>, error: bool) {
+/// Show a notice (newest last); returns its id.
+pub fn post(app: &mut PhotosuiteApp, title: impl Into<String>, lines: Vec<String>, error: bool) -> u64 {
     let id = app.ui.alloc_id();
     app.ui.notices.push(Notice { id, title: title.into(), lines, error });
     let n = app.ui.notices.len();
     if n > MAX_NOTICES {
         app.ui.notices.drain(..n - MAX_NOTICES);
     }
+    id
 }
 
 /// Report import/export `warnings` for the file operation `what` (e.g. "Opened a.psd"): the status
