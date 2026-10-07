@@ -157,7 +157,10 @@ pub struct MenuParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UiSetParams {
-    /// Fields accepted by the control method `ui.set` (tool, panels, zoom, center, dark).
+    /// Fields for the control method `ui.set`: tool, panels, dock, dockTabs, dockWidth, maskTarget,
+    /// vectorMaskTarget, selectionMode, zoom, center, fit, theme (pro, proMedium, studio,
+    /// studioLight, classic), brushSection, brushTab, brushesView, brushSize. Other fields are an
+    /// error.
     pub fields: Value,
 }
 
@@ -576,7 +579,9 @@ impl PhotosuiteMcp {
         }
     }
 
-    #[tool(description = "Bridge mode: change UI state (tool, panels, zoom, center, dark).")]
+    #[tool(
+        description = "Bridge mode: change UI state (tool, panels, dock, zoom, center, fit, theme, brush settings; see `fields`). Unknown fields are an error."
+    )]
     async fn ui_set(&self, Parameters(p): Parameters<UiSetParams>) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => to_result(b.call("ui.set", p.fields).await),
