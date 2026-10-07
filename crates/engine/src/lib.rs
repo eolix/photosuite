@@ -21,6 +21,7 @@ pub mod channel_cmds;
 pub mod color_cmds;
 pub mod commands;
 pub mod comps_cmds;
+pub mod cutout_cmds;
 pub mod display_color;
 pub mod distort_cmds;
 pub mod edit_cmds;
