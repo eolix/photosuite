@@ -56,6 +56,13 @@ fn truncated_files_mostly_error() {
             let r = decode_as_with(f, &bytes[..bytes.len() / 2], &tight());
             assert!(r.is_err(), "{f:?} decoded half a file");
         }
+        // JPEG decodes leniently (the missing part grey) but never silently (#518).
+        if f == Format::Jpeg {
+            match decode_as_with(f, &bytes[..bytes.len() / 2], &tight()) {
+                Ok(img) => assert_eq!(img.warnings, [DecodeWarning::Truncated { format: f }]),
+                Err(e) => assert!(e.to_string().contains("before any image data"), "{e}"),
+            }
+        }
     }
 }
 

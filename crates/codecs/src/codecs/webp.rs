@@ -7,7 +7,7 @@ use std::io::Cursor;
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits};
 
 const F: Format = Format::WebP;
@@ -31,6 +31,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     let mut img = Image::from_u8(w, h, layout, buf)?;
     img.icc = icc;
     img.meta = Metadata { exif, xmp, ..Default::default() };
+    if dec.is_animated() && dec.num_frames() > 1 {
+        img.warnings.push(DecodeWarning::MoreFrames { total: Some(dec.num_frames()) });
+    }
     Ok(img)
 }
 

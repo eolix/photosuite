@@ -349,3 +349,36 @@ fn non_srgb_rgb_is_converted_to_srgb_for_formats_without_a_profile() {
         assert_colors(&column_pixels(&back, cols.len()), &column_pixels(&d, cols.len()), 0.0, "sRGB bmp");
     }
 }
+
+/// #518: a JPEG cut off inside its image data opens with a warning, never silently.
+#[test]
+fn truncated_jpeg_imports_with_a_warning() {
+    for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
+        let full = export(&smooth(mode), "jpg", &ExportOptions::default()).unwrap().bytes;
+        assert_eq!(import("x.jpg", &full).unwrap().warnings, Vec::<String>::new(), "{mode:?}");
+        // Cut inside the scan data (most of this small file is headers).
+        let r = import("x.jpg", &full[..full.len() - 4]).unwrap();
+        assert_eq!(r.document.size, photosuite_geom::Size::new(32, 16));
+        assert!(r.warnings.first().is_some_and(|w| w.starts_with("JPEG data ends early")), "{mode:?}: {:?}", r.warnings);
+    }
+}
+
+/// A GIF of `frames` identical 1x1 black frames.
+fn gif_frames(frames: usize) -> Vec<u8> {
+    let mut b = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xFF\xFF\xFF".to_vec();
+    for _ in 0..frames {
+        b.extend_from_slice(b"\x2C\0\0\0\0\x01\0\x01\0\0\x02\x02\x44\x01\0");
+    }
+    b.push(0x3B);
+    b
+}
+
+/// #523: an animation opens its first frame, unchanged, with a warning that the rest was left out.
+#[test]
+fn animation_imports_the_first_frame_with_a_warning() {
+    let one = import("a.gif", &gif_frames(1)).unwrap();
+    assert_eq!(one.warnings, Vec::<String>::new());
+    let three = import("a.gif", &gif_frames(3)).unwrap();
+    assert_eq!(three.warnings, ["only the first of 3 frames was imported"]);
+    pixels_eq(&one.document, &three.document, 0.0);
+}

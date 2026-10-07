@@ -6,7 +6,7 @@ use std::io::{Cursor, Write};
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits, PngCompression};
 
 const F: Format = Format::Png;
@@ -27,6 +27,8 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         limits.check_bytes(w, h, 8)?;
     }
     let mut reader = decoder.read_info().map_err(map_png_err)?;
+    // APNG: the IDAT image is the first frame, or an extra default image when no fcTL precedes it.
+    let images = reader.info().animation_control.map_or(1, |a| u64::from(a.num_frames) + u64::from(reader.info().frame_control.is_none()));
     let (color, depth) = reader.output_color_type();
     let layout = match color {
         png::ColorType::Grayscale => ChannelLayout::Gray,
@@ -82,6 +84,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         }
     }
     img.meta = meta;
+    if images > 1 {
+        img.warnings.push(DecodeWarning::MoreFrames { total: u32::try_from(images).ok() });
+    }
     Ok(img)
 }
 

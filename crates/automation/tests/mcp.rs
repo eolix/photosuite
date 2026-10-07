@@ -287,6 +287,28 @@ async fn open_png_and_inspect() {
     cleanup(&dir);
 }
 
+/// #518, #523: `doc_open` returns why an opened image is incomplete.
+#[tokio::test(flavor = "multi_thread")]
+async fn open_reports_decode_warnings() {
+    let dir = tmp("open-warnings");
+    let jpeg = write_image(&dir, "whole.jpg", photosuite_codecs::Format::Jpeg);
+    std::fs::write(dir.join("cut.jpg"), &jpeg[..jpeg.len() - 4]).unwrap();
+    // Two 1x1 frames.
+    let mut gif = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xFF\xFF\xFF".to_vec();
+    for _ in 0..2 {
+        gif.extend_from_slice(b"\x2C\0\0\0\0\x01\0\x01\0\0\x02\x02\x44\x01\0");
+    }
+    gif.push(0x3B);
+    std::fs::write(dir.join("anim.gif"), gif).unwrap();
+    let client = connect(headless_in(&dir)).await;
+    let warnings = async |path: &str| json_of(&call(&client, "doc_open", json!({"path": path})).await)["warnings"].clone();
+    assert_eq!(warnings("whole.jpg").await, json!([]));
+    assert_eq!(warnings("cut.jpg").await, json!(["JPEG data ends early (the file is truncated or damaged); part of the image is missing"]));
+    assert_eq!(warnings("anim.gif").await, json!(["only the first of 2 frames was imported"]));
+    client.cancel().await.unwrap();
+    cleanup(&dir);
+}
+
 fn write_image(dir: &std::path::Path, name: &str, format: photosuite_codecs::Format) -> Vec<u8> {
     let img = photosuite_codecs::Image::from_u8(16, 8, photosuite_codecs::ChannelLayout::Rgb, (0..384).map(|i| (i * 7 % 251) as u8).collect()).unwrap();
     let bytes = photosuite_codecs::encode(&img, format, &Default::default()).unwrap();

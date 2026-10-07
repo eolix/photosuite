@@ -1,6 +1,7 @@
 //! TIFF via the `tiff` crate: 8/16-bit integer and 32-bit float, gray/RGB/
 //! CMYK with optional (unassociated) alpha, ICC (34675), XMP (700), DPI and
-//! a few ASCII text tags. Only the first IFD is read.
+//! a few ASCII text tags. Only the first IFD is read; further pages are counted and reported
+//! as a [`DecodeWarning::MorePages`].
 
 use std::borrow::Cow;
 use std::io::Cursor;
@@ -13,7 +14,7 @@ use tiff::tags::{PhotometricInterpretation, ResolutionUnit, SampleFormat, Tag, T
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits, TiffCompression};
 
 const F: Format = Format::Tiff;
@@ -230,7 +231,34 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         }
     }
     img.meta = meta;
+    img.warnings.extend(more_pages(&mut dec));
     Ok(img)
+}
+
+/// Counts the pages after the first IFD without decoding their pixels, skipping
+/// reduced-resolution copies (thumbnails) and transparency masks. The total is unknown when
+/// a directory can't be read or there are more than `MAX_IFDS`.
+fn more_pages(dec: &mut Decoder<Cursor<&[u8]>>) -> Option<DecodeWarning> {
+    const MAX_IFDS: u32 = 10_000;
+    let mut pages = 1u32;
+    let mut walked = 0;
+    let mut total = None;
+    loop {
+        if !dec.more_images() {
+            total = Some(pages);
+            break;
+        }
+        walked += 1;
+        if walked > MAX_IFDS || dec.next_image().is_err() {
+            break;
+        }
+        // NewSubfileType bit 0: a reduced-resolution image; bit 2: a transparency mask.
+        let kind = dec.find_tag_unsigned::<u32>(Tag::NewSubfileType).ok().flatten().unwrap_or(0);
+        if kind & 0b101 == 0 {
+            pages += 1;
+        }
+    }
+    (pages > 1).then_some(DecodeWarning::MorePages { total })
 }
 
 fn rational_f64(v: tiff::decoder::ifd::Value) -> Option<f64> {

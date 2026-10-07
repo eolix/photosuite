@@ -29,7 +29,7 @@ pub use crate::codecs::webp::is_lossless as webp_is_lossless;
 pub use crate::error::CodecError;
 pub use crate::fidelity::{FidelityWarning, fidelity_warnings, fidelity_warnings_with};
 pub use crate::format::{ASYMMETRIC_EXCEPTIONS, Format, FormatCaps, caps, detect, from_extension};
-pub use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+pub use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 pub use crate::options::{DecodeOptions, EncodeOptions, ExrCompression, Limits, PngCompression, TiffCompression};
 pub use crate::orientation::{exif_orientation, upright_exif, upright_xmp};
 pub use half::f16;

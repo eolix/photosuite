@@ -15,7 +15,8 @@ It follows the "avoid GIMP's hole" rules in `plan/architecture.md` §1.1:
 * **Honest.** `caps(format)` says what each format holds, and
   `fidelity_warnings(&image, format)` lists what an export will lose before you write it. Both
   functions use the same encode plan as `encode`, so a warning appears exactly when the file
-  changes.
+  changes. On the way in, `Image::warnings` lists what the decoded image doesn't show: frames or
+  pages left out, or data that ended early.
 
 ```rust
 use photosuite_codecs::*;
@@ -72,7 +73,10 @@ the same.
   (pure Rust, MIT), re-wrapped so ICC/EXIF/XMP are kept. Both kinds read back.
 * **Animation and multi-page files** (APNG, animated GIF/WebP, multi-page TIFF): only the first
   frame or page is decoded, and a single frame is written. `FormatCaps::animation` marks
-  containers that can hold more frames.
+  containers that can hold more frames. The decoded image then carries a
+  `DecodeWarning::MoreFrames` / `MorePages` in `Image::warnings`, with the total when the file
+  states it (frames and TIFF directories are counted without decoding them; reduced-resolution
+  TIFF directories and transparency masks are not pages).
 * **EXIF in TIFF** is stored as a sub-IFD rather than a blob, so it is not preserved yet.
   `caps.exif = false` for TIFF, and a warning is raised.
 * **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the IFD0 tag in TIFF) is applied on
@@ -87,6 +91,9 @@ the same.
   release).
 * **JPEG**
   * 8-bit only. Neither decoder backend supports 12-bit.
+  * A file cut off inside its image data decodes leniently (a baseline JPEG's missing rows come
+    out grey) but never silently: the image carries `DecodeWarning::Truncated`. A file that ends
+    before any scan data is an error.
   * CMYK is always written 4:4:4 (subsampled CMYK is not portable) as Adobe-inverted CMYK with an
     APP14 marker.
   * Text is not written because there is no COM-segment support.

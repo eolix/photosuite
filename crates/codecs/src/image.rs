@@ -4,7 +4,10 @@
 //! in **native endianness**. Integer samples are unsigned and normalized to
 //! `[0, max]`; float samples are nominally `[0, 1]` but may exceed it (HDR).
 
+use std::fmt;
+
 use crate::error::CodecError;
+use crate::format::Format;
 use half::f16;
 
 /// Channel layout of an [`Image`]. Alpha, when present, is always the last
@@ -126,6 +129,33 @@ impl Metadata {
     }
 }
 
+/// Something a decoder noticed about the file that the decoded pixels don't show: the file
+/// held more than was decoded, or less than it should.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecodeWarning {
+    /// Only the first frame of an animation was decoded; `total` counts every frame when known.
+    MoreFrames { total: Option<u32> },
+    /// Only the first page of a multi-page file was decoded; `total` counts every page when known.
+    MorePages { total: Option<u32> },
+    /// The image data ends early (truncated or damaged file); the decoder filled in the rest
+    /// (a baseline JPEG's missing rows come out grey).
+    Truncated { format: Format },
+}
+
+impl fmt::Display for DecodeWarning {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DecodeWarning::MoreFrames { total: Some(n) } => write!(f, "only the first of {n} frames was imported"),
+            DecodeWarning::MoreFrames { total: None } => write!(f, "only the first frame of the animation was imported"),
+            DecodeWarning::MorePages { total: Some(n) } => write!(f, "only the first of {n} pages was imported"),
+            DecodeWarning::MorePages { total: None } => write!(f, "only the first page of the file was imported"),
+            DecodeWarning::Truncated { format } => {
+                write!(f, "{} data ends early (the file is truncated or damaged); part of the image is missing", format.name())
+            }
+        }
+    }
+}
+
 /// A single flat raster image.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Image {
@@ -137,6 +167,9 @@ pub struct Image {
     /// Embedded ICC profile (must describe `layout`'s colour model).
     pub icc: Option<Vec<u8>>,
     pub meta: Metadata,
+    /// What the decoder noticed about the file: empty for a complete, single image and for
+    /// images built in memory. Encoders ignore it.
+    pub warnings: Vec<DecodeWarning>,
 }
 
 fn byte_len(width: u32, height: u32, layout: ChannelLayout, sample: SampleType) -> Option<usize> {
@@ -147,7 +180,7 @@ impl Image {
     /// A zero-filled image, or an error if the byte size overflows `usize`.
     pub fn new(width: u32, height: u32, layout: ChannelLayout, sample: SampleType) -> Result<Self, CodecError> {
         let len = byte_len(width, height, layout, sample).ok_or_else(|| CodecError::InvalidImage("image size overflows usize".into()))?;
-        Ok(Image { width, height, layout, sample, data: vec![0; len], icc: None, meta: Metadata::default() })
+        Ok(Image { width, height, layout, sample, data: vec![0; len], icc: None, meta: Metadata::default(), warnings: Vec::new() })
     }
 
     /// Wrap raw interleaved, native-endian bytes.
@@ -156,7 +189,7 @@ impl Image {
         if data.len() != expected {
             return Err(CodecError::InvalidImage(format!("buffer has {} bytes, expected {expected} for {width}x{height} {layout:?} {sample:?}", data.len())));
         }
-        Ok(Image { width, height, layout, sample, data, icc: None, meta: Metadata::default() })
+        Ok(Image { width, height, layout, sample, data, icc: None, meta: Metadata::default(), warnings: Vec::new() })
     }
 
     pub fn from_u8(width: u32, height: u32, layout: ChannelLayout, data: Vec<u8>) -> Result<Self, CodecError> {
@@ -324,6 +357,7 @@ impl Image {
             data,
             icc: if layout.same_model(self.layout) { self.icc.clone() } else { None },
             meta: self.meta.clone(),
+            warnings: self.warnings.clone(),
         }
     }
 

@@ -322,8 +322,9 @@ impl Image {
         if swap {
             meta.dpi = meta.dpi.map(|(x, y)| (y, x));
         }
-        let icc = self.icc.clone();
-        Ok(Image::from_raw(ow as u32, oh as u32, layout, sample, data)?.with_icc(icc).with_meta(meta))
+        let mut out = Image::from_raw(ow as u32, oh as u32, layout, sample, data)?.with_icc(self.icc).with_meta(meta);
+        out.warnings = self.warnings;
+        Ok(out)
     }
 }
 

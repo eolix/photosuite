@@ -10,7 +10,7 @@ use zune_core::options::DecoderOptions;
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits};
 use crate::orientation::{upright_exif, upright_xmp};
 
@@ -156,11 +156,70 @@ pub fn estimate_quality(bytes: &[u8]) -> Option<u8> {
     })
 }
 
+/// How a JPEG's data ends, seen from its marker structure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DataEnd {
+    /// An end-of-image marker follows the scans (or the structure is too odd to tell).
+    Complete,
+    /// The file ends inside the image data, before the end-of-image marker.
+    Truncated,
+    /// The file ends before the first scan holds any data: nothing can be decoded.
+    Empty,
+}
+
+/// Walks the marker segments (skipped by their length) and the entropy-coded scan data
+/// (skipped up to the next marker that isn't a stuffed `FF 00`, a restart or a fill byte),
+/// so an embedded thumbnail's end marker or data after the end of the image don't count.
+fn data_end(b: &[u8]) -> DataEnd {
+    // Where the bytes run out: inside the image data once a scan has held some.
+    let cut = |scan_data: bool| if scan_data { DataEnd::Truncated } else { DataEnd::Empty };
+    let mut i = 2; // past SOI
+    let mut scan_data = false;
+    loop {
+        let Some(&byte) = b.get(i) else { return cut(scan_data) };
+        if byte != 0xFF {
+            // Not where a marker should be: too odd to judge.
+            return DataEnd::Complete;
+        }
+        let Some(&code) = b.get(i + 1) else { return cut(scan_data) };
+        match code {
+            0xD9 => return DataEnd::Complete,
+            0xFF => i += 1,
+            0x01 | 0xD0..=0xD8 => i += 2,
+            _ => {
+                let Some(len) = b.get(i + 2..i + 4).and_then(|s| <[u8; 2]>::try_from(s).ok()).map(u16::from_be_bytes) else {
+                    return cut(scan_data);
+                };
+                i = i.saturating_add(2 + usize::from(len));
+                if code == 0xDA {
+                    let start = i;
+                    loop {
+                        let Some(p) = b.get(i..).and_then(|r| r.iter().position(|&v| v == 0xFF)) else {
+                            return cut(scan_data || b.len() > start);
+                        };
+                        i += p;
+                        match b.get(i + 1) {
+                            Some(0x00 | 0xD0..=0xD7) => i += 2,
+                            Some(0xFF) => i += 1,
+                            _ => break,
+                        }
+                    }
+                    scan_data |= i > start;
+                }
+            }
+        }
+    }
+}
+
 fn err(e: impl std::fmt::Display) -> CodecError {
     CodecError::malformed(F, e)
 }
 
 pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError> {
+    let end = data_end(bytes);
+    if end == DataEnd::Empty {
+        return Err(err("the file ends before any image data"));
+    }
     let meta = scan_metadata(bytes);
     if let Some((w, h, nc)) = meta.frame {
         limits.check_bytes(w, h, u64::from(nc.max(1)))?;
@@ -205,6 +264,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     let mut img = Image::from_raw(w, h, layout, SampleType::U8, px)?;
     img.icc = meta.icc;
     img.meta = Metadata { exif: meta.exif, xmp: meta.xmp, dpi: meta.dpi, text: Vec::new() };
+    if end == DataEnd::Truncated {
+        img.warnings.push(DecodeWarning::Truncated { format: F });
+    }
     Ok(img)
 }
 

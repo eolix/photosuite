@@ -28,7 +28,8 @@ pub fn import_flat(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
 
 /// A decoded flat image as a single-layer document.
 pub(crate) fn image_to_document(name: &str, img: &Image) -> Result<ImportResult, IoError> {
-    let mut warnings = Vec::new();
+    // What the decoder noticed (frames or pages left out, data ending early) comes first.
+    let mut warnings: Vec<String> = img.warnings.iter().map(ToString::to_string).collect();
     let (mode, target_layout) = match img.layout() {
         ChannelLayout::Gray | ChannelLayout::GrayA => (ColorMode::Grayscale, ChannelLayout::GrayA),
         ChannelLayout::Rgb | ChannelLayout::Rgba => (ColorMode::Rgb, ChannelLayout::Rgba),
