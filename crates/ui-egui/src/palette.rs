@@ -76,7 +76,11 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
                             .font(egui::FontId::proportional(15.0))
                             .desired_width(width - 40.0);
                         let resp = ui.add(te);
-                        resp.request_focus();
+                        // Only when focus is missing: every request_focus interrupts the IME, and
+                        // doing that each frame makes Wayland input methods drop key releases (#585).
+                        if !resp.has_focus() {
+                            resp.request_focus();
+                        }
                     });
                     ui.add_space(6.0);
                     crate::widgets::hairline(ui);
@@ -182,6 +186,25 @@ mod tests {
 
     use super::fuzzy_score;
     use crate::PhotosuiteApp;
+
+    #[test]
+    fn open_palette_interrupts_the_ime_only_when_it_takes_focus() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        // Fonts bind on the next pass; this one opens nothing.
+        ctx.run_ui(Default::default(), |_| {}).textures_delta.clear();
+        app.ui.palette_open = true;
+        // The field takes focus on the first pass and owns the IME from the second on.
+        let interrupts: Vec<Option<bool>> = (0..4)
+            .map(|_| {
+                let mut out = ctx.run_ui(Default::default(), |ui| super::show(&mut app, ui.ctx()));
+                out.textures_delta.clear();
+                out.platform_output.ime.map(|ime| ime.should_interrupt_composition)
+            })
+            .collect();
+        assert_eq!(interrupts, [None, Some(false), Some(false), Some(false)]);
+    }
 
     #[test]
     fn fuzzy_ranks_prefix_and_contiguous_higher() {

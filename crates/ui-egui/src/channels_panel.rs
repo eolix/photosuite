@@ -211,7 +211,9 @@ pub fn show(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                 if let Some(mut text) = ctx.data(|d| d.get_temp::<String>(rename_id)) {
                     let edit_rect = Rect::from_min_max(pos2(text_pos.x - 3.0, rect.center().y - 11.0), pos2(rect.right() - 36.0, rect.center().y + 11.0));
                     let te = ui.put(edit_rect, egui::TextEdit::singleline(&mut text).font(egui::FontId::proportional(12.5)));
-                    te.request_focus();
+                    if !te.has_focus() && !te.lost_focus() {
+                        te.request_focus();
+                    }
                     let (enter, esc) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
                     if esc {
                         ctx.data_mut(|d| d.remove::<String>(rename_id));
@@ -379,5 +381,27 @@ mod tests {
         assert_eq!(load_operation(m(true, false)), "add");
         assert_eq!(load_operation(m(false, true)), "subtract");
         assert_eq!(load_operation(m(true, true)), "intersect");
+    }
+
+    #[test]
+    fn rename_field_interrupts_the_ime_only_when_it_takes_focus() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
+        app.run("channel.new", json!({})).unwrap();
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.run_ui(Default::default(), |_| {}).textures_delta.clear();
+        let doc = app.session.active().unwrap().doc.id.0;
+        let name = app.session.active().unwrap().doc.channels[0].name.clone();
+        ctx.data_mut(|d| d.insert_temp(egui::Id::new(("chan-rename", doc, format!("{:?}", Row::Alpha(0).reference()))), name));
+        // The field takes focus on the first pass and owns the IME from the second on (#585).
+        let interrupts: Vec<Option<bool>> = (0..4)
+            .map(|_| {
+                let mut out = ctx.run_ui(Default::default(), |ui| show(&mut app, ui));
+                out.textures_delta.clear();
+                out.platform_output.ime.map(|ime| ime.should_interrupt_composition)
+            })
+            .collect();
+        assert_eq!(interrupts, [None, Some(false), Some(false), Some(false)]);
     }
 }
