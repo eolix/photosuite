@@ -1,6 +1,6 @@
 //! Capability-based filesystem policy for untrusted automation paths.
 
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -46,9 +46,8 @@ impl AuthorizedWorkspace {
         if !metadata.is_file() {
             return Err(AutomationError::BadRequest(format!("automation read path is not a regular file: `{path}`")));
         }
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes).map_err(|e| file_error("read", path, e))?;
-        Ok(bytes)
+        // Bounded reads, and a clear error for a file larger than memory (#375).
+        photosuite_format::read::read_all(&mut file, metadata.len()).map_err(|e| file_error("read", path, e))
     }
 
     /// Create or replace one file below the configured write root, crash-safely: the bytes go to

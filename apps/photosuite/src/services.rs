@@ -208,7 +208,8 @@ pub fn native(automation: Option<photosuite_automation::AuthorizedWorkspace>) ->
         })),
         pick_open: Some(Box::new(|| {
             let path = rfd::FileDialog::new().add_filter("All Formats", OPEN_EXTS).add_filter("PhotoSuite", &["pcraft"]).pick_file()?;
-            let bytes = std::fs::read(&path).ok()?;
+            // A read failure goes back to the app, which reports it like any other open failure.
+            let bytes = photosuite_format::read_file(&path).map_err(|e| e.to_string());
             Some((path.to_string_lossy().to_string(), bytes))
         })),
         pick_file: Some(Box::new(|filter: &str, exts: &[&str]| {

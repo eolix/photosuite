@@ -30,7 +30,7 @@ pub fn open(path: &Path) -> Result<Opened, AutomationError> {
     if path.is_dir() {
         return Ok(Opened { document: photosuite_format::load_path(path)?, warnings: Vec::new() });
     }
-    let bytes = std::fs::read(path).map_err(|e| AutomationError::Io(format!("{}: {e}", path.display())))?;
+    let bytes = photosuite_format::read_file(path).map_err(|e| AutomationError::Io(format!("{}: {e}", path.display())))?;
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     open_bytes(&name, &bytes)
 }

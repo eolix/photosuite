@@ -95,7 +95,10 @@ pub fn invoke(app: &mut PhotosuiteApp, ctx: &egui::Context, id: &str, params: &V
             form(app, id, "Image Statistics", json!({"mode": "median", "input": dir, "align": false}), json!({"mode": modes}))
         }
         "file.scripts.browse" => {
-            let (name, bytes) = app.services.pick_open.as_mut().and_then(|f| f())?;
+            let (name, bytes) = match app.pick_file_bytes()? {
+                Ok(picked) => picked,
+                Err(e) => return Some(Err(e)),
+            };
             let r = app.run(id, json!({"script": String::from_utf8_lossy(&bytes)}));
             if r.is_ok() {
                 app.ui.status = format!("Ran script {name}");

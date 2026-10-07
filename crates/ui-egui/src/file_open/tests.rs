@@ -29,7 +29,7 @@ fn app_with(pick_open: Option<(String, Vec<u8>)>, pick_save: Option<String>) -> 
             let warnings = if path.ends_with(".png") { vec!["Layers were flattened".to_string()] } else { Vec::new() };
             Ok((b"out".to_vec(), warnings))
         })),
-        pick_open: Some(Box::new(move || pick_open.take())),
+        pick_open: Some(Box::new(move || pick_open.take().map(|(name, bytes)| (name, Ok(bytes))))),
         pick_save: Some(Box::new(move |_s: &str| pick_save.clone())),
         write: Some(Box::new(move |p: &str, b: &[u8]| {
             w.borrow_mut().push((p.to_string(), b.to_vec()));
@@ -197,6 +197,23 @@ fn open_failures_are_errors_and_leave_no_document() {
 }
 
 #[test]
+fn a_picked_file_that_cannot_be_read_is_reported_like_any_open_failure() {
+    let (mut app, _) = app_with(None, None);
+    let mut picked = Some(("C:/photos/big.psb".to_string(), Err("The parameter is incorrect. (os error 87)".to_string())));
+    app.services.pick_open = Some(Box::new(move || picked.take()));
+    app.open_dialog_file();
+    assert!(app.session.documents().is_empty());
+    assert!(app.ui.status_error);
+    let notice = app.ui.notices.last().unwrap();
+    assert!(notice.error && notice.title.contains("Couldn't open big.psb: The parameter is incorrect"), "{}", notice.title);
+    // Commands that read a picked file (scripts, notes, Place) get the same message as an error.
+    app.services.pick_open = Some(Box::new(|| Some(("C:/photos/big.psb".to_string(), Err("denied".to_string())))));
+    assert_eq!(app.pick_file_bytes(), Some(Err("big.psb: denied".to_string())));
+    app.services.pick_open = Some(Box::new(|| None));
+    assert_eq!(app.pick_file_bytes(), None, "cancelled");
+}
+
+#[test]
 fn open_paths_reports_each_failure_without_panicking() {
     let (mut app, _) = app_with(None, None);
     let missing = std::env::temp_dir().join("photosuite-definitely-missing-file.psd").to_string_lossy().to_string();
@@ -258,10 +275,15 @@ impl egui::DroppedFile for FakeDrop {
 #[test]
 fn dropped_files_open_with_path_and_recent() {
     let (mut app, _) = app_with(None, None);
-    let abs = std::env::temp_dir().join("dropped.psd");
+    let dir = std::env::temp_dir().join(format!("photosuite-drop-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let abs = dir.join("dropped.psd");
+    std::fs::write(&abs, b"x").unwrap();
     let abs_s = abs.to_string_lossy().to_string();
     app.open_dropped(vec![
-        std::sync::Arc::new(FakeDrop(abs, Ok(b"x".to_vec()))),
+        // A desktop drop (absolute path) is read from disk like File › Open (#375), never through
+        // egui's whole-file `std::fs::read`.
+        std::sync::Arc::new(FakeDrop(abs, Err("egui's reader must not be used".into()))),
         // Unreadable and undecodable drops are errors; no path means no recent entry.
         std::sync::Arc::new(FakeDrop("gone.psd".into(), Err("permission denied".into()))),
         std::sync::Arc::new(FakeDrop("rel.psd".into(), Ok(b"x".to_vec()))),
@@ -274,6 +296,7 @@ fn dropped_files_open_with_path_and_recent() {
     assert_eq!(app.ui.recent_files, vec![abs_s]);
     assert!(app.ui.status_error);
     assert_eq!(app.ui.notices.iter().filter(|n| n.error).count(), 2);
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

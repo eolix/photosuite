@@ -159,7 +159,10 @@ pub fn menu(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<
             r
         }
         "file.import.notes" => {
-            let (name, bytes) = app.services.pick_open.as_mut().and_then(|f| f())?;
+            let (name, bytes) = match app.pick_file_bytes()? {
+                Ok(picked) => picked,
+                Err(e) => return Some(Err(e)),
+            };
             let r = photosuite_engine::notes_cmds::import_notes_from(&mut app.session, &name, &bytes).map_err(|e| e.to_string());
             if r.is_ok() {
                 app.ui.analysis.notes = true;

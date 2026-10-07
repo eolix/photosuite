@@ -72,7 +72,7 @@ fn base_name(path: &str) -> String {
 }
 
 fn read_file(path: &str) -> Option<Vec<u8>> {
-    if path.is_empty() { None } else { std::fs::read(path).ok() }
+    if path.is_empty() { None } else { photosuite_format::read_file(std::path::Path::new(path)).ok() }
 }
 
 /// The source file of a smart object: embedded bytes, the PSD's embedded linked-layer data (PSD
@@ -614,7 +614,7 @@ fn set_source(s: &mut Session, p: &Value, label: &str, keep_psd: bool, make: imp
 
 fn replace_contents(s: &mut Session, p: &Value) -> Result<Value> {
     let path = path_param("layer.smartObjects.replaceContents", p)?.to_string();
-    let bytes = std::fs::read(&path).map_err(|e| other(format!("can't read {path}: {e}")))?;
+    let bytes = photosuite_format::read_file(std::path::Path::new(&path)).map_err(|e| other(format!("can't read {path}: {e}")))?;
     let name = base_name(&path);
     decode_source(&name, &bytes)?; // fail before touching the document
     set_source(s, p, "Replace Contents", false, |_, _| Ok(SmartSource::Embedded { file_name: name, bytes: Arc::new(bytes) }))

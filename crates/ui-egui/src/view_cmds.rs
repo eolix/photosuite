@@ -802,7 +802,10 @@ fn front(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<Val
         }
         "file.saveACopy" => Some(save_a_copy(app)),
         "file.placeEmbedded" | "file.placeLinked" => {
-            let (name, bytes) = app.services.pick_open.as_mut().and_then(|f| f())?;
+            let (name, bytes) = match app.pick_file_bytes()? {
+                Ok(picked) => picked,
+                Err(e) => return Some(Err(e)),
+            };
             let linked = (id == "file.placeLinked").then(|| name.clone());
             let r = photosuite_engine::file_cmds::place_bytes(&mut app.session, &name, bytes, linked, &json!({})).map_err(|e| e.to_string());
             app.sync_views();

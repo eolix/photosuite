@@ -258,7 +258,8 @@ fn independent_of_document(id: &str) -> bool {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn read_path(path: &str) -> Result<Vec<u8>> {
-    std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))
+    // Bounded reads, and a clear error for a file larger than memory (#375).
+    photosuite_format::read_file(std::path::Path::new(path)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
 }
 
 #[cfg(target_arch = "wasm32")]

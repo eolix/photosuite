@@ -25,6 +25,7 @@ pub mod autosave;
 mod convert;
 pub mod manifest;
 mod migrate;
+pub mod read;
 mod store;
 pub mod zip;
 
@@ -39,6 +40,7 @@ pub use autosave::RecoveryStore;
 pub use autosave::{Autosaver, RecoveryEntry, discard_recovery, list_recovery, recover};
 pub use convert::MAX_GROUP_DEPTH;
 pub use manifest::{FORMAT_VERSION, Manifest};
+pub use read::read_file;
 pub use store::{PcraftWriter, SaveStats};
 
 /// File extension of the native format.
@@ -137,7 +139,7 @@ pub fn load_path_with(path: &Path, opts: &LoadOptions) -> Result<Document> {
     if path.is_dir() {
         store::load(&store::DirSource { root: path.to_path_buf() }, opts)
     } else {
-        let bytes = std::fs::read(path)?;
+        let bytes = read::read_file(path)?;
         load_from_bytes_with(&bytes, opts)
     }
 }
