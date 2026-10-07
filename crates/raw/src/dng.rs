@@ -113,6 +113,18 @@ fn rect_from(t: &Tiff, ifd: &Ifd, width: usize, height: usize) -> Rect {
     }
 }
 
+fn crop_value(value: f64, name: &str) -> Result<usize> {
+    if !value.is_finite() || value < 0.0 {
+        return Err(RawError::malformed(format!("invalid DNG {name}")));
+    }
+    let rounded = value.round();
+    let usize_limit = 2.0_f64.powi(usize::BITS as i32);
+    if rounded >= usize_limit {
+        return Err(RawError::malformed(format!("DNG {name} is not representable")));
+    }
+    Ok(rounded as usize)
+}
+
 /// Decodes a DNG file's raw image and metadata.
 pub(crate) fn decode(t: &Tiff, limits: &Limits) -> Result<Sensor> {
     let ifds = t.all_ifds();
@@ -139,11 +151,29 @@ pub(crate) fn decode(t: &Tiff, limits: &Limits) -> Result<Sensor> {
     let mut crop = active;
     let origin = t.tag_floats(&raw, tag::DEFAULT_CROP_ORIGIN);
     let size = t.tag_floats(&raw, tag::DEFAULT_CROP_SIZE);
-    if let ([ox, oy], [cw, ch]) = (origin.as_slice(), size.as_slice()) {
-        let f = |v: f64| if v.is_finite() && v >= 0.0 { v.round() as usize } else { 0 };
-        let r = Rect::new(active.x + f(*ox), active.y + f(*oy), f(*cw), f(*ch)).intersect(&active);
-        if !r.is_empty() {
-            crop = r;
+    if raw.has(tag::DEFAULT_CROP_ORIGIN) || raw.has(tag::DEFAULT_CROP_SIZE) {
+        if let ([ox, oy], [cw, ch]) = (origin.as_slice(), size.as_slice()) {
+            let (ox, oy, cw, ch) = (
+                crop_value(*ox, "DefaultCropOrigin"),
+                crop_value(*oy, "DefaultCropOrigin"),
+                crop_value(*cw, "DefaultCropSize"),
+                crop_value(*ch, "DefaultCropSize"),
+            );
+            let (ox, oy, cw, ch) = (ox?, oy?, cw?, ch?);
+            let active_right = active.x.checked_add(active.width).ok_or_else(|| RawError::malformed("DNG active-area right edge overflow"))?;
+            let active_bottom = active.y.checked_add(active.height).ok_or_else(|| RawError::malformed("DNG active-area bottom edge overflow"))?;
+            let candidate = active.x.checked_add(ox).zip(active.y.checked_add(oy)).and_then(|(x, y)| {
+                let right = x.checked_add(cw)?;
+                let bottom = y.checked_add(ch)?;
+                (x >= active.x && y >= active.y && right <= active_right && bottom <= active_bottom).then_some(Rect::new(x, y, cw, ch))
+            });
+            if let Some(r) = candidate.filter(|r| !r.is_empty()) {
+                crop = r;
+            } else {
+                warnings.push("out-of-range or empty DNG default crop; active area used".to_string());
+            }
+        } else {
+            warnings.push("incomplete DNG default crop; active area used".to_string());
         }
     }
     let scale = t.tag_floats(&raw, tag::DEFAULT_SCALE);

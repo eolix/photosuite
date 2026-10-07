@@ -178,6 +178,7 @@ pub enum Val {
     Ascii(String),
     Short(Vec<u16>),
     Long(Vec<u32>),
+    Double(Vec<f64>),
     Rational(Vec<(u32, u32)>),
     SRational(Vec<(i32, i32)>),
     Undefined(Vec<u8>),
@@ -219,6 +220,7 @@ impl TiffBuilder {
             Val::Ascii(s) => s.len() + 1,
             Val::Short(s) => 2 * s.len(),
             Val::Long(l) => 4 * l.len(),
+            Val::Double(d) => 8 * d.len(),
             Val::Rational(r) => 8 * r.len(),
             Val::SRational(r) => 8 * r.len(),
             Val::Blobs(b) => 4 * b.len(),
@@ -330,6 +332,7 @@ impl TiffBuilder {
         let be = self.big_endian;
         let b16 = |v: u16| if be { v.to_be_bytes() } else { v.to_le_bytes() };
         let b32 = |v: u32| if be { v.to_be_bytes() } else { v.to_le_bytes() };
+        let b64 = |v: u64| if be { v.to_be_bytes() } else { v.to_le_bytes() };
         match v {
             Val::Byte(b) => (1, b.len() as u32, b.clone()),
             Val::Undefined(b) => (7, b.len() as u32, b.clone()),
@@ -340,6 +343,7 @@ impl TiffBuilder {
             }
             Val::Short(s) => (3, s.len() as u32, s.iter().flat_map(|&v| b16(v)).collect()),
             Val::Long(l) => (4, l.len() as u32, l.iter().flat_map(|&v| b32(v)).collect()),
+            Val::Double(d) => (12, d.len() as u32, d.iter().flat_map(|v| b64(v.to_bits())).collect()),
             Val::Rational(r) => (5, r.len() as u32, r.iter().flat_map(|&(n, d)| [b32(n), b32(d)].concat()).collect()),
             Val::SRational(r) => (10, r.len() as u32, r.iter().flat_map(|&(n, d)| [b32(n as u32), b32(d as u32)].concat()).collect()),
             Val::Blobs(b) => (4, b.len() as u32, b.iter().flat_map(|&i| b32(blob_pos[i] as u32)).collect()),
@@ -390,6 +394,8 @@ pub struct DngSpec {
     pub active_area: Option<[u32; 4]>,
     /// origin (x, y), size (w, h), relative to the active area
     pub default_crop: Option<([u32; 2], [u32; 2])>,
+    /// Double-precision origin override for malformed-metadata regression tests.
+    pub default_crop_origin_double: Option<[f64; 2]>,
     pub linearization: Option<Vec<u16>>,
     /// (illuminant code, ColorMatrix row-major)
     pub color_matrix1: Option<(u16, [f64; 9])>,
@@ -422,6 +428,7 @@ impl DngSpec {
             white: 65535,
             active_area: None,
             default_crop: None,
+            default_crop_origin_double: None,
             linearization: None,
             color_matrix1: None,
             color_matrix2: None,
@@ -552,8 +559,11 @@ impl DngSpec {
             raw.push((50829, Val::Long(a.to_vec())));
         }
         if let Some((o, s)) = self.default_crop {
-            raw.push((50719, Val::Long(o.to_vec())));
+            let origin = self.default_crop_origin_double.map(|d| Val::Double(d.to_vec())).unwrap_or_else(|| Val::Long(o.to_vec()));
+            raw.push((50719, origin));
             raw.push((50720, Val::Long(s.to_vec())));
+        } else if let Some(origin) = self.default_crop_origin_double {
+            raw.push((50719, Val::Double(origin.to_vec())));
         }
         if let Some(o) = &self.opcode_list2 {
             raw.push((51009, Val::Undefined(o.clone())));
