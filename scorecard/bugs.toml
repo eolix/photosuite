@@ -1,6 +1,7 @@
 # Scorecard checklist: open bugs (#203–#208).
 # Each item: id, short target, status (done | partial | missing), issue, note (evidence).
-# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05.
+# Statuses must be true on main. BUG-203 verified against 47f9306 on 2026-10-07; the rest
+# against 4b53f62 on 2026-10-05.
 area = "bugs"
 title = "Open bugs"
 order = 9
@@ -8,44 +9,44 @@ order = 9
 [[item]]
 id = "BUG-203-1"
 target = "Every document write goes through one atomic_write (temp, fsync, rename)"
-status = "missing"
+status = "done"
 issue = 203
-note = "services.rs:125 std::fs::write; file_cmds.rs:91 fs::write; automation/files.rs:67 in place"
+note = "photosuite_format::atomic_write (format/src/atomic.rs, #230/8227071); every write site routes through it: engine file_cmds.rs write_file and preset_store.rs, automation files.rs/headless.rs/workspace.rs, app services.rs write_atomic, format store.rs and autosave.rs"
 
 [[item]]
 id = "BUG-203-2"
 target = "Temp file in the same dir, sync_all, rename over target, fsync dir on Unix"
-status = "missing"
+status = "done"
 issue = 203
-note = "No sync_all anywhere; services.rs:71 write_atomic (prefs only) does tmp + rename, no fsync"
+note = "atomic.rs: temp_name in the same dir, create_new + write_all + sync_all, Unix directory fsync after the rename"
 
 [[item]]
 id = "BUG-203-3"
 target = "Windows: retry the rename with backoff on PermissionDenied"
-status = "missing"
+status = "done"
 issue = 203
-note = "No retry around fs::rename (services.rs:77, preset_store.rs:189, format/store.rs:457)"
+note = "atomic.rs RenameRetry::platform(): seven retries from 10 ms on Windows; retry_rename is shared with automation's cap-std workspace write"
 
 [[item]]
 id = "BUG-203-4"
 target = "Unwritable directory errors clearly, never falls back to writing in place"
-status = "missing"
+status = "done"
 issue = 203
-note = "No atomic path exists for documents; all document writes are in place"
+note = "atomic.rs maps read-only dir, disk-full and cross-device rename errors to messages that say the original was not changed; there is no in-place fallback path"
 
 [[item]]
 id = "BUG-203-5"
 target = "On any failure the original file is untouched and the temp file removed"
-status = "missing"
+status = "done"
 issue = 203
-note = "services.rs:76 write_atomic leaves .tmp behind if rename fails; documents write in place"
+note = "atomic.rs removes the temp file on every failure; tests assert the original bytes survive write and rename failures"
 
 [[item]]
 id = "BUG-203-6"
 target = "Failure-injection tests: mid-write, rename and read-only dir errors keep original bytes"
-status = "missing"
+status = "done"
 issue = 203
-note = "No such tests under crates/ or apps/"
+note = "format/src/atomic/tests.rs: Faulty AtomicFs injects mid-write StorageFull, rename failure and a read-only dir; locked-target retries, symlink and file-mode preservation covered too"
 
 [[item]]
 id = "BUG-204-1"
