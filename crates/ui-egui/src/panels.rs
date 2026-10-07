@@ -1842,19 +1842,7 @@ fn history(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let doc = st.doc.clone();
     let entries = st.history.entries();
     let current = entries.len() - 1;
-    let redo: Vec<String> = {
-        let mut v = Vec::new();
-        let mut h = st.history.clone();
-        let mut d = st.doc.clone();
-        while let Some(label) = h.redo_label().map(str::to_string) {
-            v.push(label);
-            match h.redo(d.clone()) {
-                Some(n) => d = n,
-                None => break,
-            }
-        }
-        v
-    };
+    let redo: Vec<String> = st.history.redo_labels().map(str::to_string).collect();
     // Snapshot row (Photoshop shows the document's opening state with a thumbnail).
     {
         let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 38.0), Sense::hover());

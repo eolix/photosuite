@@ -525,14 +525,7 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!("type.antiAlias.windowsLcd", "Windows LCD", &["Type", "Anti-Alias"], LP, has_text, |s, p| set_aa(s, p, AntiAlias::WindowsLcd)),
         spec!("type.antiAlias.windows", "Windows", &["Type", "Anti-Alias"], LP, has_text, |s, p| set_aa(s, p, AntiAlias::Windows)),
         spec!("type.orientation.horizontal", "Horizontal", &["Type", "Orientation"], LP, has_text, |s, p| set_orientation(s, p, Orientation::Horizontal)),
-        spec!(
-            "type.orientation.vertical",
-            "Vertical",
-            &["Type", "Orientation"],
-            r##"{"layer":id?} (stored and saved; rendered horizontally for now)"##,
-            has_text,
-            |s, p| set_orientation(s, p, Orientation::Vertical)
-        ),
+        spec!("type.orientation.vertical", "Vertical", &["Type", "Orientation"], LP, has_text, |s, p| set_orientation(s, p, Orientation::Vertical)),
         spec!("type.openType.standardLigatures", "Standard Ligatures", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "liga")),
         spec!("type.openType.contextualAlternates", "Contextual Alternates", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "calt")),
         spec!("type.openType.discretionaryLigatures", "Discretionary Ligatures", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "dlig")),

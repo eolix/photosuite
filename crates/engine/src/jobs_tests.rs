@@ -157,6 +157,17 @@ fn progress_is_monotonic_and_reaches_one() {
     assert_eq!((info.state, info.progress), ("done", 1.0));
 }
 
+#[test]
+fn a_preset_filter_job_is_named_after_the_preset() {
+    // #528: the job (progress UI) and its history step say "Blur More", not "Gaussian Blur".
+    let mut s = session(300, 200);
+    let id = job(s.start("filter.blur.blurMore", json!({})).unwrap());
+    let e = wait_event(&mut s, id);
+    assert!(matches!(e.outcome, JobOutcome::Done(_)), "{e:?}");
+    assert_eq!(e.label, "Blur More");
+    assert_eq!(s.active().unwrap().history.undo_label(), Some("Blur More"));
+}
+
 /// A fake document job that runs until `gate` opens (or it is cancelled), then inverts nothing
 /// but records one undo step named "Gated Job".
 pub(super) fn gated_job(s: &mut Session, gate: &Arc<std::sync::atomic::AtomicBool>) -> JobId {

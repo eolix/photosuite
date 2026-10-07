@@ -90,7 +90,7 @@ mod wia_cmds;
 use std::sync::Arc;
 
 use photosuite_doc::{Document, LayerId};
-use photosuite_ops::History;
+use photosuite_ops::{History, LayerTarget};
 use serde_json::Value;
 
 pub use commands::{CommandSpec, command_specs};
@@ -154,7 +154,8 @@ pub struct DocState {
     /// `selected_layers` when set.
     pub active_layer: Option<LayerId>,
     /// Every selected layer in the Layers panel (⌘/⇧-click), in selection order. Like
-    /// `active_layer` this is UI state, not history; see [`DocState::selected_layers`].
+    /// `active_layer`, selecting is not a history step, but undo and redo restore the layers each
+    /// state targeted when it was created; see [`DocState::selected_layers`].
     pub selected_layers: Vec<LayerId>,
     /// Anchor of ⇧-click range selection (the last plainly or ⌘-clicked layer).
     pub layer_anchor: Option<LayerId>,
@@ -181,9 +182,11 @@ pub struct DocState {
 impl DocState {
     pub fn new(doc: Document, path: Option<String>) -> Self {
         let active_layer = doc.top_layer();
+        let mut history = History::default();
+        history.set_current_layers(LayerTarget { active: active_layer, selected: active_layer.into_iter().collect() });
         Self {
             doc: Arc::new(doc),
-            history: History::default(),
+            history,
             active_layer,
             selected_layers: active_layer.into_iter().collect(),
             layer_anchor: active_layer,
@@ -211,6 +214,10 @@ impl DocState {
     }
     pub fn is_dirty(&self) -> bool {
         self.revision != self.saved_revision
+    }
+    /// The targeted layers, as history stores them with each state.
+    fn layer_target(&self) -> LayerTarget {
+        LayerTarget { active: self.active_layer, selected: self.selected_layers.clone() }
     }
 }
 
@@ -394,9 +401,12 @@ impl Session {
         channel_cmds::fix_view(st);
         let key = self.coalesce_request.clone();
         let st = self.active_mut().ok_or(EngineError::NoDocument)?;
+        let layers = st.layer_target();
         if key.is_none() || st.coalesce != key || !st.history.can_undo() {
-            st.history.record(label, before);
+            st.history.record(label, before, layers);
             st.history.trim(&st.doc);
+        } else {
+            st.history.set_current_layers(layers);
         }
         st.coalesce = key;
         st.revision += 1;
@@ -431,9 +441,9 @@ impl Session {
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.undo(st.doc.clone()) {
-            Some(d) => {
+            Some((d, layers)) => {
                 st.doc = d;
-                fix_active(st);
+                restore_target(st, layers);
                 st.revision += 1;
                 st.last_damage = None;
                 true
@@ -449,9 +459,9 @@ impl Session {
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.redo(st.doc.clone()) {
-            Some(d) => {
+            Some((d, layers)) => {
                 st.doc = d;
-                fix_active(st);
+                restore_target(st, layers);
                 st.revision += 1;
                 st.last_damage = None;
                 true
@@ -459,6 +469,15 @@ impl Session {
             None => false,
         }
     }
+}
+
+/// Undo / redo: target the layers the restored state targeted, as far as they still exist.
+fn restore_target(st: &mut DocState, layers: LayerTarget) {
+    if layers.active.is_some_and(|id| st.doc.layer(id).is_some()) {
+        st.active_layer = layers.active;
+        st.selected_layers = layers.selected;
+    }
+    fix_active(st);
 }
 
 fn fix_active(st: &mut DocState) {

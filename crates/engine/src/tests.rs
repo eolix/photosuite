@@ -152,6 +152,73 @@ fn marquee_dragged_past_the_canvas_stops_at_its_edge() {
 }
 
 #[test]
+fn marquee_steps_are_named_after_their_tool() {
+    // #513: the elliptical marquee shares `select.rect` but records its own step name.
+    let mut s = session_with_doc();
+    let last = |s: &Session| s.active().unwrap().history.undo_label().map(str::to_string);
+    s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 10, "ellipse": true})).unwrap();
+    assert_eq!(last(&s).as_deref(), Some("Elliptical Marquee"));
+    s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 10})).unwrap();
+    assert_eq!(last(&s).as_deref(), Some("Rectangular Marquee"));
+}
+
+#[test]
+fn undo_and_redo_restore_the_targeted_layers() {
+    // #495: each history state brings back the layers it targeted when it was created.
+    let mut s = session_with_doc();
+    let target = |s: &Session| {
+        let st = s.active().unwrap();
+        (st.active_layer.unwrap(), st.selected_layers())
+    };
+    let select = |s: &mut Session, id: LayerId, mode: &str| {
+        let steps = s.active().unwrap().history.past_len();
+        s.execute("layer.select", json!({"layer": id.0, "mode": mode})).unwrap();
+        assert_eq!(s.active().unwrap().history.past_len(), steps, "selecting is not a step");
+    };
+    let bg = target(&s).0;
+    s.execute("layer.new.layer", json!({})).unwrap();
+    let new = target(&s).0;
+    assert!(s.undo());
+    assert_eq!(target(&s), (bg, vec![bg]), "the new document's target");
+    assert!(s.redo());
+    assert_eq!(target(&s), (new, vec![new]), "redo targets the new layer again");
+    // So Fill paints the new layer, not the background.
+    s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
+    let doc = &s.active().unwrap().doc;
+    assert!(!doc.layer(new).unwrap().surface().unwrap().content_bounds().is_empty());
+    let mut v = [0.0f32; 4];
+    doc.layer(bg).unwrap().surface().unwrap().read_pixel(5, 5, &mut v);
+    assert_eq!(v, [1.0; 4], "the background is untouched");
+    // Selecting another layer doesn't change what a state targets: undo returns to New Layer's
+    // target and redo to Fill's.
+    select(&mut s, bg, "replace");
+    assert!(s.undo());
+    assert_eq!(target(&s), (new, vec![new]));
+    select(&mut s, bg, "replace");
+    assert!(s.redo());
+    assert_eq!(target(&s), (new, vec![new]), "redo targets the filled layer");
+    // Undoing a delete targets the restored layer.
+    s.execute("layer.delete", json!({})).unwrap();
+    assert_eq!(target(&s).0, bg);
+    assert!(s.undo());
+    assert_eq!(target(&s), (new, vec![new]));
+    // A multi-layer target comes back too: a step taken with both layers selected...
+    select(&mut s, bg, "add");
+    s.execute("select.all", json!({})).unwrap();
+    s.execute("layer.new.layer", json!({})).unwrap();
+    assert!(s.undo());
+    assert_eq!(target(&s), (bg, vec![bg, new]));
+    // ...and the copies a multi-layer duplicate selects after its edit.
+    s.execute("layer.duplicate", json!({})).unwrap();
+    let copies = target(&s);
+    assert_eq!(copies.1.len(), 2);
+    select(&mut s, bg, "replace");
+    assert!(s.undo());
+    assert!(s.redo());
+    assert_eq!(target(&s), copies);
+}
+
+#[test]
 fn selection_modes() {
     let mut s = session_with_doc();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 10, "height": 10})).unwrap();

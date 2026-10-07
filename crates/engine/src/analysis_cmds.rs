@@ -180,7 +180,7 @@ fn compound<R>(s: &mut Session, label: &str, f: impl FnOnce(&mut Session) -> Res
     st.history = history;
     match r {
         Ok(v) => {
-            st.history.record(label, before);
+            st.history.record(label, before, st.layer_target());
             st.history.trim(&st.doc);
             st.coalesce = None;
             Ok(v)

@@ -331,7 +331,7 @@ fn build() -> Vec<CommandSpec> {
                 // Options bar: anti-aliased ellipse edges (4x4 supersampled) and Feather (applied to the new shape only).
                 let aa = p.get("antiAlias").and_then(Value::as_bool).unwrap_or(true);
                 let feather = p.get("feather").and_then(Value::as_f64).unwrap_or(0.0).clamp(0.0, 1000.0) as f32;
-                s.edit("Rectangular Marquee", |doc, _| {
+                s.edit(if ellipse { "Elliptical Marquee" } else { "Rectangular Marquee" }, |doc, _| {
                     let area = doc.bounds();
                     // A marquee dragged past the canvas stops at its edge (Photoshop); the ellipse
                     // keeps the dragged shape and is only cut there.

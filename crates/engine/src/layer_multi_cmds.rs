@@ -58,7 +58,8 @@ pub fn set_selection(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>
     Ok(())
 }
 
-/// After a structural edit, make `ids` the selection (dropping any that no longer exist).
+/// After a structural edit, make `ids` the selection (dropping any that no longer exist), which
+/// is also what the edit's history state targets.
 fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
     if let Some(st) = s.active_mut() {
         st.selected_layers = ids;
@@ -67,6 +68,8 @@ fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
             st.layer_anchor = Some(a);
         }
         crate::fix_selection(st);
+        let layers = st.layer_target();
+        st.history.set_current_layers(layers);
     }
 }
 
@@ -1023,18 +1026,22 @@ mod tests {
             let b = rect_layer(&mut s, Rect::new(12, 0, 32, 10)); // 20 wide
             let c = rect_layer(&mut s, Rect::new(70, 0, 100, 10)); // 30 wide
             select_all(&mut s, &[a, b, c]);
+            // Undo targets the layers its state had when it was created (#495): reselect.
             assert!(s.is_enabled("layer.distribute.leftEdges"));
             s.execute("layer.distribute.leftEdges", json!({})).unwrap();
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10), "left edges 0, 35, 70");
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.horizontalCenters", json!({})).unwrap();
             // centres 5 and 85 → middle centre 45
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10));
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.rightEdges", json!({})).unwrap();
             // right edges 10 and 100 → 55
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10));
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.horizontally", json!({})).unwrap();
             // span 100, widths 60 → gaps of 20: b at 30..50
             assert_eq!(bounds(&s, b), Rect::new(30, 0, 50, 10));
@@ -1053,12 +1060,15 @@ mod tests {
         // span 80, heights 34 → gaps 23: b at 33..37
         assert_eq!(bounds(&s, b), Rect::new(0, 33, 10, 37));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.topEdges", json!({})).unwrap();
         assert_eq!(bounds(&s, b), Rect::new(0, 30, 10, 34));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.bottomEdges", json!({})).unwrap();
         assert_eq!(bounds(&s, b), Rect::new(0, 41, 10, 45));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.verticalCenters", json!({})).unwrap();
         // centres 5 and 70 → 37.5, b is 4 tall → top 35.5 → rounds to 36 (35 for ties down)
         let y0 = bounds(&s, b).y0;
