@@ -354,12 +354,27 @@ pub struct SmartObject {
     /// Layer › Smart Objects › Stack Mode: when set, the source's top-level layers are combined
     /// per pixel with this statistic instead of composited.
     pub stack_mode: Option<StackMode>,
+    /// Distort / Perspective (or an imported placement whose corners aren't a parallelogram): the
+    /// full projective map from source pixels to document pixels, row-major 3×3. It overrides
+    /// `transform`, which then holds its affine approximation at the source origin.
+    pub perspective: Option<[f64; 9]>,
 }
 
 impl SmartObject {
     /// A smart object with no filters and no PSD data.
     pub fn new(source: SmartSource, transform: Affine, cache: Option<Surface>) -> Self {
-        Self { source, transform, smart_filters: Vec::new(), cache, psd_raw: None, filters_enabled: true, filter_mask: None, warp: None, stack_mode: None }
+        Self {
+            source,
+            transform,
+            smart_filters: Vec::new(),
+            cache,
+            psd_raw: None,
+            filters_enabled: true,
+            filter_mask: None,
+            warp: None,
+            stack_mode: None,
+            perspective: None,
+        }
     }
 }
 

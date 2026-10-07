@@ -531,6 +531,31 @@ pub fn parse_smart(key: &[u8; 4], data: &[u8]) -> (String, Affine) {
     (id, affine)
 }
 
+/// The projective placement of a `SoLd` / `SoLE` block whose corners aren't a parallelogram
+/// (Distort, Perspective): source pixels → document pixels, row-major 3×3. Read from
+/// `nonAffineTransform` (the placed corners), else `Trnf`. `None` for affine placements, which
+/// [`parse_smart`]'s affine holds exactly.
+pub fn parse_smart_perspective(key: &[u8; 4], data: &[u8]) -> Option<[f64; 9]> {
+    if key != b"SoLd" && key != b"SoLE" {
+        return None;
+    }
+    let d = data.get(8..).and_then(parse_prefix_versioned)?;
+    let sz = get_desc(&d, "Sz  ")?;
+    let (w, h) = (num(sz.get("Wdth"))?, num(sz.get("Hght"))?);
+    let quad = |key: &str| -> Option<[[f64; 2]; 4]> {
+        let Some(Value::List(pts)) = d.get(key) else { return None };
+        let p: Vec<f64> = pts.iter().filter_map(|v| num(Some(v))).collect();
+        (p.len() == 8 && p.iter().all(|v| v.is_finite())).then(|| [[p[0], p[1]], [p[2], p[3]], [p[4], p[5]], [p[6], p[7]]])
+    };
+    let q = quad("nonAffineTransform").or_else(|| quad("Trnf"))?;
+    // A parallelogram (top-left + bottom-right = top-right + bottom-left) is affine.
+    let tol = 1e-6 * (1.0 + q.iter().flatten().fold(0.0f64, |m, v| m.max(v.abs())));
+    if (0..2).all(|i| (q[0][i] + q[2][i] - q[1][i] - q[3][i]).abs() <= tol) || w <= 0.0 || h <= 0.0 {
+        return None;
+    }
+    photosuite_algo::transform::Homography::rect_to_quad([0.0, 0.0, w, h], q).map(|m| m.0)
+}
+
 /// `masterFXSwitch` from an `lfx2` block (defaults to `true`).
 pub fn effects_enabled(lfx2: &[u8]) -> bool {
     lfx2.get(4..)

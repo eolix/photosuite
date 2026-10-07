@@ -8,10 +8,9 @@
 //! The split commands edit a mesh: either one passed in (`"warp"`, returned edited — what the
 //! Free Transform warp UI uses) or the active smart object's stored warp (a history step).
 
-use photosuite_algo::transform::Interp;
+use photosuite_algo::transform::{Homography, Interp};
 use photosuite_algo::warp::{warp_mesh_gray, warp_mesh_surface};
 use photosuite_doc::{Document, Layer, LayerContent, LayerId, Rect};
-use photosuite_geom::Affine;
 use photosuite_geom::warp::{BezierMesh, Warp, WarpStyle};
 use photosuite_raster::Surface;
 use serde_json::{Value, json};
@@ -39,9 +38,10 @@ fn rect_f(r: Rect) -> [f64; 4] {
     [f64::from(r.x0), f64::from(r.y0), f64::from(r.x1), f64::from(r.y1)]
 }
 
-fn affine_apply(t: &Affine, p: [f64; 2]) -> [f64; 2] {
-    let [a, b, c, d, e, f] = t.m;
-    [a * p[0] + c * p[1] + e, b * p[0] + d * p[1] + f]
+/// `p` through a projective map: a smart object's placement (affine, or Distort / Perspective).
+fn hom_apply(h: &Homography, p: [f64; 2]) -> [f64; 2] {
+    let (x, y) = h.apply(p[0], p[1]);
+    [x, y]
 }
 
 /// The box a warp of `layer` starts from (Free Transform's frame).
@@ -51,8 +51,8 @@ pub fn warp_bounds(doc: &Document, layer: &Layer) -> Rect {
     if let LayerContent::Smart(sm) = &layer.content
         && let Some(w) = &sm.warp
     {
-        let t = sm.transform;
-        let c = [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| affine_apply(&t, p));
+        let t = crate::smart_cmds::placement(sm);
+        let c = [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| hom_apply(&t, p));
         let b = c.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |b, p| [b[0].min(p[0]), b[1].min(p[1]), b[2].max(p[0]), b[3].max(p[1])]);
         return Rect::new(b[0].round() as i32, b[1].round() as i32, b[2].round() as i32, b[3].round() as i32);
     }
@@ -63,9 +63,9 @@ pub fn warp_bounds(doc: &Document, layer: &Layer) -> Rect {
 pub fn smart_warp_doc_space(layer: &Layer) -> Option<Warp> {
     let LayerContent::Smart(sm) = &layer.content else { return None };
     let w = sm.warp.as_ref()?;
-    let t = sm.transform;
-    let mesh = w.to_mesh(1, 1).map_points(|p| affine_apply(&t, p));
-    let corners = [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| affine_apply(&t, p));
+    let t = crate::smart_cmds::placement(sm);
+    let mesh = w.to_mesh(1, 1).map_points(|p| hom_apply(&t, p));
+    let corners = [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| hom_apply(&t, p));
     let b = corners.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |b, p| [b[0].min(p[0]), b[1].min(p[1]), b[2].max(p[0]), b[3].max(p[1])]);
     Some(Warp::custom(mesh, b))
 }
@@ -129,15 +129,14 @@ fn warp_layer(doc_sel: Option<&Surface>, l: &mut Layer, w: &Warp, rect: Rect, in
         LayerContent::Text(_) => return Err(EngineError::Other("Warp needs rasterized type (or use Type › Warp Text)".into())),
         LayerContent::Shape(_) => return Err(EngineError::Other("Warp needs a rasterized shape (Layer › Rasterize › Shape)".into())),
         LayerContent::Smart(sm) => {
-            // Store in source space: undo the placement transform around the warp.
-            let t = sm.transform;
-            let inv = t.inverse().ok_or_else(|| EngineError::Other("the smart object's transform is degenerate".into()))?;
+            // Store in source space: undo the placement (affine, or Distort / Perspective) around the warp.
+            let inv = crate::smart_cmds::placement(sm).inverse().ok_or_else(|| EngineError::Other("the smart object's transform is degenerate".into()))?;
             let corners =
-                [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| affine_apply(&inv, p));
+                [[w.bounds[0], w.bounds[1]], [w.bounds[2], w.bounds[1]], [w.bounds[2], w.bounds[3]], [w.bounds[0], w.bounds[3]]].map(|p| hom_apply(&inv, p));
             let sb = corners.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |b, p| [b[0].min(p[0]), b[1].min(p[1]), b[2].max(p[0]), b[3].max(p[1])]);
             let src_warp = match w.style {
                 WarpStyle::None => None,
-                WarpStyle::Custom => Some(Warp::custom(w.to_mesh(1, 1).map_points(|p| affine_apply(&inv, p)), sb)),
+                WarpStyle::Custom => Some(Warp::custom(w.to_mesh(1, 1).map_points(|p| hom_apply(&inv, p)), sb)),
                 _ => Some(Warp { bounds: sb, mesh: None, ..w.clone() }),
             };
             sm.warp = src_warp.filter(|w| !w.is_identity());
@@ -293,12 +292,12 @@ fn split(s: &mut Session, p: &Value, cmd: &str, how: Split) -> Result<Value> {
     };
     let w = sm.warp.clone().unwrap_or_else(|| {
         let b = layer.surface().map_or(Rect::EMPTY, Surface::content_bounds);
-        let inv = sm.transform.inverse().unwrap_or(Affine::IDENTITY);
-        let c = [affine_apply(&inv, [f64::from(b.x0), f64::from(b.y0)]), affine_apply(&inv, [f64::from(b.x1), f64::from(b.y1)])];
+        let inv = crate::smart_cmds::placement(sm).inverse().unwrap_or(Homography::IDENTITY);
+        let c = [hom_apply(&inv, [f64::from(b.x0), f64::from(b.y0)]), hom_apply(&inv, [f64::from(b.x1), f64::from(b.y1)])];
         Warp::none([c[0][0].min(c[1][0]), c[0][1].min(c[1][1]), c[0][0].max(c[1][0]), c[0][1].max(c[1][1])])
     });
-    let t = sm.transform;
-    let at_src = at.and_then(|a| t.inverse().map(|inv| affine_apply(&inv, a)));
+    let t = crate::smart_cmds::placement(sm);
+    let at_src = at.and_then(|a| t.inverse().map(|inv| hom_apply(&inv, a)));
     let out = split_warp(&w, at_src, how).ok_or_else(|| bad(cmd, "nothing to split or remove there"))?;
     let label = if matches!(how, Split::Remove) { "Remove Warp Split" } else { "Split Warp" };
     s.edit(label, |doc, _| {

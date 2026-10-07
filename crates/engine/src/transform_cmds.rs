@@ -200,11 +200,12 @@ pub(crate) fn transform_layer(doc_sel: Option<&Surface>, l: &mut Layer, h: &Homo
         }
         LayerContent::Smart(sm) => {
             // Smart objects keep the transform and re-render from their source afterwards
-            // (`refresh_text`), so repeated transforms don't degrade the pixels.
-            let Some(a) = affine else {
-                return Err(EngineError::Other("Distort and Perspective on smart objects aren't supported yet".into()));
-            };
-            sm.transform = crate::smart_cmds::snap_affine(a.mul(&sm.transform));
+            // (`refresh_text`), so repeated transforms don't degrade the pixels. Distort and
+            // Perspective keep the full projective map, so the fourth corner survives re-renders.
+            match affine {
+                Some(a) => crate::smart_cmds::transform_placement(sm, &a),
+                None => crate::smart_cmds::set_placement(sm, h.mul(&crate::smart_cmds::placement(sm))),
+            }
             // Fallback appearance for sources that can't be re-rendered.
             if let Some(c) = &mut sm.cache {
                 let src = c.content_bounds();

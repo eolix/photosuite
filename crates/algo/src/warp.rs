@@ -46,6 +46,19 @@ pub fn place_source(src: &Surface, src_rect: Rect, t: &photosuite_geom::Affine, 
     crate::transform::warp_surface(src, src_rect, &crate::transform::Homography([a, c, e, b, d, f, 0.0, 0.0, 1.0]), Interp::Bicubic)
 }
 
+/// [`place_source`] through a projective map `h` (source → document; Distort, Perspective): the
+/// warp first (in source space), then `h`.
+pub fn place_source_projective(src: &Surface, src_rect: Rect, h: &crate::transform::Homography, warp: Option<&photosuite_geom::warp::Warp>) -> Surface {
+    if let Some(w) = warp.filter(|w| !w.is_identity()) {
+        let map = |x: f64, y: f64| {
+            let (u, v) = w.map(x, y);
+            h.apply(u, v)
+        };
+        return warp_mesh_surface(src, src_rect, &map, Interp::Bicubic);
+    }
+    crate::transform::warp_surface(src, src_rect, h, Interp::Bicubic)
+}
+
 /// Warps the content of `src` inside `src_rect` through the forward map `f` (source document
 /// coordinates → destination document coordinates). Output has `src`'s format with alpha
 /// added; pixels outside the warped area are transparent.

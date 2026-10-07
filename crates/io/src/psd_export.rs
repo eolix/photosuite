@@ -554,7 +554,16 @@ impl Ex {
         let size = if size.0 > 0.0 && size.1 > 0.0 { size } else { size_from_layer(sm) };
         let mut warnings = Vec::new();
         let fx = (!stack.filters.is_empty()).then(|| filter_fx(&stack, &l.name, &mut warnings));
-        let spec = PlacedSpec { idnt: &src.uuid, placed: &placed, transform: sm.transform, size, dpi: src.dpi, warp: sm.warp.as_ref(), filter_fx: fx };
+        let spec = PlacedSpec {
+            idnt: &src.uuid,
+            placed: &placed,
+            transform: sm.transform,
+            perspective: sm.perspective,
+            size,
+            dpi: src.dpi,
+            warp: sm.warp.as_ref(),
+            filter_fx: fx,
+        };
         let sold = sold_bytes(same_source.map(|t| &t.descriptor), &spec, &mut warnings);
         let plld = plld_bytes(&spec, &mut warnings);
         warnings.dedup();
@@ -566,7 +575,12 @@ impl Ex {
             let bounds = sm.cache.as_ref().map_or(self.canvas, |c| c.content_bounds().union(&self.canvas));
             let item = match (sm.stack_mode, self.source_composite(&src.uuid)) {
                 (None, Some((img, img_bounds))) => {
-                    let unfiltered = photosuite_algo::warp::place_source(&img, img_bounds, &sm.transform, sm.warp.as_ref());
+                    let unfiltered = match &sm.perspective {
+                        Some(p) => {
+                            photosuite_algo::warp::place_source_projective(&img, img_bounds, &photosuite_algo::transform::Homography(*p), sm.warp.as_ref())
+                        }
+                        None => photosuite_algo::warp::place_source(&img, img_bounds, &sm.transform, sm.warp.as_ref()),
+                    };
                     crate::smart_map::feid_item(&placed, &unfiltered, sm.filter_mask.as_ref(), bounds, self.fmt)
                 }
                 _ => None,

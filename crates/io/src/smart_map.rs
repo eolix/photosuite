@@ -487,6 +487,8 @@ pub struct PlacedSpec<'a> {
     pub placed: &'a str,
     /// Source pixels → document pixels.
     pub transform: Affine,
+    /// Distort / Perspective: the full projective map (row-major 3×3), overriding `transform`.
+    pub perspective: Option<[f64; 9]>,
     /// Source size in pixels.
     pub size: (f64, f64),
     /// Source resolution.
@@ -496,17 +498,32 @@ pub struct PlacedSpec<'a> {
     pub filter_fx: Option<Descriptor>,
 }
 
+/// Where the source corners land (top-left, top-right, bottom-right, bottom-left), as x, y pairs.
+fn quad_points(s: &PlacedSpec<'_>) -> [f64; 8] {
+    let (w, h) = s.size;
+    let [a, b, c, d, e, f] = s.transform.m;
+    let map = |x: f64, y: f64| match &s.perspective {
+        Some(p) => photosuite_algo::transform::Homography(*p).apply(x, y),
+        None => (a * x + c * y + e, b * x + d * y + f),
+    };
+    let mut out = [0.0; 8];
+    for (i, (x, y)) in [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)].into_iter().enumerate() {
+        (out[2 * i], out[2 * i + 1]) = map(x, y);
+    }
+    out
+}
+
 /// The transform quad: the source corners (top-left, top-right, bottom-right, bottom-left).
-fn quad(t: &Affine, (w, h): (f64, f64)) -> Value {
-    let pts = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)];
-    Value::List(
-        pts.iter()
-            .flat_map(|&(x, y)| {
-                let [a, b, c, d, e, f] = t.m;
-                [Value::Double(a * x + c * y + e), Value::Double(b * x + d * y + f)]
-            })
-            .collect(),
-    )
+fn quad(s: &PlacedSpec<'_>) -> Value {
+    Value::List(quad_points(s).into_iter().map(Value::Double).collect())
+}
+
+/// Has the placement moved from the quad a template descriptor stores (`Trnf`)?
+fn quad_moved(template: &Descriptor, s: &PlacedSpec<'_>) -> bool {
+    let Some(Value::List(pts)) = template.get("Trnf") else { return true };
+    let old: Vec<f64> = pts.iter().filter_map(|v| crate::blocks::num(Some(v))).collect();
+    let new = quad_points(s);
+    old.len() != 8 || old.iter().zip(new).any(|(a, b)| (a - b).abs() > 1e-6 * (1.0 + a.abs()))
 }
 
 fn enumv(t: &str, v: &str) -> Value {
@@ -573,10 +590,9 @@ pub fn sold_bytes(template: Option<&Descriptor>, s: &PlacedSpec<'_>, warnings: &
     let d = match template {
         Some(t) => {
             let mut d = t.clone();
-            let moved = parse_transform(t).is_none_or(|old| old != s.transform);
-            if moved {
-                set(&mut d, "Trnf", quad(&s.transform, s.size));
-                set(&mut d, "nonAffineTransform", quad(&s.transform, s.size));
+            if quad_moved(t, s) {
+                set(&mut d, "Trnf", quad(s));
+                set(&mut d, "nonAffineTransform", quad(s));
             }
             set(&mut d, "warp", warp);
             match &s.filter_fx {
@@ -597,8 +613,8 @@ pub fn sold_bytes(template: Option<&Descriptor>, s: &PlacedSpec<'_>, warnings: &
                 .with("frameCount", Value::Integer(1))
                 .with("Annt", Value::Integer(16))
                 .with("Type", Value::Integer(2))
-                .with("Trnf", quad(&s.transform, s.size))
-                .with("nonAffineTransform", quad(&s.transform, s.size))
+                .with("Trnf", quad(s))
+                .with("nonAffineTransform", quad(s))
                 .with("warp", warp)
                 .with("Sz  ", Value::Descriptor(Descriptor::new("Pnt ").with("Wdth", Value::Double(s.size.0)).with("Hght", Value::Double(s.size.1))))
                 .with("Rslt", unit(b"#Rsl", s.dpi));
@@ -627,7 +643,7 @@ pub fn plld_bytes(s: &PlacedSpec<'_>, warnings: &mut Vec<String>) -> Vec<u8> {
     for v in [1i32, 1, 16, 2] {
         out.extend_from_slice(&v.to_be_bytes());
     }
-    if let Value::List(q) = quad(&s.transform, s.size) {
+    if let Value::List(q) = quad(s) {
         for v in q {
             if let Value::Double(x) = v {
                 out.extend_from_slice(&x.to_be_bytes());
@@ -638,15 +654,6 @@ pub fn plld_bytes(s: &PlacedSpec<'_>, warnings: &mut Vec<String>) -> Vec<u8> {
     let Value::Descriptor(w) = warp_desc(s.warp, s.size, warnings) else { return pad4(out) };
     out.extend(VersionedDescriptor::new(w).to_bytes());
     pad4(out)
-}
-
-/// The transform a `soLD` descriptor stores (as [`crate::blocks::parse_smart`] reads it).
-fn parse_transform(d: &Descriptor) -> Option<Affine> {
-    let Some(Value::List(pts)) = d.get("Trnf") else { return None };
-    let sz = get_desc(d, "Sz  ")?;
-    let p: Vec<f64> = pts.iter().filter_map(|v| num(Some(v))).collect();
-    let (w, h) = (num(sz.get("Wdth"))?, num(sz.get("Hght"))?);
-    (p.len() == 8 && w > 0.0 && h > 0.0).then(|| Affine { m: [(p[2] - p[0]) / w, (p[3] - p[1]) / w, (p[6] - p[0]) / h, (p[7] - p[1]) / h, p[0], p[1]] })
 }
 
 /// The source size a `soLD` descriptor stores (`Sz  `).
@@ -865,6 +872,7 @@ mod tests {
             idnt: "id-1",
             placed: "pl-2",
             transform: t,
+            perspective: None,
             size: (64.0, 32.0),
             dpi: 72.0,
             warp: None,
@@ -893,6 +901,54 @@ mod tests {
         assert_eq!(d.get("Trnf"), tmpl.get("Trnf"));
     }
 
+    /// A Distort / Perspective placement goes out as its four corners (`Trnf`, `nonAffineTransform`)
+    /// and comes back as the same projective map; an affine one reads back as no perspective.
+    #[test]
+    fn perspective_placement_round_trips_through_sold() {
+        let h = photosuite_algo::transform::Homography::rect_to_quad([0.0, 0.0, 64.0, 32.0], [[10.0, 5.0], [80.0, 8.0], [70.0, 50.0], [12.0, 40.0]]).unwrap();
+        let mut w = Vec::new();
+        let mut spec = PlacedSpec {
+            idnt: "id",
+            placed: "pl",
+            transform: Affine::IDENTITY,
+            perspective: Some(h.0),
+            size: (64.0, 32.0),
+            dpi: 72.0,
+            warp: None,
+            filter_fx: None,
+        };
+        let sold = sold_bytes(None, &spec, &mut w);
+        let back = crate::blocks::parse_smart_perspective(b"SoLd", &sold).expect("a projective placement");
+        let n = |m: [f64; 9]| m.map(|v| v / m[8]);
+        for (a, b) in n(back).iter().zip(n(h.0)) {
+            assert!((a - b).abs() < 1e-9 * (1.0 + b.abs()), "{back:?} vs {:?}", h.0);
+        }
+        // Affine placements carry no perspective.
+        spec.perspective = None;
+        spec.transform = Affine { m: [2.0, 0.0, 0.0, 2.0, 5.0, 7.0] };
+        let sold = sold_bytes(None, &spec, &mut w);
+        assert_eq!(crate::blocks::parse_smart_perspective(b"SoLd", &sold), None);
+        assert_eq!(crate::blocks::parse_smart_perspective(b"PlLd", &sold), None);
+    }
+
+    /// `quad_moved` compares the corners a template stores with the placement's: unchanged keeps
+    /// the template's quad, a moved corner (affine or projective) or a missing quad rewrites it.
+    #[test]
+    fn quad_moved_detects_corner_changes() {
+        let t = Affine { m: [1.0, 0.0, 0.0, 1.0, 3.0, 4.0] };
+        let mut w = Vec::new();
+        let mut spec = PlacedSpec { idnt: "id", placed: "pl", transform: t, perspective: None, size: (20.0, 10.0), dpi: 72.0, warp: None, filter_fx: None };
+        let template = parse_sold(&sold_bytes(None, &spec, &mut w)).expect("parses").descriptor;
+        assert!(!quad_moved(&template, &spec), "same placement");
+        spec.transform = Affine { m: [1.0, 0.0, 0.0, 1.0, 3.5, 4.0] };
+        assert!(quad_moved(&template, &spec), "moved half a pixel");
+        spec.transform = t;
+        spec.perspective =
+            photosuite_algo::transform::Homography::rect_to_quad([0.0, 0.0, 20.0, 10.0], [[3.0, 4.0], [23.0, 4.0], [20.0, 12.0], [3.0, 14.0]]).map(|h| h.0);
+        assert!(quad_moved(&template, &spec), "one corner moved (Distort)");
+        assert!(quad_moved(&Descriptor::new("null"), &spec), "no stored quad");
+    }
+
     /// Corrupted placed-layer data and filter descriptors never panic: they parse to something
     /// (unknown filters stay verbatim) or to nothing.
     #[test]
@@ -910,6 +966,7 @@ mod tests {
             idnt: "id",
             placed: "pl",
             transform: Affine::IDENTITY,
+            perspective: None,
             size: (8.0, 8.0),
             dpi: 72.0,
             warp: None,
@@ -953,7 +1010,16 @@ mod tests {
         c.mesh = Some(custom);
         for (w, back) in [(Some(arc.clone()), Some(arc)), (Some(c.clone()), Some(c)), (Some(multi), None), (None, None)] {
             let mut warnings = Vec::new();
-            let spec = PlacedSpec { idnt: "i", placed: "p", transform: Affine::IDENTITY, size: (60.0, 30.0), dpi: 72.0, warp: w.as_ref(), filter_fx: None };
+            let spec = PlacedSpec {
+                idnt: "i",
+                placed: "p",
+                transform: Affine::IDENTITY,
+                perspective: None,
+                size: (60.0, 30.0),
+                dpi: 72.0,
+                warp: w.as_ref(),
+                filter_fx: None,
+            };
             let sold = sold_bytes(None, &spec, &mut warnings);
             assert_eq!(crate::blocks::parse_placed_warp(b"SoLd", &sold), back);
             assert_eq!(warnings.len(), usize::from(w.is_some() && back.is_none()));

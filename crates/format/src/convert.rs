@@ -164,6 +164,7 @@ fn layer_m(l: &Layer, sink: &mut dyn Sink) -> LayerM {
             }),
             warp: s.warp.clone(),
             stack_mode: s.stack_mode,
+            perspective: s.perspective,
         },
     };
     LayerM {
@@ -422,7 +423,7 @@ impl Loader<'_> {
                 cache: self.opt_surface(cache)?,
                 psd_raw: self.opt_blob(psd_raw)?,
             }),
-            ContentM::Smart { source, transform, smart_filters, cache, psd_raw, filters_enabled, filter_mask, warp, stack_mode } => {
+            ContentM::Smart { source, transform, smart_filters, cache, psd_raw, filters_enabled, filter_mask, warp, stack_mode, perspective } => {
                 LayerContent::Smart(SmartObject {
                     source: match source {
                         SmartSourceM::Embedded { file_name, blob } => SmartSource::Embedded { file_name: file_name.clone(), bytes: self.fetch.blob(blob)? },
@@ -445,6 +446,7 @@ impl Loader<'_> {
                     },
                     warp: warp.clone().filter(|w| w.mesh.as_ref().is_none_or(|m| m.is_valid())),
                     stack_mode: *stack_mode,
+                    perspective: perspective.filter(|p| p.iter().all(|v| v.is_finite())),
                 })
             }
         };

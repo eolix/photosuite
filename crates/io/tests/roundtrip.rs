@@ -124,6 +124,7 @@ fn text_shape_smart_raw_blocks_survive() {
             filter_mask: None,
             warp: None,
             stack_mode: None,
+            perspective: None,
         }),
     );
     smart.psd_blocks = vec![(*b"PlLd", Arc::new(vec![0; 4])), (*b"vmsk", Arc::new(vec![5; 8])), (*b"luni", Arc::new(vec![0; 8]))];

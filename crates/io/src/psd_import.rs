@@ -299,6 +299,8 @@ impl Ctx<'_> {
                 filter_mask,
                 warp: rec.block(k).and_then(|b| blocks::parse_placed_warp(k, &b.data)),
                 stack_mode: None,
+                // Distort / Perspective: the fourth corner (the affine `transform` drops it).
+                perspective: rec.block(k).and_then(|b| blocks::parse_smart_perspective(k, &b.data)),
             })
         } else if let Some(f) = soft_shape_fill(rec, vector_key.is_some(), fill_key) {
             // A shape whose vector mask has a density or feather is a fill layer seen through a
