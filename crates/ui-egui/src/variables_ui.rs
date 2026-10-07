@@ -183,6 +183,13 @@ fn define_page(ui: &mut egui::Ui, _t: &Tokens, layers: &[(u64, String, bool)], s
     }
 }
 
+fn data_set_index(fields: &Map<String, Value>, len: usize) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    fields.get("__cur").and_then(Value::as_u64).and_then(|v| usize::try_from(v).ok()).filter(|&i| i < len).unwrap_or(0)
+}
+
 fn data_sets_page(ui: &mut egui::Ui, _t: &Tokens, state: &mut Value, fields: &mut Map<String, Value>) {
     let def_meta: Vec<(String, String)> = state
         .get("defs")
@@ -200,7 +207,7 @@ fn data_sets_page(ui: &mut egui::Ui, _t: &Tokens, state: &mut Value, fields: &mu
         return;
     }
     let Some(sets) = state.get_mut("dataSets").and_then(Value::as_array_mut) else { return };
-    let mut cur = fields.get("__cur").and_then(Value::as_u64).unwrap_or(0) as usize;
+    let mut cur = data_set_index(fields, sets.len());
 
     ui.horizontal(|ui| {
         if ui.button("◀").clicked() && cur > 0 {
@@ -317,6 +324,19 @@ mod tests {
         assert_eq!(s["dataSets"][0]["name"], "A");
         assert_eq!(s["dataSets"][0]["values"][0]["kind"], "visibility");
         assert_eq!(s["dataSets"][0]["values"][0]["value"], false);
+    }
+
+    #[test]
+    fn data_set_index_rejects_out_of_range_control_values() {
+        let mut fields = Map::new();
+        assert_eq!(data_set_index(&fields, 1), 0);
+        fields.insert("__cur".into(), json!(999));
+        assert_eq!(data_set_index(&fields, 1), 0);
+        fields.insert("__cur".into(), json!(u64::MAX));
+        assert_eq!(data_set_index(&fields, 1), 0);
+        fields.insert("__cur".into(), json!(1));
+        assert_eq!(data_set_index(&fields, 3), 1);
+        assert_eq!(data_set_index(&fields, 0), 0);
     }
 
     #[test]
