@@ -2421,6 +2421,11 @@ pub fn tool_event(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers)
     }
     // Window › Modifier Keys: sticky Shift/⌘/⌥ act as held keys.
     let mods = crate::workspace_ui::sticky_mods(app, mods);
+    // ⌘⌥⌃-click with any tool selects the topmost layer with pixels there (quick_pick.rs); it
+    // must run before the ⌃⌥ brush resize below, which the same keys would trigger.
+    if crate::quick_pick::pointer(app, ev, mods) {
+        return;
+    }
     // Control+Alt-drag or Alt+right-drag with a painting tool resizes the brush instead of
     // painting (#231, #297).
     if crate::brush_resize::pointer(app, ev, mods, armed) {

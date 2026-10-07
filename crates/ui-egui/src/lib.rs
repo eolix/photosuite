@@ -102,6 +102,7 @@ pub mod preset_panels;
 pub mod props_layout;
 pub mod proxy;
 pub mod puppet_ui;
+pub mod quick_pick;
 pub mod rasterize_prompt;
 pub mod retouch_ui;
 pub mod rulers;
@@ -316,6 +317,8 @@ pub struct PhotosuiteApp {
     last_stroke_end: Option<(DocId, [f64; 2])>,
     /// Control+Alt-drag brush resize in progress (`brush_resize`, #231).
     pub(crate) brush_resize: Option<brush_resize::Resize>,
+    /// A ⌘⌥⌃-click layer pick is in progress; its drag and release are swallowed (`quick_pick`).
+    pub(crate) quick_pick: bool,
     /// The next tool `Down` is an Alt+right-drag that resizes the brush (#297). `tool_event`
     /// takes it on every event, so a press another handler consumes can't leave it set.
     pub(crate) brush_resize_armed: bool,
@@ -468,6 +471,7 @@ impl PhotosuiteApp {
             defer_live_stroke: false,
             last_stroke_end: None,
             brush_resize: None,
+            quick_pick: false,
             brush_resize_armed: false,
             alt_sampling: false,
             opacity_keys: None,
