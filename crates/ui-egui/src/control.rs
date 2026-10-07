@@ -6,11 +6,12 @@
 //! Methods:
 //! - `engine.execute {command, params}`: run any engine or UI command by id
 //! - `engine.commands`: list commands with enablement
-//! - `ui.inspect`: full UI state (tool, panels, views, dialogs, windows, menu tree, window size)
+//! - `ui.inspect`: full UI state (tool, panels, views, dialogs, windows, window size); the menu
+//!   tree is `ui.menu.list`
 //! - `ui.set {tool?, panels?, dock?, dockTabs?, dockWidth?, maskTarget?, vectorMaskTarget?, selectionMode?, zoom?, center?, fit?, theme?, brushSection?, brushTab?, brushesView?, brushSize?}`:
 //!   change UI state; any other field is an error ([`UI_SET_FIELDS`])
-//! - `ui.menu.invoke {id}` / `ui.menu.list`: activate a menu item by id; list the menu tree
-//! - `ui.dialog.open {kind, fields?}` (kinds: newDocument, about, layerStyle {effect?}, colorPicker {target: foreground|background}, command {command}) / `ui.dialog.set {dialog, field, value}` / `ui.dialog.confirm {dialog}` / `ui.dialog.cancel {dialog}`
+//! - `ui.menu.invoke {id, wait?}` / `ui.menu.list`: activate a menu item by id; list the menu tree
+//! - `ui.dialog.open {kind, fields?}` (kinds: newDocument, about, layerStyle {effect?}, colorPicker {target: foreground|background}, command {command}) / `ui.dialog.set {dialog, field, value}` / `ui.dialog.confirm {dialog, wait?}` / `ui.dialog.cancel {dialog}`
 //! - `ui.dialog.apply {dialog}`: commit Preferences changes without closing the dialog
 //! - `ui.window.open {document?}` / `ui.window.close {window}`: extra document windows
 //! - `ui.pointer {events: [{kind: down|move|up, x, y, pressure?, tiltX?, tiltY?, rotation?}], modifiers?, button?}`: drive the active tool in document coordinates (`button: "secondary"` = the right button: opens the Brush Preset picker, or erases with Preferences › Tools › Right-click with painting tools = erase)
@@ -26,8 +27,8 @@
 //! - `app.open {path}` / `app.save {path}`: relative file I/O under the automation roots; reply with `warnings`
 //! - `app.quit`
 //! - `jobs.list` / `jobs.cancel {job?}`: background jobs (#210) with progress; cancel one (or all).
-//!   `engine.execute` waits for a command that runs as a job unless `wait: false` (then the reply
-//!   is `{job, pending: true}`)
+//!   `engine.execute`, `ui.menu.invoke` and `ui.dialog.confirm` wait for a command that runs as a
+//!   job unless `wait: false` (then the reply is `{job, pending: true}`)
 
 use std::sync::mpsc::Sender;
 
@@ -101,10 +102,40 @@ fn wrap(r: Result<Value, String>) -> Outcome {
     }
 }
 
+/// Run a command the way automation does (script events off). Long commands may run as
+/// background jobs: by default the reply waits for the job's result (backward compatible); with
+/// `wait` false it is `{job, pending: true}` at once.
+fn run_waiting(app: &mut PhotosuiteApp, wait: bool, run: impl FnOnce(&mut PhotosuiteApp) -> Result<Value, String>) -> Outcome {
+    let events_enabled = app.session.prefs().script_events.enabled;
+    if events_enabled {
+        app.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
+    }
+    app.jobs.last_started = None;
+    let result = run(app);
+    if events_enabled {
+        app.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
+    }
+    match (result, app.jobs.last_started.take()) {
+        (Ok(_), Some(job)) if wait => Outcome::AfterJob(job),
+        (result, _) => wrap(result),
+    }
+}
+
+/// Screen position of document point (x, y) on the main canvas, where a `ui.pointer` right-click
+/// opens its menu (the mouse's opens at the pointer); the canvas centre when it can't be mapped.
+fn screen_point(app: &PhotosuiteApp, x: f64, y: f64) -> [f32; 2] {
+    let p = crate::canvas::ViewXform::active(app)
+        .map(|xf| xf.to_screen(x as f32, y as f32))
+        .filter(|p| p.is_finite())
+        .unwrap_or_else(|| app.last_canvas_rect.center());
+    [p.x, p.y]
+}
+
 pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
     let p = &req.params;
     let s = |k: &str| p.get(k).and_then(Value::as_str);
     let u = |k: &str| p.get(k).and_then(Value::as_u64);
+    let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
     match req.method.as_str() {
         "engine.execute" | "ui.menu.invoke" => {
             let Some(id) = s("command").or(s("id")) else { return err("missing `command`") };
@@ -118,27 +149,9 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
             // params and never open a dialog (an agent would otherwise get a modal instead of a
             // result). `ui.menu.invoke` behaves like a menu click, so it may open the dialog.
             if req.method == "engine.execute" && photosuite_engine::commands::find(id).is_some() {
-                // Long commands may run as background jobs: by default the reply waits for the
-                // result (backward compatible); with `"wait": false` it is `{job, pending}`.
-                let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
-                app.jobs.last_started = None;
-                let r = app.run_automation(id, params);
-                if let (Ok(_), Some(job)) = (&r, app.jobs.last_started.take())
-                    && wait
-                {
-                    return Outcome::AfterJob(job);
-                }
-                return wrap(r);
+                return run_waiting(app, wait, |app| app.run(id, params));
             }
-            let events_enabled = app.session.prefs().script_events.enabled;
-            if events_enabled {
-                app.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
-            }
-            let result = crate::menus::invoke(app, ctx, id, params);
-            if events_enabled {
-                app.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
-            }
-            wrap(result)
+            run_waiting(app, wait, |app| crate::menus::invoke(app, ctx, id, params))
         }
         "engine.commands" => wrap(app.run("command.list", json!({}))),
         // Background jobs (#210): running ones with progress, then the last few that ended.
@@ -314,15 +327,8 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                 {
                     return err(error);
                 }
-                let events_enabled = app.session.prefs().script_events.enabled;
-                if events_enabled {
-                    app.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
-                }
-                let result = if req.method == "ui.dialog.apply" { crate::prefs_ui::apply(app, id) } else { crate::dialogs::confirm(app, id) };
-                if events_enabled {
-                    app.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
-                }
-                wrap(result)
+                let apply = req.method == "ui.dialog.apply";
+                run_waiting(app, wait, |app| if apply { crate::prefs_ui::apply(app, id) } else { crate::dialogs::confirm(app, id) })
             }
             None => err("missing `dialog`"),
         },
@@ -370,17 +376,18 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest
                     "up" => ToolEvent::Up { x, y },
                     _ => ToolEvent::Move { x, y, pressure: pr },
                 };
-                // Right-click with the Move tool, or ⌘/Ctrl+right-click: list the layers there.
-                if matches!(s("button"), Some("secondary" | "right")) && crate::layer_pick_ui::is_gesture(app.ui.tool, mods) {
-                    if matches!(ev, ToolEvent::Down { .. }) {
-                        let at = app.last_canvas_rect.center();
-                        crate::layer_pick_ui::open(app, [at.x, at.y], x, y);
+                if matches!(s("button"), Some("secondary" | "right")) {
+                    let down = matches!(ev, ToolEvent::Down { .. });
+                    // Right-click with the Move tool, or ⌘/Ctrl+right-click: list the layers there.
+                    if crate::layer_pick_ui::is_gesture(app.ui.tool, mods) {
+                        if down {
+                            crate::layer_pick_ui::open(app, screen_point(app, x, y), x, y);
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                if matches!(s("button"), Some("secondary" | "right")) && !crate::paint_mouse::pointer_secondary(app, matches!(ev, ToolEvent::Down { .. }), mods)
-                {
-                    continue;
+                    if !crate::paint_mouse::pointer_secondary(app, down, mods, screen_point(app, x, y)) {
+                        continue;
+                    }
                 }
                 // A simulated pen: tilt/rotation reach the stroke like a real stylus's (see `stylus`).
                 let tilt = |k: &str| e.get(k).and_then(Value::as_f64).map(|v| v as f32);

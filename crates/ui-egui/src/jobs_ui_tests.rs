@@ -154,16 +154,7 @@ fn control_requests_wait_for_jobs_unless_asked_not_to() {
     let (req, rx) = crate::ControlRequest::new("engine.execute", json!({"command": "jobs.list"}));
     let _ = crate::control::handle(h.state_mut(), &ctx, &req);
     drop(rx);
-    let (tx, rx) = std::sync::mpsc::channel();
-    h.state_mut().jobs.waiters.push((job, tx));
-    let t = Instant::now();
-    let reply: Value = loop {
-        h.step();
-        if let Ok(v) = rx.try_recv() {
-            break v;
-        }
-        assert!(t.elapsed() < Duration::from_secs(30));
-    };
+    let reply = job_reply(&mut h, job);
     assert_eq!(reply["ok"], true, "{reply}");
     assert!(reply["result"]["filter"].is_object(), "{reply}");
 
@@ -177,6 +168,58 @@ fn control_requests_wait_for_jobs_unless_asked_not_to() {
     let (req, _rx) = crate::ControlRequest::new("jobs.cancel", json!({"job": 99999}));
     let crate::control::Outcome::Done(v) = crate::control::handle(h.state_mut(), &ctx, &req) else { panic!() };
     assert_eq!(v["ok"], false);
+}
+
+/// The control reply for `job`, once the app's frame loop has applied it.
+fn job_reply(h: &mut Harness<'static, PhotosuiteApp>, job: JobId) -> Value {
+    let (tx, rx) = std::sync::mpsc::channel();
+    h.state_mut().jobs.waiters.push((job, tx));
+    let t = Instant::now();
+    loop {
+        h.step();
+        if let Ok(v) = rx.try_recv() {
+            return v;
+        }
+        assert!(t.elapsed() < Duration::from_secs(30));
+    }
+}
+
+/// #511: a filter started by a menu item (Blur More has no dialog) or by a filter dialog's OK
+/// replies with its result once applied, like `engine.execute`; `wait: false` replies at once.
+#[test]
+fn menu_and_dialog_requests_wait_for_jobs_unless_asked_not_to() {
+    let mut h = app_harness();
+    let ctx = h.ctx.clone();
+    let control = |h: &mut Harness<'static, PhotosuiteApp>, method: &str, params: Value| {
+        let (req, _rx) = crate::ControlRequest::new(method, params);
+        crate::control::handle(h.state_mut(), &ctx, &req)
+    };
+    // The job a request started: deferred while waiting, `{job, pending}` at once otherwise.
+    // Lets it land and checks the filter's result.
+    let land = |h: &mut Harness<'static, PhotosuiteApp>, what: &str, outcome: crate::control::Outcome, wait: bool| {
+        let job = match (outcome, wait) {
+            (crate::control::Outcome::AfterJob(job), true) => job,
+            (crate::control::Outcome::Done(v), false) => {
+                assert_eq!(v["result"]["pending"], true, "{what}: {v}");
+                JobId(v["result"]["job"].as_u64().unwrap())
+            }
+            _ => panic!("{what}, wait {wait}: wrong reply kind"),
+        };
+        let reply = job_reply(h, job);
+        assert!(reply["result"]["filter"].is_object(), "{what}: {reply}");
+    };
+    let steps = |h: &Harness<'static, PhotosuiteApp>| h.state().session.active().unwrap().history.past_len();
+    for wait in [true, false] {
+        let before = steps(&h);
+        let outcome = control(&mut h, "ui.menu.invoke", json!({"id": "filter.blur.blurMore", "wait": wait}));
+        land(&mut h, "Blur More", outcome, wait);
+        let crate::control::Outcome::Done(v) = control(&mut h, "ui.menu.invoke", json!({"id": "filter.blur.gaussianBlur"})) else { panic!("dialog") };
+        let dialog = v["result"]["dialog"].as_u64().expect("Gaussian Blur opens its dialog");
+        control(&mut h, "ui.dialog.set", json!({"dialog": dialog, "field": "radius", "value": 3}));
+        let outcome = control(&mut h, "ui.dialog.confirm", json!({"dialog": dialog, "wait": wait}));
+        land(&mut h, "Gaussian Blur", outcome, wait);
+        assert_eq!(steps(&h), before + 2, "both filters applied");
+    }
 }
 
 fn psd_bytes() -> Vec<u8> {

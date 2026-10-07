@@ -145,13 +145,20 @@ pub struct BatchParams {
     pub stop_on_error: Option<bool>,
 }
 
+/// Strict: an argument the tool doesn't forward is an error, not silently dropped.
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PointerParams {
     /// Events in document coordinates: `[{"kind":"down|move|up","x":..,"y":..,"pressure":..}]`.
     pub events: Vec<Value>,
-    /// Modifier keys, e.g. `{"shift":true}`.
+    /// Modifier keys, e.g. `{"shift":true}` (also `alt`, `command`, `ctrl`, `space`).
     #[serde(default)]
     pub modifiers: Option<Value>,
+    /// Mouse button: `left` (default), or `right` / `secondary`: with the Move tool or
+    /// `{"command":true}` it opens the canvas layer menu, with a painting tool the Brush Preset
+    /// picker.
+    #[serde(default)]
+    pub button: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -547,7 +554,9 @@ impl PhotosuiteMcp {
 
     // ----- live-GUI tools (bridge mode) -----
 
-    #[tool(description = "Bridge mode: full UI state of the live app (tool, panels, views, dialogs, menu tree).")]
+    #[tool(
+        description = "Bridge mode: full UI state of the live app (tool, panels, views, dialogs, windows). For the menu tree, call `control_call` with method `ui.menu.list`."
+    )]
     async fn ui_inspect(&self) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => to_result(b.call("ui.inspect", json!({})).await),
@@ -570,6 +579,9 @@ impl PhotosuiteMcp {
                 let mut params = json!({"events": p.events});
                 if let Some(m) = p.modifiers {
                     params["modifiers"] = m;
+                }
+                if let Some(button) = p.button {
+                    params["button"] = button.into();
                 }
                 to_result(b.call("ui.pointer", params).await)
             }

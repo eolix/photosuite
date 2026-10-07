@@ -321,6 +321,11 @@ pub struct ViewXform {
 }
 
 impl ViewXform {
+    /// The main canvas's mapping for the active document as last laid out (inside the rulers).
+    pub fn active(app: &PhotosuiteApp) -> Option<Self> {
+        let v = app.ui.views.get(app.session.active_index()?)?;
+        Some(Self { rect: crate::rulers::content_rect(app, app.last_canvas_rect), zoom: v.zoom, center: v.center, flip: app.ui.view.flip_horizontal })
+    }
     pub fn to_screen(&self, x: f32, y: f32) -> Pos2 {
         let sx = if self.flip { -1.0 } else { 1.0 };
         self.rect.center() + vec2((x - self.center[0]) * self.zoom * sx, (y - self.center[1]) * self.zoom)

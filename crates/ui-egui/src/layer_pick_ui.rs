@@ -255,4 +255,38 @@ mod tests {
         let crate::control::Outcome::Done(v) = crate::control::handle(&mut a, &ctx, &req) else { panic!("inspect") };
         assert_eq!(v["result"]["layerMenu"]["layers"][0][1], "Red");
     }
+
+    /// #512: a `ui.pointer` right-click opens the layer menu (and, with a painting tool, the Brush
+    /// Preset picker) at its document point on screen, where a mouse right-click there opens it.
+    #[test]
+    fn agents_open_it_at_the_pointed_point() {
+        let (mut a, _, _, _) = app();
+        a.ui.tool = Tool::Move;
+        let mut h = harness(a);
+        let ctx = h.ctx.clone();
+        let pointer = |h: &mut Harness<'static, PhotosuiteApp>, tool: &str, x: f64, y: f64| {
+            let events = json!([{"kind": "down", "x": x, "y": y}, {"kind": "up", "x": x, "y": y}]);
+            let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"tool": tool, "button": "right", "events": events}));
+            let _ = crate::control::handle(h.state_mut(), &ctx, &req);
+            crate::canvas::ViewXform::active(h.state()).unwrap().to_screen(x as f32, y as f32)
+        };
+        let near = |a: Option<[f32; 2]>, b: Pos2| a.is_some_and(|a| (a[0] - b.x).abs() < 0.5 && (a[1] - b.y).abs() < 0.5);
+        let mut opened = Vec::new();
+        for (x, y, listed) in [(100.0, 100.0, vec!["Red", "Background"]), (20.0, 170.0, vec!["Background"])] {
+            let at = pointer(&mut h, "move", x, y);
+            let pos = h.state().ui.layer_menu.as_ref().map(|m| m.pos);
+            assert!(near(pos, at), "({x}, {y}): menu at {pos:?}, point on screen {at:?}");
+            assert_eq!(names(h.state()), listed);
+            h.state_mut().ui.layer_menu = None;
+            right_click(&mut h, at, Modifiers::NONE);
+            assert!(near(h.state().ui.layer_menu.as_ref().map(|m| m.pos), at), "the mouse opens it there too");
+            assert_eq!(names(h.state()), listed);
+            h.key_press(egui::Key::Escape);
+            h.run_steps(2);
+            opened.push(at);
+        }
+        assert!(opened[0].distance(opened[1]) > 50.0, "{opened:?}");
+        let at = pointer(&mut h, "brush", 20.0, 170.0);
+        assert!(near(h.state().ui.brush_picker, at), "picker at {:?}, point on screen {at:?}", h.state().ui.brush_picker);
+    }
 }

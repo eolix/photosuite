@@ -747,21 +747,6 @@ impl PhotosuiteApp {
         Ok(warnings)
     }
 
-    /// Run one engine command on behalf of automation while suppressing
-    /// user-configured script-event file reads. Interactive commands retain
-    /// their normal event behavior.
-    pub fn run_automation(&mut self, id: &str, params: Value) -> Result<Value, String> {
-        let events_enabled = self.session.prefs().script_events.enabled;
-        if events_enabled {
-            self.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
-        }
-        let result = self.run(id, params);
-        if events_enabled {
-            self.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
-        }
-        result
-    }
-
     /// File › Open: the platform dialog returns the chosen file's path (native; the web delivers
     /// picks through the inbox instead).
     pub fn open_dialog_file(&mut self) {

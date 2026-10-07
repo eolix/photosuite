@@ -100,8 +100,8 @@ pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) 
 /// `ui.pointer` with `"button": "secondary"`: true when its events should reach the tool (an
 /// Alt+right-drag brush resize, `brush_resize_armed` for its `Down`; or an erasing right stroke,
 /// `secondary_erase` armed for its `Down`). Otherwise a right-click with a painting tool opens
-/// the Brush Preset picker over the canvas, and nothing paints.
-pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool, mods: egui::Modifiers) -> bool {
+/// the Brush Preset picker at screen point `at`, and nothing paints.
+pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool, mods: egui::Modifiers, at: [f32; 2]) -> bool {
     let tool = app.ui.tool;
     if crate::brush_resize::applies(tool) && (crate::brush_resize::is_right_gesture(mods) || app.brush_resize.is_some_and(|r| r.secondary)) {
         app.brush_resize_armed = down && app.drag.is_none();
@@ -112,8 +112,7 @@ pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool, mods: egui::Modifi
         return true;
     }
     if down && has_brush_picker(tool) {
-        let c = app.last_canvas_rect.center();
-        app.ui.brush_picker = Some([c.x, c.y]);
+        app.ui.brush_picker = Some(at);
     }
     false
 }
@@ -301,7 +300,7 @@ mod tests {
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
         app.ui.tool = Tool::Brush;
         let m = Modifiers::NONE;
-        assert!(pointer_secondary(&mut app, true, egui::Modifiers::NONE));
+        assert!(pointer_secondary(&mut app, true, egui::Modifiers::NONE, [0.0, 0.0]));
         tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 40.0, pressure: 0.4 }, m);
         assert!(!app.secondary_erase, "armed for one stroke only");
         tool_event(&mut app, ToolEvent::Move { x: 100.0, y: 40.0, pressure: 0.8 }, m);
@@ -314,7 +313,7 @@ mod tests {
         assert_eq!(st.doc.layers[0].surface().unwrap().rgba(50, 40), [1.0, 1.0, 1.0, 1.0]);
         // With the default preference the right button opens the picker and nothing paints.
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "brushPicker"})).unwrap();
-        assert!(!pointer_secondary(&mut app, true, egui::Modifiers::NONE));
+        assert!(!pointer_secondary(&mut app, true, egui::Modifiers::NONE, [0.0, 0.0]));
         assert!(app.ui.brush_picker.is_some() && !app.secondary_erase);
     }
 
