@@ -147,9 +147,12 @@ impl GalleryFilter {
         out
     }
 
-    /// Whether the filter reads the foreground / background colours.
+    /// Whether the filter reads the foreground / background colours. Derived
+    /// from the params notation, plus the filters whose pixel code reads the
+    /// colours without listing them (issue #709): Colored Pencil uses the
+    /// background as paper tint, Neon Glow mixes foreground over background.
     pub fn uses_colours(self) -> bool {
-        self.params_doc().contains("\"foreground\"") || self.params_doc().contains("\"background\"")
+        matches!(self, Self::ColoredPencil | Self::NeonGlow) || self.params_doc().contains("\"foreground\"") || self.params_doc().contains("\"background\"")
     }
 }
 
