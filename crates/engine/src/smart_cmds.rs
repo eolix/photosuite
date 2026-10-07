@@ -194,6 +194,9 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photos
             photosuite_compose::render_layer(&one, bounds).px
         })
         .collect();
+    if frames.is_empty() {
+        return Err(EngineError::Other("the smart object's contents have no visible layers".into()));
+    }
     let stat = match mode {
         photosuite_doc::StackMode::Entropy => Stat::Entropy,
         photosuite_doc::StackMode::Kurtosis => Stat::Kurtosis,

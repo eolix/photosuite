@@ -328,6 +328,29 @@ fn stack_modes_render_from_the_nested_layers() {
 }
 
 #[test]
+fn stack_mode_rejects_sources_without_visible_layers() {
+    for depth in DEPTHS {
+        let mut s = session(depth, "rgb");
+        paint(&mut s, |_, _| [0.4, 0.4, 0.4, 1.0]);
+        s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+        s.execute("layer.smartObjects.editContents", json!({})).unwrap();
+        let ids: Vec<u64> = doc(&s).layers.iter().map(|layer| layer.id.0).collect();
+        for id in ids {
+            s.execute("layer.hideLayers", json!({"layer": id})).unwrap();
+        }
+        s.execute("layer.smartObjects.saveContents", json!({})).unwrap();
+        s.execute("file.close", json!({})).unwrap();
+
+        let err = s.execute("layer.smartObjects.stackMode.mean", json!({})).unwrap_err();
+        assert!(err.to_string().contains("no visible layers"), "{err}");
+        match &active(&s).content {
+            LayerContent::Smart(sm) => assert_eq!(sm.stack_mode, None, "failed edit must roll back"),
+            _ => panic!(),
+        }
+    }
+}
+
+#[test]
 fn reveal_in_finder_dry_run_and_enabled() {
     let mut s = session(8, "rgb");
     assert!(!s.is_enabled("layer.smartObjects.revealInFinder"));
