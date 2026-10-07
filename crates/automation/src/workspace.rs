@@ -154,6 +154,7 @@ pub fn authorize_engine_command(id: &str, params: &Value) -> Result<(), Automati
     let safe_file_command = matches!(
         id,
         "file.new"
+            | "file.newFromClipboard"
             | "file.close"
             | "file.closeAll"
             | "file.closeOthers"

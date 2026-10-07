@@ -540,11 +540,11 @@ impl PhotosuiteApp {
         }
         let t0 = gpu_canvas::now_ms();
         // The OS clipboard is read only on an explicit paste, never in the background (privacy, CPU).
-        if matches!(id, "edit.paste" | "edit.pasteSpecial.pasteInPlace") {
+        if matches!(id, "edit.paste" | "edit.pasteSpecial.pasteInPlace" | "file.newFromClipboard") {
             if !clip_read {
                 self.import_os_clipboard();
             }
-            if self.session.clipboard.is_none() && self.session.active().is_some() && self.services.clipboard_get_image.is_some() {
+            if self.session.clipboard.is_none() && self.services.clipboard_get_image.is_some() {
                 // Enabled on the strength of the OS clipboard, which held no image: a quiet no-op.
                 self.ui.status = "Nothing to paste: the clipboard holds no image".into();
                 self.ui.status_error = false;
@@ -1413,6 +1413,40 @@ mod clipboard_tests {
         let mut plain = PhotosuiteApp::new(Session::new(), Services::default());
         plain.session.execute("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
         assert!(!crate::menus::is_enabled(&plain, "edit.paste"));
+    }
+
+    /// #368: an image copied in another app opens as a document of its own, from File › New
+    /// from Clipboard or from Paste with nothing open.
+    #[test]
+    fn os_clipboard_image_becomes_a_new_document() {
+        let (os, reads) = (OsClip::default(), Arc::new(std::sync::atomic::AtomicUsize::new(0)));
+        let (b, n) = (os.clone(), Arc::clone(&reads));
+        let get = move || {
+            n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            b.lock().unwrap().clone()
+        };
+        let mut app = PhotosuiteApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
+        let ctx = egui::Context::default();
+        // Listed right after File › New…, enabled without reading the clipboard.
+        let items = crate::menus::menu_items(&app);
+        let at = items.iter().position(|i| i.id == "file.new").unwrap();
+        assert_eq!(items[at + 1].id, "file.newFromClipboard");
+        assert!(items[at + 1].enabled && crate::menus::is_enabled(&app, "edit.paste"));
+        assert!(!crate::menus::is_enabled(&app, "edit.pasteSpecial.pasteInPlace"), "Paste in Place needs a document");
+        assert_eq!(reads.load(std::sync::atomic::Ordering::SeqCst), 0);
+        // An empty clipboard is a quiet no-op.
+        let r = crate::menus::invoke(&mut app, &ctx, "file.newFromClipboard", serde_json::json!({})).unwrap();
+        assert_eq!(r["pasted"], serde_json::json!(false));
+        assert!(app.session.documents().is_empty() && !app.ui.status_error);
+        // Paste with nothing open makes the document.
+        *os.lock().unwrap() = Some((5, 3, [0u8, 0, 255, 255].repeat(15)));
+        crate::menus::invoke(&mut app, &ctx, "edit.paste", serde_json::json!({})).unwrap();
+        let d = &app.session.active().unwrap().doc;
+        assert_eq!((d.size.width, d.size.height, d.layers.len()), (5, 3, 1));
+        assert_eq!(app.ui.views.len(), 1, "the new document has a view");
+        // New from Clipboard with a document open adds another.
+        crate::menus::invoke(&mut app, &ctx, "file.newFromClipboard", serde_json::json!({})).unwrap();
+        assert_eq!(app.session.documents().len(), 2);
     }
 
     #[test]

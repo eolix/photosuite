@@ -514,6 +514,31 @@ async fn bridge_command_batch_forwards_each_steps_wait() {
     app.abort();
 }
 
+/// #368: agents can open the clipboard as a document of its own.
+#[tokio::test(flavor = "multi_thread")]
+async fn new_from_clipboard_opens_the_copy_as_a_document() {
+    let client = connect(PhotosuiteMcp::headless()).await;
+    json_of(&call(&client, "doc_new", json!({"width": 40, "height": 30})).await);
+    let r = json_of(
+        &call(
+            &client,
+            "command_batch",
+            json!({"steps": [
+                {"id": "select.rect", "params": {"x": 5, "y": 5, "width": 12, "height": 7}},
+                {"id": "edit.copy"},
+                {"id": "file.newFromClipboard"}
+            ]}),
+        )
+        .await,
+    );
+    assert_eq!(r["completed"], 3, "{r}");
+    let doc = json_of(&call(&client, "doc_inspect", json!({})).await);
+    assert_eq!((doc["width"].as_u64(), doc["height"].as_u64()), (Some(12), Some(7)), "{doc}");
+    let sess = json_of(&call(&client, "session_list", json!({})).await);
+    assert_eq!(sess["documents"].as_array().unwrap().len(), 2);
+    client.cancel().await.unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn command_batch_rejects_too_many_steps() {
     let client = connect(PhotosuiteMcp::headless()).await;

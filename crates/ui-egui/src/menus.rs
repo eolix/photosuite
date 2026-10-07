@@ -489,10 +489,10 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
         "view.proofSetup.custom" => app.session.active().is_some(),
         "view.rulers" | "view.show.grid" | "view.show.guides" | "view.snap" | "view.lockGuides" => true,
         // An image copied in another app can only be seen by reading the OS clipboard, which happens
-        // on an explicit paste: with a clipboard service, Paste stays enabled whenever a document is open.
-        "edit.paste" | "edit.pasteSpecial.pasteInPlace" => {
-            app.session.is_enabled(id) || (app.services.clipboard_get_image.is_some() && app.session.active().is_some())
-        }
+        // on an explicit paste: with a clipboard service these stay enabled. Paste and New from
+        // Clipboard need no document (with none open, Paste makes one); Paste in Place does.
+        "edit.paste" | "file.newFromClipboard" => app.session.is_enabled(id) || app.services.clipboard_get_image.is_some(),
+        "edit.pasteSpecial.pasteInPlace" => app.session.is_enabled(id) || (app.services.clipboard_get_image.is_some() && app.session.active().is_some()),
         "select.selectAndMask" => app.session.is_enabled("select.refineEdge"),
         "select.transformSelection" => app.ui.transform.is_none() && app.session.is_enabled("select.transformSelection"),
         i if (i.starts_with("view.zoom") || i == "view.fitOnScreen" || i == "view.actualPixels") || i == "window.newWindowForDocument" => {
@@ -614,6 +614,9 @@ pub fn is_live(id: &str) -> bool {
         || crate::timeline_ui::handles(id)
 }
 
+/// Commands outside the catalogue that belong right after a catalogue item: `(id, after)`.
+const PLACE_AFTER: &[(&str, &str)] = &[("file.newFromClipboard", "file.new")];
+
 pub fn menu_items(app: &PhotosuiteApp) -> Vec<MenuItem> {
     // 1) Photoshop's full menu tree, in Photoshop order; live where we implement the command.
     let known = is_live;
@@ -656,9 +659,11 @@ pub fn menu_items(app: &PhotosuiteApp) -> Vec<MenuItem> {
     for e in extra {
         let dup = items.iter().any(|i| i.id == e.id || (i.path == e.path && i.label.trim_end_matches('…') == e.label.trim_end_matches('…')));
         if !dup {
-            // Insert after the last item of the same top-level menu, keeping menus contiguous.
+            // Insert after the item it belongs next to, else after the last item of the same
+            // top-level menu, keeping menus contiguous.
             let top = e.path.first().cloned();
-            let at = items.iter().rposition(|i| i.path.first() == top.as_ref()).map_or(items.len(), |p| p + 1);
+            let after = PLACE_AFTER.iter().find(|(id, _)| *id == e.id).and_then(|(_, a)| items.iter().position(|i| i.id == *a));
+            let at = after.or_else(|| items.iter().rposition(|i| i.path.first() == top.as_ref())).map_or(items.len(), |p| p + 1);
             items.insert(at, e);
         }
     }

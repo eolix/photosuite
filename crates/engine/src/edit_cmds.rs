@@ -22,6 +22,11 @@ fn has_doc(s: &Session) -> std::result::Result<(), String> {
     s.active().map(|_| ()).ok_or_else(|| "no document open".into())
 }
 
+/// Paste and New from Clipboard need only a clipboard: with no document open, they make one.
+fn has_clip_only(s: &Session) -> std::result::Result<(), String> {
+    s.clipboard.as_ref().map(|_| ()).ok_or_else(|| "the clipboard is empty".into())
+}
+
 fn has_pixels(s: &Session) -> std::result::Result<(), String> {
     let d = s.active().ok_or("no document open")?;
     let l = d.active_layer.and_then(|id| d.doc.layer(id)).ok_or("no active layer")?;
@@ -114,7 +119,10 @@ pub(crate) fn clear_area(doc: &mut Document, id: LayerId, area: Rect, sel: Optio
 /// on `center` (the view centre from the UI) or the canvas, unless they already overlap the canvas.
 fn paste(s: &mut Session, p: &Value, in_place: bool) -> Result<Value> {
     let clip = s.clipboard.clone().ok_or(EngineError::Other("the clipboard is empty".into()))?;
-    let d = s.active().ok_or(EngineError::NoDocument)?;
+    let Some(d) = s.active() else {
+        // Nothing open to paste into: the clipboard becomes a document of its own (#368).
+        return new_from_clipboard(s);
+    };
     let canvas = d.doc.bounds();
     let fmt = d.doc.pixel_format();
     let (dx, dy) = if in_place || (clip.bounds.intersect(&canvas) == clip.bounds && p.get("center").is_none()) {
@@ -137,6 +145,26 @@ fn paste(s: &mut Session, p: &Value, in_place: bool) -> Result<Value> {
         Ok(id)
     })?;
     Ok(json!({"layer": id.0, "offset": [dx, dy]}))
+}
+
+/// A new document the size of the clipboard image, holding it as its one layer, in the pixel
+/// format it was copied in (#368).
+fn new_from_clipboard(s: &mut Session) -> Result<Value> {
+    let clip = s.clipboard.clone().ok_or(EngineError::Other("the clipboard is empty".into()))?;
+    let b = clip.bounds;
+    let (w, h) = (b.width(), b.height());
+    if w == 0 || h == 0 {
+        return Err(EngineError::Other("the clipboard image has no size".into()));
+    }
+    let fmt = clip.surface.format();
+    let target = PixelFormat::new(fmt.mode, fmt.sample, true);
+    let moved = if b.x0 == 0 && b.y0 == 0 { clip.surface } else { photosuite_algo::resample::translate_surface(&clip.surface, -b.x0, -b.y0) };
+    let mut doc = Document::new("Untitled", photosuite_geom::Size::new(w, h), fmt.mode, fmt.sample);
+    let mut l = Layer::raster(doc.next_layer_name("Layer"), target);
+    *crate::pixels_mut(&mut l)? = if moved.format() == target { moved } else { moved.convert(target) };
+    doc.layers.push(l);
+    let i = s.add_document(doc, None);
+    Ok(json!({"document": i, "width": w, "height": h}))
 }
 
 fn layer_via(s: &mut Session, cut: bool) -> Result<Value> {
@@ -420,9 +448,18 @@ pub fn specs() -> Vec<CommandSpec> {
             "Paste",
             &["Edit"],
             Some("Cmd+V"),
-            r##"{"center":[x,y]? (view centre; default keeps the position when it overlaps the canvas)}"##,
-            has_clip,
+            r##"{"center":[x,y]? (view centre; default keeps the position when it overlaps the canvas)} (with no document open: a new document from the clipboard)"##,
+            has_clip_only,
             |s, p| paste(s, p, false)
+        ),
+        spec!(
+            "file.newFromClipboard",
+            "New from Clipboard",
+            &["File"],
+            None,
+            "{} (a new document the size of the clipboard image, holding it as one layer)",
+            has_clip_only,
+            |s, _| new_from_clipboard(s)
         ),
         spec!("edit.pasteSpecial.pasteInPlace", "Paste in Place", &["Edit", "Paste Special"], Some("Cmd+Shift+V"), "{}", has_clip, |s, p| paste(s, p, true)),
         spec!("layer.new.layerViaCopy", "Layer via Copy", &["Layer", "New"], Some("Cmd+J"), "{}", has_doc, |s, _| layer_via(s, false)),
@@ -463,6 +500,40 @@ mod tests {
     fn active_bounds(s: &Session) -> Rect {
         let st = s.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds()
+    }
+
+    /// #368: the clipboard as a document of its own, from New from Clipboard or a Paste with
+    /// nothing open, at every depth.
+    #[test]
+    fn new_from_clipboard_and_paste_with_no_document() {
+        for depth in [8, 16, 32] {
+            let mut s = Session::new();
+            assert!(!s.is_enabled("file.newFromClipboard") && !s.is_enabled("edit.paste"), "nothing copied yet");
+            assert!(s.execute("file.newFromClipboard", json!({})).is_err());
+            s.execute("file.new", json!({"width": 100, "height": 100, "depth": depth})).unwrap();
+            s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
+            s.execute("select.rect", json!({"x": 10, "y": 20, "width": 30, "height": 15})).unwrap();
+            s.execute("edit.copy", json!({})).unwrap();
+            // With a document open: a second document, sized to the copy, its pixels at the origin.
+            let r = s.execute("file.newFromClipboard", json!({})).unwrap();
+            assert_eq!((r["width"].as_u64(), r["height"].as_u64()), (Some(30), Some(15)), "{r}");
+            assert_eq!(s.documents().len(), 2);
+            let d = &s.active().unwrap().doc;
+            assert_eq!((d.size.width, d.size.height, d.layers.len()), (30, 15, 1));
+            assert_eq!(d.pixel_format().sample, s.documents()[0].doc.pixel_format().sample, "{depth}-bit kept");
+            assert_eq!(active_bounds(&s), Rect::new(0, 0, 30, 15));
+            let px = d.layers[0].surface().unwrap().rgba(0, 0);
+            assert!(px[0] > 0.99 && px[1] < 0.01 && px[3] > 0.99, "{px:?}");
+            // With nothing open, Paste makes the document too.
+            while s.active().is_some() {
+                s.execute("file.close", json!({})).unwrap();
+            }
+            assert!(s.is_enabled("edit.paste") && !s.is_enabled("edit.pasteSpecial.pasteInPlace"));
+            s.execute("edit.paste", json!({})).unwrap();
+            assert_eq!(s.documents().len(), 1);
+            assert_eq!(active_bounds(&s), Rect::new(0, 0, 30, 15));
+            assert!(s.execute("edit.pasteSpecial.pasteInPlace", json!({})).is_ok(), "into the new document");
+        }
     }
 
     #[test]
