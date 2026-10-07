@@ -279,6 +279,7 @@ impl PhotosuiteMcp {
                 // of the document (`Session::edit`), so the session is still
                 // consistent: keep serving instead of failing every later call.
                 let mut g = h.lock().unwrap_or_else(PoisonError::into_inner);
+                g.sync_jobs();
                 f(&mut g)
             })
             .await
@@ -520,7 +521,8 @@ impl PhotosuiteMcp {
         let steps: Vec<Value> =
             p.steps.into_iter().map(|s| json!({"command": s.id, "params": s.params.unwrap_or_else(|| json!({})), "wait": s.wait.unwrap_or(true)})).collect();
         let args = json!({"steps": steps, "stopOnError": stop});
-        if let Some(r) = self.headless_op(move |h| h.batch(&args)).await {
+        // The reply travels as escaped JSON text, so steps are charged their escaped size.
+        if let Some(r) = self.headless_op(move |h| h.batch_with_budget(&args, BatchReplyBudget::escaped())).await {
             return to_result(r);
         }
         let Some(b) = self.bridge_client() else {
@@ -528,7 +530,7 @@ impl PhotosuiteMcp {
         };
         let mut results = Vec::new();
         let mut failed = 0;
-        let mut reply_budget = BatchReplyBudget::default();
+        let mut reply_budget = BatchReplyBudget::escaped();
         for s in &steps {
             let response = b.call("engine.execute", s.clone()).await;
             let was_error = response.is_err();
@@ -706,5 +708,49 @@ mod tests {
         assert!(r.is_err());
         let r = mcp.headless_op(|h| h.command_run("file.new", json!({"width": 8, "height": 8}))).await.unwrap();
         assert!(r.is_ok(), "session still usable after a panic: {r:?}");
+    }
+
+    /// Regression (#504): the batch budget counted plain JSON, but MCP sends the reply as escaped
+    /// text, so a batch the budget stopped could still exceed the tool-result ceiling and the
+    /// client lost every step result.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mcp_command_batch_stopped_by_the_budget_keeps_its_step_results() {
+        let mcp = PhotosuiteMcp::headless();
+        let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None };
+        let mut steps: Vec<RunParams> = (0..MAX_BATCH_STEPS - 1).map(|_| step("command.list", json!({}))).collect();
+        steps.push(step("file.new", json!({"width": 8, "height": 8})));
+        let result = mcp.command_batch(Parameters(BatchParams { steps, stop_on_error: Some(false) })).await.unwrap();
+        assert_ne!(result.is_error, Some(true), "{:?}", result.content.first().and_then(|c| c.as_text()).map(|t| &t.text[..200.min(t.text.len())]));
+        let text = &result.content.first().and_then(|c| c.as_text()).unwrap().text;
+        let reply: Value = serde_json::from_str(text).unwrap();
+        let results = reply["results"].as_array().unwrap();
+        assert!(results.last().unwrap()["error"].as_str().unwrap().contains("batch response budget exceeded"), "{}", results.last().unwrap());
+        assert_eq!(reply["completed"].as_u64().unwrap() as usize, results.len() - 1);
+        assert_eq!(reply["failed"], 1);
+        let docs = mcp.headless_op(|h| Ok(h.session.documents().len())).await.unwrap().unwrap();
+        assert_eq!(docs, 0, "the step after the budget ran out did not run");
+    }
+
+    /// The MCP server applies finished jobs before every tool call too (#503).
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mcp_tools_see_a_finished_background_job() {
+        let mcp = PhotosuiteMcp::headless();
+        mcp.headless_op(|h| {
+            h.command_run("file.new", json!({"width": 64, "height": 48}))?;
+            h.command_run("filter.noise.addNoise", json!({"amount": 50}))?;
+            h.command_start("filter.blur.gaussianBlur", json!({"radius": 4}), false)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        let t = std::time::Instant::now();
+        loop {
+            let inspected = mcp.headless_op(|h| h.inspect(None)).await.unwrap().unwrap();
+            if inspected["history"].as_array().unwrap().last().unwrap() == "Gaussian Blur" {
+                break;
+            }
+            assert!(t.elapsed().as_secs() < 60, "doc_inspect never saw the finished job: {inspected}");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
     }
 }

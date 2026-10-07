@@ -305,6 +305,23 @@ fn wait_job_blocks_until_applied() {
     assert!(s.wait_job(JobId(12345)).is_err());
 }
 
+#[test]
+fn params_that_are_not_an_object_are_rejected_before_running() {
+    let mut s = session(40, 30);
+    let before = s.active().unwrap().history.past_len();
+    for id in ["image.adjustments.invert", "filter.blur.gaussianBlur", "layer.new.layer"] {
+        for p in [json!([3]), json!("x"), json!(5), json!(true)] {
+            let e = s.execute(id, p.clone()).unwrap_err().to_string();
+            assert!(e.contains(id) && e.contains("must be a JSON object"), "{id} {p}: {e}");
+            assert!(s.start(id, p).is_err(), "{id}: background start must reject too");
+        }
+    }
+    assert_eq!(s.active().unwrap().history.past_len(), before, "nothing ran");
+    s.execute("image.adjustments.invert", json!({})).unwrap();
+    s.execute("image.adjustments.invert", Value::Null).unwrap();
+    assert_eq!(s.active().unwrap().history.past_len(), before + 2);
+}
+
 /// Cancel latency on a 24 MP document (6000×4000): from `cancel_job` until the worker thread
 /// has exited. Release only: debug builds are ~20× slower per tile.
 #[test]

@@ -178,6 +178,15 @@ fn run_errors() {
     assert_eq!(o.status.code(), Some(1));
     let o = bin().args(["run", "--new", "{", "--cmd", "x"]).output().unwrap();
     assert_eq!(o.status.code(), Some(1));
+    // Params must be a JSON object, for `--new` and for each `--params`.
+    let o = bin().args(["run", "--new", "[3]", "--cmd", "layer.new.layer"]).output().unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    let e = String::from_utf8_lossy(&o.stderr);
+    assert!(e.contains("--new") && e.contains("must be a JSON object"), "{e}");
+    let o = bin().args(["run", "--new", "{}", "--cmd", "layer.new.layer", "--params", "\"x\""]).output().unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    let e = String::from_utf8_lossy(&o.stderr);
+    assert!(e.contains("layer.new.layer") && e.contains("must be a JSON object"), "{e}");
 }
 
 #[test]

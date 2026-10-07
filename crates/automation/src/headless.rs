@@ -49,6 +49,13 @@ impl Headless {
         Self { session: Session::new(), writers: HashMap::new(), filesystem: Filesystem::Workspace(workspace) }
     }
 
+    /// Apply background jobs that finished since the last request, so every request (save,
+    /// export, inspect, preview, `session.list`, commands) sees their result. Cheap when no job
+    /// runs. The JSON-lines server and the MCP server call it before each request.
+    pub fn sync_jobs(&mut self) {
+        self.session.poll_jobs();
+    }
+
     fn doc_index(&self, index: Option<usize>) -> Result<usize, AutomationError> {
         match index {
             Some(i) if i < self.session.documents().len() => Ok(i),
@@ -207,8 +214,8 @@ impl Headless {
         if !matches!(&self.filesystem, Filesystem::TrustedLocal) {
             authorize_engine_command(id, &params)?;
         }
-        // Background jobs that finished since the last request are applied first.
-        self.session.poll_jobs();
+        // Background jobs that finished since the last request (or batch step) are applied first.
+        self.sync_jobs();
         if wait {
             return Ok(self.session.execute(id, params)?);
         }

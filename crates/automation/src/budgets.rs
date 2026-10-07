@@ -103,19 +103,34 @@ pub fn write_reply(out: &mut impl Write, reply: &Value) -> io::Result<()> {
 /// many individually valid replies cannot accumulate into an enormous batch.
 pub struct BatchReplyBudget {
     remaining: usize,
+    /// Charge each result as it costs inside a JSON string (MCP text content).
+    escaped: bool,
 }
 
 impl Default for BatchReplyBudget {
     fn default() -> Self {
-        Self { remaining: MAX_RESPONSE_BYTES - MAX_REQUEST_BYTES - 4096 }
+        Self { remaining: MAX_RESPONSE_BYTES - MAX_REQUEST_BYTES - 4096, escaped: false }
     }
 }
 
 impl BatchReplyBudget {
+    /// For a batch reply sent as MCP text content: the encoded reply is embedded in a JSON
+    /// string, which escapes every quote and backslash again, so a batch the plain budget accepts
+    /// could exceed the tool-result ceiling and lose every step result.
+    pub fn escaped() -> Self {
+        Self { escaped: true, ..Self::default() }
+    }
+
     /// Must be called before retaining the result or dispatching the next step.
     pub fn charge(&mut self, result: &Value) -> Result<(), AutomationError> {
-        let bytes = encode_with_limit(result, self.remaining.saturating_sub(1))?;
-        self.remaining = self.remaining.saturating_sub(bytes.len() + 1);
+        let limit = self.remaining.saturating_sub(1);
+        let bytes = encode_with_limit(result, limit)?;
+        // Compact JSON has no raw control characters, so only `"` and `\` grow when escaped.
+        let size = if self.escaped { bytes.len() + bytes.iter().filter(|&&b| b == b'"' || b == b'\\').count() } else { bytes.len() };
+        if size > limit {
+            return Err(bad(format!("response exceeds {limit} bytes once escaped")));
+        }
+        self.remaining = self.remaining.saturating_sub(size + 1);
         Ok(())
     }
 }
@@ -161,9 +176,23 @@ mod tests {
 
     #[test]
     fn batch_cannot_retain_more_than_the_aggregate_reply_budget() {
-        let mut budget = BatchReplyBudget { remaining: 10 };
+        let mut budget = BatchReplyBudget { remaining: 10, escaped: false };
         budget.charge(&json!("abc")).unwrap();
         assert!(budget.charge(&json!("abc")).is_err());
         assert_eq!(budget.remaining, 4);
+    }
+
+    #[test]
+    fn escaped_budget_charges_the_size_inside_a_json_string() {
+        // `"a\"b"` is 6 bytes plain and 10 once embedded in a string (`\"a\\\"b\"`).
+        let value = json!("a\"b");
+        let escaped_len = serde_json::to_string(&Value::String(value.to_string())).unwrap().len() - 2;
+        assert_eq!(escaped_len, 10);
+        let mut budget = BatchReplyBudget { remaining: 11, escaped: true };
+        budget.charge(&value).unwrap();
+        assert_eq!(budget.remaining, 0);
+        let mut budget = BatchReplyBudget { remaining: 10, escaped: true };
+        assert!(budget.charge(&value).is_err());
+        assert!(BatchReplyBudget { remaining: 10, escaped: false }.charge(&value).is_ok());
     }
 }

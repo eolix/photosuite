@@ -252,7 +252,7 @@ fn run_cmds(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
         }
         ([], Some(new)) => {
             let p: Value = serde_json::from_str(new).map_err(|e| format!("bad --new JSON: {e}"))?;
-            h.command_run("file.new", p).map_err(|e| e.to_string())?;
+            h.command_run("file.new", p).map_err(|e| format!("--new: {e}"))?;
         }
         _ => return Err("run needs exactly one of <file> or --new <json>".into()),
     }
