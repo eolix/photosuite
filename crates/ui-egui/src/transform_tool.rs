@@ -20,6 +20,32 @@ use crate::PhotosuiteApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::TransformSession;
 
+/// Which Split button is armed. The guide follows the pointer and the split is added on release.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SplitTool {
+    Cross,
+    Vertical,
+    Horizontal,
+}
+
+impl SplitTool {
+    fn command(self) -> &'static str {
+        match self {
+            SplitTool::Cross => "edit.transform.splitWarpCrosswise",
+            SplitTool::Vertical => "edit.transform.splitWarpVertically",
+            SplitTool::Horizontal => "edit.transform.splitWarpHorizontally",
+        }
+    }
+
+    fn icon(self) -> &'static str {
+        match self {
+            SplitTool::Cross => "cross",
+            SplitTool::Vertical => "vertical",
+            SplitTool::Horizontal => "horizontal",
+        }
+    }
+}
+
 /// Preview state that isn't serialisable: the document without the transformed pixels, and
 /// full-resolution textures of those pixels (transform_tex.rs).
 pub struct TransformPreview {
@@ -30,6 +56,13 @@ pub struct TransformPreview {
     gesture: Option<Gesture>,
     /// Warp-mode drag: (control point, pointer start, mesh points at the start).
     warp_drag: Option<(usize, [f64; 2], Vec<[f64; 2]>)>,
+    /// Armed split tool. None while the buttons are off and control points drag as usual.
+    split_tool: Option<SplitTool>,
+    /// Document point the split guide is following (a drag, or the hover while placing).
+    split_pointer: Option<[f64; 2]>,
+    split_placing: bool,
+    /// Option-click places a split without a button armed.
+    split_quick: bool,
     steps: Steps,
 }
 
@@ -138,6 +171,10 @@ pub fn begin(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(), String>
         opacity: layer.opacity * layer.fill_opacity,
         gesture: None,
         warp_drag: None,
+        split_tool: None,
+        split_pointer: None,
+        split_placing: false,
+        split_quick: false,
         steps: Steps::default(),
     });
     app.ui.transform = Some(TransformSession {
@@ -225,8 +262,19 @@ fn begin_lone(
     let max_side = ctx.input(|i| i.max_texture_side).max(app.gpu.as_ref().map_or(1, |g| g.max_texture_side()));
     let (image, uv) = crate::transform_tex::read_surface(&lifted, None, b, max_side);
     let texture = crate::transform_tex::PreviewTextures::new(ctx, format!("transform-{session}"), image, uv);
-    app.transform_preview =
-        Some(TransformPreview { session, doc: Arc::new(pd), texture, opacity: 0.6, gesture: None, warp_drag: None, steps: Steps::default() });
+    app.transform_preview = Some(TransformPreview {
+        session,
+        doc: Arc::new(pd),
+        texture,
+        opacity: 0.6,
+        gesture: None,
+        warp_drag: None,
+        split_tool: None,
+        split_pointer: None,
+        split_placing: false,
+        split_quick: false,
+        steps: Steps::default(),
+    });
     app.ui.transform = Some(TransformSession {
         session,
         layer,
@@ -271,8 +319,19 @@ pub fn begin_selection(app: &mut PhotosuiteApp, ctx: &egui::Context) -> Result<(
     let texture = crate::transform_tex::PreviewTextures::new(ctx, format!("transform-{session}"), egui::ColorImage::new([tw, th], px), uv);
     let mut pd = (*doc).clone();
     pd.selection = None;
-    app.transform_preview =
-        Some(TransformPreview { session, doc: Arc::new(pd), texture, opacity: 1.0, gesture: None, warp_drag: None, steps: Steps::default() });
+    app.transform_preview = Some(TransformPreview {
+        session,
+        doc: Arc::new(pd),
+        texture,
+        opacity: 1.0,
+        gesture: None,
+        warp_drag: None,
+        split_tool: None,
+        split_pointer: None,
+        split_placing: false,
+        split_quick: false,
+        steps: Steps::default(),
+    });
     app.ui.transform = Some(TransformSession {
         session,
         layer: layer.0,
@@ -335,6 +394,12 @@ pub fn enter_warp(app: &mut PhotosuiteApp) {
 pub fn leave_warp(app: &mut PhotosuiteApp) {
     if let Some(t) = app.ui.transform.as_mut() {
         t.warp = None;
+    }
+    if let Some(pv) = app.transform_preview.as_mut() {
+        pv.split_tool = None;
+        pv.split_pointer = None;
+        pv.split_placing = false;
+        pv.split_quick = false;
     }
 }
 
@@ -561,7 +626,7 @@ pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) ->
     let Some(t) = app.ui.transform.clone() else { return false };
     let tol = handle_tolerance(app);
     if t.warp.is_some() {
-        warp_pointer(app, ev, tol);
+        warp_pointer(app, ev, tol, mods);
         return true;
     }
     let Some(pv) = app.transform_preview.as_mut() else { return false };
@@ -752,21 +817,109 @@ fn apply_drag(s: &mut TransformSession, g: Gesture, p: [f64; 2], mods: egui::Mod
     }
 }
 
-/// Index of the warp control point within `tol` of `p` (nearest).
+/// An anchor or a handle on a section line. The inner control points of a patch are not shown.
+fn on_section_edge(i: usize, j: usize) -> bool {
+    i.is_multiple_of(3) || j.is_multiple_of(3)
+}
+
+/// Index of the warp control point within `tol` of `p` (nearest anchor or handle).
 fn warp_hit(w: &Warp, p: [f64; 2], tol: f64) -> Option<usize> {
     let m = w.mesh.as_ref()?;
+    let nx = m.nx();
     m.points
         .iter()
         .enumerate()
+        .filter(|(i, _)| on_section_edge(i % nx, i / nx))
         .map(|(i, q)| (i, ((q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2)).sqrt()))
         .filter(|(_, d)| *d < tol)
         .min_by(|a, b| a.1.total_cmp(&b.1))
         .map(|(i, _)| i)
 }
 
-/// Drags a warp control point. Anchors (patch corners) carry their handles along, as in
-/// Photoshop. Preset warps turn into a custom mesh on the first drag.
-fn warp_pointer(app: &mut PhotosuiteApp, ev: ToolEvent, tol: f64) {
+/// A 1×1 mesh (Grid › Default) draws rule-of-thirds guides. Denser presets are real patch
+/// boundaries only — a 3×3 is three cells, not a third-line lattice inside every cell.
+fn single_patch(mesh: &BezierMesh) -> bool {
+    mesh.us.len() == 2 && mesh.vs.len() == 2
+}
+
+/// Option-click picks the split: crosswise in the open, and the perpendicular split when the
+/// pointer is close to an existing grid line.
+fn quick_split_kind(mesh: &BezierMesh, bounds: [f64; 4], p: [f64; 2]) -> SplitTool {
+    let (s, t) = mesh.param_at(p);
+    let w = (bounds[2] - bounds[0]).abs().max(1.0);
+    let h = (bounds[3] - bounds[1]).abs().max(1.0);
+    let su = (8.0 / w).clamp(0.02, 0.12);
+    let sv = (8.0 / h).clamp(0.02, 0.12);
+    let thirds = single_patch(mesh);
+    let near = |knots: &[f64], v: f64, tol: f64| {
+        knots.iter().any(|k| *k > 0.0 && *k < 1.0 && (k - v).abs() < tol) || (thirds && [1.0 / 3.0, 2.0 / 3.0].iter().any(|k| (k - v).abs() < tol))
+    };
+    match (near(&mesh.us, s, su), near(&mesh.vs, t, sv)) {
+        (true, false) => SplitTool::Horizontal,
+        (false, true) => SplitTool::Vertical,
+        _ => SplitTool::Cross,
+    }
+}
+
+fn split_cursor(tool: SplitTool) -> CursorIcon {
+    match tool {
+        SplitTool::Vertical => CursorIcon::ResizeHorizontal,
+        SplitTool::Horizontal => CursorIcon::ResizeVertical,
+        SplitTool::Cross => CursorIcon::Crosshair,
+    }
+}
+
+/// Armed split tool, or Option held: the guide tracks the pointer and the split lands on release.
+/// Returns false when this event is an ordinary control-point drag.
+fn split_gesture(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+    let armed = app.transform_preview.as_ref().and_then(|p| p.split_tool);
+    let placing = app.transform_preview.as_ref().is_some_and(|p| p.split_placing);
+    match ev {
+        ToolEvent::Down { x, y, .. } if armed.is_some() || mods.alt => {
+            if let Some(pv) = app.transform_preview.as_mut() {
+                pv.split_placing = true;
+                pv.split_pointer = Some([x, y]);
+                pv.split_quick = armed.is_none();
+            }
+            true
+        }
+        ToolEvent::Move { x, y, .. } if placing => {
+            if let Some(pv) = app.transform_preview.as_mut() {
+                pv.split_pointer = Some([x, y]);
+            }
+            true
+        }
+        ToolEvent::Up { x, y } if placing => {
+            let quick = app.transform_preview.as_ref().is_some_and(|p| p.split_quick);
+            if let Some(pv) = app.transform_preview.as_mut() {
+                pv.split_placing = false;
+                pv.split_pointer = None;
+                pv.split_quick = false;
+            }
+            let kind = if let Some(tool) = armed {
+                Some(tool)
+            } else if quick {
+                app.ui.transform.as_ref().and_then(|t| t.warp.as_ref()).map(|w| quick_split_kind(&w.to_mesh(1, 1), w.bounds, [x, y]))
+            } else {
+                None
+            };
+            if let Some(kind) = kind {
+                // On an existing line, or a click the drag path also delivers, this is a no-op.
+                let _ = split(app, kind.command(), Some([x, y]));
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Drags a warp control point. Anchors (patch corners) carry their handles along. Preset warps
+/// turn into a custom mesh on the first drag. An armed split tool (or Option) places a split
+/// where the pointer is released instead of moving a point.
+fn warp_pointer(app: &mut PhotosuiteApp, ev: ToolEvent, tol: f64, mods: egui::Modifiers) {
+    if split_gesture(app, ev, mods) {
+        return;
+    }
     let (Some(t), Some(pv)) = (app.ui.transform.as_mut(), app.transform_preview.as_mut()) else { return };
     let Some(w) = t.warp.as_mut() else { return };
     match ev {
@@ -804,26 +957,43 @@ fn warp_pointer(app: &mut PhotosuiteApp, ev: ToolEvent, tol: f64) {
     }
 }
 
-/// Applies a split-warp command to the mesh being edited (at the box centre unless `at`).
-pub fn split(app: &mut PhotosuiteApp, id: &str, at: Option<[f64; 2]>) -> Result<(), String> {
+/// Runs a warp-edit command against the mesh in the open Warp session and writes the mesh back.
+pub fn edit_session_warp(app: &mut PhotosuiteApp, id: &str, params: &serde_json::Value) -> Result<(), String> {
     let Some(w) = app.ui.transform.as_ref().and_then(|t| t.warp.clone()) else { return Err("not warping".into()) };
-    let mut p = json!({"warp": w});
-    if let Some(a) = at {
-        p["at"] = json!(a);
+    let mut p = if params.is_object() { params.clone() } else { json!({}) };
+    if p.get("warp").is_none() {
+        p["warp"] = serde_json::to_value(&w).map_err(|e| e.to_string())?;
     }
     let r = app.session.execute(id, p).map_err(|e| e.to_string())?;
-    let nw: Warp = serde_json::from_value(r["warp"].clone()).map_err(|e| e.to_string())?;
+    let raw = r.get("warp").cloned().ok_or_else(|| "warp command returned no mesh".to_string())?;
+    let nw: Warp = serde_json::from_value(raw).map_err(|e| e.to_string())?;
     if let Some(t) = app.ui.transform.as_mut() {
         t.warp = Some(nw);
     }
     Ok(())
 }
 
-/// Cursor for hovering a document point while transforming.
-pub fn cursor(app: &PhotosuiteApp, p: [f64; 2]) -> Option<CursorIcon> {
+/// Applies a split-warp command to the mesh being edited (at the box centre unless `at`).
+pub fn split(app: &mut PhotosuiteApp, id: &str, at: Option<[f64; 2]>) -> Result<(), String> {
+    let mut p = json!({});
+    if let Some(a) = at {
+        p["at"] = json!(a);
+    }
+    edit_session_warp(app, id, &p)
+}
+
+/// Cursor for hovering a document point while transforming. `alt` is Option, which arms a quick
+/// split while a warp is active.
+pub fn cursor(app: &PhotosuiteApp, p: [f64; 2], alt: bool) -> Option<CursorIcon> {
     let t = app.ui.transform.as_ref()?;
     let tol = handle_tolerance(app);
     if let Some(w) = &t.warp {
+        if let Some(tool) = app.transform_preview.as_ref().and_then(|pv| pv.split_tool) {
+            return Some(split_cursor(tool));
+        }
+        if alt {
+            return Some(split_cursor(quick_split_kind(&w.to_mesh(1, 1), w.bounds, p)));
+        }
         return Some(if w.style != WarpStyle::Custom || warp_hit(w, p, tol).is_some() { CursorIcon::Crosshair } else { CursorIcon::Default });
     }
     Some(match hit(t, p, tol) {
@@ -842,7 +1012,14 @@ pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform
     let (Some(t), Some(pv)) = (&app.ui.transform, &app.transform_preview) else { return };
     let scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);
     if let Some(w) = &t.warp {
-        draw_warp(painter, xf, t, w, pv);
+        let over_canvas = painter.ctx().input(|i| i.pointer.hover_pos()).filter(|p| xf.rect.contains(*p)).map(|p| xf.to_doc(p));
+        let at = pv.split_pointer.or(over_canvas);
+        let alt = painter.ctx().input(|i| i.modifiers.alt);
+        let guide = at.and_then(|p| {
+            let tool = pv.split_tool.or_else(|| (alt || pv.split_quick).then(|| quick_split_kind(&w.to_mesh(1, 1), w.bounds, p)));
+            tool.map(|tool| (tool, p))
+        });
+        draw_warp(painter, xf, t, w, pv, guide);
         return;
     }
     if let Some(h) = Homography::rect_to_quad([0.0, 0.0, 1.0, 1.0], t.quad) {
@@ -884,9 +1061,11 @@ pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform
     painter.line_segment([c - vec2(0.0, 8.0), c + vec2(0.0, 8.0)], Stroke::new(1.0, Color32::WHITE));
 }
 
-/// Warp preview (the moving pixels on a fine textured mesh) plus the control mesh: grid curves at
-/// patch boundaries and thirds, anchors (squares), handles and their arms.
-fn draw_warp(painter: &egui::Painter, xf: &ViewXform, t: &TransformSession, w: &Warp, pv: &TransformPreview) {
+/// Warp preview (the moving pixels on a fine textured mesh) plus the control mesh. Patch
+/// boundaries are solid. A single patch (Grid › Default) also draws its rule-of-thirds guides;
+/// 3×3, 4×4 and 5×5 are just those even cells, with an anchor at every intersection. `guide` is
+/// the split line following the pointer.
+fn draw_warp(painter: &egui::Painter, xf: &ViewXform, t: &TransformSession, w: &Warp, pv: &TransformPreview, guide: Option<(SplitTool, [f64; 2])>) {
     let scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);
     let r = t.rect;
     let n = 32;
@@ -921,10 +1100,14 @@ fn draw_warp(painter: &egui::Painter, xf: &ViewXform, t: &TransformSession, w: &
             })
             .collect()
     };
-    // Patch boundaries (solid) and thirds (thin), like Photoshop's 3×3 grid per patch.
+    // Patch boundaries are the grid. Only Default (one patch) draws the rule-of-thirds guides;
+    // a 3×3 preset is three even cells, not those guides repeated inside every cell.
+    let thirds = single_patch(&m);
     for (k, win) in m.us.windows(2).enumerate() {
-        for third in [1.0, 2.0] {
-            painter.add(egui::Shape::line(curve(Some(win[0] + (win[1] - win[0]) * third / 3.0), None), thin));
+        if thirds {
+            for third in [1.0, 2.0] {
+                painter.add(egui::Shape::line(curve(Some(win[0] + (win[1] - win[0]) * third / 3.0), None), thin));
+            }
         }
         if k == 0 {
             painter.add(egui::Shape::line(curve(Some(win[0]), None), line));
@@ -932,36 +1115,53 @@ fn draw_warp(painter: &egui::Painter, xf: &ViewXform, t: &TransformSession, w: &
         painter.add(egui::Shape::line(curve(Some(win[1]), None), line));
     }
     for (k, win) in m.vs.windows(2).enumerate() {
-        for third in [1.0, 2.0] {
-            painter.add(egui::Shape::line(curve(None, Some(win[0] + (win[1] - win[0]) * third / 3.0)), thin));
+        if thirds {
+            for third in [1.0, 2.0] {
+                painter.add(egui::Shape::line(curve(None, Some(win[0] + (win[1] - win[0]) * third / 3.0)), thin));
+            }
         }
         if k == 0 {
             painter.add(egui::Shape::line(curve(None, Some(win[0])), line));
         }
         painter.add(egui::Shape::line(curve(None, Some(win[1])), line));
     }
-    if w.style != WarpStyle::Custom {
-        return; // presets are edited from the options bar
-    }
-    let (nx, ny) = (m.nx(), m.ny());
-    for j in 0..ny {
-        for i in 0..nx {
-            let p = scr(m.point(i, j));
-            let anchor = i % 3 == 0 && j % 3 == 0;
-            let handle = (i % 3 == 0) != (j % 3 == 0);
-            if anchor {
-                let r = egui::Rect::from_center_size(p, vec2(7.0, 7.0));
-                painter.rect_filled(r, 0.0, Color32::WHITE);
-                painter.rect_stroke(r, 0.0, line, egui::StrokeKind::Inside);
-            } else if handle {
-                // Arm to the nearest anchor along the row/column.
-                let (ai, aj) = if i % 3 == 0 { (i, if j % 3 == 1 { j - 1 } else { j + 1 }) } else { (if i % 3 == 1 { i - 1 } else { i + 1 }, j) };
-                painter.line_segment([scr(m.point(ai, aj)), p], line);
-                painter.circle_filled(p, 3.5, Color32::WHITE);
-                painter.circle_stroke(p, 3.5, line);
-            } else {
-                painter.circle_filled(p, 2.5, accent);
+    if w.style == WarpStyle::Custom {
+        let (nx, ny) = (m.nx(), m.ny());
+        for j in 0..ny {
+            for i in 0..nx {
+                if !on_section_edge(i, j) {
+                    continue;
+                }
+                let p = scr(m.point(i, j));
+                let anchor = i.is_multiple_of(3) && j.is_multiple_of(3);
+                if anchor {
+                    let r = egui::Rect::from_center_size(p, vec2(7.0, 7.0));
+                    painter.rect_filled(r, 0.0, Color32::WHITE);
+                    painter.rect_stroke(r, 0.0, line, egui::StrokeKind::Inside);
+                } else {
+                    // Arm to the nearest anchor along the row/column.
+                    let (ai, aj) = if i.is_multiple_of(3) { (i, if j % 3 == 1 { j - 1 } else { j + 1 }) } else { (if i % 3 == 1 { i - 1 } else { i + 1 }, j) };
+                    painter.line_segment([scr(m.point(ai, aj)), p], line);
+                    painter.circle_filled(p, 3.5, Color32::WHITE);
+                    painter.circle_stroke(p, 3.5, line);
+                }
             }
+        }
+    }
+    if let Some((tool, p)) = guide {
+        let (s, t) = m.param_at(p);
+        let under = Stroke::new(3.0, Color32::BLACK);
+        let over = Stroke::new(1.25, Color32::WHITE);
+        let mut strokes = Vec::new();
+        if matches!(tool, SplitTool::Vertical | SplitTool::Cross) {
+            strokes.push(curve(Some(s), None));
+        }
+        if matches!(tool, SplitTool::Horizontal | SplitTool::Cross) {
+            strokes.push(curve(None, Some(t)));
+        }
+        for pts in strokes {
+            painter.add(egui::Shape::line(pts.clone(), under));
+            painter.add(egui::Shape::line(pts, over));
         }
     }
 }
@@ -986,15 +1186,34 @@ fn readout(t: &TransformSession) -> (f64, f64, f64, f64) {
     (sx, sy, e[1].atan2(e[0]).to_degrees(), 0.0)
 }
 
-/// Options bar while transforming: reference point X/Y, W/H %, angle, interpolation, ✓ / ⊘.
+/// Width of the mode, cancel and commit cluster kept on the right of the options bar.
+const ACTIONS_W: f32 = 140.0;
+
+/// Options bar while transforming: reference point X/Y, W/H %, angle, interpolation, and, pinned
+/// to the right, the warp switch, cancel and commit.
 pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let Some(t) = app.ui.transform.clone() else { return };
-    let tk = crate::theme::Tokens::get(ui.ctx());
-    if let Some(w) = t.warp.clone() {
-        warp_options_bar(app, ui, &w);
-        return;
+    let bar = ui.available_rect_before_wrap();
+    let split = (bar.right() - ACTIONS_W).max(bar.left());
+    let fields = egui::Rect::from_min_max(bar.min, egui::pos2(split, bar.bottom()));
+    let actions = egui::Rect::from_min_max(egui::pos2(split, bar.top()), bar.max);
+    {
+        let mut row =
+            ui.new_child(egui::UiBuilder::new().id_salt("transform-fields").max_rect(fields).layout(egui::Layout::left_to_right(egui::Align::Center)));
+        row.set_clip_rect(fields);
+        if let Some(w) = t.warp.clone() {
+            warp_fields(app, &mut row, &w);
+        } else {
+            transform_fields(app, &mut row, &t);
+        }
     }
-    let (sx, sy, angle, _) = readout(&t);
+    let mut row = ui.new_child(egui::UiBuilder::new().id_salt("transform-actions").max_rect(actions).layout(egui::Layout::right_to_left(egui::Align::Center)));
+    transform_actions(app, &mut row, t.warp.is_some());
+}
+
+fn transform_fields(app: &mut PhotosuiteApp, ui: &mut egui::Ui, t: &TransformSession) {
+    let tk = crate::theme::Tokens::get(ui.ctx());
+    let (sx, sy, angle, _) = readout(t);
     let lbl = |ui: &mut egui::Ui, s: &str| {
         ui.label(egui::RichText::new(s).color(tk.text_dim).size(12.0));
     };
@@ -1049,25 +1268,10 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     {
         s.interpolation = interp;
     }
-    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.add_space(8.0);
-        if crate::icons::button(ui, "check", 24.0, false, &crate::i18n::fmt(tl!("Commit transform ({key})"), &[("key", &crate::shortcuts::pretty("Enter"))]))
-            .clicked()
-        {
-            commit(app);
-        }
-        if crate::icons::button(ui, "ban", 24.0, false, tl!("Cancel transform (Esc)")).clicked() {
-            cancel(app);
-        }
-        crate::widgets::vline(ui, 22.0);
-        if crate::icons::button(ui, "grid-3x3", 24.0, false, tl!("Switch between free transform and warp modes")).clicked() {
-            enter_warp(app);
-        }
-    });
 }
 
-/// Options bar in Warp mode: style, bend and distortions, split buttons, mode toggle, ✓ / ⊘.
-fn warp_options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, w: &Warp) {
+/// Options bar fields in Warp mode: style, bend, the split icons and the grid menu.
+fn warp_fields(app: &mut PhotosuiteApp, ui: &mut egui::Ui, w: &Warp) {
     let tk = crate::theme::Tokens::get(ui.ctx());
     let lbl = |ui: &mut egui::Ui, s: &str| {
         ui.label(egui::RichText::new(s).color(tk.text_dim).size(12.0));
@@ -1109,34 +1313,128 @@ fn warp_options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, w: &Warp) {
     } else {
         crate::widgets::vline(ui, 22.0);
         lbl(ui, tl!("Split:"));
-        for (id, label) in [
-            ("edit.transform.splitWarpCrosswise", "Crosswise"),
-            ("edit.transform.splitWarpVertically", "Vertical"),
-            ("edit.transform.splitWarpHorizontally", "Horizontal"),
-            ("edit.transform.removeWarpSplit", tl!("Remove")),
+        let armed = app.transform_preview.as_ref().and_then(|p| p.split_tool);
+        for (tool, tip) in [
+            (SplitTool::Cross, tl!("Split Warp Crosswise")),
+            (SplitTool::Vertical, tl!("Split Warp Vertically")),
+            (SplitTool::Horizontal, tl!("Split Warp Horizontally")),
         ] {
-            if crate::widgets::secondary_button(ui, label, 0.0).clicked()
-                && let Err(e) = split(app, id, None)
+            let on = armed == Some(tool);
+            if split_icon(ui, tool.icon(), tip, on).clicked()
+                && let Some(pv) = app.transform_preview.as_mut()
             {
-                app.ui.status = e;
+                pv.split_tool = if on { None } else { Some(tool) };
+                pv.split_placing = false;
+                pv.split_pointer = None;
+                pv.split_quick = false;
             }
         }
-    }
-    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.add_space(8.0);
-        if crate::icons::button(ui, "check", 24.0, false, &crate::i18n::fmt(tl!("Commit warp ({key})"), &[("key", &crate::shortcuts::pretty("Enter"))]))
-            .clicked()
-        {
-            commit(app);
-        }
-        if crate::icons::button(ui, "ban", 24.0, false, tl!("Cancel warp (Esc)")).clicked() {
-            cancel(app);
-        }
         crate::widgets::vline(ui, 22.0);
-        if crate::icons::button(ui, "grid-3x3", 24.0, true, tl!("Switch between free transform and warp modes")).clicked() {
-            leave_warp(app);
+        lbl(ui, tl!("Grid:"));
+        let mesh = w.mesh.clone().unwrap_or_else(|| BezierMesh::identity(w.bounds, 1, 1));
+        let mut grid = warp_grid_id(&mesh).to_string();
+        let opts = [
+            ("custom".to_string(), tl!("Custom")),
+            ("default".to_string(), tl!("Default")),
+            ("3".to_string(), tl!("3 x 3")),
+            ("4".to_string(), tl!("4 x 4")),
+            ("5".to_string(), tl!("5 x 5")),
+        ];
+        if crate::widgets::dropdown(ui, "warp-grid", &mut grid, &opts, 92.0)
+            && let Some(n) = match grid.as_str() {
+                "default" => Some(1),
+                "3" => Some(3),
+                "4" => Some(4),
+                "5" => Some(5),
+                _ => None,
+            }
+        {
+            let _ = edit_session_warp(app, "edit.transform.warpGrid", &json!({ "size": n }));
         }
-    });
+    }
+}
+
+/// Grid menu readout: Default is 1×1, the numbered entries are uniform n×n patches, and anything
+/// split by hand reads as Custom.
+fn warp_grid_id(mesh: &BezierMesh) -> &'static str {
+    let cols = mesh.us.len().saturating_sub(1);
+    let rows = mesh.vs.len().saturating_sub(1);
+    let even = |k: &[f64]| {
+        let n = k.len().saturating_sub(1);
+        n > 0 && k.iter().enumerate().all(|(i, v)| (v - i as f64 / n as f64).abs() < 1e-4)
+    };
+    if cols == rows && even(&mesh.us) && even(&mesh.vs) {
+        match cols {
+            1 => "default",
+            3 => "3",
+            4 => "4",
+            5 => "5",
+            _ => "custom",
+        }
+    } else {
+        "custom"
+    }
+}
+
+/// One of the three Split icons. `on` is the armed tool: the line then follows the pointer.
+fn split_icon(ui: &mut egui::Ui, kind: &str, tip: &str, on: bool) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(vec2(22.0, 22.0), egui::Sense::click());
+    let ink = crate::icons::button_chrome(ui, rect, on, resp.hovered());
+    let c = rect.center();
+    let stroke = Stroke::new(1.15, ink);
+    let box_r = egui::Rect::from_center_size(c, vec2(13.0, 13.0));
+    ui.painter().rect_stroke(box_r, 2.0, stroke, egui::StrokeKind::Inside);
+    let h = 5.2;
+    match kind {
+        "vertical" => {
+            ui.painter().line_segment([c - vec2(0.0, h), c + vec2(0.0, h)], stroke);
+        }
+        "horizontal" => {
+            ui.painter().line_segment([c - vec2(h, 0.0), c + vec2(h, 0.0)], stroke);
+        }
+        _ => {
+            ui.painter().line_segment([c - vec2(h, 0.0), c + vec2(h, 0.0)], stroke);
+            ui.painter().line_segment([c - vec2(0.0, h), c + vec2(0.0, h)], stroke);
+        }
+    }
+    if kind == "cross" {
+        ui.painter().circle_filled(c, 1.5, ink);
+    } else {
+        ui.painter().circle_stroke(c, 2.1, stroke);
+    }
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
+    resp.on_hover_text(tip)
+}
+
+/// Warp switch, cancel and commit, kept on the right of the options bar.
+fn transform_actions(app: &mut PhotosuiteApp, ui: &mut egui::Ui, warping: bool) {
+    ui.add_space(8.0);
+    let commit_tip = if warping {
+        crate::i18n::fmt(tl!("Commit warp ({key})"), &[("key", &crate::shortcuts::pretty("Enter"))])
+    } else {
+        crate::i18n::fmt(tl!("Commit transform ({key})"), &[("key", &crate::shortcuts::pretty("Enter"))])
+    };
+    let commit_btn = crate::icons::button(ui, "check", 26.0, false, &commit_tip);
+    commit_btn.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Commit transform"));
+    if commit_btn.clicked() {
+        commit(app);
+    }
+    let cancel_tip = if warping { tl!("Cancel warp (Esc)") } else { tl!("Cancel transform (Esc)") };
+    let cancel_btn = crate::icons::button(ui, "ban", 26.0, false, cancel_tip);
+    cancel_btn.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Cancel transform"));
+    if cancel_btn.clicked() {
+        cancel(app);
+    }
+    crate::widgets::vline(ui, 22.0);
+    let mode = crate::icons::button(ui, "grid-3x3", 26.0, warping, tl!("Switch between free transform and warp modes"));
+    mode.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Switch between free transform and warp modes"));
+    if mode.clicked() {
+        if warping {
+            leave_warp(app);
+        } else {
+            enter_warp(app);
+        }
+    }
 }
 
 /// Scale the box along its own axes about the reference point.
@@ -1181,6 +1479,41 @@ mod tests {
         }
     }
 
+    #[test]
+    fn transform_bar_pins_warp_cancel_and_commit() {
+        use egui_kittest::Harness;
+        use egui_kittest::kittest::Queryable;
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.ui.transform = Some(session());
+        let width = 720.0;
+        let mut h = Harness::builder().with_size(vec2(width, 48.0)).build_ui_state(
+            |ui, app: &mut PhotosuiteApp| {
+                if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    return;
+                }
+                ui.horizontal_centered(|ui| options_bar(app, ui));
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Anthracite);
+        h.run_steps(6);
+        let commit = h.get_by_label("Commit transform").rect();
+        let cancel = h.get_by_label("Cancel transform").rect();
+        let mode = h.get_by_label("Switch between free transform and warp modes").rect();
+        assert!(commit.right() > width - 36.0, "commit sits on the right: {commit:?}");
+        assert!(cancel.right() < commit.left() + 1.0, "cancel is left of commit");
+        assert!(mode.right() < cancel.left() + 1.0, "warp switch is left of cancel");
+        h.get_by_label("Switch between free transform and warp modes").click();
+        h.run_steps(2);
+        assert!(h.state().ui.transform.as_ref().unwrap().warp.is_some());
+        h.get_by_label("Switch between free transform and warp modes").click();
+        h.run_steps(2);
+        assert!(h.state().ui.transform.as_ref().unwrap().warp.is_none());
+        h.get_by_label("Cancel transform").click();
+        h.run_steps(2);
+        assert!(h.state().ui.transform.is_none());
+    }
+
     fn drag(s: &mut TransformSession, from: [f64; 2], to: [f64; 2], mods: egui::Modifiers) {
         let g = Gesture { hit: hit(s, from, 8.0), start: from, quad0: s.quad, pivot0: s.pivot };
         apply_drag(s, g, to, mods);
@@ -1202,6 +1535,114 @@ mod tests {
         assert_eq!(hit(&s, [8.0, -1.0], 12.0), Hit::Edge(0));
         assert_eq!(hit(&s, [8.0, 8.0], 12.0), Hit::Pivot);
         assert_eq!(hit(&s, [40.0, 40.0], 12.0), Hit::Outside);
+    }
+
+    #[test]
+    fn interior_patch_points_are_hidden_and_grid_anchors_stay() {
+        assert!(on_section_edge(0, 0) && on_section_edge(1, 0) && on_section_edge(0, 2));
+        assert!(!on_section_edge(1, 1) && !on_section_edge(2, 2));
+        let b = [0.0, 0.0, 30.0, 30.0];
+        let w = Warp::custom(BezierMesh::identity(b, 1, 1), b);
+        assert!(warp_hit(&w, [10.0, 10.0], 4.0).is_none(), "the point inside the patch is not shown");
+        assert_eq!(warp_hit(&w, [0.0, 0.0], 4.0), Some(0));
+        let grid = Warp::custom(BezierMesh::identity(b, 3, 3), b);
+        assert_eq!(warp_hit(&grid, [10.0, 10.0], 4.0), Some(33), "a grid-corner anchor stays draggable");
+        assert!(warp_hit(&grid, [30.0 / 9.0, 30.0 / 9.0], 2.0).is_none());
+    }
+
+    #[test]
+    fn grid_menu_reads_default_and_even_presets() {
+        let b = [0.0, 0.0, 100.0, 80.0];
+        let plain = BezierMesh::identity(b, 1, 1);
+        assert_eq!(warp_grid_id(&plain), "default");
+        assert_eq!(warp_grid_id(&BezierMesh::identity(b, 3, 3)), "3");
+        assert_eq!(warp_grid_id(&BezierMesh::identity(b, 4, 4)), "4");
+        assert_eq!(warp_grid_id(&BezierMesh::identity(b, 5, 5)), "5");
+        assert_eq!(warp_grid_id(&BezierMesh::identity(b, 2, 2)), "custom");
+        let mut split = plain.clone();
+        assert!(split.split_u(0.5));
+        assert_eq!(warp_grid_id(&split), "custom");
+        assert!(single_patch(&plain));
+        assert!(!single_patch(&BezierMesh::identity(b, 3, 3)));
+    }
+
+    #[test]
+    fn split_tool_places_the_line_where_the_pointer_releases() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        app.sync_views();
+        app.session.execute("layer.new.layer", json!({})).unwrap();
+        app.session
+            .edit("paint", |doc, a| {
+                doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photosuite_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+                Ok(())
+            })
+            .unwrap();
+        begin_warp(&mut app, &egui::Context::default()).unwrap();
+        app.transform_preview.as_mut().unwrap().split_tool = Some(SplitTool::Vertical);
+        let knots = |app: &PhotosuiteApp| app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap().us.clone();
+        assert_eq!(knots(&app).len(), 2);
+        let mods = egui::Modifiers::NONE;
+        warp_pointer(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, 2.0, mods);
+        warp_pointer(&mut app, ToolEvent::Move { x: 14.0, y: 20.0, pressure: 1.0 }, 2.0, mods);
+        assert_eq!(knots(&app).len(), 2, "the line is only a guide until release");
+        warp_pointer(&mut app, ToolEvent::Up { x: 14.0, y: 20.0 }, 2.0, mods);
+        let us = knots(&app);
+        let has = |ks: &[f64], u: f64| ks.iter().any(|k| (k - u).abs() < 0.02);
+        // The default grid's thirds stay; the release cuts the section that contains it.
+        assert!(has(&us, 0.25) && has(&us, 1.0 / 3.0) && has(&us, 2.0 / 3.0), "{us:?}");
+        let vs = app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap().vs.clone();
+        assert!(has(&vs, 1.0 / 3.0) && has(&vs, 2.0 / 3.0), "horizontal sections stay: {vs:?}");
+        assert!(app.transform_preview.as_ref().unwrap().split_tool.is_some(), "the tool stays armed");
+        // Option-click in the open places both lines, without a button armed.
+        app.transform_preview.as_mut().unwrap().split_tool = None;
+        let alt = egui::Modifiers::ALT;
+        warp_pointer(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, 2.0, alt);
+        warp_pointer(&mut app, ToolEvent::Up { x: 20.0, y: 20.0 }, 2.0, alt);
+        let m = app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap();
+        assert!(m.us.len() == us.len() + 1 && has(&m.vs, 0.5), "crosswise cuts the open section: us {:?} vs {:?}", m.us, m.vs);
+    }
+
+    #[test]
+    fn split_of_a_grid_cuts_one_section_and_keeps_the_rest() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+        app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        app.sync_views();
+        app.session.execute("layer.new.layer", json!({})).unwrap();
+        app.session
+            .edit("paint", |doc, a| {
+                doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photosuite_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+                Ok(())
+            })
+            .unwrap();
+        begin_warp(&mut app, &egui::Context::default()).unwrap();
+        let rect = app.ui.transform.as_ref().unwrap().rect;
+        let before = BezierMesh::identity(rect, 3, 3);
+        app.ui.transform.as_mut().unwrap().warp = Some(Warp::custom(before.clone(), rect));
+        // Middle of the centre column (s = 0.5), inside the top row of cells.
+        let x = rect[0] + 0.5 * (rect[2] - rect[0]);
+        let y = rect[1] + (1.0 / 6.0) * (rect[3] - rect[1]);
+        app.transform_preview.as_mut().unwrap().split_tool = Some(SplitTool::Vertical);
+        let mods = egui::Modifiers::NONE;
+        warp_pointer(&mut app, ToolEvent::Down { x, y, pressure: 1.0 }, 2.0, mods);
+        warp_pointer(&mut app, ToolEvent::Up { x, y }, 2.0, mods);
+        let m = app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap();
+        assert_eq!(m.vs.len(), before.vs.len(), "horizontal sections are not rebuilt: {:?}", m.vs);
+        for (a, b) in m.vs.iter().zip(&before.vs) {
+            assert!((a - b).abs() < 1e-6, "{:?} vs {:?}", m.vs, before.vs);
+        }
+        assert_eq!(m.us.len(), before.us.len() + 1, "one cut: {:?}", m.us);
+        for u in [0.0, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0] {
+            assert!(m.us.iter().any(|k| (k - u).abs() < 1e-3), "missing {u} in {:?}", m.us);
+        }
+        let (nx0, nx1) = (before.nx(), m.nx());
+        for j in 0..before.ny() {
+            for i in 0..3 {
+                let a = before.points[j * nx0 + i];
+                let b = m.points[j * nx1 + i];
+                assert!((a[0] - b[0]).abs() < 1e-6 && (a[1] - b[1]).abs() < 1e-6, "left section moved");
+            }
+        }
     }
 
     #[test]
@@ -1457,15 +1898,17 @@ mod tests {
         let w = app.ui.transform.as_ref().unwrap().warp.clone().unwrap();
         assert!(w.is_identity());
         // Drag the bottom-right anchor (point 15) by (+10, +6): its two handles follow.
-        warp_pointer(&mut app, ToolEvent::Down { x: 32.0, y: 32.0, pressure: 1.0 }, 2.0);
-        warp_pointer(&mut app, ToolEvent::Up { x: 42.0, y: 38.0 }, 2.0);
+        warp_pointer(&mut app, ToolEvent::Down { x: 32.0, y: 32.0, pressure: 1.0 }, 2.0, egui::Modifiers::NONE);
+        warp_pointer(&mut app, ToolEvent::Up { x: 42.0, y: 38.0 }, 2.0, egui::Modifiers::NONE);
         let m = app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.clone().unwrap();
         assert_eq!(m.points[15], [42.0, 38.0]);
         let near = |a: [f64; 2], b: [f64; 2]| (a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-9;
         assert!(near(m.points[14], [24.0 + 10.0, 38.0]), "{:?}", m.points[14]);
         assert!(near(m.points[11], [42.0, 24.0 + 6.0]), "{:?}", m.points[11]);
         split(&mut app, "edit.transform.splitWarpCrosswise", None).unwrap();
-        assert_eq!(app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap().nx(), 7);
+        let split_m = app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap();
+        assert_eq!(split_m.points.last().copied(), Some([42.0, 38.0]), "the corner survives the cut");
+        assert!(split_m.us.iter().any(|u| (u - 1.0 / 3.0).abs() < 1e-6) && split_m.us.iter().any(|u| (u - 0.5).abs() < 1e-6));
         commit(&mut app);
         let st = app.session.active().unwrap();
         let b = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
@@ -1495,11 +1938,11 @@ mod tests {
         let t = app.ui.transform.as_mut().unwrap();
         let preset = Warp::preset(WarpStyle::Arc, 50.0, t.rect);
         t.warp = Some(preset.clone());
-        warp_pointer(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, 2.0);
-        warp_pointer(&mut app, ToolEvent::Up { x: 20.0, y: 20.0 }, 2.0);
+        warp_pointer(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, 2.0, egui::Modifiers::NONE);
+        warp_pointer(&mut app, ToolEvent::Up { x: 20.0, y: 20.0 }, 2.0, egui::Modifiers::NONE);
         assert_eq!(app.ui.transform.as_ref().unwrap().warp.as_ref(), Some(&preset), "a miss changes nothing");
         let corner = preset.to_mesh(1, 1).points[15];
-        warp_pointer(&mut app, ToolEvent::Down { x: corner[0], y: corner[1], pressure: 1.0 }, 2.0);
+        warp_pointer(&mut app, ToolEvent::Down { x: corner[0], y: corner[1], pressure: 1.0 }, 2.0, egui::Modifiers::NONE);
         assert_eq!(app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().style, WarpStyle::Custom);
     }
 

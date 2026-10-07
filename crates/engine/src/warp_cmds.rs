@@ -5,8 +5,8 @@
 //! (`photosuite_algo::warp`); smart objects store the warp in their source space and re-render
 //! from the source, so editing a smart object's warp never degrades it.
 //!
-//! The split commands edit a mesh: either one passed in (`"warp"`, returned edited — what the
-//! Free Transform warp UI uses) or the active smart object's stored warp (a history step).
+//! The split and grid commands edit a mesh: either one passed in (`"warp"`, returned edited —
+//! what the Free Transform warp UI uses) or the active smart object's stored warp (a history step).
 
 use photosuite_algo::transform::{Homography, Interp};
 use photosuite_algo::warp::{warp_mesh_gray, warp_mesh_surface};
@@ -233,9 +233,21 @@ pub enum Split {
     Remove,
 }
 
+/// The default warp draws rule-of-thirds guides on its single patch. Make those real sections
+/// before a split, so the cut divides the grid on screen instead of replacing it.
+fn commit_default_sections(mesh: &mut BezierMesh) {
+    let _ = mesh.split_u(1.0 / 3.0);
+    let _ = mesh.split_u(2.0 / 3.0);
+    let _ = mesh.split_v(1.0 / 3.0);
+    let _ = mesh.split_v(2.0 / 3.0);
+}
+
 /// Applies a split (or removes the split nearest `at`) on `w`'s mesh (presets become custom).
 pub fn split_warp(w: &Warp, at: Option<[f64; 2]>, how: Split) -> Option<Warp> {
     let mut mesh = w.to_mesh(1, 1);
+    if !matches!(how, Split::Remove) && w.style == WarpStyle::Custom && mesh.us.len() == 2 && mesh.vs.len() == 2 {
+        commit_default_sections(&mut mesh);
+    }
     let (s, t) = match at {
         Some(p) => mesh.param_at(p),
         None => (0.5, 0.5),
@@ -271,15 +283,25 @@ pub fn split_warp(w: &Warp, at: Option<[f64; 2]>, how: Split) -> Option<Warp> {
     ok.then(|| Warp::custom(mesh, w.bounds))
 }
 
+fn param_rect(p: &Value) -> [f64; 4] {
+    let Some(r) = p.get("rect").and_then(Value::as_array) else {
+        return [0.0, 0.0, 1.0, 1.0];
+    };
+    let at = |i: usize, d: f64| r.get(i).and_then(Value::as_f64).unwrap_or(d);
+    [at(0, 0.0), at(1, 0.0), at(2, 1.0), at(3, 1.0)]
+}
+
+/// A warp passed inline (`warp`, `mesh` or `style`). `None` means "use the active smart object".
+fn inline_warp(cmd: &str, p: &Value) -> Result<Option<Warp>> {
+    if p.get("warp").is_none() && p.get("mesh").is_none() && p.get("style").is_none() {
+        return Ok(None);
+    }
+    Ok(Some(warp_from_params(cmd, p, param_rect(p))?))
+}
+
 fn split(s: &mut Session, p: &Value, cmd: &str, how: Split) -> Result<Value> {
     let at = p.get("at").and_then(Value::as_array).and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]));
-    if p.get("warp").is_some() || p.get("mesh").is_some() || p.get("style").is_some() {
-        let rect = p.get("rect").and_then(Value::as_array).map(|r| {
-            let v: Vec<f64> = r.iter().map(|x| x.as_f64().unwrap_or(0.0)).collect();
-            [v[0], v.get(1).copied().unwrap_or(0.0), v.get(2).copied().unwrap_or(1.0), v.get(3).copied().unwrap_or(1.0)]
-        });
-        let rect = rect.unwrap_or([0.0, 0.0, 1.0, 1.0]);
-        let w = warp_from_params(cmd, p, rect)?;
+    if let Some(w) = inline_warp(cmd, p)? {
         let out = split_warp(&w, at, how).ok_or_else(|| bad(cmd, "nothing to split or remove there"))?;
         return Ok(json!({"warp": out}));
     }
@@ -309,9 +331,76 @@ fn split(s: &mut Session, p: &Value, cmd: &str, how: Split) -> Result<Value> {
     Ok(json!({"layer": id.0, "warp": out}))
 }
 
+/// Square preset size. `"default"` is 1. Numbers outside 1..=64 are rejected, not clamped.
+fn grid_size(cmd: &str, p: &Value) -> Result<usize> {
+    let Some(v) = p.get("size").or_else(|| p.get("grid")) else {
+        return Err(bad(cmd, "pass `size` (1, 3, 4, 5 or \"default\")"));
+    };
+    if v.as_array().is_some() {
+        return Err(bad(cmd, "pass `size` as a number or \"default\", \"3\", \"4\" or \"5\""));
+    }
+    let n = match v {
+        Value::String(s) => match s.as_str() {
+            "default" => 1,
+            "3" | "3x3" => 3,
+            "4" | "4x4" => 4,
+            "5" | "5x5" => 5,
+            _ => return Err(bad(cmd, "grid size must be default, 3, 4 or 5")),
+        },
+        Value::Number(num) => num.as_u64().ok_or_else(|| bad(cmd, "grid size must be a whole number from 1 to 64"))?,
+        _ => return Err(bad(cmd, "grid size must be a number or default, 3, 4 or 5")),
+    };
+    if !(1..=64).contains(&n) {
+        return Err(bad(cmd, "grid size must be from 1 to 64"));
+    }
+    Ok(n as usize)
+}
+
+/// Even `n`×`n` patches fitted to `w`. The surface stays; knots sit at `i/n`.
+fn resize_warp(w: &Warp, n: usize) -> Warp {
+    let mesh = w.to_mesh(1, 1);
+    let knots: Vec<f64> = (0..=n).map(|i| i as f64 / n as f64).collect();
+    Warp::custom(BezierMesh::fit(&|s, t| mesh.eval(s, t), knots.clone(), knots), w.bounds)
+}
+
+fn grid(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "edit.transform.warpGrid";
+    let n = grid_size(CMD, p)?;
+    if let Some(w) = inline_warp(CMD, p)? {
+        return Ok(json!({"warp": resize_warp(&w, n)}));
+    }
+    let st = s.active().ok_or(EngineError::NoDocument)?;
+    let id = st.active_layer.ok_or(EngineError::Other("no active layer".into()))?;
+    let layer = st.doc.layer(id).ok_or(EngineError::NoLayer(id))?;
+    let LayerContent::Smart(sm) = &layer.content else {
+        return Err(bad(CMD, "pass the warp being edited (`warp`), or select a smart object"));
+    };
+    let w = sm.warp.clone().unwrap_or_else(|| {
+        let b = layer.surface().map_or(Rect::EMPTY, Surface::content_bounds);
+        // The layer's pixels back in source space, through the full placement (affine, or
+        // Distort / Perspective).
+        let r = rect_f(b);
+        let c = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]];
+        let c = match crate::smart_cmds::placement(sm).inverse() {
+            Some(inv) => c.map(|p| hom_apply(&inv, p)),
+            None => c,
+        };
+        Warp::none(c.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |b, p| [b[0].min(p[0]), b[1].min(p[1]), b[2].max(p[0]), b[3].max(p[1])]))
+    });
+    let out = resize_warp(&w, n);
+    s.edit("Warp Grid", |doc, _| {
+        if let Some(Layer { content: LayerContent::Smart(sm), .. }) = doc.layer_mut(id) {
+            sm.warp = Some(out.clone());
+        }
+        crate::smart_cmds::refresh(doc, id).map(|_| ())
+    })?;
+    Ok(json!({"layer": id.0, "warp": out}))
+}
+
 pub fn specs() -> Vec<CommandSpec> {
     const P: &str = r##"{"layer":id?,"rect":[x0,y0,x1,y1]? (warp box; default = layer content ∩ selection),"style":"custom|none|arc|arcLower|arcUpper|arch|bulge|shellLower|shellUpper|flag|wave|fish|rise|fisheye|inflate|squeeze|twist","bend":%=50,"hDistort":%,"vDistort":%,"vertical":bool,"mesh":{"us":[0,…,1],"vs":[0,…,1],"points":[[x,y]…]} ((3c+1)×(3r+1) control points, row-major, document px),"grid":[cols,rows]?,"warp":{full warp object}?,"interpolation":"bicubic|bilinear|nearest"}"##;
-    const S: &str = r##"{"warp":{…}? (the warp being edited; returned split),"rect":[x0,y0,x1,y1]?,"at":[x,y]? (document point; default = middle of the patch)} — without `warp`, edits the active smart object's warp"##;
+    const S: &str = r##"{"warp":{…}? (the warp being edited; returned split),"rect":[x0,y0,x1,y1]?,"at":[x,y]? (document point; default = middle of the patch)} — without `warp`, edits the active smart object's warp. A 1×1 custom mesh is divided at the thirds first (the guides drawn on the default grid), so splitWarpCrosswise on an identity custom warp returns a 4×4 mesh (knots at 0, 1/3, 1/2, 2/3 and 1), not a 2×2. A preset is fitted as one patch and split without that step."##;
+    const G: &str = r##"{"warp":{…}? (the warp being edited; returned with the new mesh),"rect":[x0,y0,x1,y1]?,"size":n|"default"|"3"|"4"|"5" (square patches, 1..=64; 1 and "default" are the single-patch grid)} — without `warp`/`style`/`mesh`, edits the active smart object's warp. The surface is kept and the new lines are real splits at i/n."##;
     vec![
         CommandSpec {
             id: "edit.transform.warp",
@@ -372,6 +461,16 @@ pub fn specs() -> Vec<CommandSpec> {
             enabled: has_layer,
             journal: true,
             run: |s, p| split(s, p, "edit.transform.removeWarpSplit", Split::Remove),
+        },
+        CommandSpec {
+            id: "edit.transform.warpGrid",
+            label: "Warp Grid",
+            menu: &[],
+            shortcut: None,
+            params: G,
+            enabled: has_layer,
+            journal: true,
+            run: |s, p| grid(s, p),
         },
     ]
 }
@@ -451,6 +550,32 @@ mod tests {
     }
 
     #[test]
+    fn split_cuts_existing_sections_instead_of_replacing_the_grid() {
+        let b = [0.0, 0.0, 90.0, 60.0];
+        let plain = Warp::custom(BezierMesh::identity(b, 1, 1), b);
+        let cut = split_warp(&plain, Some([b[0] + 0.25 * 90.0, 30.0]), Split::Vertical).unwrap();
+        let m = cut.mesh.unwrap();
+        for u in [0.0, 0.25, 1.0 / 3.0, 2.0 / 3.0, 1.0] {
+            assert!(m.us.iter().any(|k| (k - u).abs() < 1e-6), "default guides stay, cut at 0.25: {:?}", m.us);
+        }
+        assert_eq!(m.vs, vec![0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0]);
+        let grid = BezierMesh::identity(b, 3, 3);
+        let cut = split_warp(&Warp::custom(grid.clone(), b), Some([45.0, 10.0]), Split::Vertical).unwrap();
+        let m = cut.mesh.unwrap();
+        assert_eq!(m.vs, grid.vs);
+        assert_eq!(m.us.len(), grid.us.len() + 1);
+        for u in [0.0, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0] {
+            assert!(m.us.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.us);
+        }
+        let (nx0, nx1) = (grid.nx(), m.nx());
+        for j in 0..grid.ny() {
+            for i in 0..3 {
+                assert_eq!(m.points[j * nx1 + i], grid.points[j * nx0 + i]);
+            }
+        }
+    }
+
+    #[test]
     fn split_commands_edit_meshes_exactly() {
         let mut s = session(8);
         let w = Warp::preset(WarpStyle::Bulge, 30.0, [10.0, 10.0, 60.0, 40.0]);
@@ -496,5 +621,45 @@ mod tests {
             let LayerContent::Smart(sm) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!() };
             assert_eq!(sm.warp.as_ref().unwrap().style, WarpStyle::Custom);
         }
+    }
+
+    #[test]
+    fn crosswise_split_of_an_identity_custom_warp_is_four_by_four() {
+        let mut s = session(8);
+        let r = s.execute("edit.transform.splitWarpCrosswise", json!({"style": "custom", "rect": [0.0, 0.0, 90.0, 60.0]})).unwrap();
+        let out: Warp = serde_json::from_value(r["warp"].clone()).unwrap();
+        let m = out.mesh.unwrap();
+        assert_eq!((m.us.len(), m.vs.len()), (5, 5), "thirds, then the centre cut: {:?}", (m.us.clone(), m.vs.clone()));
+        for u in [0.0, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0] {
+            assert!(m.us.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.us);
+            assert!(m.vs.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.vs);
+        }
+    }
+
+    #[test]
+    fn warp_grid_fits_the_surface_and_rejects_bad_sizes() {
+        let mut s = session(8);
+        assert!(s.execute("edit.transform.warpGrid", json!({})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": 0})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": -3})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": 65})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": 1.5})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": "custom"})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"size": "nope"})).is_err());
+        assert!(s.execute("edit.transform.warpGrid", json!({"grid": [3, 3]})).is_err());
+        let b = [10.0, 10.0, 60.0, 40.0];
+        let mut bent = BezierMesh::identity(b, 1, 1);
+        bent.points[0][0] += 12.0;
+        let r = s.execute("edit.transform.warpGrid", json!({"warp": Warp::custom(bent.clone(), b), "size": 4})).unwrap();
+        let out: Warp = serde_json::from_value(r["warp"].clone()).unwrap();
+        let m = out.mesh.unwrap();
+        assert_eq!(out.style, WarpStyle::Custom);
+        assert_eq!(m.us, vec![0.0, 0.25, 0.5, 0.75, 1.0]);
+        assert_eq!(m.vs, m.us);
+        assert!((m.eval(0.0, 0.0)[0] - bent.eval(0.0, 0.0)[0]).abs() < 1e-3);
+        assert!((m.eval(1.0, 1.0)[0] - b[2]).abs() < 1e-3);
+        let r = s.execute("edit.transform.warpGrid", json!({"warp": Warp::custom(m, b), "size": "default"})).unwrap();
+        let back: Warp = serde_json::from_value(r["warp"].clone()).unwrap();
+        assert_eq!(back.mesh.unwrap().us.len(), 2);
     }
 }

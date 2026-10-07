@@ -156,26 +156,28 @@ pub fn tool_icon(t: Tool) -> &'static str {
     }
 }
 
-
-
-/// Square icon button: transparent until hovered; `selected` gets the accent treatment.
-pub fn button(ui: &mut egui::Ui, name: &str, box_size: f32, selected: bool, tooltip: &str) -> Response {
+/// Selected and hover fill shared by square icon buttons. Returns the icon tint.
+pub fn button_chrome(ui: &egui::Ui, rect: Rect, selected: bool, hovered: bool) -> Color32 {
     let t = Tokens::get(ui.ctx());
-    let (rect, resp) = ui.allocate_exact_size(Vec2::splat(box_size), Sense::click());
-    let hovered = resp.hovered();
     if selected {
         ui.painter().rect_filled(rect, t.radius_sm, t.accent_soft);
         ui.painter().rect_stroke(rect, t.radius_sm, egui::Stroke::new(1.0, t.accent_border), egui::StrokeKind::Inside);
     } else if hovered {
         ui.painter().rect_filled(rect, t.radius_sm, t.hover);
     }
-    let tint = if selected {
+    if selected {
         t.accent_text
     } else if hovered {
         t.text
     } else {
         t.icon
-    };
+    }
+}
+
+/// Square icon button: transparent until hovered; `selected` gets the accent treatment.
+pub fn button(ui: &mut egui::Ui, name: &str, box_size: f32, selected: bool, tooltip: &str) -> Response {
+    let (rect, resp) = ui.allocate_exact_size(Vec2::splat(box_size), Sense::click());
+    let tint = button_chrome(ui, rect, selected, resp.hovered());
     paint(ui, rect, name, (box_size * 0.52).round(), tint);
     if tooltip.is_empty() {
         return resp;
