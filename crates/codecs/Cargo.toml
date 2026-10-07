@@ -28,6 +28,12 @@ webp-rust = "0.3"
 zune-jpeg = "0.5"
 zune-core = "0.5"
 jpeg-encoder = "0.6"
+# HEIC / HEIF decode (pure Rust, no unsafe, MIT OR Apache-2.0). Read-only: see ASYMMETRIC_EXCEPTIONS.
+heic-rs = { version = "0.1.1", default-features = false, features = ["std"] }
+
+# Parallel tile decoding off the web build (wasm has no threads here).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+heic-rs = { version = "0.1.1", default-features = false, features = ["std", "parallel"] }
 
 [dev-dependencies]
 proptest.workspace = true

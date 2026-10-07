@@ -154,6 +154,8 @@
         <string>com.ilm.openexr-image</string>
         <string>public.radiance</string>
         <string>public.avif</string>
+        <string>public.heic</string>
+        <string>public.heif</string>
         <string>app.photosuite.qoi</string>
       </array>
     </dict>

@@ -21,6 +21,9 @@ pub enum Format {
     Hdr,
     /// Encode-only behind the `avif` feature; see [`ASYMMETRIC_EXCEPTIONS`].
     Avif,
+    /// HEIC / HEIF with HEVC pictures (iPhone and macOS photos). Decode-only; see
+    /// [`ASYMMETRIC_EXCEPTIONS`].
+    Heic,
 }
 
 /// What a format can hold **and** what this crate reads/writes for it.
@@ -51,11 +54,18 @@ pub struct FormatCaps {
 
 /// Formats that are enabled but intentionally not symmetric, with the reason.
 /// The test-suite asserts that every other enabled format is read+write.
-pub const ASYMMETRIC_EXCEPTIONS: &[(Format, &str)] = &[(
-    Format::Avif,
-    "AVIF encode uses ravif (pure Rust) but decoding requires dav1d (C); read stays unsupported \
-     until a pure-Rust AV1 decoder is viable. Only enabled with the non-default `avif` feature.",
-)];
+pub const ASYMMETRIC_EXCEPTIONS: &[(Format, &str)] = &[
+    (
+        Format::Avif,
+        "AVIF encode uses ravif (pure Rust) but decoding requires dav1d (C); read stays unsupported \
+         until a pure-Rust AV1 decoder is viable. Only enabled with the non-default `avif` feature.",
+    ),
+    (
+        Format::Heic,
+        "HEIC decodes through heic-rs (pure Rust); there is no permissively licensed pure-Rust HEVC \
+         encoder to write it with, so HEIC opens but isn't offered for saving.",
+    ),
+];
 
 use ChannelLayout as L;
 use SampleType as S;
@@ -65,7 +75,7 @@ const ALL_LAYOUTS: &[ChannelLayout] = &[L::Gray, L::GrayA, L::Rgb, L::Rgba, L::C
 
 impl Format {
     /// Every format known to the crate (enabled or not).
-    pub const ALL: [Format; 13] = [
+    pub const ALL: [Format; 14] = [
         Format::Png,
         Format::Jpeg,
         Format::Tiff,
@@ -79,6 +89,7 @@ impl Format {
         Format::OpenExr,
         Format::Hdr,
         Format::Avif,
+        Format::Heic,
     ];
 
     pub fn caps(self) -> FormatCaps {
@@ -106,6 +117,7 @@ impl Format {
             Format::OpenExr => "OpenEXR",
             Format::Hdr => "Radiance HDR",
             Format::Avif => "AVIF",
+            Format::Heic => "HEIF",
         }
     }
 
@@ -126,6 +138,7 @@ impl Format {
             Format::OpenExr => &["exr"],
             Format::Hdr => &["hdr"],
             Format::Avif => &["avif"],
+            Format::Heic => &["heic", "heif", "hif"],
         }
     }
 
@@ -144,6 +157,7 @@ impl Format {
             Format::OpenExr => "image/x-exr",
             Format::Hdr => "image/vnd.radiance",
             Format::Avif => "image/avif",
+            Format::Heic => "image/heic",
         }
     }
 
@@ -190,6 +204,7 @@ pub fn caps(format: Format) -> FormatCaps {
         Format::OpenExr => FormatCaps { depths: &[S::F16, S::F32], layouts: RGB_GRAY, ..base },
         Format::Hdr => FormatCaps { depths: &[S::F32], layouts: &[L::Rgb], alpha: false, lossy: true, ..base },
         Format::Avif => FormatCaps { read: false, write: cfg!(feature = "avif"), lossy: true, ..base },
+        Format::Heic => FormatCaps { write: false, depths: &[S::U8, S::U16], icc: true, exif: true, xmp: true, lossy: true, ..base },
     }
 }
 
@@ -224,6 +239,9 @@ pub fn detect(bytes: &[u8]) -> Option<Format> {
     if b.len() >= 12 && &b[4..8] == b"ftyp" && is_avif_ftyp(b) {
         return Some(Format::Avif);
     }
+    if b.len() >= 12 && &b[4..8] == b"ftyp" && is_heic_ftyp(b) {
+        return Some(Format::Heic);
+    }
     if b.len() >= 14 && b.starts_with(b"BM") {
         return Some(Format::Bmp);
     }
@@ -244,6 +262,17 @@ fn is_avif_ftyp(b: &[u8]) -> bool {
     let end = size.clamp(12, b.len().min(64));
     let brands = &b[8..end];
     brands.as_chunks::<4>().0.iter().enumerate().any(|(i, c)| i != 1 && (c == b"avif" || c == b"avis"))
+}
+
+/// An HEVC-in-HEIF brand (major or compatible): Apple's `heic`, the 10-bit `heix`, the
+/// multi-view and sequence ones, or a bare `mif1` / `msf1` (generic HEIF; AVIF was ruled out first).
+fn is_heic_ftyp(b: &[u8]) -> bool {
+    let size = u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize;
+    let end = size.clamp(12, b.len().min(64));
+    let brands = &b[8..end];
+    brands.as_chunks::<4>().0.iter().enumerate().any(|(i, c)| {
+        i != 1 && matches!(c, b"heic" | b"heix" | b"heim" | b"heis" | b"hevc" | b"hevx" | b"mif1" | b"msf1")
+    })
 }
 
 fn looks_like_tga(b: &[u8]) -> bool {

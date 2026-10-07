@@ -32,7 +32,7 @@ pub use crate::image::{ChannelLayout, Image, Metadata, SampleType};
 pub use crate::options::{DecodeOptions, EncodeOptions, ExrCompression, Limits, PngCompression, TiffCompression};
 pub use half::f16;
 
-use crate::codecs::{exr, jpeg, png, pnm, tiff, via_image, webp};
+use crate::codecs::{exr, heic, jpeg, png, pnm, tiff, via_image, webp};
 
 /// Detect the format and decode with default [`Limits`].
 pub fn decode(bytes: &[u8]) -> Result<Image, CodecError> {
@@ -63,6 +63,7 @@ pub fn decode_as_with(format: Format, bytes: &[u8], opts: &DecodeOptions) -> Res
         Format::WebP => webp::decode(bytes, l),
         Format::Pnm => pnm::decode(bytes, l),
         Format::OpenExr => exr::decode(bytes, l),
+        Format::Heic => heic::decode(bytes, l),
         Format::Gif | Format::Bmp | Format::Tga | Format::Ico | Format::Qoi | Format::Hdr | Format::Avif => via_image::decode(format, bytes, l),
     }?;
     // Final guard for decoders whose header we could not pre-inspect.
@@ -94,5 +95,7 @@ pub fn encode(image: &Image, format: Format, opts: &EncodeOptions) -> Result<Vec
         Format::Pnm => pnm::encode(image, plan, opts),
         Format::OpenExr => exr::encode(image, plan, opts),
         Format::Gif | Format::Bmp | Format::Tga | Format::Ico | Format::Qoi | Format::Hdr | Format::Avif => via_image::encode(format, image, plan, opts),
+        // `caps(Heic).write` is false, so the check above already returned.
+        Format::Heic => Err(CodecError::unsupported(format, "encoding is not available for this format")),
     }
 }

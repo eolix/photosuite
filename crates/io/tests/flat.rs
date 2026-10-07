@@ -222,3 +222,19 @@ fn psd_to_png_to_psd_chain() {
     let psd2 = export(&d3, "b.psd", &ExportOptions::default()).unwrap();
     assert!(photosuite_psd::PsdFile::from_bytes(&psd2.bytes).is_ok());
 }
+
+/// HEIC opens as a one-layer document of its own depth, with alpha and its ICC profile; the
+/// fixtures are the codec crate's synthetic ones.
+#[test]
+fn heic_opens_as_a_document() {
+    let read = |n: &str| std::fs::read(format!("{}/../codecs/tests/fixtures/heic/{n}.heic", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    for (name, depth) in [("rgb", SampleType::U8), ("rgba", SampleType::U8), ("rgb16", SampleType::U16)] {
+        let d = import(&format!("IMG_0001.{name}.HEIC"), &read(name)).unwrap().document;
+        assert_eq!((d.size.width, d.size.height, d.mode, d.depth), (64, 48, ColorMode::Rgb, depth), "{name}");
+        assert_eq!(d.layers.len(), 1, "{name}");
+    }
+    let d = import("p3.heic", &read("icc")).unwrap().document;
+    assert!(d.icc_profile.is_some(), "the profile is kept");
+    // Not a HEIC after all: an error, not a panic.
+    assert!(import("broken.heic", b"\0\0\0\x18ftypheic\0\0\0\0mif1heic").is_err());
+}

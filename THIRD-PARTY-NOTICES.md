@@ -154,6 +154,7 @@ the public domain.
 | `resources/brushes/{Markers,Paintbrush_Set}.abr` | Brush libraries | brushchick; lovelace | CC BY-ND |
 | `resources/brushes/Pencil_Scribbles.abr` | Brush library | stuffwemake | CC BY-SA |
 | `crates/cms/profiles/photosuite-coated-cmyk.icc` | Synthetic CMYK profile | PhotoCraft contributors | CC0 |
+| `crates/codecs/tests/fixtures/heic/*.heic` | Synthetic HEIC test images (generated; see the README there) | The PhotoSuite authors | MIT OR Apache-2.0 |
 
 ## Test data — not shipped
 

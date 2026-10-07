@@ -80,6 +80,8 @@
         <RegistryValue Root="HKLM" Key="Software\Classes\.exr\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\.hdr\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\.avif\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.heic\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.heif\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\.qoi\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\.ico\OpenWithProgids" Name="Photosuite.Image" Value="" Type="string" />
 
@@ -101,6 +103,8 @@
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".exr" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".hdr" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".avif" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".heic" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".heif" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".qoi" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\photosuite.exe\SupportedTypes" Name=".ico" Value="" Type="string" />
         <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\photosuite.exe" Value="[#PhotosuiteExe]" Type="string" />
