@@ -264,6 +264,26 @@ fn strokes(x: i32, y: i32, d: (i32, i32), len: f32, wid: f32, seed: u32) -> f32 
     vnoise(u / len.max(0.5), v / wid.max(0.3), seed)
 }
 
+/// Repaints in discrete strokes `len` px long and `wid` px wide along `d`: every stroke takes the
+/// colour of `src` at its middle, and neighbouring strokes start at staggered points, so the
+/// image reads as separate strokes rather than a smear. Also returns where the pixel lies along
+/// its stroke (0 at the start, 1 at the end). Reads up to `len / 2 + 1` px away.
+fn paint_stroke(src: &Win, x: i32, y: i32, d: (i32, i32), len: f32, wid: f32, seed: u32) -> (Px, f32) {
+    let (dx, dy) = (d.0 as f32, d.1 as f32);
+    let l = (dx * dx + dy * dy).sqrt().max(1e-6);
+    let (ux, uy) = (dx / l, dy / l);
+    let (len, wid) = (len.max(1.0), wid.max(0.5));
+    let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
+    let u = fx * ux + fy * uy;
+    let v = -fx * uy + fy * ux;
+    let lane = (v / wid).floor() as i32;
+    let off = hash01(lane, 0, 0, seed) * len;
+    let t = ((u + off) / len).rem_euclid(1.0);
+    // Back to the stroke's middle along the direction.
+    let du = (0.5 - t) * len;
+    (src.sample(fx + du * ux, fy + du * uy), t)
+}
+
 /// Unit vector toward the light in image coordinates (y down).
 fn light_dir(name: &str) -> (f32, f32) {
     let s = std::f32::consts::FRAC_1_SQRT_2;
@@ -333,6 +353,11 @@ fn weave(x: f32, y: f32, p: f32, noise: f32) -> f32 {
 
 /// Texturizer core: relief-shades the window with a procedural texture.
 fn texturize(win: &mut Win, kind: &str, scaling: f32, relief: f32, light: &str, invert: bool) {
+    texturize_by(win, kind, scaling, relief, light, invert, |_| 1.0);
+}
+
+/// [`texturize`] with the relief scaled per pixel by `weight` of its colour (0–1).
+fn texturize_by(win: &mut Win, kind: &str, scaling: f32, relief: f32, light: &str, invert: bool, weight: impl Fn(&Px) -> f32) {
     if relief <= 0.0 {
         return;
     }
@@ -345,7 +370,7 @@ fn texturize(win: &mut Win, kind: &str, scaling: f32, relief: f32, light: &str, 
         let (fx, fy) = (x as f32, y as f32);
         let gx = (texture(kind, fx + 1.0, fy, s) - texture(kind, fx - 1.0, fy, s)) * 0.5 * sign;
         let gy = (texture(kind, fx, fy + 1.0, s) - texture(kind, fx, fy - 1.0, s)) * 0.5 * sign;
-        let f = shade(gx, gy, l, k).clamp(0.0, 2.0);
+        let f = 1.0 + (shade(gx, gy, l, k).clamp(0.0, 2.0) - 1.0) * weight(&win.c[i]);
         win.c[i] = map(win.c[i], |v| v * f);
     }
 }
@@ -388,7 +413,7 @@ pub(crate) fn effect_reach(e: &GalleryEffect) -> i32 {
         F::Cutout => 0,
         F::DryBrush | F::Fresco => kuwahara_reach(1 + g("brushSize") as usize) + gs(1.0) + 2,
         F::FilmGrain | F::DiffuseGlow | F::ChalkCharcoal | F::Reticulation | F::Grain | F::MosaicTiles | F::Texturizer => 0,
-        F::RoughPastels => (g("strokeLength") / 2.0) as i32 + 2,
+        F::RoughPastels => gs(0.6 + 1.2) + ((2.0 + g("strokeLength")) / 2.0) as i32 + 3,
         F::NeonGlow => gs(g("glowSize").abs() * 0.6 + 0.5),
         F::PaintDaubs => kuwahara_reach(daubs_radius(e)) + gs(1.5) + 1,
         F::PaletteKnife => kuwahara_reach((g("strokeSize") / 3.0).max(1.0) as usize) + gs(g("softness") * 0.5),
@@ -399,7 +424,7 @@ pub(crate) fn effect_reach(e: &GalleryEffect) -> i32 {
         F::Underpainting => gs(0.5 + g("brushSize") * 0.4),
         F::Watercolor => kuwahara_reach(watercolor_radius(e)) + 2,
         F::AccentedEdges => gs(0.4 + g("smoothness") * 0.3) + gs(g("edgeWidth") * 0.5) + 2,
-        F::AngledStrokes => (g("strokeLength") / 3.0) as i32 + gs(1.0) + 2,
+        F::AngledStrokes => gs(0.8) + (g("strokeLength").max(3.0) / 2.0) as i32 + gs(1.0) + 3,
         F::Crosshatch => (g("strokeLength") / 3.0) as i32 + gs(1.0) + 2,
         F::DarkStrokes => 9,
         F::InkOutlines => (g("strokeLength") / 2.0) as i32 + 3,
@@ -607,17 +632,23 @@ fn apply(e: &GalleryEffect, win: &mut Win, ctx: &Ctx) {
             }
         }
         F::RoughPastels => {
+            // Chalk strokes up to the right; Stroke Detail keeps more of the image inside them.
             let len = g("strokeLength");
-            let det = g("strokeDetail") / 20.0;
-            let orig = win.c.clone();
-            line_blur3(&mut win.c, w, h, (1, -1), (len / 2.0) as usize);
-            for i in 0..win.c.len() {
-                let (x, y) = win.xy(i);
-                let n = strokes(x, y, (1, -1), 3.0 + len * 0.8, 1.1, 51) - 0.5;
-                let p = mix(win.c[i], orig[i], det * 0.5);
-                win.c[i] = map(p, |v| v + n * 0.3);
+            let det = (g("strokeDetail") - 1.0) / 19.0;
+            if len >= 1.0 {
+                let mut soft = win.c.clone();
+                blur3(&mut soft, w, h, 0.6 + (1.0 - det) * 1.2);
+                let src = Win { r: win.r, w, h, c: soft };
+                for i in 0..win.c.len() {
+                    let (x, y) = win.xy(i);
+                    let (c, t) = paint_stroke(&src, x, y, (1, -1), 2.0 + len, 1.5, 51);
+                    // A chalk stroke is a little lighter in its middle, grainy along its length.
+                    let n = (strokes(x, y, (1, -1), 2.0 + len * 0.5, 0.8, 52) - 0.5) * 0.12 + (0.5 - (t - 0.5).abs()) * 0.06;
+                    win.c[i] = map(mix(c, win.c[i], det * 0.6), |v| v + n);
+                }
             }
-            texturize(win, e.choice("texture"), g("scaling"), g("relief"), e.choice("light"), e.flag("invert"));
+            // Bright areas are thick chalk; in dark ones it's scraped off to show the texture.
+            texturize_by(win, e.choice("texture"), g("scaling"), g("relief"), e.choice("light"), e.flag("invert"), |p| 0.15 + 0.85 * (1.0 - clamp01(lum(p))));
         }
         F::SmudgeStick => {
             line_blur3(&mut win.c, w, h, (1, 1), (g("strokeLength") * 1.5) as usize);
@@ -673,33 +704,41 @@ fn apply(e: &GalleryEffect, win: &mut Win, ctx: &Ctx) {
                     if eb >= 0.5 { map(win.c[i], |v| v + (1.0 - v) * k * (eb - 0.5) * 2.0) } else { map(win.c[i], |v| v * (1.0 - k * (0.5 - eb) * 2.0)) };
             }
         }
-        F::AngledStrokes | F::Crosshatch => {
+        F::AngledStrokes => {
+            // Light areas are painted in strokes going one way, dark areas the other way;
+            // Direction Balance moves the split (0: all down-right, 100: all up-right).
+            let len = g("strokeLength").max(3.0);
+            let bal = g("directionBalance") / 100.0;
+            let mut soft = win.c.clone();
+            blur3(&mut soft, w, h, 0.8);
+            let l: Vec<f32> = soft.iter().map(lum).collect();
+            let src = Win { r: win.r, w, h, c: soft };
+            for i in 0..win.c.len() {
+                let (x, y) = win.xy(i);
+                let k = smoothstep(1.0 - bal - 0.05, 1.0 - bal + 0.05, l[i]);
+                let (down, _) = paint_stroke(&src, x, y, (1, 1), len, 2.0, 83);
+                let (up, _) = paint_stroke(&src, x, y, (1, -1), len, 2.0, 84);
+                let n = (strokes(x, y, (1, 1), len * 0.5, 0.7, 85) - 0.5) * (1.0 - k) + (strokes(x, y, (1, -1), len * 0.5, 0.7, 86) - 0.5) * k;
+                win.c[i] = map(mix(down, up, k), |v| v + n * 0.1);
+            }
+            unsharp(win, 1.0, 0.2 + g("sharpness") / 10.0 * 2.3);
+        }
+        F::Crosshatch => {
             let len = g("strokeLength");
             let r = (len / 3.0) as usize;
-            if e.filter == F::Crosshatch {
-                let st = g("strength");
-                for i in 0..win.c.len() {
-                    let (x, y) = win.xy(i);
-                    let n = (hash01(x, y, 0, 81) - 0.5) * 0.12 * st;
-                    win.c[i] = map(win.c[i], |v| v + n);
-                }
+            let st = g("strength");
+            for i in 0..win.c.len() {
+                let (x, y) = win.xy(i);
+                let n = (hash01(x, y, 0, 81) - 0.5) * 0.12 * st;
+                win.c[i] = map(win.c[i], |v| v + n);
             }
-            let l = win.lum();
             let mut a = win.c.clone();
             line_blur3(&mut a, w, h, (1, 1), r);
             line_blur3(&mut win.c, w, h, (1, -1), r);
-            if e.filter == F::AngledStrokes {
-                let bal = g("directionBalance") / 100.0;
-                for i in 0..win.c.len() {
-                    win.c[i] = mix(a[i], win.c[i], smoothstep(1.0 - bal - 0.15, 1.0 - bal + 0.15, l[i]));
-                }
-                unsharp(win, 1.0, g("sharpness") / 10.0 * 1.5);
-            } else {
-                for i in 0..win.c.len() {
-                    win.c[i] = mix(a[i], win.c[i], 0.5);
-                }
-                unsharp(win, 1.0, g("sharpness") / 20.0 * 3.0);
+            for i in 0..win.c.len() {
+                win.c[i] = mix(a[i], win.c[i], 0.5);
             }
+            unsharp(win, 1.0, g("sharpness") / 20.0 * 3.0);
         }
         F::DarkStrokes => {
             let (bal, bi, wi) = (g("balance") / 10.0, g("blackIntensity") / 10.0, g("whiteIntensity") / 10.0);
@@ -1164,6 +1203,33 @@ mod tests {
                     let t = apply_tiled(&s, &fp, b, b, None, 16, Some(b)).read_region(b);
                     let worst = a.iter().zip(&t).map(|(x, y)| (x - y).abs()).fold(0.0, f32::max);
                     assert!(worst < 1e-3, "{} differs across tilings by {worst}", f.key());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn rough_pastels_and_angled_strokes_respond_to_every_slider() {
+        // #879: these smeared or drowned the image in texture, and some sliders did nothing.
+        use crate::GalleryFilter as G;
+        let b = Rect::new(0, 0, 56, 40);
+        let s = pattern(SampleType::F32);
+        let run = |e: &GalleryEffect, tile: i32| {
+            let fp = FilterParams::FilterGallery { effects: vec![e.clone()] };
+            apply_tiled(&s, &fp, b, b, None, tile, Some(b)).read_region(b)
+        };
+        for f in [G::RoughPastels, G::AngledStrokes] {
+            let base = run(&GalleryEffect::new(f), 256);
+            for prm in f.params() {
+                let crate::GalleryParamKind::Range { min, max, .. } = prm.kind else { continue };
+                for v in [min, max] {
+                    let mut e = GalleryEffect::new(f);
+                    e.set(prm.key, v);
+                    let a = run(&e, 256);
+                    assert_ne!(a, base, "{} {} = {v} changed nothing", f.key(), prm.key);
+                    let t = run(&e, 16);
+                    let worst = a.iter().zip(&t).map(|(x, y)| (x - y).abs()).fold(0.0, f32::max);
+                    assert!(worst < 1e-3, "{} {} = {v} differs across tilings by {worst}", f.key(), prm.key);
                 }
             }
         }
