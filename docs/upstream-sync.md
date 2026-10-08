@@ -125,3 +125,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `3f605afc81` | skip | UI change (menu row sizes) — Menu rows touch, as in native menus: long menus are a fifth shorter (#402) (#844) |
 | `44303db546` | skip | UI change: About dialog (PhotoSuite's own) — About: contributor and model credits compiled in (grab bag + table, self-submitted names) (#898) |
 | `0f16bce0c5` | skip | already done differently here (PhotoSuite's own Magnetic Lasso, magnetic_ui.rs) — Add the Magnetic Lasso tool (#864) |
+| `07174271d5` | skip | only held-back files (translations / CI / brand / records) — CI: never cancel main's runs; trim per-PR runner time (#800) |
