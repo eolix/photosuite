@@ -118,3 +118,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `f9479063be` | skip | UI change: PhotoSuite's own Camera Raw — Rework Camera Raw filter preview and navigation (#781) |
 | `a20c63521d` | skip | UI change (new search palette) — Help › Search: find any menu command by name (#815) |
 | `c161eaec73` | skip | fonts (no UI changes from upstream) — Fonts: use craft-fonts as an optional build input; move the Japanese fonts out (#353) (#353) |
+| `b07a2e5b43` | skip | already done here (persist_window in apps/photosuite main.rs) — Remember desktop window and panel sizes across restarts (#587) |
