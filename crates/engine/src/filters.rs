@@ -15,7 +15,9 @@ fn f(p: &Value, k: &str, d: f32) -> f32 {
     p.get(k).and_then(Value::as_f64).map_or(d, |v| v as f32)
 }
 fn i(p: &Value, k: &str, d: i32) -> i32 {
-    p.get(k).and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f.round() as i64))).map_or(d, |v| v as i32)
+    // Clamped like the neighbouring filter params: an out-of-range value saturates instead of
+    // wrapping through `as i32` (`3e9` used to come back as a negative offset).
+    p.get(k).and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f.round() as i64))).map_or(d, |v| v.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32)
 }
 fn b(p: &Value, k: &str, d: bool) -> bool {
     p.get(k).and_then(Value::as_bool).unwrap_or(d)
@@ -36,18 +38,28 @@ fn preserve(p: &Value) -> Preserve {
     if s(p, "preserve", "squareness") == "roundness" { Preserve::Roundness } else { Preserve::Squareness }
 }
 
+/// One-step presets (no dialog): the history step they record (their own name, not the generic
+/// algorithm's) and the fixed parameters, tuned to match the reference app's fixed-strength filters.
+fn preset(id: &str) -> Option<(&'static str, FilterParams)> {
+    Some(match id {
+        "filter.blur.blur" => ("Blur", FilterParams::GaussianBlur { radius: 0.6 }),
+        "filter.blur.blurMore" => ("Blur More", FilterParams::GaussianBlur { radius: 1.4 }),
+        "filter.sharpen.sharpen" => ("Sharpen", FilterParams::UnsharpMask { amount: 60.0, radius: 0.5, threshold: 0.0 }),
+        "filter.sharpen.sharpenMore" => ("Sharpen More", FilterParams::UnsharpMask { amount: 150.0, radius: 0.6, threshold: 0.0 }),
+        "filter.sharpen.sharpenEdges" => ("Sharpen Edges", FilterParams::UnsharpMask { amount: 100.0, radius: 0.8, threshold: 6.0 }),
+        "filter.noise.despeckle" => ("Despeckle", FilterParams::SurfaceBlur { radius: 2.0, threshold: 12.0 }),
+        _ => return None,
+    })
+}
+
 /// Builds the algorithm parameters for a filter command id from JSON params
 /// (Photoshop dialog units).
 pub fn params_for(id: &str, p: &Value) -> Option<FilterParams> {
+    if let Some((_, fp)) = preset(id) {
+        return Some(fp);
+    }
     Some(match id {
         "filter.blur.gaussianBlur" => FilterParams::GaussianBlur { radius: f(p, "radius", 1.0).clamp(0.1, 1000.0) },
-        // One-step presets (no dialog), tuned to match Photoshop's fixed-strength filters.
-        "filter.blur.blur" => FilterParams::GaussianBlur { radius: 0.6 },
-        "filter.blur.blurMore" => FilterParams::GaussianBlur { radius: 1.4 },
-        "filter.sharpen.sharpen" => FilterParams::UnsharpMask { amount: 60.0, radius: 0.5, threshold: 0.0 },
-        "filter.sharpen.sharpenMore" => FilterParams::UnsharpMask { amount: 150.0, radius: 0.6, threshold: 0.0 },
-        "filter.sharpen.sharpenEdges" => FilterParams::UnsharpMask { amount: 100.0, radius: 0.8, threshold: 6.0 },
-        "filter.noise.despeckle" => FilterParams::SurfaceBlur { radius: 2.0, threshold: 12.0 },
         "filter.blur.boxBlur" => FilterParams::BoxBlur { radius: f(p, "radius", 1.0).clamp(1.0, 2000.0) },
         "filter.blur.motionBlur" => FilterParams::MotionBlur { angle: f(p, "angle", 0.0), distance: f(p, "distance", 10.0).clamp(1.0, 2000.0) },
         "filter.blur.radialBlur" => FilterParams::RadialBlur {
@@ -149,6 +161,10 @@ pub fn apply_filter_to_surface(
     if let Some(out) = crate::lens_cmds::apply_to_surface(id, params, surf, canvas) {
         return Some(out);
     }
+    // Image › Adjustments recorded as smart filters (Levels, Curves, Shadows/Highlights… from PSD).
+    if let Some(kind) = id.strip_prefix("image.adjustments.") {
+        return crate::adjust_cmds::adjust_as_filter(kind, params, surf);
+    }
     // WebAssembly plug-in smart filters (plugin_cmds).
     if id == crate::plugin_cmds::RUN {
         return crate::plugin_cmds::apply_to_surface(id, params, surf, selection, canvas);
@@ -185,43 +201,57 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
         Some(l) => photosuite_doc::LayerId(l),
         None => s.active().and_then(|d| d.active_layer).ok_or(EngineError::Other("no active layer".into()))?,
     };
-    let label = fp.label().to_string();
+    let label = preset(id).map_or(fp.label(), |(name, _)| name).to_string();
+    let msg = label.clone();
     let mut params = p.clone();
     if let Value::Object(m) = &mut params {
         m.remove("__kind");
     }
-    s.edit(&label, |doc, _| {
-        let selection = doc.selection.clone();
-        let sel_bounds = selection.as_ref().map(photosuite_raster::Surface::content_bounds);
-        // Distortions centre on the selection when there is one, else the canvas.
-        let doc_bounds = doc.bounds();
-        let bounds = sel_bounds.filter(|b| !b.is_empty()).unwrap_or(doc_bounds);
-        // Neighbourhood filters repeat edge pixels at the canvas edge (or past it, where the
-        // layer has off-canvas pixels) instead of fading in transparency, as Photoshop does.
-        if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, p)? {
+    let id = id.to_string();
+    let p = p.clone();
+    let layer_id = layer.0;
+    // A background job when started with `Session::start` (#210): the filter runs on a worker,
+    // checking for cancellation before every tile.
+    crate::jobs::edit_job(
+        s,
+        &label,
+        move |doc, _, ctx| {
+            let filter = |surf: &photosuite_raster::Surface, fp: &FilterParams, area, bounds, sel: Option<&photosuite_raster::Surface>, extent| {
+                ctx.stage(0.0, 1.0, &msg, |ctl| algo::apply_in_with(surf, fp, area, bounds, sel, extent, ctl)).ok_or(EngineError::Cancelled)
+            };
+            let selection = doc.selection.clone();
+            let sel_bounds = selection.as_ref().map(photosuite_raster::Surface::content_bounds);
+            // Distortions centre on the selection when there is one, else the canvas.
+            let doc_bounds = doc.bounds();
+            let bounds = sel_bounds.filter(|b| !b.is_empty()).unwrap_or(doc_bounds);
+            // Neighbourhood filters repeat edge pixels at the canvas edge (or past it, where the
+            // layer has off-canvas pixels) instead of fading in transparency, as Photoshop does.
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, &p)? {
+                let content = surf.content_bounds();
+                let area = algo::output_area(&fp, content, bounds, sel_bounds);
+                *surf = filter(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content))?;
+                return Ok(fp.clone());
+            }
+            let l = doc.layer_mut(layer).ok_or(EngineError::NoLayer(layer))?;
+            let mut fp = fp.clone();
+            crate::filters_ext::resolve_in_layer(&mut fp, l, bounds);
+            let surf = match &mut l.content {
+                LayerContent::Raster(surf) => surf,
+                LayerContent::Smart(_) => {
+                    // Non-destructive: record the filter and re-render the smart object from its source.
+                    let sf =
+                        SmartFilter { command: id.clone(), params: params.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
+                    return crate::smart_cmds::add_smart_filter(doc, layer, sf, selection.as_ref()).map(|()| fp);
+                }
+                _ => return Err(EngineError::Other("not a pixel layer".into())),
+            };
             let content = surf.content_bounds();
             let area = algo::output_area(&fp, content, bounds, sel_bounds);
-            *surf = algo::apply_in(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content));
-            return Ok(());
-        }
-        let l = doc.layer_mut(layer).ok_or(EngineError::NoLayer(layer))?;
-        crate::filters_ext::resolve_in_layer(&mut fp, l, bounds);
-        let surf = match &mut l.content {
-            LayerContent::Raster(surf) => surf,
-            LayerContent::Smart(_) => {
-                // Non-destructive: record the filter and re-render the smart object from its source.
-                let sf =
-                    SmartFilter { command: id.to_string(), params: params.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
-                return crate::smart_cmds::add_smart_filter(doc, layer, sf, selection.as_ref());
-            }
-            _ => return Err(EngineError::Other("not a pixel layer".into())),
-        };
-        let content = surf.content_bounds();
-        let area = algo::output_area(&fp, content, bounds, sel_bounds);
-        *surf = algo::apply_in(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content));
-        Ok(())
-    })?;
-    Ok(json!({ "layer": layer.0, "filter": serde_json::to_value(&fp).unwrap_or(Value::Null) }))
+            *surf = filter(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content))?;
+            Ok(fp)
+        },
+        move |fp| json!({ "layer": layer_id, "filter": serde_json::to_value(&fp).unwrap_or(Value::Null) }),
+    )
 }
 
 macro_rules! filter_cmd {
@@ -407,6 +437,32 @@ mod tests {
     }
 
     #[test]
+    fn preset_filters_record_their_own_name() {
+        // #528: one-step presets run a generic algorithm but name the step after themselves;
+        // the generic commands keep the algorithm's name.
+        let specs = specs();
+        for (id, name) in [
+            ("filter.blur.blur", "Blur"),
+            ("filter.blur.blurMore", "Blur More"),
+            ("filter.sharpen.sharpen", "Sharpen"),
+            ("filter.sharpen.sharpenMore", "Sharpen More"),
+            ("filter.sharpen.sharpenEdges", "Sharpen Edges"),
+            ("filter.noise.despeckle", "Despeckle"),
+            ("filter.blur.gaussianBlur", "Gaussian Blur"),
+            ("filter.sharpen.unsharpMask", "Unsharp Mask"),
+            ("filter.blur.surfaceBlur", "Surface Blur"),
+        ] {
+            let mut s = session();
+            let steps = s.active().unwrap().history.past_len();
+            s.execute(id, json!({})).unwrap();
+            let h = &s.active().unwrap().history;
+            assert_eq!((h.past_len(), h.undo_label()), (steps + 1, Some(name)), "{id}");
+            let label = specs.iter().find(|c| c.id == id).unwrap().label;
+            assert_eq!(label.trim_end_matches('…'), name, "{id}: the step is named like the command");
+        }
+    }
+
+    #[test]
     fn specs_are_complete_and_documented() {
         let specs = specs();
         for id in ALL {
@@ -442,6 +498,17 @@ mod tests {
             let j = (5 * 48 + 5) * 4;
             assert_ne!(after[j..j + 4], before[j..j + 4]);
         }
+    }
+
+    #[test]
+    fn huge_offsets_clamp_instead_of_wrapping() {
+        // 3e9 wrapped to a negative offset through `as i32`; it saturates now, so it
+        // equals the maximal in-range offset instead of shifting the other way.
+        let mut a = session();
+        a.execute("filter.other.offset", json!({"horizontal": 3_000_000_000_i64, "vertical": 0})).unwrap();
+        let mut b = session();
+        b.execute("filter.other.offset", json!({"horizontal": 2_147_483_647_i64, "vertical": 0})).unwrap();
+        assert_eq!(active_pixels(&a), active_pixels(&b));
     }
 
     #[test]
@@ -527,6 +594,7 @@ mod tests {
                     filter_mask: None,
                     warp: None,
                     stack_mode: None,
+                    perspective: None,
                 }),
             );
             *active = Some(doc.insert_above(*active, l));

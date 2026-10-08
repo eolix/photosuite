@@ -6,7 +6,7 @@ use std::io::{Cursor, Write};
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits, PngCompression};
 
 const F: Format = Format::Png;
@@ -27,6 +27,8 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         limits.check_bytes(w, h, 8)?;
     }
     let mut reader = decoder.read_info().map_err(map_png_err)?;
+    // APNG: the IDAT image is the first frame, or an extra default image when no fcTL precedes it.
+    let images = reader.info().animation_control.map_or(1, |a| u64::from(a.num_frames) + u64::from(reader.info().frame_control.is_none()));
     let (color, depth) = reader.output_color_type();
     let layout = match color {
         png::ColorType::Grayscale => ChannelLayout::Gray,
@@ -82,6 +84,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         }
     }
     img.meta = meta;
+    if images > 1 {
+        img.warnings.push(DecodeWarning::MoreFrames { total: u32::try_from(images).ok() });
+    }
     Ok(img)
 }
 
@@ -131,7 +136,8 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     }
     if opts.embed_metadata {
         if let Some(exif) = &img.meta.exif {
-            info.exif_metadata = Some(exif.clone().into());
+            // The pixels are written as they are shown: never let a viewer rotate them again.
+            info.exif_metadata = Some(crate::orientation::upright_exif(exif).into_owned().into());
         }
         if let Some((x, y)) = img.meta.dpi
             && x > 0.0
@@ -164,7 +170,7 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
                 res.map_err(|e| CodecError::encode(F, e))?;
             }
             if let Some(xmp) = &img.meta.xmp {
-                encoder.add_itxt_chunk(XMP_KEYWORD.into(), xmp.clone()).map_err(|e| CodecError::encode(F, e))?;
+                encoder.add_itxt_chunk(XMP_KEYWORD.into(), crate::orientation::upright_xmp(xmp).into_owned()).map_err(|e| CodecError::encode(F, e))?;
             }
         }
         let mut writer = encoder.write_header().map_err(|e| CodecError::encode(F, e))?;

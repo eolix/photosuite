@@ -72,7 +72,9 @@ pub struct NewParams {
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct SaveParams {
     /// Forward-slash relative target beneath the configured automation write root.
-    /// The extension selects the format. Omit to save to the document's own relative path.
+    /// The extension selects the format. Omit to write back to the document's own file, which
+    /// works only for a PSD, PSB or .pcraft file kept in its own format; any other save needs
+    /// `path`, so a flattened or converted copy never replaces the opened file.
     #[serde(default)]
     pub path: Option<String>,
     /// Format override as an extension (pcraft, psd, png, jpg, tif, webp, exr, …).
@@ -81,6 +83,9 @@ pub struct SaveParams {
     /// JPEG quality 1..100 for lossy exports.
     #[serde(default)]
     pub quality: Option<u8>,
+    /// TIFF: keep the layers (Photoshop layer data). Off by default: a flat TIFF.
+    #[serde(default, rename = "tiffLayers")]
+    pub tiff_layers: bool,
     #[serde(default)]
     pub index: Option<usize>,
 }
@@ -112,29 +117,51 @@ pub struct ListParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct RunParams {
-    /// Command id, e.g. `layer.new.layer`, `filter.blur.gaussian`.
+    /// Command id, e.g. `layer.new.layer`, `filter.blur.gaussianBlur`.
     pub id: String,
     /// Command parameters as a JSON object (see the `params` doc in `command_list`).
     #[serde(default)]
     pub params: Option<Value>,
+    /// Wait for a long command (filters, Content-Aware Fill, Photomerge, …) to finish (default
+    /// true). With false it runs as a background job and the result is `{"job": id}`: poll it
+    /// with `jobs_list`, stop it with `jobs_cancel`.
+    #[serde(default)]
+    pub wait: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct JobCancelParams {
+    /// The job id from `command_run` / `jobs_list` (omit to cancel every running job).
+    #[serde(default)]
+    pub job: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct BatchParams {
-    /// Commands to run in order: `[{"id": "layer.new.layer", "params": {"name": "Ink"}}, …]`.
+    /// Commands to run in order: `[{"id": "layer.new.layer", "params": {"name": "Ink"}}, …]`. A
+    /// step with `"wait": false` starts a long command as a background job (its result is
+    /// `{"job": id}`, as in `command_run`); later steps that edit the same document fail until
+    /// the job ends.
     pub steps: Vec<RunParams>,
     /// Stop at the first failing step (default true).
     #[serde(default)]
     pub stop_on_error: Option<bool>,
 }
 
+/// Strict: an argument the tool doesn't forward is an error, not silently dropped.
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PointerParams {
     /// Events in document coordinates: `[{"kind":"down|move|up","x":..,"y":..,"pressure":..}]`.
     pub events: Vec<Value>,
-    /// Modifier keys, e.g. `{"shift":true}`.
+    /// Modifier keys, e.g. `{"shift":true}` (also `alt`, `command`, `ctrl`, `space`).
     #[serde(default)]
     pub modifiers: Option<Value>,
+    /// Mouse button: `left` (default), or `right` / `secondary`: with the Move tool or
+    /// `{"command":true}` it opens the canvas layer menu, with a painting tool the Brush Preset
+    /// picker.
+    #[serde(default)]
+    pub button: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -145,7 +172,10 @@ pub struct MenuParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UiSetParams {
-    /// Fields accepted by the control method `ui.set` (tool, panels, zoom, center, dark).
+    /// Fields for the control method `ui.set`: tool, panels, dock, dockTabs, dockWidth, maskTarget,
+    /// vectorMaskTarget, selectionMode, zoom, center, fit, theme (midnight, anthracite, slate,
+    /// pearl, aubergine, ocean), brushSection, brushTab, brushesView, brushSize. Other fields are
+    /// an error.
     pub fields: Value,
 }
 
@@ -252,6 +282,7 @@ impl PhotosuiteMcp {
                 // of the document (`Session::edit`), so the session is still
                 // consistent: keep serving instead of failing every later call.
                 let mut g = h.lock().unwrap_or_else(PoisonError::into_inner);
+                g.sync_jobs();
                 f(&mut g)
             })
             .await
@@ -281,22 +312,24 @@ impl PhotosuiteMcp {
             Ok(bytes) => bytes,
             Err(error) => return Ok(fail(format!("app screenshot data: {error}"))),
         };
-        if let Err(error) = check_png(bytes.len()) {
-            return Ok(fail(error));
-        }
         let bytes = match downscale_png(&bytes, max_side.unwrap_or(0)) {
             Ok(Some(small)) => small,
             Ok(None) => bytes,
             Err(error) => return Ok(fail(error)),
         };
+        if let Err(error) = check_png(bytes.len()) {
+            return Ok(fail(error));
+        }
         Ok(png_result(&bytes, "screenshot of the live app window".into()))
     }
 }
 
 fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, AutomationError> {
     // A compressed reply's byte limit does not bound its decoded pixel allocation.
-    let opts =
-        photosuite_codecs::DecodeOptions { limits: photosuite_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 } };
+    let opts = photosuite_codecs::DecodeOptions {
+        limits: photosuite_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 },
+        ..Default::default()
+    };
     let img = photosuite_codecs::decode_as_with(photosuite_codecs::Format::Png, png, &opts).map_err(|error| AutomationError::Other(error.to_string()))?;
     let (w, h) = img.dimensions();
     if max_side == 0 || w.max(h) <= max_side {
@@ -372,11 +405,11 @@ impl PhotosuiteMcp {
         if let Some(v) = p.name {
             params.insert("name".into(), v.into());
         }
-        self.run_command("file.new".into(), Value::Object(params)).await
+        self.run_command("file.new".into(), Value::Object(params), true).await
     }
 
     #[tool(description = "Save the document. `.pcraft` is the lossless native format (incremental); other extensions \
-        (psd, png, jpg, tif, webp, exr, …) export. Returns warnings about anything the format cannot hold.")]
+        (psd, png, jpg, tif, webp, exr, …) export. Without `path` only a PSD, PSB or .pcraft document is written back to its own         file. Returns warnings about anything the format cannot hold.")]
     async fn doc_save(&self, Parameters(p): Parameters<SaveParams>) -> Result<CallToolResult, McpError> {
         self.save_impl(p).await
     }
@@ -397,7 +430,8 @@ impl PhotosuiteMcp {
         let Some(b) = self.bridge_client() else {
             return Ok(no_backend());
         };
-        to_result(b.call("engine.execute", json!({"command": "document.inspect", "params": {}})).await)
+        let params = p.index.map(|index| json!({"document": index})).unwrap_or_else(|| json!({}));
+        to_result(b.call("engine.execute", json!({"command": "document.inspect", "params": params})).await)
     }
 
     #[tool(description = "Render the flattened document and return it as a PNG image (bridge mode: window screenshot).")]
@@ -461,9 +495,23 @@ impl PhotosuiteMcp {
         Ok(ok_json(&Value::Array(items)))
     }
 
-    #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result.")]
+    #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result. \
+        Long commands (filters, Content-Aware Fill/Scale, Photomerge, brush import) wait to finish unless `wait` is false: \
+        then they run as a background job and the result is {job: id} (see jobs_list, jobs_cancel).")]
     async fn command_run(&self, Parameters(p): Parameters<RunParams>) -> Result<CallToolResult, McpError> {
-        self.run_command(p.id, p.params.unwrap_or_else(|| json!({}))).await
+        self.run_command(p.id, p.params.unwrap_or_else(|| json!({})), p.wait.unwrap_or(true)).await
+    }
+
+    #[tool(description = "List background jobs: running ones with progress (0-1), message and elapsed time, then the last few \
+        that ended (state done|failed|cancelled with their result or error). Finished jobs are applied first.")]
+    async fn jobs_list(&self) -> Result<CallToolResult, McpError> {
+        self.jobs_call("jobs.list", json!({})).await
+    }
+
+    #[tool(description = "Cancel a background job by id (or every running job when `job` is omitted). The document is left \
+        unchanged.")]
+    async fn jobs_cancel(&self, Parameters(p): Parameters<JobCancelParams>) -> Result<CallToolResult, McpError> {
+        self.jobs_call("jobs.cancel", p.job.map_or_else(|| json!({}), |j| json!({"job": j}))).await
     }
 
     #[tool(description = "Run several engine commands in one call (fewer round trips). Returns {completed, failed, \
@@ -473,9 +521,11 @@ impl PhotosuiteMcp {
             return Ok(fail(format!("batch contains {} steps; maximum is {MAX_BATCH_STEPS}", p.steps.len())));
         }
         let stop = p.stop_on_error.unwrap_or(true);
-        let steps: Vec<Value> = p.steps.into_iter().map(|s| json!({"command": s.id, "params": s.params.unwrap_or_else(|| json!({}))})).collect();
+        let steps: Vec<Value> =
+            p.steps.into_iter().map(|s| json!({"command": s.id, "params": s.params.unwrap_or_else(|| json!({})), "wait": s.wait.unwrap_or(true)})).collect();
         let args = json!({"steps": steps, "stopOnError": stop});
-        if let Some(r) = self.headless_op(move |h| h.batch(&args)).await {
+        // The reply travels as escaped JSON text, so steps are charged their escaped size.
+        if let Some(r) = self.headless_op(move |h| h.batch_with_budget(&args, BatchReplyBudget::escaped())).await {
             return to_result(r);
         }
         let Some(b) = self.bridge_client() else {
@@ -483,7 +533,7 @@ impl PhotosuiteMcp {
         };
         let mut results = Vec::new();
         let mut failed = 0;
-        let mut reply_budget = BatchReplyBudget::default();
+        let mut reply_budget = BatchReplyBudget::escaped();
         for s in &steps {
             let response = b.call("engine.execute", s.clone()).await;
             let was_error = response.is_err();
@@ -509,7 +559,9 @@ impl PhotosuiteMcp {
 
     // ----- live-GUI tools (bridge mode) -----
 
-    #[tool(description = "Bridge mode: full UI state of the live app (tool, panels, views, dialogs, menu tree).")]
+    #[tool(
+        description = "Bridge mode: full UI state of the live app (tool, panels, views, dialogs, windows). For the menu tree, call `control_call` with method `ui.menu.list`."
+    )]
     async fn ui_inspect(&self) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => to_result(b.call("ui.inspect", json!({})).await),
@@ -525,13 +577,18 @@ impl PhotosuiteMcp {
         }
     }
 
-    #[tool(description = "Bridge mode: send pointer events (document coordinates) to the active tool.")]
+    #[tool(
+        description = "Bridge mode: send pointer events (document coordinates) to the active tool; with a Color Picker open they sample the image into it instead."
+    )]
     async fn ui_pointer(&self, Parameters(p): Parameters<PointerParams>) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => {
                 let mut params = json!({"events": p.events});
                 if let Some(m) = p.modifiers {
                     params["modifiers"] = m;
+                }
+                if let Some(button) = p.button {
+                    params["button"] = button.into();
                 }
                 to_result(b.call("ui.pointer", params).await)
             }
@@ -547,7 +604,9 @@ impl PhotosuiteMcp {
         }
     }
 
-    #[tool(description = "Bridge mode: change UI state (tool, panels, zoom, center, dark).")]
+    #[tool(
+        description = "Bridge mode: change UI state (tool, panels, dock, zoom, center, fit, theme, brush settings; see `fields`). Unknown fields are an error."
+    )]
     async fn ui_set(&self, Parameters(p): Parameters<UiSetParams>) -> Result<CallToolResult, McpError> {
         match self.bridge_client() {
             Some(b) => to_result(b.call("ui.set", p.fields).await),
@@ -569,15 +628,27 @@ fn bridge_only_headless(name: &str) -> Result<CallToolResult, McpError> {
 }
 
 impl PhotosuiteMcp {
-    async fn run_command(&self, id: String, params: Value) -> Result<CallToolResult, McpError> {
+    async fn run_command(&self, id: String, params: Value, wait: bool) -> Result<CallToolResult, McpError> {
         let (id2, params2) = (id.clone(), params.clone());
-        if let Some(r) = self.headless_op(move |h| h.command_run(&id2, params2)).await {
+        if let Some(r) = self.headless_op(move |h| h.command_start(&id2, params2, wait)).await {
             return to_result(r);
         }
         let Some(b) = self.bridge_client() else {
             return Ok(no_backend());
         };
-        to_result(b.call("engine.execute", json!({"command": id, "params": params})).await)
+        to_result(b.call("engine.execute", json!({"command": id, "params": params, "wait": wait})).await)
+    }
+
+    /// `jobs.list` / `jobs.cancel` in either backend.
+    async fn jobs_call(&self, method: &'static str, params: Value) -> Result<CallToolResult, McpError> {
+        let p2 = params.clone();
+        if let Some(r) = self.headless_op(move |h| h.command_start(method, p2, true)).await {
+            return to_result(r);
+        }
+        let Some(b) = self.bridge_client() else {
+            return Ok(no_backend());
+        };
+        to_result(b.call(method, params).await)
     }
 
     async fn save_impl(&self, p: SaveParams) -> Result<CallToolResult, McpError> {
@@ -589,7 +660,7 @@ impl PhotosuiteMcp {
         }
         let Some(r) = self
             .headless_op(move |h| {
-                let mut opts = photosuite_io::ExportOptions::default();
+                let mut opts = photosuite_io::ExportOptions { tiff_layers: p.tiff_layers, ..Default::default() };
                 if let Some(q) = p.quality {
                     opts.encode.jpeg_quality = q.clamp(1, 100);
                 }
@@ -631,6 +702,7 @@ mod tests {
     fn bridge_screenshot_decode_limits_apply_even_without_downscaling() {
         let image = photosuite_codecs::Image::from_u8(8193, 1, photosuite_codecs::ChannelLayout::Rgba, vec![0; 8193 * 4]).unwrap();
         let png = photosuite_codecs::encode(&image, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+        assert!(downscale_png(b"not a png", 32).is_err());
         assert!(downscale_png(&png, 0).is_err());
         assert!(downscale_png(&png, 1024).is_err());
     }
@@ -642,5 +714,49 @@ mod tests {
         assert!(r.is_err());
         let r = mcp.headless_op(|h| h.command_run("file.new", json!({"width": 8, "height": 8}))).await.unwrap();
         assert!(r.is_ok(), "session still usable after a panic: {r:?}");
+    }
+
+    /// Regression (#504): the batch budget counted plain JSON, but MCP sends the reply as escaped
+    /// text, so a batch the budget stopped could still exceed the tool-result ceiling and the
+    /// client lost every step result.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mcp_command_batch_stopped_by_the_budget_keeps_its_step_results() {
+        let mcp = PhotosuiteMcp::headless();
+        let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None };
+        let mut steps: Vec<RunParams> = (0..MAX_BATCH_STEPS - 1).map(|_| step("command.list", json!({}))).collect();
+        steps.push(step("file.new", json!({"width": 8, "height": 8})));
+        let result = mcp.command_batch(Parameters(BatchParams { steps, stop_on_error: Some(false) })).await.unwrap();
+        assert_ne!(result.is_error, Some(true), "{:?}", result.content.first().and_then(|c| c.as_text()).map(|t| &t.text[..200.min(t.text.len())]));
+        let text = &result.content.first().and_then(|c| c.as_text()).unwrap().text;
+        let reply: Value = serde_json::from_str(text).unwrap();
+        let results = reply["results"].as_array().unwrap();
+        assert!(results.last().unwrap()["error"].as_str().unwrap().contains("batch response budget exceeded"), "{}", results.last().unwrap());
+        assert_eq!(reply["completed"].as_u64().unwrap() as usize, results.len() - 1);
+        assert_eq!(reply["failed"], 1);
+        let docs = mcp.headless_op(|h| Ok(h.session.documents().len())).await.unwrap().unwrap();
+        assert_eq!(docs, 0, "the step after the budget ran out did not run");
+    }
+
+    /// The MCP server applies finished jobs before every tool call too (#503).
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mcp_tools_see_a_finished_background_job() {
+        let mcp = PhotosuiteMcp::headless();
+        mcp.headless_op(|h| {
+            h.command_run("file.new", json!({"width": 64, "height": 48}))?;
+            h.command_run("filter.noise.addNoise", json!({"amount": 50}))?;
+            h.command_start("filter.blur.gaussianBlur", json!({"radius": 4}), false)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        let t = std::time::Instant::now();
+        loop {
+            let inspected = mcp.headless_op(|h| h.inspect(None)).await.unwrap().unwrap();
+            if inspected["history"].as_array().unwrap().last().unwrap() == "Gaussian Blur" {
+                break;
+            }
+            assert!(t.elapsed().as_secs() < 60, "doc_inspect never saw the finished job: {inspected}");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
     }
 }

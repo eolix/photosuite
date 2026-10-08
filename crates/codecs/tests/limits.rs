@@ -5,7 +5,7 @@ use common::*;
 use photosuite_codecs::*;
 
 fn opts(l: Limits) -> DecodeOptions {
-    DecodeOptions { limits: l }
+    DecodeOptions { limits: l, ..Default::default() }
 }
 
 fn is_limit(r: Result<Image, CodecError>) -> bool {

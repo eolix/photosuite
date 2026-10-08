@@ -735,6 +735,16 @@ impl Compositor {
                 }
             }
             for e in f.layer.effects.items.iter().filter(|e| e.enabled()) {
+                // Effect noise is speckled in the CPU maps; keep CPU and GPU identical by
+                // rendering noise-carrying effects on the CPU path.
+                let noisy = match e {
+                    photosuite_doc::Effect::DropShadow(s) | photosuite_doc::Effect::InnerShadow(s) => s.noise > 0.0,
+                    photosuite_doc::Effect::OuterGlow(g) | photosuite_doc::Effect::InnerGlow(g) => g.noise > 0.0,
+                    _ => false,
+                };
+                if noisy {
+                    return Err(Unsupported(format!("effect noise on `{}` uses the CPU path", f.layer.name)));
+                }
                 for s in fx::program_with(e, &doc.global_light, false, &doc.patterns, (0.0, 0.0)).stages {
                     if s.lut.as_ref().is_some_and(|l| l.len() > 4096) {
                         return Err(Unsupported(format!("effect blur on `{}` too wide for the GPU path", f.layer.name)));

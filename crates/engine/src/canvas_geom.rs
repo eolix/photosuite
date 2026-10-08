@@ -104,7 +104,7 @@ pub(crate) fn transform_layer_geometry(l: &mut Layer, a: &Affine, content: bool,
             t.transform = a.mul(&t.transform);
             retag_text(dpi, t);
         }
-        LayerContent::Smart(sm) if content => sm.transform = crate::smart_cmds::snap_affine(a.mul(&sm.transform)),
+        LayerContent::Smart(sm) if content => crate::smart_cmds::transform_placement(sm, a),
         LayerContent::Group(g) => {
             if let Some(ab) = &mut g.artboard {
                 ab.rect = map_rect(a, ab.rect);

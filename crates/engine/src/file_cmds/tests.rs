@@ -158,6 +158,37 @@ fn place_embedded_centres_fits_and_embeds() {
     }
 }
 
+/// A 40×20 JPEG (left half red, right half blue) tagged EXIF Orientation = 6: shown upright it
+/// is 20×40, red on top.
+fn rotated_jpeg(dir: &str) -> String {
+    let px: Vec<u8> = (0..20).flat_map(|_| (0..40).flat_map(|x| if x < 20 { [230, 20, 20] } else { [20, 20, 230] })).collect();
+    let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgb, px).unwrap();
+    let jpeg = photosuite_codecs::encode(&img, photosuite_codecs::Format::Jpeg, &Default::default()).unwrap();
+    let mut seg = b"Exif\0\0II*\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0".to_vec();
+    let mut file = vec![0xFF, 0xD8, 0xFF, 0xE1];
+    file.extend_from_slice(&((seg.len() + 2) as u16).to_be_bytes());
+    file.append(&mut seg);
+    file.extend_from_slice(&jpeg[2..]);
+    let path = join(dir, "IMG_0001.jpg");
+    std::fs::write(&path, file).unwrap();
+    path
+}
+
+#[test]
+fn rotated_jpegs_open_and_place_upright() {
+    let dir = tmp("orientation");
+    let path = rotated_jpeg(&dir);
+    let mut s = Session::new();
+    s.execute("file.openAs", json!({"path": path, "as": "jpg"})).unwrap();
+    assert_eq!((doc(&s).size.width, doc(&s).size.height), (20, 40));
+    assert!(composite(&s, 10, 5)[0] > 0.8 && composite(&s, 10, 35)[2] > 0.8, "red on top, blue below");
+    // Placed as a smart object: upright too, and it renders upright from its embedded bytes.
+    let mut s = session(100, 100, 8);
+    let r = s.execute("file.placeEmbedded", json!({"path": path})).unwrap();
+    assert_eq!(r["bounds"], json!([40.0, 30.0, 60.0, 70.0]));
+    assert!(composite(&s, 50, 35)[0] > 0.8 && composite(&s, 50, 65)[2] > 0.8);
+}
+
 #[test]
 fn file_info_round_trips_through_xmp_and_psd() {
     let mut s = session(8, 8, 8);
@@ -373,4 +404,80 @@ fn import_pdf_opens_the_chosen_page_at_a_resolution() {
     assert!(px[2] > 0.9 && px[0] < 0.1, "page 2 is blue: {px:?}");
     assert!(s.execute("file.importPdf", json!({"path": path, "page": 5})).is_err());
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn only_layered_files_save_in_place() {
+    for path in ["a.psd", "dir/a.PSB", r"C:\w\a.pcraft", "my.dir/a.psd"] {
+        assert!(saves_in_place(path), "{path}");
+    }
+    // Flat formats, no extension, a dotted folder with an extensionless file, a dot file.
+    for path in ["a.png", "a.jpg", "a", "my.psd/a", ".psd", "a.", ""] {
+        assert!(!saves_in_place(path), "{path}");
+    }
+    assert_eq!(extension("dir/Photo.JPEG").as_deref(), Some("jpeg"));
+    assert_eq!(extension("my.dir/name"), None);
+}
+
+#[test]
+fn templates_open_untitled_without_their_path() {
+    assert!(is_template("dir/card.PSDT") && !is_template("card.psd") && !is_template("psdt"));
+    let dir = tmp("template");
+    let path = format!("{dir}/card.psdt");
+    let mut s = session(8, 8, 8);
+    std::fs::write(&path, encode(doc(&s), "x.psd", None).unwrap().0).unwrap();
+    s.execute("file.openAs", json!({"path": path})).unwrap();
+    s.execute("file.openAs", json!({"path": path, "as": "psd"})).unwrap();
+    let opened: Vec<_> = s.documents()[1..].iter().map(|d| (d.doc.name.as_str(), d.path.as_deref())).collect();
+    assert_eq!(opened, [("Untitled-1", None), ("Untitled-2", None)]);
+}
+
+/// Two inputs with one output name: the first result is kept and the second is an error, never
+/// a silent overwrite listed as written (#422).
+#[test]
+fn batch_reports_inputs_that_share_an_output_name() {
+    let dir = tmp("collide");
+    let input = join(&dir, "in");
+    std::fs::create_dir_all(&input).unwrap();
+    png(&input, "a.png", 8, 8, "#ff0000");
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 8, "height": 8, "background": "#0000ff"})).unwrap();
+    save_doc(doc(&s), &join(&input, "a.jpg"), None).unwrap();
+    png(&input, "B.png", 8, 8, "#00ff00");
+    png(&input, "b.tif", 8, 8, "#00ff00");
+    for (cmd, extra) in [
+        ("file.automate.batch", json!({"steps": [], "format": "jpg"})),
+        ("file.scripts.imageProcessor", json!({})),
+        ("file.automate.lensCorrection", json!({"format": "jpg"})),
+    ] {
+        let out = join(&dir, cmd);
+        let mut p = extra;
+        p["input"] = json!(input);
+        p["output"] = json!(out);
+        let r = s.execute(cmd, p).unwrap();
+        let files = r["files"].as_array().unwrap();
+        let errors = r["errors"].as_array().unwrap();
+        // `a.*` and `B.png`/`b.tif` (names that differ only in case) each collide once.
+        assert_eq!((files.len(), errors.len()), (2, 2), "{cmd}: {r}");
+        assert!(errors.iter().all(|e| e["error"].as_str().unwrap().contains("not written")), "{r}");
+        let mut written: Vec<_> = files.iter().map(|f| f.as_str().unwrap().to_lowercase()).collect();
+        written.dedup();
+        assert_eq!(written.len(), 2, "each listed file is distinct: {r}");
+    }
+    // Keeping each file's format, nothing collides.
+    let out = join(&dir, "same");
+    let r = s.execute("file.automate.batch", json!({"steps": [], "input": input, "output": out})).unwrap();
+    assert_eq!((r["files"].as_array().unwrap().len(), r["errors"].as_array().unwrap().len()), (4, 0), "{r}");
+    // A droplet over two folders holding the same name.
+    let other = join(&dir, "other");
+    std::fs::create_dir_all(&other).unwrap();
+    png(&other, "a.png", 8, 8, "#ffffff");
+    let droplet = join(&dir, "d.pcdroplet");
+    std::fs::write(&droplet, json!({"photosuiteDroplet": 1, "name": "d", "action": {"steps": []}, "options": {"format": "png"}}).to_string()).unwrap();
+    let out = join(&dir, "droplet");
+    let r = s.execute("file.automate.runDroplet", json!({"droplet": droplet, "input": [join(&input, "a.png"), other], "output": out})).unwrap();
+    assert_eq!((r["files"].as_array().unwrap().len(), r["errors"].as_array().unwrap().len()), (1, 1), "{r}");
+    let kept = photosuite_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
+    let px = photosuite_compose::render(&kept, Rect::new(1, 1, 2, 2)).px[0];
+    assert!(px[0] > 0.99 && px[1] < 0.01, "the first input's result is kept: {px:?}");
 }

@@ -742,11 +742,11 @@ pub fn form_body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
                 Value::Number(n) => {
                     ui.label(label_of(&k));
                     if let Some(mut i) = n.as_i64() {
-                        ui.add(egui::DragValue::new(&mut i));
+                        ui.add(egui::DragValue::new(&mut i).custom_parser(crate::widgets::parse_num));
                         json!(i)
                     } else {
                         let mut x = n.as_f64().unwrap_or(0.0);
-                        ui.add(egui::DragValue::new(&mut x).speed(0.5));
+                        ui.add(egui::DragValue::new(&mut x).speed(0.5).custom_parser(crate::widgets::parse_num));
                         json!(x)
                     }
                 }
@@ -802,11 +802,12 @@ fn front(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<Val
         }
         "file.saveACopy" => Some(save_a_copy(app)),
         "file.placeEmbedded" | "file.placeLinked" => {
-            let (name, bytes) = app.services.pick_open.as_mut().and_then(|f| f())?;
+            let (name, bytes) = match app.pick_file_bytes()? {
+                Ok(picked) => picked,
+                Err(e) => return Some(Err(e)),
+            };
             let linked = (id == "file.placeLinked").then(|| name.clone());
-            let r = photosuite_engine::file_cmds::place_bytes(&mut app.session, &name, bytes, linked, &json!({})).map_err(|e| e.to_string());
-            app.sync_views();
-            Some(r)
+            Some(app.place_bytes(&name, bytes, linked))
         }
         "file.fileInfo" => {
             let info = app.session.execute("file.fileInfo", json!({})).ok()?;
@@ -897,12 +898,10 @@ fn front(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<Val
             json!({"format": ["jpg", "png", "psd", "tiff"]}),
         ),
         "file.automate.batch" => {
-            let a = &app.ui.actions;
-            let action = a.selected.and_then(|i| a.list.get(i)).or(a.list.first());
-            let Some(action) = action else {
+            let Some(action) = crate::actions::selected_action(app) else {
                 return Some(Err("record an action in the Actions panel first".into()));
             };
-            let steps: Vec<Value> = action.steps.iter().map(|(id, p)| json!([id, p])).collect();
+            let steps = crate::actions::action_steps(action);
             let name = action.name.clone();
             dialog(
                 app,

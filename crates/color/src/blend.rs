@@ -164,6 +164,8 @@ pub fn blend_channel(mode: BlendMode, cb: f32, cs: f32) -> f32 {
         BlendMode::Overlay => hard_light(cs, cb),
         BlendMode::SoftLight => soft_light_ps(cb, cs),
         BlendMode::HardLight => hard_light(cb, cs),
+        BlendMode::VividLight if cs <= 0.0 => 0.0,
+        BlendMode::VividLight if cs >= 1.0 => 1.0,
         BlendMode::VividLight => {
             if cs <= 0.5 {
                 color_burn(cb, 2.0 * cs)
@@ -180,7 +182,7 @@ pub fn blend_channel(mode: BlendMode, cb: f32, cs: f32) -> f32 {
             }
         }
         BlendMode::HardMix => {
-            if cb + cs >= 1.0 - 1e-6 {
+            if vivid_light_hard_mix(cb, cs) >= 0.5 - 1e-6 {
                 1.0
             } else {
                 0.0
@@ -198,6 +200,26 @@ pub fn blend_channel(mode: BlendMode, cb: f32, cs: f32) -> f32 {
         }
         // Non-separable modes are handled by `blend_rgb`; fall back to source.
         BlendMode::DarkerColor | BlendMode::LighterColor | BlendMode::Hue | BlendMode::Saturation | BlendMode::Color | BlendMode::Luminosity => cs,
+    }
+}
+
+#[inline]
+fn vivid_light_hard_mix(cb: f32, cs: f32) -> f32 {
+    const EDGE: f32 = 1e-4;
+    if cs <= 0.5 {
+        if cb >= 1.0 - EDGE {
+            1.0
+        } else if cs <= 0.0 {
+            0.0
+        } else {
+            1.0 - ((1.0 - cb) / (2.0 * cs)).min(1.0)
+        }
+    } else if cb <= EDGE {
+        0.0
+    } else if cs >= 1.0 {
+        1.0
+    } else {
+        (cb / (2.0 * (1.0 - cs))).min(1.0)
     }
 }
 
@@ -407,6 +429,34 @@ mod tests {
         assert!(close(blend_channel(BlendMode::PinLight, 0.1, 0.9), 0.8));
         assert!(close(blend_channel(BlendMode::HardMix, 0.6, 0.4), 1.0));
         assert!(close(blend_channel(BlendMode::HardMix, 0.6, 0.3), 0.0));
+    }
+
+    #[test]
+    fn vivid_light_source_extremes_and_interior_values() {
+        for cb in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            assert_eq!(blend_channel(BlendMode::VividLight, cb, 0.0), 0.0);
+            assert_eq!(blend_channel(BlendMode::VividLight, cb, 1.0), 1.0);
+        }
+        assert!(close(blend_channel(BlendMode::VividLight, 0.75, 0.25), 0.5));
+        assert!(close(blend_channel(BlendMode::VividLight, 0.25, 0.75), 0.5));
+    }
+
+    #[test]
+    fn hard_mix_matches_photoshop_extremes_and_interior_values() {
+        assert_eq!(blend_channel(BlendMode::HardMix, 1.0, 0.0), 1.0);
+        assert_eq!(blend_channel(BlendMode::HardMix, 0.0, 1.0), 0.0);
+        assert_eq!(blend_channel(BlendMode::HardMix, 1.0 - 1e-5, 0.0), 1.0);
+        assert_eq!(blend_channel(BlendMode::HardMix, 1e-5, 1.0), 0.0);
+        assert_eq!(blend_channel(BlendMode::HardMix, 0.6, 0.4), 1.0);
+        assert_eq!(blend_channel(BlendMode::HardMix, 0.6, 0.3), 0.0);
+    }
+
+    #[test]
+    fn vivid_light_and_hard_mix_composite_extremes() {
+        assert_eq!(composite(BlendMode::VividLight, [1.0, 1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], 1.0), [0.0, 0.0, 0.0, 1.0]);
+        assert_eq!(composite(BlendMode::VividLight, [0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0], 1.0), [1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(composite(BlendMode::HardMix, [0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0], 1.0), [0.0, 0.0, 0.0, 1.0]);
+        assert_eq!(composite(BlendMode::HardMix, [1.0, 1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], 1.0), [1.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]

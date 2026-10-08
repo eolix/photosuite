@@ -1,6 +1,6 @@
 use photosuite_color::{Color, PixelFormat, SampleType};
 use photosuite_doc::TextLayer;
-use photosuite_doc::text::{CharStyle, FontFeature, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
+use photosuite_doc::text::{CharStyle, FontFeature, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
 use photosuite_geom::Affine;
 
 use crate::{TextEngine, fonts};
@@ -305,6 +305,43 @@ fn empty_text_and_empty_lines() {
     assert!((l.lines[2].baseline - 2.0 * 14.4).abs() < 1e-3);
     let (_, r) = e.render(&point("", 12.0), 72.0, PixelFormat::RGBA8);
     assert_eq!(r.rect.width(), 0);
+}
+
+/// U+0003 is a forced line break inside a paragraph (as PSD type stores Shift+Return): a new
+/// line with the paragraph's leading and no paragraph spacing, never a missing-glyph box.
+#[test]
+fn forced_line_break_starts_a_line_in_the_same_paragraph() {
+    let mut e = TextEngine::new();
+    let text = "one\u{3}two";
+    let spaced = ParagraphStyle { space_before_pt: 5.0, space_after_pt: 5.0, ..Default::default() };
+    let l = e.layout(&with_para(point(text, 10.0), spaced.clone()), 72.0);
+    assert_eq!(l.lines.len(), 2, "{:?}", l.lines);
+    assert_eq!(text[l.lines[0].range.clone()].trim_end_matches('\u{3}'), "one");
+    assert_eq!(&text[l.lines[1].range.clone()], "two");
+    assert_eq!((l.lines[0].paragraph, l.lines[1].paragraph), (0, 0));
+    assert!((l.lines[1].baseline - 12.0).abs() < 1e-3, "auto leading, no paragraph spacing: {}", l.lines[1].baseline);
+    assert!(l.glyphs.iter().all(|g| g.id != 0), "no .notdef for the break");
+    // A paragraph break in the same place adds the spacing.
+    let p = e.layout(&with_para(point("one\ntwo", 10.0), spaced), 72.0);
+    assert!((p.lines[1].baseline - 22.0).abs() < 1e-3, "{}", p.lines[1].baseline);
+    // Centred lines are centred on their own, and box text breaks there too.
+    let c = e.layout(&with_para(point("a\u{3}wide line", 20.0), ParagraphStyle { align: TextAlign::Center, ..Default::default() }), 72.0);
+    assert_eq!(c.lines.len(), 2);
+    assert!((c.lines[0].x0 + c.lines[0].x1).abs() < 0.01 && (c.lines[1].x0 + c.lines[1].x1).abs() < 0.01, "{:?}", c.lines);
+    let mut b = point("short\u{3}next", 12.0);
+    b.shape = TextShape::Box { x: 0.0, y: 0.0, width: 500.0, height: 500.0 };
+    assert_eq!(e.layout(&b, 72.0).lines.len(), 2);
+    // Rendered at every depth: two rows of ink, and nothing after the first line's text.
+    for fmt in [PixelFormat::RGBA8, PixelFormat::RGBA16, PixelFormat::RGBA32F] {
+        let (l, r) = e.render(&TextLayer { transform: Affine::translate(0.0, 40.0), ..point(text, 20.0) }, 72.0, fmt);
+        let row = |i: usize| {
+            let ln = &l.lines[i];
+            photosuite_geom::Rect::new(-2, (ln.baseline - ln.ascent + 40.0) as i32, 200, (ln.baseline + 40.0) as i32)
+        };
+        assert!(alpha_sum(&r.surface, row(0)) > 1.0 && alpha_sum(&r.surface, row(1)) > 1.0, "{fmt:?}");
+        let one_end = l.lines[0].x1.ceil() as i32 + 2;
+        assert!(alpha_sum(&r.surface, photosuite_geom::Rect::new(one_end, row(0).y0, 200, row(0).y1)) < 1e-3, "{fmt:?}: ink after the first line's text");
+    }
 }
 
 #[test]
@@ -707,4 +744,103 @@ fn kerning_modes_split_pairs() {
     assert!((adv(&mixed, 0) - adv(&metric, 0)).abs() < 1e-3, "AV before stays kerned");
     assert!((adv(&mixed, 1) - adv(&plain, 1)).abs() < 1e-3, "VA into the manual character");
     assert!((adv(&mixed, 2) - adv(&plain, 2)).abs() < 1e-3, "AV out of it");
+}
+
+#[test]
+fn japanese_dictionary_word_boundaries() {
+    // Use only the existing bundled Latin fonts: segmentation must not require a CJK font.
+    let text = "私は学生です";
+    let mut fonts = fonts::FontDb::new();
+    let mut context = parley::LayoutContext::<[u8; 4]>::new();
+    let mut layout = parley::Layout::new();
+    let mut builder = context.ranged_builder(&mut fonts.fcx, text, 1.0, false);
+    builder.push_default(parley::StyleProperty::FontFamily(parley::FontFamily::named("Inter")));
+    // Suppress CJK line-break opportunities so these flags expose word boundaries alone.
+    builder.push_default(parley::StyleProperty::WordBreak(parley::WordBreak::KeepAll));
+    builder.build_into(&mut layout, text);
+    layout.break_all_lines(None);
+    let mut boundaries = Vec::new();
+    for line in layout.lines() {
+        for run in line.runs() {
+            for cluster in run.clusters() {
+                if cluster.is_word_boundary() {
+                    boundaries.push(cluster.text_range().start);
+                }
+            }
+        }
+    }
+    assert_eq!(boundaries, vec![0, 3, 6, 12]);
+}
+
+#[test]
+fn japanese_box_text_preserves_wrap_boundaries() {
+    let mut engine = TextEngine::new();
+    let mut text = point("日本語の文章を折り返します。", 12.0);
+    text.shape = TextShape::Box { x: 0.0, y: 0.0, width: 40.0, height: 1000.0 };
+    let layout = engine.layout(&text, 72.0);
+    assert!(layout.lines.len() > 1);
+    let mut end = 0;
+    for line in &layout.lines {
+        assert_eq!(line.range.start, end);
+        let content = text.text.get(line.range.clone()).expect("UTF-8 line boundaries");
+        assert!(!content.starts_with('。'), "closing punctuation must stay with its preceding text");
+        end = line.range.end;
+    }
+    assert_eq!(end, text.text.len());
+}
+
+#[test]
+fn word_and_line_navigation() {
+    use crate::layout::{byte_index, char_index, hit_char, line_edge, line_index, line_step, word_boundary};
+    assert_eq!(word_boundary("hello big world", 0, true), 5);
+    assert_eq!(word_boundary("hello big world", 7, false), 6);
+    assert_eq!(word_boundary("hello big world", 15, false), 10);
+    assert_eq!(word_boundary("hello", 0, false), 0);
+    assert_eq!(word_boundary("hello", 5, true), 5);
+    assert_eq!(word_boundary("", 4, true), 0);
+    assert_eq!(word_boundary("ab", 100, true), 2);
+    assert_eq!(word_boundary("ab, cd", 0, true), 2);
+    assert_eq!(word_boundary("ab, cd", 2, true), 6);
+    assert_eq!(word_boundary("Größe", 0, true), 5);
+
+    let mut e = TextEngine::new();
+    let text = "AäB\ncd";
+    for vertical in [false, true] {
+        let mut t = point(text, 20.0);
+        if vertical {
+            t.orientation = Orientation::Vertical;
+        }
+        let l = e.layout(&t, 72.0);
+        let n = text.chars().count();
+        for i in 0..=n {
+            let b = byte_index(text, i);
+            let [(x0, y0), (x1, y1)] = l.caret_segment(b);
+            let (idx, line) = hit_char(&l, text, (x0 + x1) / 2.0, (y0 + y1) / 2.0);
+            assert_eq!(idx, i, "vertical {vertical} index {i}");
+            assert_eq!(line, line_index(&l, b), "vertical {vertical} index {i}");
+        }
+        assert!(l.lines.len() >= 2, "vertical {vertical}");
+        let end0 = char_index(text, l.lines[0].range.end);
+        let start1 = char_index(text, l.lines[1].range.start);
+        assert_eq!(line_edge(&l, text, 1, true), end0, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, 1, false), 0, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, start1, false), start1, "vertical {vertical}");
+        assert_eq!(line_edge(&l, text, start1, true), n, "vertical {vertical}");
+        let x = l.caret(byte_index(text, 0)).0;
+        let next = line_step(&l, text, 0, x, 1);
+        assert!((start1..=n).contains(&next), "vertical {vertical} line_step -> {next}");
+        assert_eq!(line_step(&l, text, 0, x, -1), 0, "vertical {vertical}");
+        assert_eq!(line_step(&l, text, n, x, 1), n, "vertical {vertical}");
+    }
+
+    // A remembered column stays on the short line's start; the caret's own x falls off its end.
+    let text = "WWWWWW\nI";
+    let l = e.layout(&point(text, 30.0), 72.0);
+    let end0 = line_edge(&l, text, 0, true);
+    // end0 is the first line's end, which is not the second line. Step from there.
+    let kept = line_step(&l, text, end0, l.caret(0).0, 1);
+    let jumped = line_step(&l, text, end0, l.caret(byte_index(text, end0)).0, 1);
+    assert_eq!(kept, char_index(text, l.lines[1].range.start), "kept column");
+    assert_eq!(jumped, char_index(text, l.lines[1].range.end), "own column");
+    assert!(jumped > kept);
 }

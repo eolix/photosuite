@@ -65,12 +65,12 @@ pub fn unchanged(doc: &Document) -> bool {
 
 /// The resource to write: `None` keeps the preserved one, `Some(None)` drops it, `Some(Some)` is
 /// a fresh resource. `layer_ids` maps document layers to the PSD layer ids being written.
-pub fn export_resource(doc: &Document, layer_ids: &HashMap<LayerId, u32>) -> Option<Option<Vec<u8>>> {
+pub fn export_resource(doc: &Document, layer_ids: &HashMap<LayerId, u32>) -> (Option<Option<Vec<u8>>>, Option<String>) {
     if unchanged(doc) {
-        return None;
+        return (None, None);
     }
     if doc.slices.is_empty() {
-        return Some(None);
+        return (Some(None), None);
     }
     let mut records: Vec<SliceRecord> = doc
         .slices
@@ -104,12 +104,34 @@ pub fn export_resource(doc: &Document, layer_ids: &HashMap<LayerId, u32>) -> Opt
         })
         .collect();
     let taken: Vec<Rect> = doc.slices.list.iter().map(|s| s.rect).collect();
-    for (id, r) in (doc.slices.next_id()..).zip(slices::auto_slices(doc.bounds(), &taken)) {
+    let mut used: std::collections::HashSet<u32> = doc.slices.list.iter().map(|s| s.id).collect();
+    // Keep the usual above-max numbering when possible; if stored ids include u32::MAX, use the
+    // first available id instead of wrapping or colliding with a reserved one.
+    let mut next_id = doc.slices.next_id().or(Some(1));
+    let mut omitted_auto_slices = false;
+    for r in slices::auto_slices(doc.bounds(), &taken) {
+        let Some(mut id) = next_id else {
+            omitted_auto_slices = true;
+            break;
+        };
+        while used.contains(&id) {
+            let Some(next) = id.checked_add(1) else {
+                omitted_auto_slices = true;
+                break;
+            };
+            id = next;
+        }
+        if omitted_auto_slices {
+            break;
+        }
+        used.insert(id);
+        next_id = id.checked_add(1);
         records.push(SliceRecord { id, origin: 0, kind: 1, rect: [r.x0, r.y0, r.x1, r.y1], ..Default::default() });
     }
     let group_name = if doc.slices.group_name.is_empty() { slices::base_name(doc) } else { doc.slices.group_name.clone() };
     let res = SlicesResource { version: 6, bounds: [0, 0, doc.size.height as i32, doc.size.width as i32], group_name, slices: records };
-    Some(Some(res.to_bytes()))
+    let warning = omitted_auto_slices.then(|| "auto slices omitted because the slice id space is exhausted".to_string());
+    (Some(Some(res.to_bytes())), warning)
 }
 
 #[cfg(test)]
@@ -142,7 +164,9 @@ mod tests {
             ..Default::default()
         });
         let ids: HashMap<LayerId, u32> = [(lid, 5)].into_iter().collect();
-        let data = export_resource(&d, &ids).unwrap().unwrap();
+        let (data, warning) = export_resource(&d, &ids);
+        assert!(warning.is_none());
+        let data = data.unwrap().unwrap();
         // Read back into a copy of the document without slices.
         let mut back = d.clone();
         back.slices = Slices::default();
@@ -150,6 +174,20 @@ mod tests {
         import(&mut back);
         assert_eq!(back.slices.list, d.slices.list);
         assert!(unchanged(&back));
-        assert!(export_resource(&back, &ids).is_none(), "unchanged → keep the raw resource");
+        assert_eq!(export_resource(&back, &ids), (None, None), "unchanged → keep the raw resource");
+    }
+
+    #[test]
+    fn auto_slice_ids_do_not_collide_with_maximal_stored_id() {
+        let mut d = Document::new("site.psd", Size::new(120, 90), ColorMode::Rgb, SampleType::U8);
+        d.slices.list.push(Slice { id: u32::MAX, rect: Rect::new(10, 10, 20, 20), ..Default::default() });
+        let (resource, warning) = export_resource(&d, &HashMap::new());
+        assert!(warning.is_none());
+        let data = resource.flatten().expect("a changed document writes a resource");
+        let decoded = SlicesResource::from_bytes(&data).expect("resource is valid");
+        let ids: Vec<u32> = decoded.slices.iter().map(|s| s.id).collect();
+        assert!(ids.contains(&u32::MAX));
+        assert!(ids.contains(&1));
+        assert_eq!(ids.iter().collect::<std::collections::HashSet<_>>().len(), ids.len());
     }
 }

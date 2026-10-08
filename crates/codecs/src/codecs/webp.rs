@@ -7,7 +7,7 @@ use std::io::Cursor;
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits};
 
 const F: Format = Format::WebP;
@@ -31,6 +31,9 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     let mut img = Image::from_u8(w, h, layout, buf)?;
     img.icc = icc;
     img.meta = Metadata { exif, xmp, ..Default::default() };
+    if dec.is_animated() && dec.num_frames() > 1 {
+        img.warnings.push(DecodeWarning::MoreFrames { total: Some(dec.num_frames()) });
+    }
     Ok(img)
 }
 
@@ -55,10 +58,11 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     }
     if opts.embed_metadata {
         if let Some(exif) = &img.meta.exif {
-            enc.set_exif_metadata(exif.clone());
+            // The pixels are written as they are shown: never let a viewer rotate them again.
+            enc.set_exif_metadata(crate::orientation::upright_exif(exif).into_owned());
         }
         if let Some(xmp) = &img.meta.xmp {
-            enc.set_xmp_metadata(xmp.as_bytes().to_vec());
+            enc.set_xmp_metadata(crate::orientation::upright_xmp(xmp).as_bytes().to_vec());
         }
     }
     enc.encode(img.data(), img.width(), img.height(), ct).map_err(|e| CodecError::encode(F, e))?;

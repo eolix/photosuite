@@ -520,11 +520,14 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         let mut ru = ui.new_child(egui::UiBuilder::new().max_rect(inner));
         ru.spacing_mut().item_spacing.y = 6.0;
         ru.horizontal(|ui| {
-            if widgets::primary_button(ui, tl!("OK"), 120.0).clicked() {
-                action = Some("ok");
-            }
-            if widgets::secondary_button(ui, tl!("Cancel"), 120.0).clicked() {
-                action = Some("cancel");
+            if let Some(role) = widgets::dialog_buttons(
+                ui,
+                &[
+                    widgets::DialogButton::new(widgets::ButtonRole::Default, tl!("OK"), 120.0),
+                    widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 120.0),
+                ],
+            ) {
+                action = Some(if role == widgets::ButtonRole::Default { "ok" } else { "cancel" });
             }
         });
         ru.add_space(4.0);

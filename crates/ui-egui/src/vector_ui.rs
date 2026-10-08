@@ -182,6 +182,37 @@ pub fn pen_commit(app: &mut PhotosuiteApp, closed: bool) {
     }
 }
 
+/// The path that path commands act on without a name: the one selected in the Paths panel, else
+/// the work path, else the selected layer's shape path or vector mask; `None` when there's none.
+pub fn active_path_name(app: &PhotosuiteApp) -> Option<String> {
+    let st = app.session.active()?;
+    let rows = path_rows(&st.doc, st.active_layer);
+    let key = |r: &PathEntry| match r.kind {
+        PathRow::Work => "work".to_string(),
+        PathRow::Layer => "layer".to_string(),
+        PathRow::Saved => r.name.clone(),
+    };
+    let selected = app.ui.selected_path.as_deref().filter(|s| rows.iter().any(|r| key(r) == *s)).map(str::to_string);
+    selected.or_else(|| rows.iter().find(|r| r.kind == PathRow::Work).map(key)).or_else(|| rows.iter().find(|r| r.kind == PathRow::Layer).map(key))
+}
+
+/// ⌘↩ / Ctrl+Enter (#306): load a path as a selection, like Photoshop with a Pen or Path
+/// Selection tool or a path selected in the Paths panel. A path being drawn with the Pen is
+/// finished first and loads; otherwise [`active_path_name`]. `params` may set feather, mode…
+pub fn path_to_selection(app: &mut PhotosuiteApp, params: Value) -> Result<Value, String> {
+    if app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2) {
+        // The finished path becomes the work path, or a shape layer's path or a vector mask.
+        let on_layer = app.ui.tool_options.vector_mode == "shape" || targeted_vector_mask(app).is_some();
+        pen_commit(app, false);
+        app.ui.selected_path = Some(if on_layer { "layer" } else { "work" }.into());
+    }
+    let name = active_path_name(app)
+        .ok_or_else(|| tl!("No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.").to_string())?;
+    let mut p = params.as_object().cloned().unwrap_or_default();
+    p.insert("name".into(), json!(name));
+    app.run("path.toSelection", Value::Object(p))
+}
+
 // ---------------------------------------------------------------------------------------------
 // Path Selection
 
@@ -464,7 +495,7 @@ fn swatch(ui: &mut egui::Ui, fill: Option<&photosuite_doc::Fill>, tip: &str) -> 
     ui.painter().rect_stroke(r, 2.0, Stroke::new(1.0, t.field_border), egui::StrokeKind::Outside);
     let resp = resp.on_hover_text(tip);
     let mut out = None;
-    egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+    crate::widgets::swatch_popup(&resp).show(|ui| {
         let mut c = current.unwrap_or(Color32::BLACK);
         if egui::color_picker::color_picker_color32(ui, &mut c, egui::color_picker::Alpha::Opaque) {
             out = Some(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
@@ -648,6 +679,47 @@ pub fn paths_footer(ctx: &egui::Context) -> Option<Rect> {
     ctx.data(|d| d.get_temp(footer_id()))
 }
 
+/// Commands offered by a Paths row's context menu. The row's path is passed explicitly so a
+/// right-click acts on that row even when another path is selected in the panel.
+fn path_context_actions(entry: &PathEntry, doc: &Document) -> Vec<(&'static str, &'static str, Value)> {
+    let key = match entry.kind {
+        PathRow::Work => "work".to_string(),
+        PathRow::Layer => "layer".to_string(),
+        PathRow::Saved => entry.name.clone(),
+    };
+    let mut actions = vec![
+        ("Make Selection", "path.toSelection", json!({"name": key})),
+        ("Fill Path", "path.fill", json!({"name": key})),
+        ("Stroke Path", "path.stroke", json!({"name": key, "tool": "brush"})),
+    ];
+    if entry.kind == PathRow::Work {
+        let mut n = doc.paths.len().saturating_add(1);
+        while doc.paths.iter().any(|p| p.name == format!("Path {n}")) {
+            n = n.saturating_add(1);
+            if n == usize::MAX {
+                break;
+            }
+        }
+        actions.push(("Save Path", "path.rename", json!({"name": "work", "to": format!("Path {n}")})));
+    } else {
+        let mut n = 1usize;
+        while doc.paths.iter().any(|p| p.name == format!("{} copy {n}", entry.name)) {
+            n = n.saturating_add(1);
+            if n == usize::MAX {
+                break;
+            }
+        }
+        let copy_name = format!("{} copy {n}", entry.name);
+        actions.push(("Duplicate Path", "path.set", json!({"name": copy_name, "path": photosuite_engine::vector_cmds::path_json(&entry.path)})));
+    }
+    if entry.kind != PathRow::Layer {
+        actions.push(("Delete Path", "path.delete", json!({"name": key})));
+    } else if entry.name.ends_with(" Vector Mask") {
+        actions.push(("Delete Vector Mask", "layer.vectorMask.delete", json!({})));
+    }
+    actions
+}
+
 pub fn paths_panel(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
@@ -702,6 +774,18 @@ pub fn paths_panel(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
                     let n = doc.paths.len() + 1;
                     action = Some(("path.rename", json!({"name": "work", "to": format!("Path {n}")})));
                 }
+                resp.context_menu(|ui| {
+                    ui.set_min_width(190.0);
+                    let entry = PathEntry { name: name.clone(), path: path.clone(), kind: *kind };
+                    let can_paint = app.session.active().and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id))).is_some_and(|l| l.surface().is_some());
+                    for (label, cmd, params) in path_context_actions(&entry, &doc) {
+                        let enabled = !matches!(cmd, "path.fill" | "path.stroke") || can_paint;
+                        if ui.add_enabled(enabled, egui::Button::new(tl!(label))).clicked() {
+                            action = Some((cmd, params));
+                            ui.close();
+                        }
+                    }
+                });
                 ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.separator));
             }
         },
@@ -760,6 +844,49 @@ mod tests {
     }
 
     #[test]
+    fn paths_context_menu_uses_the_clicked_row_and_dispatches_commands() {
+        let mut app = app();
+        let path = json!({"subpaths": [{"closed": true, "knots": [
+            {"anchor": [10, 10], "in": [10, 10], "out": [10, 10]},
+            {"anchor": [80, 10], "in": [80, 10], "out": [80, 10]},
+            {"anchor": [80, 80], "in": [80, 80], "out": [80, 80]}
+        ]}]});
+        app.run("path.set", json!({"name": "First", "path": path})).unwrap();
+        app.run("path.set", json!({"name": "Second", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let first = path_rows(doc, None).into_iter().find(|r| r.name == "First").unwrap();
+        let entries = path_context_actions(&first, doc);
+        assert_eq!(entries[0].1, "path.toSelection");
+        assert_eq!(entries[0].2["name"], "First");
+        assert!(entries.iter().all(|(_, id, _)| photosuite_engine::commands::find(id).is_some()));
+        let (_, id, params) = entries.into_iter().find(|(_, id, _)| *id == "path.toSelection").unwrap();
+        app.run(id, params).unwrap();
+        assert!(app.session.active().unwrap().doc.selection.is_some());
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("path.toSelection"));
+
+        app.run("path.set", json!({"name": "First copy 1", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let first = path_rows(doc, None).into_iter().find(|r| r.name == "First").unwrap();
+        let (_, _, duplicate) = path_context_actions(&first, doc).into_iter().find(|(_, id, _)| *id == "path.set").unwrap();
+        assert_eq!(duplicate["name"], "First copy 2", "duplicate must not overwrite an existing path");
+    }
+
+    #[test]
+    fn work_path_context_save_and_layer_path_deletion_rules() {
+        let mut app = app();
+        let path = json!({"subpaths": []});
+        app.run("path.set", json!({"name": "work", "path": path})).unwrap();
+        let doc = &app.session.active().unwrap().doc;
+        let work = path_rows(doc, None).into_iter().find(|r| r.kind == PathRow::Work).unwrap();
+        let entries = path_context_actions(&work, doc);
+        assert!(entries.iter().any(|(_, id, _)| *id == "path.rename"));
+        assert!(!entries.iter().any(|(_, id, _)| *id == "path.set"));
+        let layer = PathEntry { kind: PathRow::Layer, ..work };
+        let entries = path_context_actions(&layer, doc);
+        assert!(!entries.iter().any(|(_, id, _)| *id == "path.delete"));
+    }
+
+    #[test]
     fn shape_drag_creates_layers_with_modifiers() {
         let mut app = app();
         finish_shape(&mut app, Tool::Rectangle, [10.0, 10.0], [60.0, 30.0], egui::Modifiers::SHIFT);
@@ -815,4 +942,69 @@ mod tests {
         let wp = app.session.active().unwrap().doc.work_path.clone().unwrap();
         assert_eq!((wp.subpaths[0].knots[0].anchor.x, wp.subpaths[0].knots[0].anchor.y), (30.0, 25.0));
     }
+
+    /// #534: dragging in a shape's fill picker, opened from the Properties panel at the right edge
+    /// of the window, keeps the picker in place (it flipped from side to side as its width
+    /// followed the colour readouts, which moved it under the pointer).
+    #[test]
+    fn shape_colour_picker_stays_put_while_dragging() {
+        use egui::{PointerButton, vec2};
+        use egui_kittest::kittest::Queryable;
+        let mut app = app();
+        let id = app.run("shape.create", json!({"kind": "rect", "rect": [10, 10, 100, 60], "fill": "#3070c0"})).unwrap()["layer"].as_u64().unwrap();
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(1440.0, 900.0)).build_ui_state(
+            move |ui, app: &mut PhotosuiteApp| {
+                // Fonts set up after the first frame only apply from the next one.
+                if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    return;
+                }
+                egui::Panel::right("properties").resizable(false).exact_size(285.0).show(ui, |ui| shape_properties(app, ui, photosuite_doc::LayerId(id)));
+            },
+            app,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::Midnight);
+        h.run_steps(4);
+        let label = h.query_all(egui_kittest::kittest::by().label("Fill").include_labels()).next().expect("the Fill label").rect();
+        // The swatch is right of its label.
+        let swatch = egui::pos2(label.right() + 17.0, label.center().y);
+        let press = |h: &mut egui_kittest::Harness<'_, PhotosuiteApp>, pos, pressed| {
+            h.event(egui::Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+            h.step();
+        };
+        h.hover_at(swatch);
+        h.step();
+        press(&mut h, swatch, true);
+        press(&mut h, swatch, false);
+        h.run_steps(3);
+        let popup = |h: &egui_kittest::Harness<'_, PhotosuiteApp>| {
+            h.ctx.memory(|m| m.areas().visible_layer_ids().into_iter().filter(|l| l.order == egui::Order::Foreground).find_map(|l| m.area_rect(l.id)))
+        };
+        let opened = popup(&h).expect("the picker opened");
+        let fill = |h: &egui_kittest::Harness<'_, PhotosuiteApp>| {
+            let st = h.state().session.active().unwrap();
+            match &st.doc.layer(photosuite_doc::LayerId(id)).unwrap().content {
+                LayerContent::Shape(sh) => sh.fill.clone(),
+                _ => None,
+            }
+        };
+        let before = fill(&h);
+        // Drag across the picker's colour area.
+        let start = opened.min + vec2(60.0, opened.height() * 0.5);
+        h.hover_at(start);
+        h.step();
+        press(&mut h, start, true);
+        for i in 1..=10 {
+            h.event(egui::Event::PointerMoved(start + vec2(i as f32 * 5.0, i as f32)));
+            h.step();
+            let r = popup(&h).expect("the picker stays open");
+            assert_eq!(r.left_top(), opened.left_top(), "step {i}: the picker moved from {opened:?} to {r:?}");
+            assert!(h.ctx.content_rect().contains_rect(r), "step {i}: {r:?} runs off the window");
+        }
+        press(&mut h, start, false);
+        assert_ne!(fill(&h), before, "the drag picked a colour");
+    }
 }
+
+#[cfg(test)]
+#[path = "path_selection_tests.rs"]
+mod path_selection_tests;

@@ -51,11 +51,13 @@ impl Rect {
     pub fn from_size(size: Size) -> Self {
         Self::from_xywh(0, 0, size.width, size.height)
     }
+    /// Horizontal extent; 0 when `x1 <= x0`. Exact even for i32-extreme edges.
     pub fn width(&self) -> u32 {
-        (self.x1 - self.x0).max(0) as u32
+        if self.x1 > self.x0 { self.x1.abs_diff(self.x0) } else { 0 }
     }
+    /// Vertical extent; 0 when `y1 <= y0`. Exact even for i32-extreme edges.
     pub fn height(&self) -> u32 {
-        (self.y1 - self.y0).max(0) as u32
+        if self.y1 > self.y0 { self.y1.abs_diff(self.y0) } else { 0 }
     }
     pub fn size(&self) -> Size {
         Size::new(self.width(), self.height())
@@ -254,5 +256,18 @@ mod tests {
         let grown = Rect::new(i32::MAX - 5, i32::MIN + 5, i32::MAX - 1, i32::MIN + 10).inflate(10);
         assert_eq!(grown.x1, i32::MAX);
         assert_eq!(grown.y0, i32::MIN);
+    }
+
+    #[test]
+    fn width_and_height_do_not_overflow_on_extreme_edges() {
+        // Inverted extreme rect: empty, so 0 (x1 - x0 used to overflow and panic).
+        let r = Rect::new(i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+        assert_eq!((r.width(), r.height()), (0, 0));
+        assert!(r.is_empty());
+        // Widest possible rect: the true extent fits in u32.
+        let r = Rect::new(i32::MIN, i32::MIN + 20, i32::MAX, i32::MAX - 5);
+        assert_eq!(r.width(), u32::MAX);
+        assert_eq!(r.height(), u32::MAX - 25);
+        assert_eq!(r.size(), Size::new(u32::MAX, u32::MAX - 25));
     }
 }

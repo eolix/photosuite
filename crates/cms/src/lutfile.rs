@@ -35,6 +35,15 @@ fn err<T>(msg: impl Into<String>) -> Result<T, LutError> {
     Err(LutError(msg.into()))
 }
 
+fn checked_data_len(size: usize) -> Result<(usize, usize), LutError> {
+    if !(2..=MAX_SIZE).contains(&size) {
+        return err(format!("unsupported LUT size {size}"));
+    }
+    let entries = size.checked_pow(3).ok_or_else(|| LutError(format!("unsupported LUT size {size}")))?;
+    let data_len = entries.checked_mul(3).ok_or_else(|| LutError(format!("unsupported LUT size {size}")))?;
+    Ok((entries, data_len))
+}
+
 impl LutFile {
     /// The identity table of edge `size`.
     pub fn identity(size: usize) -> Self {
@@ -57,11 +66,9 @@ impl LutFile {
     }
 
     fn check(self) -> Result<Self, LutError> {
-        if self.size < 2 || self.size > MAX_SIZE {
-            return err(format!("unsupported LUT size {}", self.size));
-        }
-        if self.data.len() != self.size.pow(3) * 3 {
-            return err(format!("expected {} entries, found {}", self.size.pow(3), self.data.len() / 3));
+        let (entries, data_len) = checked_data_len(self.size)?;
+        if self.data.len() != data_len {
+            return err(format!("expected {entries} entries, found {}", self.data.len() / 3));
         }
         if self.data.iter().any(|v| !v.is_finite()) {
             return err("non-finite LUT value");
@@ -205,7 +212,11 @@ pub fn parse_cube(text: &str) -> Result<LutFile, LutError> {
     if size3 > 0 {
         return LutFile { title, size: size3, data: rows }.check();
     }
-    if size1 >= 2 && rows.len() == size1 * 3 {
+    if size1 >= 2 {
+        let expected_rows = size1.checked_mul(3).ok_or_else(|| LutError(format!("unsupported 1D LUT size {size1}")))?;
+        if rows.len() != expected_rows {
+            return err("no LUT_3D_SIZE in .cube file");
+        }
         let curve = |ch: usize, v: f32| {
             let x = v.clamp(0.0, 1.0) * (size1 - 1) as f32;
             let i = (x.floor() as usize).min(size1 - 2);
@@ -261,12 +272,13 @@ pub fn parse_look(text: &str) -> Result<LutFile, LutError> {
         Some(text[start..end].trim().trim_matches('"').trim().to_string())
     };
     let size: usize = tag("size").and_then(|s| s.parse().ok()).ok_or_else(|| LutError("no <size> in .look".into()))?;
+    let (entries, _) = checked_data_len(size)?;
     let hex: Vec<u8> = tag("data").ok_or_else(|| LutError("no <data> in .look".into()))?.bytes().filter(u8::is_ascii_hexdigit).collect();
     let nib = |c: u8| (c as char).to_digit(16).unwrap_or(0) as u8;
     let bytes: Vec<u8> = hex.as_chunks::<2>().0.iter().map(|p| nib(p[0]) << 4 | nib(p[1])).collect();
     let floats: Vec<f32> = bytes.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect();
-    let n3 = size.pow(3);
-    let data = if floats.len() == n3 * 4 { floats.as_chunks::<4>().0.iter().flat_map(|c| [c[0], c[1], c[2]]).collect() } else { floats };
+    let rgba_entries = entries.checked_mul(4).ok_or_else(|| LutError(format!("unsupported LUT size {size}")))?;
+    let data = if floats.len() == rgba_entries { floats.as_chunks::<4>().0.iter().flat_map(|c| [c[0], c[1], c[2]]).collect() } else { floats };
     LutFile { title: tag("title").unwrap_or_default(), size, data }.check()
 }
 
@@ -408,6 +420,19 @@ mod tests {
         assert_eq!(l.size, 33);
         let last = &l.data[l.data.len() - 3..];
         assert!((last[0] - 0.5).abs() < 1e-6 && (last[1] - 1.0).abs() < 1e-6);
+
+        let mut larger = String::from("LUT_1D_SIZE 256\n");
+        for i in 0..256 {
+            let value = i as f32 / 255.0;
+            larger.push_str(&format!("{value} {value} {value}\n"));
+        }
+        assert_eq!(parse_cube(&larger).unwrap().size, 33);
+    }
+
+    #[test]
+    fn cube_1d_size_multiplication_overflow_is_rejected() {
+        let text = format!("LUT_1D_SIZE {}\n", usize::MAX);
+        assert!(parse_cube(&text).is_err());
     }
 
     #[test]
@@ -431,6 +456,12 @@ mod tests {
         let hex: String = id.data.iter().flat_map(|v| v.to_le_bytes()).map(|b| format!("{b:02X}")).collect();
         let xml = format!("<?xml version=\"1.0\"?><look><LUT><size>\"2\"</size><data>\"{hex}\"</data></LUT></look>");
         assert_eq!(parse("a.look", xml.as_bytes()).unwrap().data, id.data);
+    }
+
+    #[test]
+    fn look_3d_size_exponent_overflow_is_rejected() {
+        let text = format!("<look><size>{}</size><data>00</data></look>", usize::MAX);
+        assert!(parse_look(&text).is_err());
     }
 
     #[test]

@@ -54,7 +54,7 @@ fn migrate(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let total = g + st + sh + pt + tp;
     if total > 0 {
-        ps.rev += 1;
+        s.presets_changed();
     }
     counts.insert("gradients".into(), json!(g));
     counts.insert("styles".into(), json!(st));
@@ -97,13 +97,57 @@ mod tests {
             }
         });
         std::fs::write(&file, serde_json::to_string(&data).unwrap()).unwrap();
+        let prefs_rev = s.prefs.rev();
+        let presets_rev = s.presets.rev;
         let r = s.execute("edit.presets.migratePresets", json!({"path": file.to_string_lossy()})).unwrap();
         assert_eq!(r["added"]["gradients"], 1, "only the new group is added");
         assert_eq!(s.presets.gradients.len(), before + 1);
         assert!(s.presets.gradients.iter().any(|g| g.name == "My Imported Set"));
+        assert_eq!(s.prefs.rev(), prefs_rev + 1, "migration marks preferences dirty");
+        assert_eq!(s.presets.rev, presets_rev + 1);
         // Idempotent: migrating again adds nothing.
+        let prefs_rev = s.prefs.rev();
+        let presets_rev = s.presets.rev;
+        let saved = s.prefs_to_json();
         let r2 = s.execute("edit.presets.migratePresets", json!({"path": file.to_string_lossy()})).unwrap();
         assert_eq!(r2["migrated"], 0);
+        assert_eq!(s.prefs.rev(), prefs_rev, "duplicate groups do not dirty preferences");
+        assert_eq!(s.presets.rev, presets_rev);
+        assert_eq!(s.prefs_to_json(), saved);
+        let _ = std::fs::remove_file(file);
+    }
+
+    #[test]
+    fn each_migrated_preset_kind_marks_preferences_dirty_and_survives_reload() {
+        let file = std::env::temp_dir().join(format!("pc-migrate-persist-{}.json", std::process::id()));
+        for (key, incoming) in [
+            ("gradients", json!([{"name": "Imported gradients", "items": []}])),
+            ("styles", json!([{"name": "Imported styles", "items": []}])),
+            ("shapes", json!([{"name": "Imported shapes", "items": []}])),
+            ("pattern_groups", json!([{"name": "Imported patterns", "items": ["Bricks"]}])),
+            ("tool_presets", json!([{"name": "Imported tool", "tool": "brush", "options": {"size": 17.0}}])),
+        ] {
+            for wrapped in [false, true] {
+                let mut s = Session::new();
+                let mut data = json!({});
+                data[key] = incoming.clone();
+                if wrapped {
+                    data = json!({"presets": data});
+                }
+                std::fs::write(&file, serde_json::to_string(&data).unwrap()).unwrap();
+                let prefs_rev = s.prefs.rev();
+                let presets_rev = s.presets.rev;
+                let r = s.execute("edit.presets.migratePresets", json!({"path": file.to_string_lossy()})).unwrap();
+                assert_eq!(r["migrated"], 1, "{key}, wrapped={wrapped}");
+                assert_eq!(s.prefs.rev(), prefs_rev + 1, "{key}, wrapped={wrapped}: preferences must be saved");
+                assert_eq!(s.presets.rev, presets_rev + 1);
+                let saved = s.prefs_to_json();
+                let mut restored = Session::new();
+                restored.load_prefs_json(&saved).unwrap();
+                let imported = &incoming[0];
+                assert!(restored.prefs_value()["presets"][key].as_array().unwrap().contains(imported), "{key}, wrapped={wrapped}");
+            }
+        }
         let _ = std::fs::remove_file(file);
     }
 

@@ -137,6 +137,17 @@ pub fn merge_brush(base: &BrushSettings, patch: &Value, cmd: &str) -> Result<Bru
     Ok(out)
 }
 
+pub(crate) fn validate_brush_size(brush: &BrushSettings, cmd: &str) -> Result<()> {
+    let max = photosuite_paint::MAX_BRUSH_SIZE;
+    if !brush.size.is_finite() || brush.size > max {
+        return Err(bad(cmd, format!("brush size must be finite and at most {max} px")));
+    }
+    if brush.dual_brush.enabled && (!brush.dual_brush.size.is_finite() || brush.dual_brush.size > max) {
+        return Err(bad(cmd, format!("dual brush size must be finite and at most {max} px")));
+    }
+    Ok(())
+}
+
 fn find_preset<'a>(s: &'a Session, name: &str, cmd: &str) -> Result<&'a BrushPreset> {
     photosuite_paint::presets::find(&s.tools.presets, name).ok_or_else(|| bad(cmd, format!("no brush preset named `{name}`")))
 }
@@ -176,6 +187,7 @@ pub fn resolve_brush(s: &Session, p: &Value, cmd: &str) -> Result<BrushSettings>
         Some(v) => v,
         None => photosuite_paint::rng::seed_from_bytes(p.get("points").map(|v| v.to_string()).unwrap_or_default().as_bytes()),
     };
+    validate_brush_size(&b, cmd)?;
     Ok(b)
 }
 
@@ -215,6 +227,7 @@ fn erase_locked(brush: &mut BrushSettings, lock: bool, bg: [f32; 4]) {
 fn stroke_with(s: &mut Session, p: &Value, label: &str, brush: BrushSettings, pts: Vec<StrokePoint>, auto_erase: bool) -> Result<Value> {
     let bg = s.tools.background;
     let fg = brush.color;
+    let symmetry = s.active().and_then(|st| st.symmetry_path.clone());
     let (id, brush, zoom) = stroke_target(s, p, brush)?;
     let dmg = s.edit(label, |doc, _| {
         let sel = doc.selection.clone();
@@ -224,7 +237,24 @@ fn stroke_with(s: &mut Session, p: &Value, label: &str, brush: BrushSettings, pt
         if auto_erase {
             apply_auto_erase(&mut brush, surf, pts.first(), fg, bg);
         }
-        Ok(render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom))
+        let damage = if let Some(axis) = &symmetry {
+            let reflected = axis.reflect_points(&pts);
+            if crate::symmetry_cmds::SymmetryAxis::has_distinct_mirror(&pts, &reflected) {
+                let pre = surf.clone();
+                let mut original = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+                original.push(&pts);
+                original.finish();
+                let mut mirror = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+                mirror.push(&reflected);
+                mirror.finish();
+                original.composite_union(&mirror, &pre, surf, sel.as_ref(), lock)
+            } else {
+                render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom)
+            }
+        } else {
+            render_stroke(surf, &brush, &pts, sel.as_ref(), lock, zoom)
+        };
+        Ok(damage)
     })?;
     Ok(damage_json(s, dmg))
 }
@@ -281,6 +311,8 @@ pub struct LiveStroke {
     /// Jitter seed to pass to `paint.stroke`.
     pub seed: u64,
     renderer: StrokeRenderer,
+    mirror: Option<(crate::symmetry_cmds::SymmetryAxis, StrokeRenderer)>,
+    mirror_distinct: bool,
     pre: Surface,
     sel: Option<Surface>,
     lock: bool,
@@ -317,15 +349,18 @@ impl LiveStroke {
             apply_auto_erase(&mut brush, surf, pts.first(), fg, s.tools.background);
         }
         let renderer = StrokeRenderer::new(&brush, Some(surf.format()), zoom);
+        let mirror = s.active().and_then(|st| st.symmetry_path.clone()).map(|axis| (axis, StrokeRenderer::new(&brush, Some(surf.format()), zoom)));
         let pre = surf.clone();
-        let mut live = Self { doc: std::sync::Arc::new(doc), seed, renderer, pre, sel, lock, layer, params: p.clone(), tail: Rect::EMPTY };
+        let mut live =
+            Self { doc: std::sync::Arc::new(doc), seed, renderer, mirror, mirror_distinct: false, pre, sel, lock, layer, params: p.clone(), tail: Rect::EMPTY };
         live.push(&pts)?;
         Ok(live)
     }
 
     /// Everything the stroke has touched so far.
     pub fn bounds(&self) -> Rect {
-        self.renderer.bounds().union(&self.tail)
+        let bounds = self.renderer.bounds().union(&self.tail);
+        if self.mirror_distinct { self.mirror.as_ref().map_or(bounds, |(_, renderer)| bounds.union(&renderer.bounds())) } else { bounds }
     }
 
     /// Render more points; returns the rectangle that changed. The doc shows the stroke as
@@ -334,7 +369,28 @@ impl LiveStroke {
     /// nothing new appears on release.
     pub fn push(&mut self, pts: &[StrokePoint]) -> Result<Rect> {
         self.renderer.push(pts);
+        if let Some((axis, mirror)) = &mut self.mirror {
+            let reflected = axis.reflect_points(pts);
+            self.mirror_distinct |= crate::symmetry_cmds::SymmetryAxis::has_distinct_mirror(pts, &reflected);
+            mirror.push(&reflected);
+        }
         let (surf, _) = crate::channel_cmds::target_surface(std::sync::Arc::make_mut(&mut self.doc), self.layer, &self.params)?;
+        if let (true, Some((_, mirror))) = (self.mirror_distinct, &mut self.mirror) {
+            // Preview the finished strokes through one coverage buffer. Shared axis pixels
+            // therefore receive the brush opacity once, exactly like the final commit.
+            let old = self.tail;
+            let mut original_preview = self.renderer.clone();
+            original_preview.finish();
+            let mut mirror_preview = mirror.clone();
+            mirror_preview.finish();
+            let bounds = original_preview.bounds().union(&mirror_preview.bounds()).union(&old);
+            if !bounds.is_empty() {
+                surf.write_region(bounds, &self.pre.read_region(bounds));
+            }
+            let damage = original_preview.composite_union(&mirror_preview, &self.pre, surf, self.sel.as_ref(), self.lock);
+            self.tail = bounds;
+            return Ok(damage.union(&bounds));
+        }
         let mut dmg = Rect::EMPTY;
         let old = std::mem::replace(&mut self.tail, Rect::EMPTY);
         if !old.is_empty() {
@@ -581,6 +637,7 @@ fn set_brush(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     b = merge_brush(&b, &patch, cmd)?;
+    validate_brush_size(&b, cmd)?;
     let before = std::mem::replace(&mut s.tools.brush, b);
     // A coalesced gesture (one slider drag) journals as one call: remember the brush it started from.
     let key = p.get("coalesce").and_then(Value::as_str).filter(|_| p.get("preset").is_none() && p.get("reset").is_none());
@@ -676,7 +733,7 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!(
             "paint.pencil",
             "Pencil",
-            r##"{"points":[[x,y,pressure?,tiltX?,tiltY?,rotation?,timeMs?,wheel?],…],"brush":{…}?,"preset":name?,"size":px?,"opacity":0..1?,"color":"#rrggbb"?=foreground,"mode":"normal|multiply|screen|…"="normal","erase":bool?,"autoErase":bool=false,"seed":u64?,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target}"##,
+            r##"{"points":[[x,y,pressure?,tiltX?,tiltY?,rotation?,timeMs?,wheel?],…],"brush":{…}?,"preset":name?,"size":0.5..5000 px?,"opacity":0..1?,"color":"#rrggbb"?=foreground,"mode":"normal|multiply|screen|…"="normal","erase":bool?,"autoErase":bool=false,"seed":u64?,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target}"##,
             has_paintable,
             pencil,
             true
@@ -684,7 +741,7 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!(
             "paint.mixerBrush",
             "Mixer Brush",
-            r##"{"points":[…],"brush":{…}?,"preset":name?,"size":px?,"wet":0..100=brush.mixer.wet,"load":0..100=brush.mixer.load,"mix":0..100=brush.mixer.mix,"flow":0..100=brush.mixer.flow,"color":"#rrggbb"?=foreground,"sampleAllLayers":bool=brush.mixer.sampleAllLayers,"cleanAfterStroke":bool=true,"loadAfterStroke":bool=true,"seed":u64?}"##,
+            r##"{"points":[…],"brush":{…}?,"preset":name?,"size":0.5..5000 px?,"wet":0..100=brush.mixer.wet,"load":0..100=brush.mixer.load,"mix":0..100=brush.mixer.mix,"flow":0..100=brush.mixer.flow,"color":"#rrggbb"?=foreground,"sampleAllLayers":bool=brush.mixer.sampleAllLayers,"cleanAfterStroke":bool=true,"loadAfterStroke":bool=true,"seed":u64?}"##,
             has_paintable,
             mixer_brush,
             true

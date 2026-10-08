@@ -121,6 +121,17 @@ pub(crate) fn int(p: &Value, key: &str) -> Option<i64> {
     p.get(key).and_then(|v| v.as_i64().or_else(|| v.as_f64().filter(|f| f.is_finite()).map(|f| f.round() as i64)))
 }
 
+/// [`int`] narrowed to `i32` for geometry: `None` when absent, and a bad-params error when the
+/// value would wrap through `as i32` — out-of-range integers truncate by multiples of 2^32,
+/// which silently relocates geometry (`dx = 2^32 + 50` moves 50 px, `3e9` goes negative)
+/// instead of erroring.
+pub(crate) fn int_i32(cmd: &str, p: &Value, key: &str) -> Result<Option<i32>> {
+    match int(p, key) {
+        None => Ok(None),
+        Some(v) => i32::try_from(v).map(Some).map_err(|_| bad(cmd, format!("`{key}` = {v} is outside the 32-bit coordinate range"))),
+    }
+}
+
 fn f32_or(p: &Value, key: &str, default: f32) -> f32 {
     p.get(key).and_then(Value::as_f64).map(|v| v as f32).unwrap_or(default)
 }
@@ -278,12 +289,11 @@ fn build() -> Vec<CommandSpec> {
         ),
         cmd!("edit.clear", "Clear", ["Edit"], Some("Delete"), "{}", has_pixel_layer, |s, p| {
             let id = layer_param(s, p)?;
+            let bg = s.tools.background;
             s.edit("Clear", |doc, _| {
                 let sel = doc.selection.clone();
                 let area = sel.as_ref().map(|m| m.content_bounds()).unwrap_or(doc.bounds());
-                let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-                pixels::clear_surface(l.surface_mut().ok_or_else(|| EngineError::Other("not a pixel layer".into()))?, area, sel.as_ref());
-                Ok(())
+                crate::edit_cmds::clear_area(doc, id, area, sel.as_ref(), bg)
             })?;
             Ok(Value::Null)
         }),
@@ -325,14 +335,18 @@ fn build() -> Vec<CommandSpec> {
             r##"{"x":i32,"y":i32,"width":u32,"height":u32,"mode":"replace|add|subtract|intersect"="replace","ellipse":bool=false,"antiAlias":bool=true,"feather":px=0}"##,
             has_doc,
             |s, p| {
-                let get = |k: &str| int(p, k).ok_or_else(|| bad("select.rect", format!("missing `{k}`")));
-                let r = Rect::from_xywh(get("x")? as i32, get("y")? as i32, get("width")?.max(0) as u32, get("height")?.max(0) as u32);
+                let get = |k: &str| int_i32("select.rect", p, k).and_then(|v| v.ok_or_else(|| bad("select.rect", format!("missing `{k}`"))));
+                let r = Rect::from_xywh(get("x")?, get("y")?, get("width")?.max(0) as u32, get("height")?.max(0) as u32);
                 let mode = p.get("mode").and_then(Value::as_str).unwrap_or("replace").to_string();
                 let ellipse = p.get("ellipse").and_then(Value::as_bool).unwrap_or(false);
                 // Options bar: anti-aliased ellipse edges (4x4 supersampled) and Feather (applied to the new shape only).
                 let aa = p.get("antiAlias").and_then(Value::as_bool).unwrap_or(true);
                 let feather = p.get("feather").and_then(Value::as_f64).unwrap_or(0.0).clamp(0.0, 1000.0) as f32;
-                s.edit("Rectangular Marquee", |doc, _| {
+                s.edit(if ellipse { "Elliptical Marquee" } else { "Rectangular Marquee" }, |doc, _| {
+                    let area = doc.bounds();
+                    // A marquee dragged past the canvas stops at its edge (Photoshop); the ellipse
+                    // keeps the dragged shape and is only cut there.
+                    let cut = r.intersect(&area);
                     let mut shape = Surface::new(photosuite_color::PixelFormat::GRAY8);
                     if ellipse {
                         let (cx, cy) = ((r.x0 + r.x1) as f32 / 2.0, (r.y0 + r.y1) as f32 / 2.0);
@@ -341,8 +355,8 @@ fn build() -> Vec<CommandSpec> {
                             let (dx, dy) = ((x - cx) / rx, (y - cy) / ry);
                             dx * dx + dy * dy <= 1.0
                         };
-                        for y in r.y0..r.y1 {
-                            for x in r.x0..r.x1 {
+                        for y in cut.y0..cut.y1 {
+                            for x in cut.x0..cut.x1 {
                                 let (fx, fy) = (x as f32, y as f32);
                                 let corners = [(fx, fy), (fx + 1.0, fy), (fx, fy + 1.0), (fx + 1.0, fy + 1.0)].iter().filter(|(a, b)| inside(*a, *b)).count();
                                 let cov = if !aa {
@@ -359,9 +373,8 @@ fn build() -> Vec<CommandSpec> {
                             }
                         }
                     } else {
-                        shape.fill_rect(r, &[1.0]);
+                        shape.fill_rect(cut, &[1.0]);
                     }
-                    let area = doc.bounds();
                     if feather > 0.0 {
                         use photosuite_algo::selection as sel;
                         let m = sel::feather(&sel::mask_from_surface(Some(&shape), area), area.width() as usize, area.height() as usize, feather);
@@ -375,7 +388,8 @@ fn build() -> Vec<CommandSpec> {
                         ("intersect", Some(o)) => combine(&o, &shape, area, |a, b| a.min(b)),
                         _ => shape,
                     };
-                    doc.selection = Some(combined);
+                    // Nothing selected on the canvas (e.g. dragged entirely outside it) deselects.
+                    doc.selection = (!combined.content_bounds().is_empty()).then_some(combined);
                     Ok(())
                 })?;
                 Ok(Value::Null)
@@ -461,7 +475,9 @@ fn build() -> Vec<CommandSpec> {
             has_layer,
             |s, p| {
                 let id = layer_param(s, p)?;
-                let label = if p.get("visible").is_some() && p.as_object().is_some_and(|o| o.len() <= 2) { "Layer Visibility" } else { "Layer Properties" };
+                let only_visibility =
+                    p.as_object().is_some_and(|o| o.contains_key("visible") && o.keys().all(|k| matches!(k.as_str(), "layer" | "visible" | "coalesce")));
+                let label = if only_visibility { "Layer Visibility" } else { "Layer Properties" };
                 let before = s.active().ok_or(EngineError::NoDocument)?.doc.clone();
                 // Clipping and channel changes reach the layers around it: recomposite everything.
                 let local = p.get("clipped").is_none() && p.get("channels").is_none();
@@ -686,6 +702,8 @@ fn build() -> Vec<CommandSpec> {
                         sib.insert(at.min(sib.len()), layer);
                     }
                 }
+                // Moving a group into (or beside) a deeply nested layer can pass the nesting cap.
+                crate::layer_multi_cmds::check_group_depth(doc, "Reorder Layer")?;
                 *active = Some(id);
                 Ok(())
             })?;
@@ -736,7 +754,7 @@ fn build() -> Vec<CommandSpec> {
             "Brush Stroke",
             [],
             None,
-            r##"{"points":[[x,y,pressure?,tiltX?,tiltY?,rotation?,timeMs?,wheel?],…],"brush":{…BrushSettings}?,"preset":name?,"size":px?,"hardness":0..1?,"opacity":0..1?,"flow":0..1?,"spacing":0..10?,"color":"#rrggbb"?=foreground,"mode":"normal|multiply|screen|…"="normal","erase":bool?,"smoothing":0..1?,"zoom":number=1,"seed":u64?,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target}"##,
+            r##"{"points":[[x,y,pressure?,tiltX?,tiltY?,rotation?,timeMs?,wheel?],…],"brush":{…BrushSettings}?,"preset":name?,"size":0.5..5000 px?,"hardness":0..1?,"opacity":0..1?,"flow":0..1?,"spacing":0..10?,"color":"#rrggbb"?=foreground,"mode":"normal|multiply|screen|…"="normal","erase":bool?,"smoothing":0..1?,"zoom":number=1,"seed":u64?,"target":"pixels"|"mask"|"quickMask"|{"channel":i}=Channels panel target}"##,
             has_paintable,
             crate::brush_cmds::paint_stroke
         ),
@@ -793,6 +811,28 @@ fn build() -> Vec<CommandSpec> {
             journal: false,
         },
         CommandSpec {
+            id: "document.move",
+            label: "Move Document",
+            menu: &[],
+            shortcut: None,
+            params: r##"{"document":index?,"to":index}"##,
+            enabled: has_doc,
+            run: |s, p| {
+                let index = |key: &str| {
+                    p.get(key)
+                        .map(|v| v.as_u64().and_then(|v| usize::try_from(v).ok()).ok_or_else(|| bad("document.move", format!("`{key}` must be a tab index"))))
+                };
+                let from = match index("document") {
+                    Some(i) => i?,
+                    None => s.active_index().ok_or(EngineError::NoDocument)?,
+                };
+                let to = index("to").ok_or_else(|| bad("document.move", "missing `to`"))??;
+                let to = s.move_document(from, to).ok_or(EngineError::NoDocument)?;
+                Ok(json!({"document": to}))
+            },
+            journal: false,
+        },
+        CommandSpec {
             id: "command.list",
             label: "List Commands",
             menu: &[],
@@ -821,10 +861,11 @@ fn build() -> Vec<CommandSpec> {
             params: r##"{"x":i32,"y":i32}"##,
             enabled: has_doc,
             run: |s, p| {
-                let x = int(p, "x").unwrap_or(0) as i32;
-                let y = int(p, "y").unwrap_or(0) as i32;
+                let coord = |k: &str| i32::try_from(int(p, k).unwrap_or(0)).map_err(|_| bad("document.pixel", format!("{k} must fit in 32 bits")));
+                let (x, y) = (coord("x")?, coord("y")?);
                 let d = s.active().ok_or(EngineError::NoDocument)?;
-                let px = photosuite_compose::render(&d.doc, Rect::from_xywh(x, y, 1, 1)).px[0];
+                // At i32::MAX the 1x1 rect saturates to empty: a pixel that far out is transparent.
+                let px = photosuite_compose::render(&d.doc, Rect::from_xywh(x, y, 1, 1)).px.first().copied().unwrap_or_default();
                 Ok(json!(px))
             },
             journal: false,
@@ -936,8 +977,11 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::gradient_fill_cmds::specs());
     v.extend(crate::type_cmds::specs());
     v.extend(crate::transform_cmds::specs());
+    v.extend(crate::float_cmds::specs());
     v.extend(crate::vector_cmds::specs());
     v.extend(crate::smartselect_cmds::specs());
+    v.extend(crate::cutout_cmds::specs());
+    v.extend(crate::symmetry_cmds::specs());
     v.extend(crate::edit_cmds::specs());
     v.extend(crate::color_cmds::specs());
     v.extend(crate::brush_cmds::specs());
@@ -954,11 +998,13 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_extra_cmds::specs());
     v.extend(crate::type_styles_cmds::specs());
     v.extend(crate::type_spell_cmds::specs());
+    v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::edit_menu_cmds::specs());
     v.extend(crate::fill_key_cmds::specs());
+    v.extend(crate::stamp_cmds::specs());
     v.extend(crate::align_cmds::specs());
     v.extend(crate::photo_cmds::specs());
     v.extend(crate::lens_cmds::specs());
@@ -983,17 +1029,20 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::automate_cmds::specs());
     v.extend(crate::print_cmds::specs());
     v.extend(crate::pick_cmds::specs());
+    v.extend(crate::layer_nav_cmds::specs());
     v.extend(crate::frame_cmds::specs());
     v.extend(crate::migrate_cmds::specs());
     v.extend(crate::trap_cmds::specs());
     v.extend(crate::timeline_cmds::specs());
     v.extend(crate::video_cmds::specs());
+    v.extend(crate::jobs::specs());
     v.extend(crate::wia_cmds::specs());
     v.extend(crate::variables_cmds::specs());
     v.extend(crate::plugin_cmds::specs());
     v.extend(crate::group_view_cmds::specs());
     v.extend(crate::fx_view_cmds::specs());
     v.extend(crate::mask_view_cmds::specs());
+    v.extend(crate::actions_cmds::specs());
     v
 }
 
@@ -1055,6 +1104,9 @@ fn arrange(s: &mut Session, p: &Value, delta: i32) -> Result<Value> {
 fn set_mask(s: &mut Session, p: &Value, label: &str, mask: Option<LayerMask>) -> Result<Value> {
     let id = layer_param(s, p)?;
     s.edit(label, |doc, _| {
+        if mask.is_some() {
+            crate::extra_cmds::background_to_layer_for_mask(doc, id);
+        }
         doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = mask;
         Ok(())
     })?;

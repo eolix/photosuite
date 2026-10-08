@@ -57,8 +57,32 @@ fn upstream_dir(root: &Path) -> PathBuf {
 /// must survive [`map_text`] unchanged.
 const KEEP: &[&str] = &["storytold/photocraft", "photocraft-corpus", "PhotoCraft contributors", "PhotoCraft (https://", "PhotoCraft](https://"];
 
-/// PhotoCraft's names → PhotoSuite's: the app id (the macOS bundle uses `app.photosuite`), then
-/// every casing of the name.
+/// PhotoCraft's themes → PhotoSuite's, by role: Pro (darkest) → Midnight, ProMedium (the
+/// default) → Slate (the default), Studio and Classic → Anthracite, StudioLight → Pearl. Longer
+/// names first, so `ProMedium` is not read as `Pro`. Only the unmistakable spellings: a bare
+/// `"pro"` or `"studio"` string is mapped by hand.
+const THEMES: &[(&str, &str)] = &[
+    ("ThemeKind::ProMedium", "ThemeKind::Slate"),
+    ("ThemeKind::StudioLight", "ThemeKind::Pearl"),
+    ("ThemeKind::Studio", "ThemeKind::Anthracite"),
+    ("ThemeKind::Classic", "ThemeKind::Anthracite"),
+    ("ThemeKind::Pro", "ThemeKind::Midnight"),
+    // The engine's `interface.theme` preference (`prefs::Theme`) carries the same names.
+    ("Theme::ProMedium", "Theme::Slate"),
+    ("Theme::StudioLight", "Theme::Pearl"),
+    ("Theme::Studio", "Theme::Anthracite"),
+    ("Theme::Classic", "Theme::Anthracite"),
+    ("Theme::Pro", "Theme::Midnight"),
+    ("\"proMedium\"", "\"slate\""),
+    ("\"promedium\"", "\"slate\""),
+    ("\"studioLight\"", "\"pearl\""),
+    ("\"studiolight\"", "\"pearl\""),
+    ("window.theme.proMedium", "window.theme.slate"),
+    ("window.theme.studioLight", "window.theme.pearl"),
+];
+
+/// PhotoCraft's names → PhotoSuite's: the app id (the macOS bundle uses `app.photosuite`), every
+/// casing of the name, and in Rust sources the theme names ([`THEMES`]).
 fn map_text(text: &str, path: &str) -> String {
     let mut s = text.to_string();
     let mut guards = Vec::new();
@@ -74,19 +98,25 @@ fn map_text(text: &str, path: &str) -> String {
     for (from, to) in [("PHOTOCRAFT", "PHOTOSUITE"), ("PhotoCraft", "PhotoSuite"), ("Photocraft", "Photosuite"), ("photocraft", "photosuite")] {
         s = s.replace(from, to);
     }
+    if path.ends_with(".rs") {
+        for (from, to) in THEMES {
+            s = s.replace(from, to);
+        }
+    }
     for (g, k) in guards {
         s = s.replace(&g, k);
     }
     s
 }
 
-/// Upstream paths never applied automatically: brand material (trademark terms), the app icon,
-/// licence and attribution files, translations (PhotoSuite's own), and CI (a different setup).
-/// They are listed after a port for a person to look at.
+/// Upstream paths never applied automatically: everything under `docs/` (PhotoSuite writes its
+/// own; upstream's also carries brand material under trademark terms), the app icon, licence and
+/// attribution files, all of the translation machinery (PhotoSuite's own), and CI (a different setup). They are
+/// listed after a port for a person to look at.
 fn held_back(path: &str) -> bool {
-    const PREFIXES: &[&str] = &["docs/brand/", "docs/images/", "assets/app-icon/", "book/", ".github/", "crates/ui-egui/src/i18n/"];
-    const FILES: &[&str] = &["NOTICE", "LICENSE-MIT", "LICENSE-APACHE", "README.md", "AGENTS.md", "THIRD-PARTY-NOTICES.md", "THIRD-PARTY-CRATES.md", "SECURITY.md"];
-    (PREFIXES.iter().any(|p| path.starts_with(p)) && !path.ends_with("/catalog.rs") && !path.ends_with("/mod.rs")) || FILES.contains(&path)
+    const PREFIXES: &[&str] = &["docs/", "assets/app-icon/", "book/", ".github/", "crates/ui-egui/src/i18n/"];
+    const FILES: &[&str] = &["NOTICE", "ATTRIBUTION.md", "LICENSE-MIT", "LICENSE-APACHE", "README.md", "AGENTS.md", "THIRD-PARTY-NOTICES.md", "THIRD-PARTY-CRATES.md", "SECURITY.md"];
+    PREFIXES.iter().any(|p| path.starts_with(p)) || FILES.contains(&path)
 }
 
 /// Upstream issue references (`#784`) point at PhotoCraft's tracker, not ours.
@@ -215,6 +245,29 @@ fn kind(subject: &str) -> &'static str {
     } else {
         "feature"
     }
+}
+
+/// PhotoSuite's commit subjects start with one of these types, and nothing else.
+const TYPES: &[&str] = &["feat", "fix", "chore", "docs", "nit"];
+
+/// The message with its subject as `<type>: <description>`. The description is upstream's subject
+/// without its own `word:` / `word(scope):` prefix; the type is that prefix when it is one of
+/// [`TYPES`], and otherwise the one [`kind`] guesses (`feature` → `feat`). The body is kept.
+fn standard_subject(message: &str) -> String {
+    let (subject, rest) = message.split_once('\n').unwrap_or((message, ""));
+    let subject = subject.trim();
+    let guessed = match kind(subject) {
+        "feature" => "feat",
+        k => k,
+    };
+    let (ty, description) = match subject.split_once(':') {
+        Some((head, tail)) if !head.is_empty() && head.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "()-_/".contains(c)) => {
+            let word = head.split('(').next().unwrap_or(head);
+            (TYPES.iter().find(|t| **t == word).copied().unwrap_or(guessed), tail.trim())
+        }
+        _ => (guessed, subject),
+    };
+    if rest.is_empty() { format!("{ty}: {description}") } else { format!("{ty}: {description}\n{rest}") }
 }
 
 /// How many of the commit's files PhotoSuite no longer has as upstream had them before it
@@ -368,7 +421,7 @@ fn port(root: &Path, up: &Path, sha: &str) -> Result<(), String> {
     let meta = git(up, &["log", "-1", "--format=%an%x00%ae%x00%aD%x00%B", &full])?;
     let mut parts = meta.splitn(4, '\0');
     let (name, email, date, body) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""), parts.next().unwrap_or(""), parts.next().unwrap_or(""));
-    let message = format!("{}\n\n{TRAILER}{full}\n", qualify_issue_refs(body.trim_end()));
+    let message = format!("{}\n\n{TRAILER}{full}\n", standard_subject(&qualify_issue_refs(body.trim_end())));
     let env = [("GIT_AUTHOR_NAME", name), ("GIT_AUTHOR_EMAIL", email), ("GIT_AUTHOR_DATE", date)];
     let base_tree = side_tree(root, up, &format!("{full}^"), &paths)?;
     let new_tree = side_tree(root, up, &full, &paths)?;
@@ -419,12 +472,41 @@ mod tests {
 
     #[test]
     fn brand_licences_translations_and_ci_are_held_back() {
-        for p in ["docs/brand/artcraft-logo.svg", "assets/app-icon/hicolor/16x16/apps/x.png", "NOTICE", "README.md", ".github/workflows/ci.yml", "crates/ui-egui/src/i18n/ja.tsv"] {
+        for p in ["docs/brand/artcraft-logo.svg", "docs/architecture.md", "docs/roadmap.md", "docs/scorecard.md", "assets/app-icon/hicolor/16x16/apps/x.png", "NOTICE", "README.md", ".github/workflows/ci.yml", "crates/ui-egui/src/i18n/ja.tsv"] {
             assert!(held_back(p), "{p}");
         }
-        for p in ["crates/ui-egui/src/i18n/catalog.rs", "crates/ui-egui/src/i18n/mod.rs", "crates/engine/src/lib.rs", "docs/architecture.md"] {
+        assert!(held_back("crates/ui-egui/src/i18n/mod.rs") && held_back("ATTRIBUTION.md"));
+        for p in ["crates/engine/src/lib.rs", "crates/io/README.md"] {
             assert!(!held_back(p), "{p}");
         }
+    }
+
+    #[test]
+    fn themes_are_mapped_in_rust_sources() {
+        let src = r#"set(ThemeKind::ProMedium); set(ThemeKind::Pro); set(ThemeKind::StudioLight); set(ThemeKind::Studio); ui.set({"theme": "studioLight"})"#;
+        assert_eq!(
+            map_text(src, "crates/ui-egui/src/x.rs"),
+            r#"set(ThemeKind::Slate); set(ThemeKind::Midnight); set(ThemeKind::Pearl); set(ThemeKind::Anthracite); ui.set({"theme": "pearl"})"#
+        );
+        assert_eq!(map_text("ThemeKind::Pro", "docs/ui.md"), "ThemeKind::Pro");
+        assert_eq!(map_text("prefs::Theme::Studio, Theme::ProMedium", "a.rs"), "prefs::Theme::Anthracite, Theme::Slate");
+    }
+
+    #[test]
+    fn subjects_take_photosuite_types() {
+        for (from, to) in [
+            ("fix(automation): downscale bridge screenshots (#753)", "fix: downscale bridge screenshots (#753)"),
+            ("feat(ui): add bounded Liquify redo history (#435)", "feat: add bounded Liquify redo history (#435)"),
+            ("docs: add star history chart to README (#469)", "docs: add star history chart to README (#469)"),
+            ("i18n: add Czech (cs) UI translation (#328)", "chore: add Czech (cs) UI translation (#328)"),
+            ("algo: fix flaky cancel/progress test (#609)", "fix: fix flaky cancel/progress test (#609)"),
+            ("rustfmt crates/ui-egui/src/canvas.rs (#819)", "chore: rustfmt crates/ui-egui/src/canvas.rs (#819)"),
+            ("Marquee: stop the selection at the canvas edge (#263)", "feat: Marquee: stop the selection at the canvas edge (#263)"),
+            ("Fix vector pixel bounds overflow (#747)", "fix: Fix vector pixel bounds overflow (#747)"),
+        ] {
+            assert_eq!(standard_subject(from), to);
+        }
+        assert_eq!(standard_subject("fix(x): a\n\nbody\nmore"), "fix: a\n\nbody\nmore");
     }
 
     #[test]

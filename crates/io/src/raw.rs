@@ -22,6 +22,17 @@ fn limits() -> Limits {
     Limits { max_width: l.max_width, max_height: l.max_height, max_pixels: l.max_pixels, max_alloc: l.max_alloc }
 }
 
+/// A raw file's embedded JPEG preview, turned upright. Its own EXIF orientation wins when it
+/// has one; otherwise the raw's IFD0 orientation applies (TIFF-based raws record it there, and
+/// their previews are usually stored as the sensor reads out). Developed raws are oriented by
+/// `photosuite-raw` and carry no EXIF, so nothing is turned twice.
+fn upright_preview(raw: &[u8], jpeg: &[u8]) -> Result<Image, IoError> {
+    let img = codecs::decode_as_with(Format::Jpeg, jpeg, &codecs::DecodeOptions { keep_orientation: true, ..Default::default() })?;
+    let own = img.meta.exif.as_deref().map_or(1, codecs::exif_orientation);
+    let o = if own != 1 { own } else { codecs::exif_orientation(raw) };
+    Ok(img.oriented(o)?)
+}
+
 /// Develops a raw file with the default settings.
 pub fn import_raw(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
     import_raw_with(name, bytes, &DevelopOptions { limits: limits(), ..Default::default() })
@@ -77,7 +88,7 @@ pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Resul
         }
         Err(RawError::Unsupported(reason)) => match photosuite_raw::embedded_preview(bytes) {
             Some(p) => {
-                let img = codecs::decode_as(Format::Jpeg, p.jpeg)?;
+                let img = upright_preview(bytes, p.jpeg)?;
                 let mut r = image_to_document(name, &img)?;
                 r.warnings.insert(
                     0,

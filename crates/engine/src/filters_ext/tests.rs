@@ -24,7 +24,7 @@ fn pixels(s: &Session) -> Vec<f32> {
     d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 48, 32))
 }
 
-const IDS: [&str; 33] = [
+const IDS: [&str; 34] = [
     "filter.pixelate.colorHalftone",
     "filter.pixelate.crystallize",
     "filter.pixelate.facet",
@@ -42,6 +42,7 @@ const IDS: [&str; 33] = [
     "filter.render.fibers",
     "filter.render.lensFlare",
     "filter.render.lightingEffects",
+    "filter.render.relight",
     "filter.noise.reduceNoise",
     "filter.blur.smartBlur",
     "filter.blur.lensBlur",
@@ -214,4 +215,136 @@ fn params_map_to_algorithm_units() {
     let Some(FilterParams::Shear { points, .. }) = params_for("filter.distort.shear", &json!({"points": [[0, 0.1], [1, -0.1]]})) else { panic!() };
     assert_eq!(points, vec![[0.0, 0.1], [1.0, -0.1]]);
     assert!(params_for("filter.nope", &json!({})).is_none());
+    assert_eq!(
+        params_for("filter.render.relight", &json!({})),
+        Some(FilterParams::Relight { angle: 45.0, elevation: 40.0, intensity: 40.0, ambient: 55.0, warmth: 0.0, softness: 25.0 })
+    );
+}
+
+fn paint_shaded_disc(s: &mut Session, size: i32) {
+    s.edit("disc", |doc, active| {
+        let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
+        let cx = size as f32 / 2.0;
+        let rad = size as f32 * 0.42;
+        for y in 0..size {
+            for x in 0..size {
+                let dx = x as f32 + 0.5 - cx;
+                let dy = y as f32 + 0.5 - cx;
+                let d2 = dx * dx + dy * dy;
+                let px = if d2 <= rad * rad {
+                    let nz = (rad * rad - d2).max(0.0).sqrt() / rad;
+                    let sh = 0.22 + 0.78 * nz;
+                    [0.55 * sh, 0.55 * sh, 0.55 * sh, 1.0]
+                } else {
+                    [0.18, 0.18, 0.18, 1.0]
+                };
+                surf.write_pixel(x, y, &px);
+            }
+        }
+        Ok(())
+    })
+    .unwrap();
+}
+
+fn relight_session(w: i32, h: i32) -> Session {
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": w, "height": h})).unwrap();
+    s.execute("layer.new.layer", json!({})).unwrap();
+    paint_shaded_disc(&mut s, w.min(h));
+    s
+}
+
+#[test]
+fn relight_command_exists_and_toggles_with_document() {
+    let spec = crate::commands::find("filter.render.relight").expect("registered");
+    assert_eq!(spec.menu, &["Filter", "Render"]);
+    assert_eq!(spec.label, "Relight…");
+    assert!(spec.journal);
+    let mut s = Session::new();
+    assert!(!s.is_enabled("filter.render.relight"));
+    s.execute("file.new", json!({"width": 32, "height": 32})).unwrap();
+    s.execute("layer.new.layer", json!({})).unwrap();
+    assert!(s.is_enabled("filter.render.relight"));
+    s.execute("type.create", json!({"x": 8, "y": 16, "text": "Hi", "size": 12})).unwrap();
+    assert!(!s.is_enabled("filter.render.relight"));
+}
+
+#[test]
+fn relight_is_disabled_on_a_pixel_locked_layer() {
+    let mut s = relight_session(32, 32);
+    assert!(s.is_enabled("filter.render.relight"));
+    s.execute("layer.setProps", json!({"locks": {"pixels": true}})).unwrap();
+    assert!(!s.is_enabled("filter.render.relight"));
+    assert!(s.execute("filter.render.relight", json!({})).is_err());
+}
+
+#[test]
+fn relight_defaults_change_a_shaded_disc_and_undo() {
+    let mut s = relight_session(48, 48);
+    let before = {
+        let d = s.active().unwrap();
+        d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 48, 48))
+    };
+    let depth = s.active().unwrap().history.past_len();
+    s.execute("filter.render.relight", json!({})).unwrap();
+    let after = {
+        let d = s.active().unwrap();
+        d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 48, 48))
+    };
+    assert_ne!(after, before);
+    assert_eq!(s.active().unwrap().history.past_len(), depth + 1);
+    s.execute("edit.undo", json!({})).unwrap();
+    let undone = {
+        let d = s.active().unwrap();
+        d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 48, 48))
+    };
+    assert_eq!(undone, before);
+}
+
+#[test]
+fn relight_records_a_smart_filter_and_can_be_hidden() {
+    let mut s = relight_session(32, 32);
+    let before = {
+        let d = s.active().unwrap();
+        d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 32, 32))
+    };
+    s.execute("filter.convertForSmartFilters", json!({})).unwrap();
+    s.execute("filter.render.relight", json!({"angle": 180, "intensity": 70})).unwrap();
+    let (is_relight, lit) = {
+        let d = s.active().unwrap();
+        let layer = d.doc.layer(d.active_layer.unwrap()).unwrap();
+        let photosuite_doc::LayerContent::Smart(sm) = &layer.content else { panic!("expected a smart object") };
+        let ok = sm.smart_filters.iter().any(|f| f.command == "filter.render.relight");
+        (ok, layer.surface().unwrap().read_region(Rect::new(0, 0, 32, 32)))
+    };
+    assert!(is_relight);
+    assert_ne!(lit, before);
+    s.execute("layer.smartFilter.setVisible", json!({"index": 0, "visible": false})).unwrap();
+    let restored = {
+        let d = s.active().unwrap();
+        d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 32, 32))
+    };
+    assert_eq!(restored, before);
+}
+
+#[test]
+fn relight_rejects_bad_params() {
+    let mut s = relight_session(16, 16);
+    assert!(s.execute("filter.render.relight", json!({"intensity": 999})).is_err());
+    assert!(s.execute("filter.render.relight", json!({"elevation": -3})).is_err());
+    assert!(s.execute("filter.render.relight", json!({"angle": "east"})).is_err());
+    assert!(s.execute("filter.render.relight", json!({"softness": 0})).is_err());
+    assert!(s.execute("filter.render.relight", json!(null)).is_err());
+}
+
+#[test]
+fn relight_honours_the_selection() {
+    let mut s = relight_session(48, 32);
+    s.execute("select.rect", json!({"x": 0, "y": 0, "width": 12, "height": 12})).unwrap();
+    let before = pixels(&s);
+    s.execute("filter.render.relight", json!({"angle": 180, "intensity": 70})).unwrap();
+    let after = pixels(&s);
+    let far = (28 * 48 + 40) * 4;
+    assert_eq!(after[far..far + 4], before[far..far + 4]);
+    assert_ne!(after[..12 * 4], before[..12 * 4]);
 }

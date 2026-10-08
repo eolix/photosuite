@@ -1,5 +1,6 @@
-//! Photoshop's on-canvas brush resize (#231): with a painting tool, Control+Alt+drag (Windows,
-//! Linux) or Control+Option+drag (macOS) changes the brush instead of painting. Left and right
+//! Photoshop's on-canvas brush resize (#231, #297): with a painting tool, Alt+right-drag
+//! (Windows, Linux) or Control+Option+drag (macOS; Control+Alt+drag works everywhere) changes the
+//! brush instead of painting. Left and right
 //! set the diameter (the circle's edge follows the pointer), up and down the hardness (down makes
 //! it harder). The brush circle stays where the drag began, tinted to show the hardness, with a
 //! Diameter/Hardness readout beside the pointer.
@@ -11,6 +12,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use egui::{Color32, Pos2, Stroke, vec2};
+use photosuite_engine::paint::MAX_BRUSH_SIZE;
 use serde_json::json;
 
 use crate::PhotosuiteApp;
@@ -20,7 +22,7 @@ use crate::state::Tool;
 /// Screen points of vertical drag that take the hardness from 0 % to 100 %.
 pub const HARDNESS_TRAVEL: f32 = 200.0;
 /// The brush size range (`tools.setBrush` accepts the same).
-const SIZE: std::ops::RangeInclusive<f32> = 1.0..=5000.0;
+const SIZE: std::ops::RangeInclusive<f32> = 1.0..=MAX_BRUSH_SIZE;
 
 /// A resize drag in progress.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -31,6 +33,8 @@ pub struct Resize {
     pub start: (f32, f32),
     /// The `coalesce` key of this drag's `tools.setBrush` calls.
     key: u64,
+    /// Begun by an Alt+right-drag (#297): it ends when the right button is up.
+    pub secondary: bool,
 }
 
 /// Tools the gesture resizes: every painting tool, and Quick Selection (it has a brush too).
@@ -41,6 +45,12 @@ pub fn applies(tool: Tool) -> bool {
 /// Control+Alt (Control+Option on a Mac): `ctrl` is the Control key on every platform.
 pub fn is_gesture(mods: egui::Modifiers) -> bool {
     mods.ctrl && mods.alt
+}
+
+/// Alt (Option) with the right button: Photoshop's Windows gesture (#297). The left button with
+/// Alt alone stays the painting tools' eyedropper.
+pub fn is_right_gesture(mods: egui::Modifiers) -> bool {
+    mods.alt
 }
 
 /// The diameter and hardness a drag from `start` by (`dx`, `dy`) document pixels gives at `zoom`.
@@ -55,16 +65,19 @@ pub fn resized(start: (f32, f32), dx: f64, dy: f64, zoom: f32) -> (f32, f32) {
 }
 
 /// Route a tool event: true when it belongs to a resize drag (begun here with Control+Alt held,
-/// or already in progress), so the tool never sees it.
-pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+/// or an Alt+right-drag `armed` for this press, or already in progress), so the tool never sees
+/// it.
+pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers, armed: bool) -> bool {
     static KEY: AtomicU64 = AtomicU64::new(0);
     match ev {
         ToolEvent::Down { x, y, .. } => {
-            if app.drag.is_some() || !applies(app.ui.tool) || !is_gesture(mods) {
+            // A new press ends any resize whose release was never seen.
+            app.brush_resize = None;
+            if app.drag.is_some() || !applies(app.ui.tool) || !(armed || is_gesture(mods)) {
                 return false;
             }
             let b = &app.session.tools.brush;
-            app.brush_resize = Some(Resize { anchor: [x, y], start: (b.size, b.hardness), key: KEY.fetch_add(1, Ordering::Relaxed) });
+            app.brush_resize = Some(Resize { anchor: [x, y], start: (b.size, b.hardness), key: KEY.fetch_add(1, Ordering::Relaxed), secondary: armed });
             true
         }
         ToolEvent::Move { x, y, .. } => match app.brush_resize {
@@ -81,6 +94,14 @@ pub fn pointer(app: &mut PhotosuiteApp, ev: ToolEvent, mods: egui::Modifiers) ->
             }
             None => false,
         },
+    }
+}
+
+/// End an Alt+right-drag resize whose button is no longer down (its release went elsewhere, e.g.
+/// outside the window), so it can't swallow the next stroke.
+pub fn release_stale(app: &mut PhotosuiteApp, secondary_down: bool) {
+    if !secondary_down && app.brush_resize.is_some_and(|r| r.secondary) {
+        app.brush_resize = None;
     }
 }
 
@@ -180,7 +201,7 @@ mod tests {
         assert_eq!(resized((40.0, 0.5), 10.0, 0.0, 1.0), (60.0, 0.5), "the edge follows the pointer");
         assert_eq!(resized((40.0, 0.5), 0.0, 50.0, 2.0), (40.0, 1.0), "down is harder, in screen points");
         assert_eq!(resized((40.0, 0.5), -1e9, -1e9, 1.0), (1.0, 0.0));
-        assert_eq!(resized((40.0, 0.5), 1e9, 1e9, 1.0), (5000.0, 1.0));
+        assert_eq!(resized((40.0, 0.5), 1e9, 1e9, 1.0), (MAX_BRUSH_SIZE, 1.0));
         assert_eq!(resized((40.0, 0.5), f64::NAN, f64::INFINITY, f32::NAN), (40.0, 0.5));
         assert!(is_gesture(CTRL_ALT) && !is_gesture(Modifiers::ALT) && !is_gesture(Modifiers::CTRL) && !is_gesture(Modifiers::SHIFT));
     }
@@ -270,5 +291,154 @@ mod tests {
         assert!(h.state().brush_resize.is_none());
         assert!(!h.state().session.journal.iter().any(|(id, _)| id == "paint.stroke"), "nothing painted");
         assert_eq!(history(h.state()), undo0, "no undo step");
+    }
+
+    fn canvas(a: PhotosuiteApp) -> Harness<'static, PhotosuiteApp> {
+        let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
+            |ui, app: &mut PhotosuiteApp| {
+                let ctx = ui.ctx().clone();
+                if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
+                    return;
+                }
+                egui::CentralPanel::default().show(ui, |ui| crate::canvas::document_area(app, ui));
+            },
+            a,
+        );
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        h.run_steps(4);
+        h
+    }
+
+    fn button(h: &mut Harness<'static, PhotosuiteApp>, pos: Pos2, button: PointerButton, pressed: bool, modifiers: Modifiers) {
+        h.event(egui::Event::PointerButton { pos, button, pressed, modifiers });
+        h.run_steps(2);
+    }
+
+    /// Alt+right-drag from the canvas centre, six steps of `step` screen points.
+    fn alt_right_drag(h: &mut Harness<'static, PhotosuiteApp>, step: egui::Vec2) -> Pos2 {
+        let c = h.state().last_canvas_rect.center();
+        h.event(egui::Event::ModifiersChanged(Modifiers::ALT));
+        h.event(egui::Event::PointerMoved(c));
+        h.run_steps(1);
+        button(h, c, PointerButton::Secondary, true, Modifiers::ALT);
+        let mut p = c;
+        for _ in 0..6 {
+            p += step;
+            h.event(egui::Event::PointerMoved(p));
+            h.run_steps(1);
+        }
+        p
+    }
+
+    #[test]
+    fn alt_right_drag_resizes_with_the_readout_and_never_paints() {
+        for erase_pref in [false, true] {
+            let mut a = app(Tool::Brush);
+            if erase_pref {
+                a.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
+            }
+            a.sync_views();
+            let mut h = canvas(a);
+            let (undo0, size0) = (history(h.state()), h.state().session.tools.brush.size);
+            let end = alt_right_drag(&mut h, vec2(10.0, 8.0));
+            let r = h.state().brush_resize.expect("resizing");
+            assert!(r.secondary);
+            assert!(h.state().session.tools.brush.size > size0, "right grows the brush");
+            assert!(h.state().session.tools.brush.hardness > 0.2, "down hardens it");
+            assert!(h.ctx.memory(|m| m.area_rect(egui::Id::new("brush-resize-readout"))).is_some(), "the readout shows");
+            assert_eq!(h.output().platform_output.cursor_icon, egui::CursorIcon::None);
+            button(&mut h, end, PointerButton::Secondary, false, Modifiers::ALT);
+            h.event(egui::Event::ModifiersChanged(Modifiers::NONE));
+            h.run_steps(2);
+            let app = h.state();
+            assert!(app.brush_resize.is_none() && !app.brush_resize_armed && app.ui.brush_picker.is_none());
+            assert!(!app.session.journal.iter().any(|(id, _)| id == "paint.stroke"), "nothing painted or erased (erase pref {erase_pref})");
+            assert_eq!(history(app), undo0, "no undo step");
+            let sets = app.session.journal.iter().filter(|(id, _)| id == "tools.setBrush").count();
+            assert_eq!(sets, 2, "the setup call plus one coalesced resize");
+        }
+    }
+
+    #[test]
+    fn plain_right_click_still_opens_the_picker() {
+        let mut a = app(Tool::Brush);
+        a.sync_views();
+        let mut h = canvas(a);
+        let c = h.state().last_canvas_rect.center();
+        h.event(egui::Event::PointerMoved(c));
+        h.run_steps(1);
+        button(&mut h, c, PointerButton::Secondary, true, Modifiers::NONE);
+        button(&mut h, c, PointerButton::Secondary, false, Modifiers::NONE);
+        assert!(h.state().ui.brush_picker.is_some() && h.state().brush_resize.is_none());
+        // ⌥ alone on the left button stays the eyedropper, not a resize.
+        assert!(!is_gesture(Modifiers::ALT) && is_right_gesture(Modifiers::ALT));
+    }
+
+    #[test]
+    fn a_missed_release_never_leaves_the_resize_stuck() {
+        let mut a = app(Tool::Brush);
+        a.sync_views();
+        let mut h = canvas(a);
+        // An Alt+right resize whose button-up never reached the canvas (released over another
+        // window, focus lost): the next canvas frame sees the right button up and ends it.
+        h.state_mut().brush_resize_armed = true;
+        tool_event(h.state_mut(), ToolEvent::Down { x: 100.0, y: 100.0, pressure: 1.0 }, Modifiers::NONE);
+        assert!(h.state().brush_resize.is_some_and(|r| r.secondary));
+        h.run_steps(2);
+        assert!(h.state().brush_resize.is_none(), "released when the right button is up");
+        // A plain left drag paints again.
+        let c = h.state().last_canvas_rect.center();
+        h.event(egui::Event::WindowFocused(true));
+        h.event(egui::Event::PointerMoved(c));
+        h.run_steps(1);
+        button(&mut h, c, PointerButton::Primary, true, Modifiers::NONE);
+        for k in 1..=5 {
+            h.event(egui::Event::PointerMoved(c + vec2(12.0 * k as f32, 0.0)));
+            h.run_steps(1);
+        }
+        button(&mut h, c + vec2(60.0, 0.0), PointerButton::Primary, false, Modifiers::NONE);
+        assert!(h.state().session.journal.iter().any(|(id, _)| id == "paint.stroke"), "the stroke paints");
+    }
+
+    #[test]
+    fn an_armed_press_consumed_by_another_handler_disarms() {
+        // Free Transform is active: it takes every press, including an armed Alt+right one.
+        let mut a = app(Tool::Brush);
+        a.run("layer.new.layer", json!({})).unwrap();
+        a.run("edit.fill", json!({"color": [1.0, 0.0, 0.0, 1.0]})).unwrap();
+        let ctx = egui::Context::default();
+        crate::transform_tool::begin(&mut a, &ctx).unwrap();
+        assert!(a.ui.transform.is_some());
+        a.brush_resize_armed = true;
+        tool_event(&mut a, ToolEvent::Down { x: 50.0, y: 50.0, pressure: 1.0 }, Modifiers::ALT);
+        tool_event(&mut a, ToolEvent::Up { x: 50.0, y: 50.0 }, Modifiers::ALT);
+        assert!(!a.brush_resize_armed, "the armed flag never outlives its press");
+        assert!(a.brush_resize.is_none());
+        crate::transform_tool::cancel(&mut a);
+        assert!(a.ui.transform.is_none());
+        // The next plain press paints rather than resizing.
+        tool_event(&mut a, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, Modifiers::NONE);
+        assert!(a.brush_resize.is_none());
+        tool_event(&mut a, ToolEvent::Move { x: 60.0, y: 20.0, pressure: 1.0 }, Modifiers::NONE);
+        tool_event(&mut a, ToolEvent::Up { x: 60.0, y: 20.0 }, Modifiers::NONE);
+        assert!(a.session.journal.iter().any(|(id, _)| id == "paint.stroke"));
+    }
+
+    #[test]
+    fn agents_resize_with_an_alt_right_pointer_drag() {
+        let mut a = app(Tool::Brush);
+        let ctx = egui::Context::default();
+        let events = json!([{"kind": "down", "x": 100, "y": 100}, {"kind": "move", "x": 120, "y": 100}, {"kind": "up", "x": 130, "y": 100}]);
+        let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"button": "right", "alt": true, "events": events}));
+        let _ = crate::control::handle(&mut a, &ctx, &req);
+        assert_eq!(a.session.tools.brush.size, 100.0, "40 px + 2 × 30");
+        assert!(a.brush_resize.is_none() && !a.brush_resize_armed);
+        assert!(!a.session.journal.iter().any(|(id, _)| id == "paint.stroke"));
+        // Without Alt, a right press with the Brush opens the picker and paints nothing.
+        let events = json!([{"kind": "down", "x": 10, "y": 10}, {"kind": "up", "x": 10, "y": 10}]);
+        let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"button": "right", "events": events}));
+        let _ = crate::control::handle(&mut a, &ctx, &req);
+        assert_eq!(a.session.tools.brush.size, 100.0);
+        assert!(a.ui.brush_picker.is_some());
     }
 }

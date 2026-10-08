@@ -590,3 +590,52 @@ fn gray_profile_with_reversed_lut_type_reencodes() {
     odd.description = "re-encoded".into();
     let _ = Profile::parse(&odd.with_encoded_bytes().to_bytes()).unwrap();
 }
+
+/// sRGB the way Photoshop embeds it: a v2 profile whose TRCs are 1024-entry 16-bit tables.
+fn srgb_as_v2_tables() -> Profile {
+    let mut p = srgb().clone();
+    let table = |c: &photosuite_cms::Curve| {
+        photosuite_cms::Curve::Table((0..1024).map(|i| ((c.eval64(i as f64 / 1023.0) * 65535.0).round() / 65535.0) as f32).collect())
+    };
+    let trc = p.trc.clone().unwrap();
+    p.trc = Some([table(&trc[0]), table(&trc[1]), table(&trc[2])]);
+    p.version = (2, 0x10);
+    p.with_encoded_bytes()
+}
+
+#[test]
+fn same_colors_ignores_the_encoding() {
+    let v2 = Profile::parse(&srgb_as_v2_tables().to_bytes()).unwrap();
+    assert_ne!(v2.content_hash(), srgb().content_hash(), "different bytes");
+    assert!(v2.same_colors(srgb()) && srgb().same_colors(&v2));
+    for b in Builtin::ALL {
+        assert!(b.profile().same_colors(b.profile()), "{b:?}");
+        // Re-encoded (fresh bytes, same model): CMYK too, where a round trip is not an identity.
+        let again = Profile::parse(&b.profile().clone().with_encoded_bytes().to_bytes()).unwrap();
+        assert!(again.same_colors(b.profile()), "{b:?} re-encoded");
+    }
+}
+
+#[test]
+fn same_colors_tells_different_spaces_apart() {
+    for other in [Builtin::DisplayP3, Builtin::LinearSrgb, Builtin::AdobeRgbCompat, Builtin::Rec2020, Builtin::CoatedCmyk, Builtin::GrayGamma22] {
+        assert!(!srgb().same_colors(other.profile()), "{other:?}");
+    }
+    assert!(!Builtin::GrayGamma22.profile().same_colors(Builtin::SGray.profile()));
+    // Scaling the red primary's XYZ by 2% makes a different space too.
+    let mut moved = srgb().clone();
+    let m = moved.matrix.as_mut().unwrap();
+    for row in m.iter_mut() {
+        row[0] *= 1.02;
+    }
+    assert!(!moved.with_encoded_bytes().same_colors(srgb()));
+}
+
+/// The sRGB IEC61966-2.1 profile Windows ships (the one Photoshop embeds), when present.
+#[test]
+fn windows_srgb_is_the_builtin_srgb() {
+    let Ok(bytes) = std::fs::read("C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm") else { return };
+    let p = Profile::parse(&bytes).unwrap();
+    assert_ne!(p.content_hash(), srgb().content_hash());
+    assert!(p.same_colors(srgb()));
+}

@@ -214,3 +214,119 @@ async fn agent_completes_ten_scripted_tasks() {
     c.cancel().await.unwrap();
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+/// Click just after "Big", insert a word, then bold through the end of the line. Geometry comes
+/// from `type.hitTest` / `type.caret` / `type.navigate`; the edit is the existing `type.edit`.
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_edits_text_by_position() {
+    let dir = tmp("type-caret");
+    let c = connect(&dir).await;
+    tool(&c, "doc_new", json!({"width": 480, "height": 200, "background": "white"})).await;
+    let listed = tool(&c, "command_list", json!({"filter": "type."})).await;
+    let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    for id in ["type.hitTest", "type.caret", "type.navigate"] {
+        assert!(ids.contains(&id), "command_list missing {id}: {ids:?}");
+    }
+
+    run(&c, "type.create", json!({"x": 40, "y": 90, "text": "Big Sale", "size": 48})).await;
+    let before = inspect(&c).await["history"].as_array().unwrap().len();
+    // The caret after "Big" and the caret after the following space. A quarter of the way is
+    // the left half of that space, which hit-tests as the caret after "Big".
+    let after_big = run(&c, "type.caret", json!({"index": 3})).await;
+    let after_space = run(&c, "type.caret", json!({"index": 4})).await;
+    let seg = after_big["segment"].as_array().unwrap();
+    let (x3, y0, y1) = (seg[0][0].as_f64().unwrap(), seg[0][1].as_f64().unwrap(), seg[1][1].as_f64().unwrap());
+    let x4 = after_space["segment"][0][0].as_f64().unwrap();
+    assert!(x4 > x3 + 0.5, "space should have width, caret x {x3} -> {x4}");
+    let hit = run(&c, "type.hitTest", json!({"x": x3 + 0.25 * (x4 - x3), "y": (y0 + y1) / 2.0})).await;
+    assert_eq!(hit["index"].as_u64(), Some(3), "{hit}");
+    assert_eq!(hit["inside"], true, "{hit}");
+    let quiet = inspect(&c).await["history"].as_array().unwrap().len();
+    assert_eq!(quiet, before, "caret queries are not history steps");
+
+    run(&c, "type.edit", json!({"replace": {"start": hit["index"], "end": hit["index"], "text": " Summer"}})).await;
+    let info = run(&c, "type.info", json!({})).await;
+    assert_eq!(info["text"], "Big Summer Sale", "{info}");
+
+    let end = run(&c, "type.navigate", json!({"index": 0, "move": "lineEnd"})).await;
+    let n = info["text"].as_str().unwrap().chars().count() as u64;
+    assert_eq!(end["index"].as_u64(), Some(n), "{end}");
+    // "Summer" starts one character after the insertion caret (the space in " Summer").
+    let summer = hit["index"].as_u64().unwrap() + 1;
+    run(&c, "type.setStyle", json!({"range": [summer, end["index"]], "fauxBold": true})).await;
+    let info = run(&c, "type.info", json!({})).await;
+    assert_eq!(info["text"], "Big Summer Sale");
+    let bold = info["runs"].as_array().unwrap().iter().find(|r| r["style"]["faux_bold"] == true);
+    let bold = bold.unwrap_or_else(|| panic!("no bold run in {info}"));
+    assert_eq!(bold["start"].as_u64(), Some(summer), "{bold}");
+    assert_eq!(bold["end"].as_u64(), end["index"].as_u64(), "{bold}");
+
+    tool(&c, "doc_close", json!({})).await;
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+async fn connect_headless(headless: photosuite_automation::Headless) -> Conn {
+    let (s, c) = tokio::io::duplex(1 << 20);
+    tokio::spawn(async move {
+        let backend = photosuite_automation::Backend::Headless(std::sync::Arc::new(std::sync::Mutex::new(headless)));
+        if let Ok(running) = PhotosuiteMcp::with_backend(backend).serve(s).await {
+            let _ = running.waiting().await;
+        }
+    });
+    Client.serve(c).await.expect("client init")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_records_and_replays_an_action() {
+    let dir = tmp("actions");
+    let c = connect(&dir).await;
+    let listed = tool(&c, "command_list", json!({"filter": "actions."})).await;
+    let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|item| item.get("id").and_then(Value::as_str)).collect();
+    for id in ["actions.list", "actions.get", "actions.record", "actions.stop", "actions.play", "actions.delete"] {
+        assert!(ids.contains(&id), "{id} missing from {ids:?}");
+    }
+
+    run(&c, "file.new", json!({"width": 32, "height": 32, "background": "white"})).await;
+    run(&c, "actions.record", json!({"name": "Red"})).await;
+    run(&c, "layer.new.layer", json!({})).await;
+    run(&c, "select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 8})).await;
+    run(&c, "edit.fill", json!({"color": "#ff0000"})).await;
+    let stopped = run(&c, "actions.stop", json!({})).await;
+    assert_eq!(stopped["steps"], 3, "{stopped}");
+    let got = run(&c, "actions.get", json!({"action": "Red"})).await;
+    assert_eq!(got["steps"][0][0], "layer.new.layer");
+    assert_eq!(got["steps"][1][0], "select.rect");
+    assert_eq!(got["steps"][2][0], "edit.fill");
+
+    run(&c, "file.new", json!({"width": 32, "height": 32, "background": "white"})).await;
+    let played = run(&c, "actions.play", json!({"action": "Red"})).await;
+    assert_eq!(played["ran"], 3, "{played}");
+    assert!(played.get("failed").is_none(), "{played}");
+    let px = pixel(&c, 2, 2).await;
+    assert!(close(&px, &[1.0, 0.0, 0.0, 1.0], 1e-4), "{px:?}");
+
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agent_play_refuses_a_recorded_file_open() {
+    let dir = tmp("actions-auth");
+    let workspace = AuthorizedWorkspace::new(Some(&dir), Some(&dir)).expect("test workspace");
+    let mut headless = photosuite_automation::Headless::with_workspace(workspace);
+    headless.session.actions.list.push(photosuite_engine::actions_cmds::Action {
+        name: "Open".into(),
+        steps: vec![("file.open".into(), json!({"path": "/etc/passwd"})), ("layer.new.layer".into(), json!({}))],
+    });
+    let c = connect_headless(headless).await;
+    let played = run(&c, "actions.play", json!({"action": "Open"})).await;
+    assert_eq!(played["ran"], 0, "{played}");
+    assert_eq!(played["failed"]["step"], 0, "{played}");
+    assert_eq!(played["failed"]["id"], "file.open", "{played}");
+    assert!(played["failed"]["error"].as_str().unwrap_or("").contains("disabled"), "{played}");
+    let session = tool(&c, "session_list", json!({})).await;
+    assert!(session["documents"].as_array().is_some_and(|d| d.is_empty()), "{session}");
+    c.cancel().await.unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}

@@ -96,7 +96,7 @@ fn layout_gives_the_name_what_the_indicators_leave() {
 fn long_names_never_run_under_the_indicators() {
     for ppp in [1.0, 1.5, 2.0] {
         for width in [250.0, 290.0, 520.0] {
-            let h = harness(busy(), ppp, "promedium", width);
+            let h = harness(busy(), ppp, "slate", width);
             check(&recorded(&h.ctx), &format!("@{ppp}x {width}pt"));
         }
     }
@@ -117,7 +117,7 @@ fn click(h: &mut Harness<'_, PhotosuiteApp>, at: Pos2) {
 
 #[test]
 fn the_fx_triangle_hides_and_shows_the_effects_rows() {
-    let mut h = harness(busy(), 1.0, "promedium", 290.0);
+    let mut h = harness(busy(), 1.0, "slate", 290.0);
     let top = h.state().session.active().unwrap().doc.layers.last().unwrap().clone();
     let rows = |h: &Harness<'_, PhotosuiteApp>| recorded(&h.ctx).iter().map(|r| r.row.top()).collect::<Vec<_>>();
     let before = rows(&h);
@@ -141,7 +141,7 @@ fn groups_open(s: &photosuite_engine::Session) -> Vec<bool> {
 
 #[test]
 fn collapse_all_groups_from_the_panel_menu_and_it_is_saved() {
-    let mut h = harness(busy(), 1.0, "promedium", 290.0);
+    let mut h = harness(busy(), 1.0, "slate", 290.0);
     assert!(groups_open(&h.state().session).iter().all(|o| *o));
     let menu = crate::dock::last_rects(&h.ctx).into_iter().find(|(g, _)| *g == crate::dock::Group::Layers).expect("layers group").1;
     // The hamburger sits at the right end of the group's tab strip.
@@ -159,5 +159,49 @@ fn collapse_all_groups_from_the_panel_menu_and_it_is_saved() {
         let mut s = photosuite_engine::Session::new();
         s.add_document(back, None);
         assert!(groups_open(&s).iter().all(|o| !o), "{name}: groups stay closed");
+    }
+}
+
+/// Dragging down the eye column hides (or shows) every layer swept over, in one history step, and
+/// never reorders the layers, even when one pointer move jumps several rows; a hidden layer's eye
+/// box is empty and a click shows it again.
+#[test]
+fn dragging_down_the_eyes_sweeps_visibility_without_reordering() {
+    for moves in [10, 1] {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
+        for i in 0..4 {
+            s.execute("layer.new.layer", json!({"name": format!("L{i}")})).unwrap();
+        }
+        let mut h = harness(s, 1.0, "slate", 290.0);
+        let order = |h: &Harness<'_, PhotosuiteApp>| h.state().session.active().unwrap().doc.layers.iter().map(|l| l.id).collect::<Vec<_>>();
+        let visible = |h: &Harness<'_, PhotosuiteApp>, id: u64| h.state().session.active().unwrap().doc.layer(photosuite_doc::LayerId(id)).unwrap().visible;
+        let steps = |h: &Harness<'_, PhotosuiteApp>| h.state().session.active().unwrap().history.past_len();
+        let (before, steps_before) = (order(&h), steps(&h));
+        // Rows top to bottom: L3, L2, L1, L0, Background.
+        let rows = recorded(&h.ctx);
+        let eye = |r: &RowRects| pos2(r.row.left() + 17.0, r.row.center().y);
+        let (first, last) = (eye(&rows[0]), eye(&rows[2]));
+        h.event(egui::Event::PointerMoved(first));
+        h.run_steps(1);
+        h.event(egui::Event::PointerButton { pos: first, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+        h.run_steps(1);
+        for k in 1..=moves {
+            h.event(egui::Event::PointerMoved(first + (last - first) * (k as f32 / moves as f32)));
+            h.run_steps(1);
+        }
+        h.event(egui::Event::PointerButton { pos: last, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+        h.run_steps(3);
+        for r in &rows[..3] {
+            assert!(!visible(&h, r.layer), "{moves} moves: layer {} swept hidden", r.layer);
+        }
+        assert!(visible(&h, rows[3].layer), "{moves} moves: rows past the sweep are untouched");
+        assert_eq!(order(&h), before, "{moves} moves: an eye drag never reorders the layers");
+        assert_eq!(steps(&h), steps_before + 1, "{moves} moves: the whole sweep is one history step");
+        assert_eq!(h.state().session.active().unwrap().history.undo_label(), Some("Layer Visibility"));
+        // A click on the (empty) eye box of a hidden layer shows it again.
+        let p = eye(&recorded(&h.ctx)[1]);
+        click(&mut h, p);
+        assert!(visible(&h, rows[1].layer));
     }
 }

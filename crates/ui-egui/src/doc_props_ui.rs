@@ -190,8 +190,9 @@ pub fn properties(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.add_space(label_w + 8.0);
             let mut d = depth;
-            let opts: Vec<(SampleType, &str)> = DEPTHS.iter().map(|(d, l, _)| (*d, *l)).collect();
-            if widgets::dropdown(ui, "doc-props-depth", &mut d, &opts, 150.0)
+            let opts: Vec<(SampleType, &str, &str)> =
+                DEPTHS.iter().map(|(d, l, _)| (*d, *l, if *d == SampleType::F32 { "Floating point" } else { "Integer" })).collect();
+            if widgets::dropdown_with_tooltips(ui, "doc-props-depth", &mut d, &opts, 150.0)
                 && let Some((_, _, id)) = DEPTHS.iter().find(|(x, _, _)| *x == d)
             {
                 run.push(((*id).to_string(), Value::Null));
@@ -313,6 +314,19 @@ mod tests {
     fn document_dropdowns_map_to_live_mode_commands() {
         for id in MODES.iter().map(|m| m.2).chain(DEPTHS.iter().map(|d| d.2)) {
             assert!(photosuite_engine::commands::find(id).is_some(), "{id} is not an engine command");
+        }
+    }
+
+    #[test]
+    fn image_mode_depth_labels_match_sample_types_and_are_translated() {
+        assert_eq!(
+            DEPTHS.iter().map(|(sample, label, _)| (*sample, *label)).collect::<Vec<_>>(),
+            [(SampleType::U8, "8 Bits/Channel"), (SampleType::U16, "16 Bits/Channel"), (SampleType::F32, "32 Bits/Channel"),]
+        );
+        for lang in crate::i18n::Lang::all().filter(|lang| lang.code() != "en") {
+            for (_, label, id) in DEPTHS {
+                assert_ne!(crate::i18n::tr_id(lang, id, label), *label, "{}: {label}", lang.code());
+            }
         }
     }
 }

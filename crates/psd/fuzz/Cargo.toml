@@ -35,3 +35,10 @@ path = "fuzz_targets/abr.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "image_source_data"
+path = "fuzz_targets/image_source_data.rs"
+test = false
+doc = false
+bench = false

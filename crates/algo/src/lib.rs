@@ -54,6 +54,7 @@ pub mod poisson;
 pub mod puppet;
 pub mod pyramid;
 pub mod quantize;
+mod relight;
 mod render;
 pub mod render2;
 pub mod resample;
@@ -412,6 +413,16 @@ pub enum FilterParams {
         height: f32,
         white_is_high: bool,
     },
+    /// Photographic relight: angle −180…180°, elevation 0…90°, intensity/ambient 0…100,
+    /// warmth −100…100, softness 1…100. Intensity 0 is an identity copy.
+    Relight {
+        angle: f32,
+        elevation: f32,
+        intensity: f32,
+        ambient: f32,
+        warmth: f32,
+        softness: f32,
+    },
 
     // ---- Noise ----
     /// Strength 0–10, the rest 0–100 %.
@@ -594,6 +605,7 @@ impl FilterParams {
             FilterParams::Fibers { .. } => "Fibers",
             FilterParams::LensFlare { .. } => "Lens Flare",
             FilterParams::LightingEffects { .. } => "Lighting Effects",
+            FilterParams::Relight { .. } => "Relight",
             FilterParams::ReduceNoise { .. } => "Reduce Noise",
             FilterParams::SmartBlur { .. } => "Smart Blur",
             FilterParams::LensBlur { .. } => "Lens Blur",
@@ -635,6 +647,8 @@ fn halo_ext(p: &FilterParams) -> Halo {
         // Generators and per-pixel renders only need the bounds geometry (always in the context).
         FilterParams::Fibers { .. } | FilterParams::LensFlare { .. } => Halo::Radius(0),
         FilterParams::LightingEffects { .. } => r(1.0),
+        FilterParams::Relight { intensity, .. } if *intensity == 0.0 => Halo::Radius(0),
+        FilterParams::Relight { .. } => Halo::Radius(relight::HALO_RADIUS),
         FilterParams::ReduceNoise { .. } => r(denoise::reach()),
         FilterParams::SmartBlur { radius, .. } => r(*radius),
         FilterParams::LensBlur { radius, .. } => r(*radius),
@@ -770,6 +784,12 @@ pub fn kernel(params: &FilterParams, src: &Image, out: Rect, ctx: &Ctx) -> Vec<f
                 white_is_high: *white_is_high,
             },
         ),
+        FilterParams::Relight { angle, elevation, intensity, ambient, warmth, softness } => relight::relight(
+            src,
+            out,
+            ctx,
+            relight::Params { angle: *angle, elevation: *elevation, intensity: *intensity, ambient: *ambient, warmth: *warmth, softness: *softness },
+        ),
         FilterParams::ReduceNoise { strength, preserve_details, reduce_color_noise, sharpen_details, remove_jpeg_artifact } => denoise::reduce_noise(
             src,
             out,
@@ -872,6 +892,20 @@ pub fn apply_in(surface: &Surface, params: &FilterParams, area: Rect, bounds: Re
     apply_tiled(surface, params, area.intersect(&extent), bounds, selection, auto_tile(params), Some(extent))
 }
 
+/// [`apply_in`] that can be cancelled (checked before each tile) and reports progress per tile
+/// group. `None` when `ctl` was cancelled; the input surface is never modified.
+pub fn apply_in_with(
+    surface: &Surface,
+    params: &FilterParams,
+    area: Rect,
+    bounds: Rect,
+    selection: Option<&Surface>,
+    extent: Rect,
+    ctl: &photosuite_raster::Interrupt,
+) -> Option<Surface> {
+    apply_tiled_with(surface, params, area.intersect(&extent), bounds, selection, auto_tile(params), Some(extent), ctl)
+}
+
 /// Results do not depend on the tiling, so wide-halo filters use bigger tiles to keep the
 /// re-read margin (and its cost) below ~2× the tile area.
 fn auto_tile(params: &FilterParams) -> i32 {
@@ -894,9 +928,26 @@ pub fn apply_tiled(
     tile: i32,
     extent: Option<Rect>,
 ) -> Surface {
+    // Never cancelled, so always `Some`; the fallback (the input unchanged) is unreachable.
+    apply_tiled_with(surface, params, area, bounds, selection, tile, extent, &photosuite_raster::Interrupt::NONE).unwrap_or_else(|| surface.clone())
+}
+
+/// [`apply_tiled`] with cancellation (checked before each tile, so a cancel takes effect within
+/// one tile's work) and progress (after each group of tiles). `None` when cancelled.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_tiled_with(
+    surface: &Surface,
+    params: &FilterParams,
+    area: Rect,
+    bounds: Rect,
+    selection: Option<&Surface>,
+    tile: i32,
+    extent: Option<Rect>,
+    ctl: &photosuite_raster::Interrupt,
+) -> Option<Surface> {
     let mut out = surface.clone();
     if area.is_empty() {
-        return out;
+        return Some(out);
     }
     let fmt = surface.format();
     let ctx = Ctx { bounds, mode: fmt.mode, alpha: fmt.alpha };
@@ -912,7 +963,19 @@ pub fn apply_tiled(
         }
         y = y.saturating_add(tile);
     }
+    // Tiles finished so far, for progress reported per tile (from any worker thread).
+    let finished = std::sync::atomic::AtomicUsize::new(0);
+    let total = tiles.len().max(1);
     let run = |t: &Rect| -> (Rect, Vec<f32>) {
+        // Cancelled: skip the remaining tiles of the group (the result is discarded).
+        if ctl.cancelled() {
+            return (*t, Vec::new());
+        }
+        let tick = || {
+            let n = finished.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            // The last few percent are the writes after each group.
+            ctl.progress(0.98 * n as f32 / total as f32);
+        };
         let owned;
         let src = match (&shared, halo) {
             (Some(s), _) => s,
@@ -945,6 +1008,7 @@ pub fn apply_tiled(
                 }
             }
         }
+        tick();
         (*t, data)
     };
     // Tiles are filtered in groups of about RESULT_BUDGET bytes (at least one per core) and each
@@ -959,6 +1023,9 @@ pub fn apply_tiled(
     let per_tile = side.saturating_mul(side).saturating_mul(fmt.channels() * std::mem::size_of::<f32>());
     let group = (RESULT_BUDGET / per_tile.max(1)).max(threads).max(1);
     for chunk in tiles.chunks(group) {
+        if ctl.cancelled() {
+            return None;
+        }
         #[cfg(not(target_arch = "wasm32"))]
         let results: Vec<(Rect, Vec<f32>)> = {
             use rayon::prelude::*;
@@ -966,12 +1033,16 @@ pub fn apply_tiled(
         };
         #[cfg(target_arch = "wasm32")]
         let results: Vec<(Rect, Vec<f32>)> = chunk.iter().map(run).collect();
+        if ctl.cancelled() {
+            return None;
+        }
         for (t, data) in results {
             out.write_region(t, &data);
         }
     }
     out.prune();
-    out
+    ctl.progress(1.0);
+    Some(out)
 }
 
 /// Bytes of float filter results held at once by [`apply_tiled`].

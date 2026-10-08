@@ -16,12 +16,14 @@
 //! Converting a layer embeds it as an in-memory `.pcraft` bundle of a nested document (exactly
 //! lossless, layered, any depth/model). PSD placed layers keep their source in the preserved
 //! global `lnk2` block (found by uuid), and keep Photoshop's rendering until something changes,
-//! so an unedited PSD still round-trips byte for byte.
+//! so an unedited PSD still round-trips byte for byte. PSD export (`photosuite_io::smart_map`)
+//! writes every smart object back as one: its source embedded in `lnk2` (a `.pcraft` source as a
+//! PSB), its smart filters in `filterFX` and its filter mask in `FEid`.
 
 use std::sync::{Arc, Mutex};
 
 use photosuite_algo::resample::translate_surface;
-use photosuite_algo::transform::{Homography, Interp, warp_surface};
+use photosuite_algo::transform::Homography;
 use photosuite_color::{BlendMode, PixelFormat};
 use photosuite_doc::{DocId, Document, Layer, LayerContent, LayerId, LayerMask, Metadata, SmartObject, SmartSource};
 use photosuite_geom::{Affine, Rect, Size};
@@ -41,6 +43,9 @@ pub struct SmartLink {
 
 /// PSD placed-layer keys that describe the smart object's source; stale once we change it.
 const PLACED_KEYS: [&[u8; 4]; 3] = [b"SoLd", b"PlLd", b"SoLE"];
+
+/// Command id of a Photoshop smart filter PhotoSuite does not implement (kept verbatim from PSD).
+pub use photosuite_io::smart_map::UNSUPPORTED_FILTER;
 
 fn other(msg: impl Into<String>) -> EngineError {
     EngineError::Other(msg.into())
@@ -67,7 +72,7 @@ fn base_name(path: &str) -> String {
 }
 
 fn read_file(path: &str) -> Option<Vec<u8>> {
-    if path.is_empty() { None } else { std::fs::read(path).ok() }
+    if path.is_empty() { None } else { photosuite_format::read_file(std::path::Path::new(path)).ok() }
 }
 
 /// The source file of a smart object: embedded bytes, the PSD's embedded linked-layer data (PSD
@@ -189,6 +194,9 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photos
             photosuite_compose::render_layer(&one, bounds).px
         })
         .collect();
+    if frames.is_empty() {
+        return Err(EngineError::Other("the smart object's contents have no visible layers".into()));
+    }
     let stat = match mode {
         photosuite_doc::StackMode::Entropy => Stat::Entropy,
         photosuite_doc::StackMode::Kurtosis => Stat::Kurtosis,
@@ -209,28 +217,6 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photos
 }
 
 // ---------- rendering ----------
-
-/// Places the source image in the document: an exact shift for whole-pixel translations
-/// (conversion and re-render are then lossless), a bicubic warp otherwise.
-fn place(img: &SourceImage, t: &Affine) -> Surface {
-    let [a, b, c, d, e, f] = t.m;
-    let near = |x: f64, y: f64| (x - y).abs() < 1e-9;
-    if near(a, 1.0) && near(b, 0.0) && near(c, 0.0) && near(d, 1.0) && near(e, e.round()) && near(f, f.round()) {
-        return translate_surface(&img.surface, e.round() as i32, f.round() as i32);
-    }
-    warp_surface(&img.surface, img.bounds, &Homography([a, c, e, b, d, f, 0.0, 0.0, 1.0]), Interp::Bicubic)
-}
-
-/// Places the source image through its warp (source space) and then its transform, in one
-/// resampling pass (Edit › Transform › Warp on a smart object stays lossless).
-fn place_warped(img: &SourceImage, w: &photosuite_geom::warp::Warp, t: &Affine) -> Surface {
-    let [a, b, c, d, e, f] = t.m;
-    let map = |x: f64, y: f64| {
-        let (u, v) = w.map(x, y);
-        (a * u + c * v + e, b * u + d * v + f)
-    };
-    photosuite_algo::warp::warp_mesh_surface(&img.surface, img.bounds, &map, Interp::Bicubic)
-}
 
 /// `top` blended over `base` with `mode` at `opacity` (a smart filter's blending options).
 fn blend_surfaces(base: &Surface, top: &Surface, mode: BlendMode, opacity: f32) -> Surface {
@@ -313,9 +299,10 @@ pub fn render(doc: &Document, sm: &SmartObject) -> Result<Option<Surface>> {
         Some(mode) => stack_image(&name, &bytes, doc.pixel_format(), mode)?,
         None => source_image(&name, &bytes, doc.pixel_format())?,
     };
-    let placed = match sm.warp.as_ref().filter(|w| !w.is_identity()) {
-        Some(w) => place_warped(&img, w, &sm.transform),
-        None => place(&img, &sm.transform),
+    // Through the warp (source space) and the transform in one pass; whole-pixel moves are exact.
+    let placed = match &sm.perspective {
+        Some(p) => photosuite_algo::warp::place_source_projective(&img.surface, img.bounds, &Homography(*p), sm.warp.as_ref()),
+        None => photosuite_algo::warp::place_source(&img.surface, img.bounds, &sm.transform, sm.warp.as_ref()),
     };
     Ok(Some(apply_smart_filters(&placed, sm, doc.bounds())))
 }
@@ -399,9 +386,45 @@ pub(crate) fn snap_affine(a: Affine) -> Affine {
     Affine { m: a.m.map(|v| if (v - v.round()).abs() < 1e-9 { v.round() } else { v }) }
 }
 
+/// Where the smart object's source pixels land in the document: its projective map (Distort,
+/// Perspective) or its affine transform.
+pub fn placement(sm: &SmartObject) -> Homography {
+    sm.perspective.map(Homography).unwrap_or_else(|| affine_homography(&sm.transform))
+}
+
+pub(crate) fn affine_homography(a: &Affine) -> Homography {
+    let [a, b, c, d, e, f] = a.m;
+    Homography([a, c, e, b, d, f, 0.0, 0.0, 1.0])
+}
+
+/// Sets where the source lands. An affine map is stored exactly in `transform` (no
+/// `perspective`); a projective one in `perspective`, with `transform` its affine approximation at
+/// the source origin (for code that only needs scale and position).
+pub(crate) fn set_placement(sm: &mut SmartObject, h: Homography) {
+    let m = h.0;
+    let n = if m[8].abs() > 1e-12 { m.map(|v| v / m[8]) } else { m };
+    if n[6].abs() < 1e-12 && n[7].abs() < 1e-12 {
+        sm.transform = snap_affine(Affine { m: [n[0], n[3], n[1], n[4], n[2], n[5]] });
+        sm.perspective = None;
+        return;
+    }
+    let h = Homography(n);
+    let (o, x, y) = (h.apply(0.0, 0.0), h.apply(1.0, 0.0), h.apply(0.0, 1.0));
+    sm.transform = Affine { m: [x.0 - o.0, x.1 - o.1, y.0 - o.0, y.1 - o.1, o.0, o.1] };
+    sm.perspective = Some(n);
+}
+
+/// Composes `a` (document → document) onto the smart object's placement.
+pub(crate) fn transform_placement(sm: &mut SmartObject, a: &Affine) {
+    match sm.perspective {
+        None => sm.transform = snap_affine(a.mul(&sm.transform)),
+        Some(_) => set_placement(sm, affine_homography(a).mul(&placement(sm))),
+    }
+}
+
 /// Moves a smart object by whole pixels without re-rendering.
 pub(crate) fn shift_smart(sm: &mut SmartObject, dx: i32, dy: i32) {
-    sm.transform = Affine::translate(dx as f64, dy as f64).mul(&sm.transform);
+    transform_placement(sm, &Affine::translate(dx as f64, dy as f64));
     if let Some(c) = &mut sm.cache {
         *c = crate::layer_multi_cmds::shift_surface(c, dx, dy);
     }
@@ -410,8 +433,8 @@ pub(crate) fn shift_smart(sm: &mut SmartObject, dx: i32, dy: i32) {
     }
 }
 
-/// Forget PSD placed-layer data that no longer describes the smart object (PSD export then
-/// writes the rendered pixels).
+/// Forget PSD placed-layer data that no longer describes the smart object (its source changed):
+/// PSD export then writes fresh placed-layer blocks and embeds the new source.
 fn detach_psd(l: &mut Layer) {
     if let LayerContent::Smart(sm) = &mut l.content {
         sm.psd_raw = None;
@@ -594,7 +617,7 @@ fn set_source(s: &mut Session, p: &Value, label: &str, keep_psd: bool, make: imp
 
 fn replace_contents(s: &mut Session, p: &Value) -> Result<Value> {
     let path = path_param("layer.smartObjects.replaceContents", p)?.to_string();
-    let bytes = std::fs::read(&path).map_err(|e| other(format!("can't read {path}: {e}")))?;
+    let bytes = photosuite_format::read_file(std::path::Path::new(&path)).map_err(|e| other(format!("can't read {path}: {e}")))?;
     let name = base_name(&path);
     decode_source(&name, &bytes)?; // fail before touching the document
     set_source(s, p, "Replace Contents", false, |_, _| Ok(SmartSource::Embedded { file_name: name, bytes: Arc::new(bytes) }))
@@ -729,6 +752,9 @@ fn set_filter_params(s: &mut Session, p: &Value) -> Result<Value> {
     edit_filters(s, p, "Edit Smart Filter", |sm| {
         let i = filter_index(CMD, p, sm)?;
         let f = &mut sm.smart_filters[i];
+        if f.command == photosuite_io::smart_map::UNSUPPORTED_FILTER {
+            return Err(bad(CMD, "this Photoshop filter isn't implemented in PhotoSuite: it is kept as is (it can be hidden, moved or deleted)"));
+        }
         match (&mut f.params, new) {
             (Value::Object(old), Value::Object(n)) => old.extend(n),
             (slot, n) => *slot = n,
@@ -778,6 +804,24 @@ fn move_filter(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 // ---------- enablement ----------
+
+/// Whether smart-filter command `spec` can run with `p`: its precondition is checked on an
+/// explicit `"layer"` of the active document (the layer it then edits) rather than on the
+/// active layer, which stays active (#466). `None` for other commands or without that target.
+pub(crate) fn target_enabled(s: &mut Session, spec: &CommandSpec, p: &Value) -> Option<std::result::Result<(), String>> {
+    if !spec.id.starts_with("layer.smartFilter.") {
+        return None;
+    }
+    let target = LayerId(p.get("layer")?.as_u64()?);
+    let d = s.active_mut()?;
+    d.doc.layer(target)?;
+    let active = d.active_layer.replace(target);
+    let r = (spec.enabled)(s);
+    if let Some(d) = s.active_mut() {
+        d.active_layer = active;
+    }
+    Some(r)
+}
 
 fn active_smart(s: &Session) -> std::result::Result<&SmartObject, String> {
     let d = s.active().ok_or("no document open")?;

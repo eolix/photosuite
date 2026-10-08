@@ -13,12 +13,23 @@
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
-use photosuite_doc::Document;
+use photosuite_doc::{Document, LayerId};
+
+/// The layers a state targeted when it was created: the active ("key") layer and every selected
+/// layer. Undo and redo bring them back with the state's document, as the reference app does;
+/// selecting layers is not a step of its own, so it doesn't change a state's target.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct LayerTarget {
+    pub active: Option<LayerId>,
+    pub selected: Vec<LayerId>,
+}
 
 #[derive(Clone, Debug)]
 pub struct HistoryState {
     pub label: String,
     pub doc: Arc<Document>,
+    /// The layers targeted when this state was created.
+    pub layers: LayerTarget,
 }
 
 #[derive(Clone, Debug)]
@@ -32,6 +43,8 @@ pub struct History {
     pub max_bytes: usize,
     /// Label of the step that produced the current document.
     current_label: String,
+    /// The layers targeted when the current document was created (opened or edited).
+    current_layers: LayerTarget,
 }
 
 impl Default for History {
@@ -42,13 +55,22 @@ impl Default for History {
 
 impl History {
     pub fn new(max_states: usize) -> Self {
-        Self { undo: VecDeque::new(), redo: Vec::new(), max_states: max_states.max(1), max_bytes: 0, current_label: "Open".into() }
+        Self {
+            undo: VecDeque::new(),
+            redo: Vec::new(),
+            max_states: max_states.max(1),
+            max_bytes: 0,
+            current_label: "Open".into(),
+            current_layers: LayerTarget::default(),
+        }
     }
 
-    /// Record that `before` was replaced by a new current document via step `label`.
-    pub fn record(&mut self, label: impl Into<String>, before: Arc<Document>) {
+    /// Record that `before` was replaced by a new current document via step `label`, which left
+    /// `layers` targeted.
+    pub fn record(&mut self, label: impl Into<String>, before: Arc<Document>, layers: LayerTarget) {
         let prev_label = std::mem::replace(&mut self.current_label, label.into());
-        self.undo.push_back(HistoryState { label: prev_label, doc: before });
+        let prev_layers = std::mem::replace(&mut self.current_layers, layers);
+        self.undo.push_back(HistoryState { label: prev_label, doc: before, layers: prev_layers });
         self.redo.clear();
         while self.undo.len() > self.max_states {
             self.undo.pop_front();
@@ -67,20 +89,34 @@ impl History {
     pub fn redo_label(&self) -> Option<&str> {
         self.redo.last().map(|s| s.label.as_str())
     }
-
-    /// Undo: returns the document to make current.
-    pub fn undo(&mut self, current: Arc<Document>) -> Option<Arc<Document>> {
-        let prev = self.undo.pop_back()?;
-        let label = std::mem::replace(&mut self.current_label, prev.label);
-        self.redo.push(HistoryState { label, doc: current });
-        Some(prev.doc)
+    /// Labels of the redo states, the next redo first (the History panel's greyed rows).
+    pub fn redo_labels(&self) -> impl Iterator<Item = &str> {
+        self.redo.iter().rev().map(|s| s.label.as_str())
     }
 
-    pub fn redo(&mut self, current: Arc<Document>) -> Option<Arc<Document>> {
+    /// Set the layers the current document targets from its creation on: when it is first
+    /// opened, or when its step coalesces or changes the selection after recording.
+    pub fn set_current_layers(&mut self, layers: LayerTarget) {
+        self.current_layers = layers;
+    }
+
+    /// Undo: `current` becomes redoable; returns the document to make current and the layers it
+    /// targeted when it was created.
+    pub fn undo(&mut self, current: Arc<Document>) -> Option<(Arc<Document>, LayerTarget)> {
+        let prev = self.undo.pop_back()?;
+        let label = std::mem::replace(&mut self.current_label, prev.label);
+        let layers = std::mem::replace(&mut self.current_layers, prev.layers.clone());
+        self.redo.push(HistoryState { label, doc: current, layers });
+        Some((prev.doc, prev.layers))
+    }
+
+    /// Redo: the mirror of [`Self::undo`].
+    pub fn redo(&mut self, current: Arc<Document>) -> Option<(Arc<Document>, LayerTarget)> {
         let next = self.redo.pop()?;
         let label = std::mem::replace(&mut self.current_label, next.label);
-        self.undo.push_back(HistoryState { label, doc: current });
-        Some(next.doc)
+        let layers = std::mem::replace(&mut self.current_layers, next.layers.clone());
+        self.undo.push_back(HistoryState { label, doc: current, layers });
+        Some((next.doc, next.layers))
     }
 
     /// Entries for a History panel: past labels oldest→newest, then the current label.
@@ -109,6 +145,11 @@ impl History {
     pub fn purge_last(&mut self) -> bool {
         self.redo.clear();
         self.undo.pop_back().is_some()
+    }
+
+    /// Forget the redo states, e.g. after undoing half of a compound step that failed.
+    pub fn clear_redo(&mut self) {
+        self.redo.clear();
     }
 
     pub fn clear(&mut self) {
@@ -191,7 +232,7 @@ mod tests {
         let mut d = (**cur).clone();
         f(&mut d);
         *cur = Arc::new(d);
-        h.record(label, before);
+        h.record(label, before, LayerTarget::default());
     }
 
     #[test]
@@ -203,12 +244,37 @@ mod tests {
         });
         assert_eq!(cur.layers.len(), 2);
         assert_eq!(h.undo_label(), Some("New Layer"));
-        cur = h.undo(cur).unwrap();
+        cur = h.undo(cur).unwrap().0;
         assert_eq!(cur.layers.len(), 1);
         assert_eq!(h.redo_label(), Some("New Layer"));
-        cur = h.redo(cur).unwrap();
+        cur = h.redo(cur).unwrap().0;
         assert_eq!(cur.layers.len(), 2);
         assert!(h.redo(cur.clone()).is_none());
+    }
+
+    #[test]
+    fn undo_and_redo_return_the_layers_each_state_targeted_when_created() {
+        let mut h = History::default();
+        let open = Arc::new(base());
+        let bg = open.layers[0].id;
+        let target = |id: LayerId| LayerTarget { active: Some(id), selected: vec![id] };
+        h.set_current_layers(target(bg));
+        // New Layer targets the new layer; the background is then selected (not a step) and filled.
+        let mut d = (*open).clone();
+        let new = d.insert_above(None, Layer::raster("L", d.pixel_format()));
+        let layered = Arc::new(d);
+        h.record("New Layer", open, target(new));
+        let mut d = (*layered).clone();
+        d.name = "filled".into();
+        h.record("Fill", layered, target(bg));
+        let (d, layers) = h.undo(Arc::new(d)).unwrap();
+        assert_eq!(layers, target(new), "New Layer's state targeted the new layer when created");
+        let (d, layers) = h.undo(d).unwrap();
+        assert_eq!(layers, target(bg), "the opened document's target");
+        let (d, layers) = h.redo(d).unwrap();
+        assert_eq!(layers, target(new));
+        let (_, layers) = h.redo(d).unwrap();
+        assert_eq!(layers, target(bg), "Fill's state targeted the background");
     }
 
     #[test]
@@ -222,6 +288,9 @@ mod tests {
         assert!(Arc::ptr_eq(&h.state(0).unwrap(), &open));
         assert_eq!(h.state(1).unwrap().name, "a");
         assert!(h.state(2).is_none(), "the current document is not held");
+        cur = h.undo(cur).unwrap().0;
+        h.undo(cur).unwrap();
+        assert_eq!(h.redo_labels().collect::<Vec<_>>(), ["A", "B"], "next redo first");
     }
 
     #[test]
@@ -229,7 +298,7 @@ mod tests {
         let mut h = History::default();
         let mut cur = Arc::new(base());
         edit(&mut h, &mut cur, "A", |d| d.name = "a".into());
-        cur = h.undo(cur).unwrap();
+        cur = h.undo(cur).unwrap().0;
         edit(&mut h, &mut cur, "B", |d| d.name = "b".into());
         assert!(!h.can_redo());
         assert_eq!(h.entries(), vec!["Open".to_string(), "B".to_string()]);
@@ -243,7 +312,7 @@ mod tests {
             edit(&mut h, &mut cur, &format!("step {i}"), |d| d.name = format!("{i}"));
         }
         let mut n = 0;
-        while let Some(d) = h.undo(cur.clone()) {
+        while let Some((d, _)) = h.undo(cur.clone()) {
             cur = d;
             n += 1;
         }

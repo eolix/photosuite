@@ -140,8 +140,9 @@ impl Slices {
         self.list.is_empty()
     }
     /// A fresh slice id (Photoshop counts from 1; auto slices use ids too, so leave room).
-    pub fn next_id(&self) -> u32 {
-        self.list.iter().map(|s| s.id).max().unwrap_or(0) + 1
+    /// Returns `None` when the stored ids have exhausted the `u32` id space.
+    pub fn next_id(&self) -> Option<u32> {
+        self.list.iter().map(|s| s.id).max().unwrap_or(0).checked_add(1)
     }
     pub fn get(&self, id: u32) -> Option<&Slice> {
         self.list.iter().find(|s| s.id == id)
@@ -300,5 +301,13 @@ mod tests {
         assert_eq!(user.origin, SliceOrigin::User);
         d.slices.list[0].name = "logo".into();
         assert!(resolve(&d).iter().any(|s| s.name == "logo"));
+    }
+
+    #[test]
+    fn exhausted_slice_id_survives_serialization() {
+        let slices = Slices { list: vec![Slice { id: u32::MAX, ..Default::default() }], ..Default::default() };
+        let value = serde_json::to_value(&slices).unwrap();
+        let loaded: Slices = serde_json::from_value(value).unwrap();
+        assert_eq!(loaded.next_id(), None);
     }
 }

@@ -66,6 +66,8 @@ pub struct ViewParams {
     /// Display transform: 0 none, 1 the document's display LUT (document → monitor profile,
     /// Proof Colors), 2 LUT plus the gamut warning (see [`GpuCanvas::set_display_lut`]).
     pub display: u8,
+    /// The display the view is on (its LUT is per document and display, #569; 0 = unknown).
+    pub output: u32,
     /// View › 32-bit Preview Options (exposure in stops, gamma), applied to the texture values
     /// before the display LUT; `None` when off. The display LUT must then leave it out
     /// (`ColorState::gpu_canvas_lut`).
@@ -581,36 +583,43 @@ impl GpuCanvas {
         }
         // LUTs and identity-transform signatures can outlive document textures. Prune both,
         // or a preserved-ID reopen can skip rebuilding a missing LUT.
-        res.luts.retain(|k, _| live.contains(k));
-        res.display_lut_signatures.retain(|k, _| live.contains(k));
+        res.luts.retain(|k, _| live.contains(&k.0));
+        res.display_lut_signatures.retain(|k, _| live.contains(&k.0));
     }
 
-    pub(crate) fn display_lut_signature(&self, doc: u64) -> Option<(u64, u8)> {
+    pub(crate) fn display_lut_signature(&self, doc: u64, output: u32) -> Option<(u64, u8)> {
         let renderer = self.rs.renderer.read();
-        renderer.callback_resources.get::<Resources>()?.display_lut_signatures.get(&doc).copied()
+        renderer.callback_resources.get::<Resources>()?.display_lut_signatures.get(&(doc, output)).copied()
     }
 
-    pub(crate) fn cache_display_lut_signature(&self, doc: u64, signature: u64, mode: u8) {
+    /// Whether document `doc` has a display LUT for display `output` (tests).
+    #[cfg(test)]
+    pub(crate) fn has_display_lut(&self, doc: u64, output: u32) -> bool {
+        let renderer = self.rs.renderer.read();
+        renderer.callback_resources.get::<Resources>().is_some_and(|r| r.luts.contains_key(&(doc, output)))
+    }
+
+    pub(crate) fn cache_display_lut_signature(&self, doc: u64, output: u32, signature: u64, mode: u8) {
         let mut renderer = self.rs.renderer.write();
         if let Some(res) = renderer.callback_resources.get_mut::<Resources>() {
-            res.display_lut_signatures.insert(doc, (signature, mode));
+            res.display_lut_signatures.insert((doc, output), (signature, mode));
         }
     }
 
-    /// Set (or clear with `None`) the display LUT of document `doc`: `size`³ RGBA8 texels, red
-    /// fastest. RGB is the display colour for each lattice input; alpha 255 marks out-of-gamut
-    /// colours for the gamut warning.
-    pub fn set_display_lut(&self, doc: u64, size: u32, rgba: Option<&[u8]>) {
+    /// Set (or clear with `None`) the display LUT of document `doc` on display `output`:
+    /// `size`³ RGBA8 texels, red fastest. RGB is the display colour for each lattice input;
+    /// alpha 255 marks out-of-gamut colours for the gamut warning.
+    pub fn set_display_lut(&self, doc: u64, output: u32, size: u32, rgba: Option<&[u8]>) {
         if !self.health.is_ok() {
             return;
         }
         let (device, queue) = (&self.rs.device, &self.rs.queue);
         let mut renderer = self.rs.renderer.write();
         let Some(res) = renderer.callback_resources.get_mut::<Resources>() else { return };
-        res.display_lut_signatures.remove(&doc);
+        res.display_lut_signatures.remove(&(doc, output));
         match rgba {
             None => {
-                res.luts.remove(&doc);
+                res.luts.remove(&(doc, output));
             }
             Some(bytes) => {
                 if size < 2 || bytes.len() as u64 != (size as u64).pow(3) * 4 {
@@ -618,7 +627,7 @@ impl GpuCanvas {
                     return;
                 }
                 let bg = lut_bind_group(device, queue, &res.lut_bgl, size, bytes);
-                res.luts.insert(doc, bg);
+                res.luts.insert((doc, output), bg);
             }
         }
     }
@@ -840,7 +849,17 @@ impl GpuInfo {
             format!("Driver: {}", or(&self.driver, "unknown")),
             format!("GPU backend preference: {}", or(&self.preference, "auto")),
             format!("Selected at launch: {}", or(&self.selected, "auto")),
-            format!("Canvas renderer: {}", if self.canvas == "gpu" { "GPU" } else { "CPU" }),
+            format!("Image compositor: {}", if self.canvas == "gpu" { "GPU" } else { "CPU" }),
+            format!(
+                "Window renderer: {}",
+                if self.device_type == "cpu" {
+                    "Software adapter"
+                } else if self.adapter.is_empty() {
+                    "Unknown"
+                } else {
+                    "Graphics adapter"
+                }
+            ),
         ];
         if let Some(f) = &self.fallback {
             v.push(format!("Fallback: {f}"));
@@ -1095,10 +1114,11 @@ struct Resources {
     encode_bgl: wgpu::BindGroupLayout,
     encode_pipeline: wgpu::RenderPipeline,
     lut_bgl: wgpu::BindGroupLayout,
-    /// Display LUTs per document (Proof Colors / Gamut Warning); `identity_lut` otherwise.
-    luts: HashMap<u64, wgpu::BindGroup>,
+    /// Display LUTs per (document, display) (monitor profile, Proof Colors / Gamut Warning);
+    /// `identity_lut` otherwise.
+    luts: HashMap<(u64, u32), wgpu::BindGroup>,
     /// Signatures belong to their renderer resources, including identity transforms (mode 0).
-    display_lut_signatures: HashMap<u64, (u64, u8)>,
+    display_lut_signatures: HashMap<(u64, u32), (u64, u8)>,
     identity_lut: wgpu::BindGroup,
     /// Transparency checkerboard and gamut warning colours (Preferences › Transparency & Gamut).
     style: CanvasStyle,
@@ -1641,7 +1661,7 @@ impl CallbackTrait for CanvasCallback {
         let (cx0, cy0) = (clip.left_px as f32, clip.top_px as f32);
         let (cx1, cy1) = (cx0 + clip.width_px as f32, cy0 + clip.height_px as f32);
         pass.set_pipeline(&res.tile_pipeline);
-        pass.set_bind_group(2, res.luts.get(&self.params.doc).unwrap_or(&res.identity_lut), &[]);
+        pass.set_bind_group(2, res.luts.get(&(self.params.doc, self.params.output)).unwrap_or(&res.identity_lut), &[]);
         for t in &doc.tiles {
             let [tx, ty, tw, th] = t.rect.map(|v| v as f32);
             let (x0, y0) = (origin[0] + tx * scale, origin[1] + ty * scale);

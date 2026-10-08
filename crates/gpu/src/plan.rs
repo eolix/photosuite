@@ -298,7 +298,7 @@ impl<'a> DocCtx<'a> {
     pub fn of(doc: &'a Document) -> Self {
         DocCtx {
             canvas: doc.bounds(),
-            transfer: Transfer::for_mode(doc.mode),
+            transfer: Transfer::for_document(doc.mode, doc.depth),
             light: doc.global_light,
             patterns: &doc.patterns,
             mode: doc.mode,
@@ -880,7 +880,7 @@ impl<'a> Planner<'a> {
         }
         let mut p = Pass::new(Kernel::Adjust, 0);
         p.a = Some(src);
-        let (kind, params, lut) = adjustment_program(adj, self.cx.transfer, photosuite_compose::adjustment_quantum(self.cx.depth));
+        let (kind, params, lut) = adjustment_program(adj, self.cx.transfer, self.cx.depth);
         p.adjust_kind = kind;
         p.params = params;
         p.lut = lut;
@@ -1427,7 +1427,7 @@ pub fn adjustment_on_gpu(adj: &Adjustment) -> bool {
 }
 
 /// Adjustment → (kernel kind, parameters, LUT rows). Kinds are the `switch` in `adjust()`.
-pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, quantum: Option<f32>) -> Program {
+pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photosuite_color::SampleType) -> Program {
     let mut p = [[0.0f32; 4]; 4];
     match adj {
         Adjustment::Invert => (1, p, None),
@@ -1460,7 +1460,9 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, quantum: Option<
             (6, p, None)
         }
         // RGB space only (see `adjustment_on_gpu`); the rows are the CPU's channel∘master LUTs.
-        Adjustment::Levels { .. } | Adjustment::Curves { .. } => (7, p, Some(adjust::tone_luts_q(adj, quantum).iter().take(3).map(|t| to_row(t)).collect())),
+        Adjustment::Levels { .. } | Adjustment::Curves { .. } => {
+            (7, p, Some(adjust::tone_luts_depth(adj, Some(depth)).iter().take(3).map(|t| to_row(t)).collect()))
+        }
         Adjustment::HueSaturation { hue, saturation, lightness, colorize, ranges } => {
             p[0] = [*hue, saturation / 100.0, lightness / 100.0, if *colorize { 1.0 } else { 0.0 }];
             if !*colorize && ranges.iter().any(|r| !r.is_neutral()) {

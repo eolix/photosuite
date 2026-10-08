@@ -113,6 +113,22 @@ fn live_gradient_renders_like_the_classic_gradient() {
     parity(8, "transparent", stops.clone(), false, 0.51 / 255.0);
     parity(8, "white", json!({"stops": [[0, "#ff2000"], [1, "#1010e0"]], "reverse": true, "dither": true}), true, 1.01 / 255.0);
     parity(16, "transparent", json!({"gradient": "Foreground to Transparent", "dither": true}), false, 1.01 / 255.0);
+    parity(32, "transparent", json!({"gradient": "Black, White", "transparency": [[0, 65], [1, 0]], "dither": false}), false, 1e-4);
+}
+
+/// Issue #465: explicit `transparency` stops replace those of a preset or the current gradient.
+#[test]
+fn create_honours_explicit_transparency_stops() {
+    for extra in [json!({"gradient": "Foreground to Transparent"}), json!({"gradient": "black, white"}), json!({})] {
+        let mut s = session(8, "transparent");
+        let mut p = json!({"from": [0, 0], "to": [48, 0], "transparency": [[1, 0], [0, 65]]});
+        for (k, v) in extra.as_object().unwrap() {
+            p[k] = v.clone();
+        }
+        s.execute(CREATE, p).unwrap();
+        let Fill::Gradient { opacity_stops, .. } = active_fill(&s) else { panic!("not a gradient fill") };
+        assert_eq!(opacity_stops, vec![(0.0, 0.65), (1.0, 0.0)], "{extra}");
+    }
 }
 
 #[test]

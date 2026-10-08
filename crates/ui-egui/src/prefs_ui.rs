@@ -5,7 +5,7 @@
 //!
 //! The values live in the engine ([`photosuite_engine::prefs::Preferences`], so agents read and
 //! change them with `prefs.get` / `prefs.set`); this module only edits a working copy in a dialog
-//! and commits it with those commands on OK.
+//! and commits it with those commands on Apply or OK.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -23,7 +23,11 @@ use crate::theme::{ThemeKind, Tokens};
 #[derive(Default)]
 pub struct Runtime {
     loaded: bool,
+    /// Preferences revision last written to storage (or loaded from it).
     saved_rev: u64,
+    /// This instance's preferences as of `saved_rev`: the base of the three-way merge on save.
+    saved_value: Option<Value>,
+    save_retry: SaveRetry,
     theme_pref: Option<Theme>,
     next_autosave_ms: f64,
     autosaved: HashMap<DocId, u64>,
@@ -106,16 +110,23 @@ pub fn load(app: &mut PhotosuiteApp) {
     crate::dock::restore(app);
     app.sync_recent();
     app.prefs_rt.saved_rev = app.session.prefs.rev();
+    app.prefs_rt.saved_value = Some(app.session.prefs_value());
     if app.session.prefs().file_handling.recover_on_launch
         && let Some(recover) = app.services.recover.as_mut()
     {
         let docs = recover();
         let n = docs.len();
-        for (path, doc) in docs {
-            app.session.add_document(doc, path);
+        for r in docs {
+            app.session.add_document(r.doc, r.path);
             // Recovered documents are unsaved.
-            if let Some(st) = app.session.active_mut() {
-                st.saved_revision = 0;
+            let Some(st) = app.session.active_mut() else { continue };
+            st.saved_revision = 0;
+            // Their entry already holds this revision: it stays until a newer autosave replaces
+            // it or the document is saved or closed (see `autosave`).
+            let (id, revision) = (st.doc.id, st.revision);
+            app.prefs_rt.autosaved.insert(id, revision);
+            if let Some(adopt) = app.services.adopt_autosave.as_mut() {
+                adopt(id.0, &r.key);
             }
         }
         if n > 0 {
@@ -152,13 +163,12 @@ fn presets_store(app: &mut PhotosuiteApp) {
 fn display_scale(pref: prefs::UiScale, native: Option<f32>, monitor_px: Option<egui::Vec2>) -> f32 {
     let native = native.filter(|v| v.is_finite() && *v > 0.0).unwrap_or(1.0);
     match pref {
-        prefs::UiScale::P100 => 1.0,
-        prefs::UiScale::P200 => 2.0,
         prefs::UiScale::Auto => {
             // A 4K display needs at least 200%; preserve larger system scales.
             let is_4k = monitor_px.is_some_and(|s| s.x.is_finite() && s.y.is_finite() && s.x.min(s.y) >= 2160.0 && s.x.max(s.y) >= 3840.0);
             if is_4k { native.max(2.0) } else { native }
         }
+        fixed => fixed.name().parse::<f32>().map_or(1.0, |pct| pct / 100.0),
     }
 }
 
@@ -224,14 +234,8 @@ pub fn tick(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     presets_store(app);
     sync_tooltips(app, ctx);
     app.sync_recent();
-    if app.session.prefs.rev() != app.prefs_rt.saved_rev {
-        app.prefs_rt.saved_rev = app.session.prefs.rev();
-        let text = app.session.prefs_to_json();
-        if let Some(save) = app.services.save_prefs.as_mut()
-            && let Err(e) = save(&text)
-        {
-            app.ui.status = format!("Couldn't save preferences: {e}");
-        }
+    if let Some(wait) = persist(app, ctx.input(|i| i.time)) {
+        ctx.request_repaint_after(std::time::Duration::try_from_secs_f64(wait).unwrap_or_default());
     }
     let style = canvas_style(app);
     if let Some(gpu) = app.gpu.as_ref()
@@ -242,6 +246,135 @@ pub fn tick(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     }
     autosave(app);
     history_log(app);
+}
+
+/// First retry delay after a failed preferences write, in seconds; it doubles with every further
+/// failure up to [`SAVE_RETRY_MAX_S`]. A new change retries sooner, but no sooner than this.
+const SAVE_RETRY_S: f64 = 2.0;
+const SAVE_RETRY_MAX_S: f64 = 30.0;
+/// Failed writes in a row before a notice says preferences aren't being saved.
+const SAVE_NOTICE_AFTER: u32 = 3;
+
+/// Retry state of a failed preferences write (times are egui input time, in seconds).
+#[derive(Default)]
+struct SaveRetry {
+    failures: u32,
+    /// When the next retry is due.
+    at: f64,
+    /// When the last write was tried, and the revision it carried.
+    tried_at: f64,
+    tried_rev: u64,
+    /// The "not saved" notice, while it's shown.
+    notice: Option<u64>,
+}
+
+/// Save changed preferences. A failed write stays pending and is retried with a backoff (a newer
+/// change retries sooner); the status bar reports the first failure and a notice a persistent
+/// one. Returns the seconds until the next retry while one is pending.
+fn persist(app: &mut PhotosuiteApp, now: f64) -> Option<f64> {
+    let rev = app.session.prefs.rev();
+    if rev == app.prefs_rt.saved_rev {
+        return None;
+    }
+    let r = &app.prefs_rt.save_retry;
+    if r.failures > 0 {
+        let due = if rev == r.tried_rev { r.at } else { r.at.min(r.tried_at + SAVE_RETRY_S) };
+        if now < due {
+            return Some(due - now);
+        }
+    }
+    let ours = app.session.prefs_value();
+    // A change that was undone (or set a value to what it already was) leaves nothing to write.
+    let written = if app.prefs_rt.saved_value.as_ref() == Some(&ours) { Ok(()) } else { write_prefs(app, &ours) };
+    match written {
+        Ok(()) => {
+            app.prefs_rt.saved_rev = rev;
+            app.prefs_rt.saved_value = Some(ours);
+            let r = std::mem::take(&mut app.prefs_rt.save_retry);
+            if r.failures > 0 {
+                app.ui.status = "Preferences saved".into();
+                app.ui.status_error = false;
+                if let Some(id) = r.notice {
+                    app.ui.notices.retain(|n| n.id != id);
+                }
+            }
+            None
+        }
+        Err(e) => {
+            let r = &mut app.prefs_rt.save_retry;
+            r.failures = r.failures.saturating_add(1);
+            (r.tried_at, r.tried_rev) = (now, rev);
+            let delay = (SAVE_RETRY_S * 2f64.powi(r.failures.min(16) as i32 - 1)).min(SAVE_RETRY_MAX_S);
+            r.at = now + delay;
+            let failures = r.failures;
+            if failures == 1 {
+                app.ui.status = format!("Couldn't save preferences: {e}. Retrying…");
+                app.ui.status_error = true;
+            } else if failures == SAVE_NOTICE_AFTER {
+                let lines = vec![e, "PhotoSuite keeps retrying; until a save succeeds, preference changes are lost when it closes.".into()];
+                let id = crate::notices::post(app, "Preferences can't be saved", lines, true);
+                app.prefs_rt.save_retry.notice = Some(id);
+            }
+            Some(delay)
+        }
+    }
+}
+
+/// Write `ours` over the stored preferences, keeping what another instance (a second browser
+/// tab, another app window) changed there since this one last loaded or saved them.
+fn write_prefs(app: &mut PhotosuiteApp, ours: &Value) -> Result<(), String> {
+    let Some(save) = app.services.save_prefs.as_mut() else { return Ok(()) };
+    let stored = app.services.load_prefs.as_mut().and_then(|load| load()).and_then(|t| serde_json::from_str::<Value>(&t).ok());
+    let text = match (stored, &app.prefs_rt.saved_value) {
+        (Some(mut theirs @ Value::Object(_)), Some(base)) => {
+            merge_changes(base, ours, &mut theirs);
+            serde_json::to_string_pretty(&theirs)
+        }
+        _ => serde_json::to_string_pretty(ours),
+    }
+    .map_err(|e| e.to_string())?;
+    save(&text)
+}
+
+/// Three-way merge of preference trees: whatever `ours` changed since `base` goes over `theirs`
+/// (what storage holds now) and the rest of `theirs` is kept. Objects merge key by key; any
+/// other value, arrays included, is replaced whole.
+fn merge_changes(base: &Value, ours: &Value, theirs: &mut Value) {
+    if ours == base {
+        return;
+    }
+    match (base, ours, theirs) {
+        (Value::Object(b), Value::Object(o), Value::Object(t)) => {
+            for (k, ov) in o {
+                match (b.get(k), t.get_mut(k)) {
+                    (Some(bv), Some(tv)) => merge_changes(bv, ov, tv),
+                    // Removed there, unchanged here: it stays removed.
+                    (Some(bv), None) if bv == ov => {}
+                    _ => {
+                        t.insert(k.clone(), ov.clone());
+                    }
+                }
+            }
+            for k in b.keys().filter(|k| !o.contains_key(*k)) {
+                t.remove(k);
+            }
+        }
+        (_, _, theirs) => *theirs = ours.clone(),
+    }
+}
+
+/// Write the preferences now, through the same merge as [`persist`], for recovery choices that
+/// need the result immediately. The pending revision stays unsaved when the write fails.
+pub(crate) fn save_preferences(app: &mut PhotosuiteApp) -> Result<(), String> {
+    let rev = app.session.prefs.rev();
+    let ours = app.session.prefs_value();
+    write_prefs(app, &ours)?;
+    app.prefs_rt.saved_rev = rev;
+    app.prefs_rt.saved_value = Some(ours);
+    if let Some(id) = std::mem::take(&mut app.prefs_rt.save_retry).notice {
+        app.ui.notices.retain(|n| n.id != id);
+    }
+    Ok(())
 }
 
 /// Background autosave of documents with unsaved changes every N minutes (File Handling).
@@ -350,16 +483,23 @@ pub fn shortcut_items(app: &PhotosuiteApp) -> Vec<(String, String, Vec<String>, 
     // temporary tools (#249).
     let tools_key = |id: &str| id.starts_with("tools.") || photosuite_engine::fill_key_cmds::IDS.contains(&id);
     let mut tools = Vec::new();
+    let mut layer = Vec::new();
     for c in photosuite_engine::command_specs() {
         if seen.insert(c.id.to_string()) && c.shortcut.is_some() {
             let item = (c.id.to_string(), c.label.to_string(), c.menu.iter().map(|s| s.to_string()).collect::<Vec<_>>(), c.shortcut.map(Into::into));
             if c.menu.is_empty() && tools_key(c.id) {
                 tools.push((item.0, item.1, vec!["Tools".to_string()], item.3));
+            } else if c.menu.is_empty() && c.id.starts_with("layer.") {
+                // Stamp Visible / Stamp Down (#217): no menu item in Photoshop; listed at the end
+                // of the Layer section.
+                layer.push((item.0, item.1, vec!["Layer".to_string()], item.3));
             } else {
                 out.push(item);
             }
         }
     }
+    let at = out.iter().rposition(|i| i.2.first().map(String::as_str) == Some("Layer")).map_or(out.len(), |i| i + 1);
+    out.splice(at..at, layer);
     out.extend(tools);
     for (id, label, def) in prefs::TEMPORARY_TOOLS {
         if seen.insert(id.to_string()) {
@@ -371,6 +511,9 @@ pub fn shortcut_items(app: &PhotosuiteApp) -> Vec<(String, String, Vec<String>, 
 
 /// Text of a key press for the shortcut editor (`Cmd+Shift+K`), `None` for bare modifiers.
 pub fn shortcut_text(key: egui::Key, m: egui::Modifiers) -> Option<String> {
+    if is_modifier_key(key) {
+        return None;
+    }
     let mut parts = Vec::new();
     if m.command || m.mac_cmd {
         parts.push(tl!("Cmd").to_string());
@@ -398,6 +541,14 @@ pub fn shortcut_text(key: egui::Key, m: egui::Modifiers) -> Option<String> {
     prefs::normalize_shortcut(&parts.join("+"))
 }
 
+/// A modifier key on its own. egui reports Ctrl, Shift, Alt and ⌘ presses as key events too
+/// (`ControlLeft`…), before the key pressed with them: they are never a shortcut's key, so
+/// shortcut capture waits for the real key (#292: Ctrl+F was recorded as "Ctrl+ControlLeft").
+pub fn is_modifier_key(key: egui::Key) -> bool {
+    use egui::Key::*;
+    matches!(key, ShiftLeft | ShiftRight | ControlLeft | ControlRight | AltLeft | AltRight | SuperLeft | SuperRight)
+}
+
 // ------------------------------------------------------------------ menu routing
 
 /// Shell front ends for Edit-menu commands invoked without parameters (dialogs, pickers).
@@ -417,13 +568,18 @@ pub fn invoke(app: &mut PhotosuiteApp, _ctx: &egui::Context, id: &str, params: &
         "edit.toolbar" => Some(Ok(json!({"dialog": open_shortcuts(app, 2)}))),
         "edit.colorSettings" => {
             let d = crate::filter_dialog::open(app, "edit.colorSettings");
+            let cur = serde_json::to_value(&app.session.color.settings).unwrap_or_default();
+            // What Monitor Profile resolves to, so a fallback to sRGB is visible (#569): read the
+            // displays again now, and the dialog refreshes this line as it draws.
+            crate::monitor_status::read_now(app);
+            let note = crate::monitor_status::note(app);
             if let Some(dm) = d.and_then(|d| app.ui.dialog_mut(d)) {
-                let cur = serde_json::to_value(&app.session.color.settings).unwrap_or_default();
                 for (k, v) in cur.as_object().into_iter().flatten() {
                     if dm.fields.contains_key(k) {
                         dm.fields.insert(k.clone(), v.clone());
                     }
                 }
+                dm.fields.insert("__note".into(), json!(note));
             }
             dialog(d)
         }
@@ -495,6 +651,37 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
     fields.contains_key("__prefsui")
 }
 
+/// Only Preferences supports applying changes without closing the dialog.
+pub fn is_preferences(fields: &Map<String, Value>) -> bool {
+    fields.get("__prefsui").and_then(Value::as_str) == Some("prefs")
+}
+
+fn preference_values(p: &prefs::Preferences) -> Map<String, Value> {
+    let values = p.to_json();
+    SECTIONS.iter().filter_map(|(id, _)| Some((id.to_string(), values.get(id)?.clone()))).collect()
+}
+
+/// Compare the editable sections, excluding settings managed outside Preferences.
+pub fn preferences_changed(app: &PhotosuiteApp, fields: &Map<String, Value>) -> bool {
+    is_preferences(fields) && fields.get("values").and_then(Value::as_object).is_some_and(|values| *values != preference_values(app.session.prefs()))
+}
+
+/// Commit the working copy and keep the current section open. Failure leaves the draft intact.
+pub fn apply(app: &mut PhotosuiteApp, id: u64) -> Result<Value, String> {
+    let d = app.ui.dialogs.iter().find(|d| d.id == id).ok_or_else(|| format!("no dialog {id}"))?;
+    if d.kind != DialogKind::Command || !is_preferences(&d.fields) {
+        return Err("Apply is only available for Preferences".into());
+    }
+    let fields = d.fields.clone();
+    let result = confirm(app, &fields)?;
+    let values = Value::Object(preference_values(app.session.prefs()));
+    if let Some(d) = app.ui.dialog_mut(id) {
+        // Use the validated values as the next draft, including any normalisation by prefs.set.
+        d.fields.insert("values".into(), values);
+    }
+    Ok(result)
+}
+
 /// Max dialog width for our dialogs.
 pub fn width(fields: &Map<String, Value>) -> Option<f32> {
     match fields.get("__prefsui").and_then(Value::as_str)? {
@@ -507,11 +694,9 @@ pub fn width(fields: &Map<String, Value>) -> Option<f32> {
 /// Open Edit › Preferences on `section`.
 pub fn open_preferences(app: &mut PhotosuiteApp, section: &str) -> u64 {
     let section = if SECTIONS.iter().any(|(id, _)| *id == section) { section } else { "general" };
-    let values = app.session.prefs().to_json();
-    let working: Map<String, Value> = SECTIONS.iter().filter_map(|(id, _)| Some((id.to_string(), values.get(id)?.clone()))).collect();
+    let working = preference_values(app.session.prefs());
     let order = field_order(app.session.prefs(), &working);
-    let gpu = app.perf.gpu_info.lines();
-    open_kind(app, "prefs", "Preferences", json!({"section": section, "values": working, "__order": order, "__gpuInfo": gpu}))
+    open_kind(app, "prefs", "Preferences", json!({"section": section, "values": working, "__order": order}))
 }
 
 /// Each section's keys in declaration order (JSON objects sort their keys; the serialised text
@@ -578,7 +763,10 @@ pub fn open_mismatch(app: &mut PhotosuiteApp, report: &Value) -> u64 {
 /// Render one of our dialogs' bodies.
 pub fn body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     match f.get("__prefsui").and_then(Value::as_str).unwrap_or("") {
-        "prefs" => prefs_body(ui, f),
+        "prefs" => {
+            f.insert("__gpuInfo".into(), json!(app.perf.gpu_info.lines()));
+            prefs_body(ui, f);
+        }
         "shortcuts" => shortcuts_body(app, ui, f),
         "presets" => presets_body(app, ui, f),
         "presetsIO" => presets_io_body(ui, f),
@@ -606,8 +794,7 @@ fn choice_label(v: &str) -> String {
     match v {
         "cm" => "Centimeters".into(),
         "mm" => "Millimeters".into(),
-        "100" => "100%".into(),
-        "200" => "200%".into(),
+        "75" | "100" | "125" | "150" | "175" | "200" | "250" | "300" => format!("{v}%"),
         "8" => "8 Bits/Channel".into(),
         "16" => "16 Bits/Channel".into(),
         "postScript" => "PostScript (72 points/inch)".into(),
@@ -704,14 +891,47 @@ fn gpu_status_rows(ui: &mut egui::Ui, info: Option<&Value>, obj: &mut Map<String
     for line in info.and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str) {
         ui.label(RichText::new(line).color(t.text_dim));
     }
-    let auto = obj.get("gpuBackend").and_then(Value::as_str) == Some("auto");
     ui.add_space(4.0);
-    ui.horizontal(|ui| {
-        if ui.add_enabled(!auto, egui::Button::new(tl!("Reset GPU Backend"))).clicked() {
-            obj.insert("gpuBackend".into(), json!("auto"));
-        }
-        ui.label(RichText::new(tl!("Applies at next launch.")).color(t.text_faint));
+    ui.label(RichText::new(tl!("Applies at next launch.")).color(t.text_faint));
+    ui.collapsing(tl!("Advanced"), |ui| {
+        ui.horizontal(|ui| {
+            ui.label(tl!("GPU Backend"));
+            let mut current = obj.get("gpuBackend").and_then(Value::as_str).unwrap_or("auto").to_string();
+            let options = prefs::choices("performance.gpuBackend").unwrap_or(&[]);
+            let labels: Vec<String> = options.iter().map(|o| choice_label(o)).collect();
+            let pairs: Vec<(String, &str)> = options.iter().map(|o| o.to_string()).zip(labels.iter().map(String::as_str)).collect();
+            crate::widgets::dropdown(ui, "graphics-backend", &mut current, &pairs, 220.0);
+            obj.insert("gpuBackend".into(), json!(current));
+        });
     });
+}
+
+/// One user-facing choice; legacy flags remain compatible with older settings.
+fn rendering_mode_row(ui: &mut egui::Ui, obj: &mut Map<String, Value>) {
+    let mut current = rendering_mode_value(obj);
+    ui.horizontal(|ui| {
+        ui.label(tl!("Rendering Mode"));
+        let pairs =
+            vec![("auto".to_string(), tl!("Automatic (recommended)")), ("gpu".to_string(), tl!("GPU")), ("cpu".to_string(), tl!("CPU / Compatibility"))];
+        let previous = current.clone();
+        crate::widgets::dropdown(ui, "rendering-mode", &mut current, &pairs, 240.0);
+        if current != previous {
+            obj.insert("renderingMode".into(), json!(current));
+            obj.insert("useGpu".into(), json!(current != "cpu"));
+        }
+    });
+    ui.label(tl!("Automatic uses GPU acceleration when available and falls back to CPU rendering on errors."));
+    ui.add_space(8.0);
+}
+
+fn rendering_mode_value(obj: &Map<String, Value>) -> String {
+    obj.get("renderingMode").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| {
+        if obj.get("useGpu").and_then(Value::as_bool) == Some(false) || obj.get("gpuBackend").and_then(Value::as_str) == Some("cpu") {
+            "cpu".into()
+        } else {
+            "auto".into()
+        }
+    })
 }
 
 /// Does `section` have any setting the dialog shows (see [`prefs::HIDDEN_UNTIL_IMPLEMENTED`])?
@@ -723,6 +943,9 @@ fn has_visible_fields(values: &Value, section: &str) -> bool {
 /// number fields with the preference's range, text fields.
 fn section_fields(ui: &mut egui::Ui, section: &str, obj: &mut Map<String, Value>, order: &[String], lang: crate::i18n::Lang) {
     let t = Tokens::get(ui.ctx());
+    if section == "performance" {
+        rendering_mode_row(ui, obj);
+    }
     let mut keys: Vec<String> = order.iter().filter(|k| obj.contains_key(*k)).cloned().collect();
     keys.extend(obj.keys().filter(|k| !order.contains(k)).cloned());
     egui::Grid::new(("prefs-grid", section)).num_columns(2).spacing([14.0, 7.0]).show(ui, |ui| {
@@ -730,7 +953,7 @@ fn section_fields(ui: &mut egui::Ui, section: &str, obj: &mut Map<String, Value>
             let path = format!("{section}.{k}");
             // Settings nothing reads yet stay out of the dialog (issue #204); their stored values
             // pass through untouched.
-            if prefs::is_hidden(&path) {
+            if prefs::is_hidden(&path) || (section == "performance" && matches!(k.as_str(), "useGpu" | "gpuBackend" | "renderingMode")) {
                 continue;
             }
             let v = obj.get(&k).cloned().unwrap_or(Value::Null);
@@ -791,11 +1014,11 @@ fn section_fields(ui: &mut egui::Ui, section: &str, obj: &mut Map<String, Value>
                     let (lo, hi) = prefs::range(&path).unwrap_or((-1e9, 1e9));
                     if n.is_u64() || n.is_i64() {
                         let mut x = n.as_i64().unwrap_or(0);
-                        ui.add(egui::DragValue::new(&mut x).range(lo as i64..=hi as i64));
+                        ui.add(egui::DragValue::new(&mut x).range(lo as i64..=hi as i64).custom_parser(crate::widgets::parse_num));
                         obj.insert(k, json!(x));
                     } else {
                         let mut x = n.as_f64().unwrap_or(0.0);
-                        ui.add(egui::DragValue::new(&mut x).range(lo..=hi).speed(0.1).max_decimals(3));
+                        ui.add(egui::DragValue::new(&mut x).range(lo..=hi).speed(0.1).max_decimals(3).custom_parser(crate::widgets::parse_num));
                         obj.insert(k, json!(x));
                     }
                 }
@@ -875,7 +1098,7 @@ fn shortcuts_body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, f: &mut Map<String
     if capture && tab == 0 && !selected.is_empty() {
         let pressed = ui.input(|i| {
             i.events.iter().find_map(|e| match e {
-                egui::Event::Key { key, pressed: true, modifiers, .. } => Some((*key, *modifiers)),
+                egui::Event::Key { key, pressed: true, modifiers, .. } if !is_modifier_key(*key) => Some((*key, *modifiers)),
                 _ => None,
             })
         });
@@ -1146,7 +1369,7 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
         "presetsIO" => {
             let kinds: Vec<&str> = ["brushes", "customShapes"].into_iter().filter(|k| f.get(*k).and_then(Value::as_bool).unwrap_or(true)).collect();
             if f.get("action").and_then(Value::as_str) == Some("import") {
-                let (name, bytes) = app.services.pick_open.as_mut().and_then(|p| p()).ok_or("cancelled")?;
+                let (name, bytes) = app.pick_file_bytes().ok_or_else(|| "cancelled".to_string())??;
                 let text = String::from_utf8(bytes).map_err(|_| format!("{name} is not a preset file"))?;
                 app.run("edit.presets.exportImportPresets", json!({"action": "import", "kinds": kinds, "data": text}))
             } else {
@@ -1172,7 +1395,21 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
 }
 
 #[cfg(test)]
+#[path = "shortcut_capture_tests.rs"]
+mod shortcut_capture_tests;
+
+#[cfg(test)]
 mod tests {
+
+    #[test]
+    fn rendering_mode_display_respects_explicit_mode_and_legacy_disable() {
+        let legacy = serde_json::json!({"useGpu": false, "gpuBackend": "auto"});
+        assert_eq!(super::rendering_mode_value(legacy.as_object().unwrap()), "cpu");
+        let explicit = serde_json::json!({"renderingMode": "gpu", "useGpu": false, "gpuBackend": "cpu"});
+        assert_eq!(super::rendering_mode_value(explicit.as_object().unwrap()), "gpu");
+        let automatic = serde_json::json!({"renderingMode": null, "useGpu": true, "gpuBackend": "auto"});
+        assert_eq!(super::rendering_mode_value(automatic.as_object().unwrap()), "auto");
+    }
     use super::*;
     use std::sync::{Arc, Mutex};
 
@@ -1227,16 +1464,126 @@ mod tests {
 
     fn app_with_saved(text: Option<String>) -> (PhotosuiteApp, Arc<Mutex<Option<String>>>) {
         let store: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(text));
+        (app_on(&store, Arc::default()), store)
+    }
+
+    /// An app whose preferences live in `store`; writes fail while `fail` is set.
+    fn app_on(store: &Arc<Mutex<Option<String>>>, fail: Arc<std::sync::atomic::AtomicBool>) -> PhotosuiteApp {
         let (a, b) = (store.clone(), store.clone());
         let services = crate::Services {
             load_prefs: Some(Box::new(move || a.lock().unwrap().clone())),
             save_prefs: Some(Box::new(move |s: &str| {
+                if fail.load(std::sync::atomic::Ordering::Relaxed) {
+                    return Err("storage is full".into());
+                }
                 *b.lock().unwrap() = Some(s.to_string());
                 Ok(())
             })),
             ..Default::default()
         };
-        (PhotosuiteApp::new(photosuite_engine::Session::new(), services), store)
+        PhotosuiteApp::new(photosuite_engine::Session::new(), services)
+    }
+
+    fn stored(store: &Arc<Mutex<Option<String>>>) -> Value {
+        serde_json::from_str(store.lock().unwrap().as_deref().unwrap_or("null")).unwrap()
+    }
+
+    #[test]
+    fn merge_keeps_changes_made_elsewhere() {
+        let base = json!({"a": {"x": 1, "y": 1}, "list": [1], "gone": 1, "kept": 1});
+        // Here: a.x changed, `gone` removed, `new` added.
+        let ours = json!({"a": {"x": 2, "y": 1}, "list": [1], "kept": 1, "new": 1});
+        // There: a.y, `list` and `kept` changed, and a key this version doesn't know.
+        let mut theirs = json!({"a": {"x": 1, "y": 3}, "list": [1, 2], "gone": 1, "kept": 5, "future": true});
+        merge_changes(&base, &ours, &mut theirs);
+        assert_eq!(theirs, json!({"a": {"x": 2, "y": 3}, "list": [1, 2], "kept": 5, "new": 1, "future": true}));
+        // Arrays are leaves: a list changed here replaces the stored one whole.
+        merge_changes(&json!({"list": [1]}), &json!({"list": [1, 3]}), &mut theirs);
+        assert_eq!(theirs["list"], json!([1, 3]));
+        // Nothing changed here: storage is left as it is, whatever it holds.
+        let mut odd = json!({"x": [7]});
+        merge_changes(&ours, &ours, &mut odd);
+        assert_eq!(odd, json!({"x": [7]}));
+        // A value that changed type here replaces the stored one.
+        merge_changes(&json!({"a": 1}), &json!({"a": {"b": 2}}), &mut theirs);
+        assert_eq!(theirs["a"], json!({"b": 2}));
+    }
+
+    #[test]
+    fn saving_keeps_preferences_another_instance_changed() {
+        let store = Arc::new(Mutex::new(None));
+        let ctx = egui::Context::default();
+        // Two browser tabs (or app windows) on the same storage.
+        let (mut a, mut b) = (app_on(&store, Arc::default()), app_on(&store, Arc::default()));
+        tick(&mut a, &ctx);
+        tick(&mut b, &ctx);
+        a.run("prefs.set", json!({"values": {"interface.theme": "anthracite"}})).unwrap();
+        tick(&mut a, &ctx);
+        assert_eq!(stored(&store)["interface"]["theme"], "anthracite");
+        // The other one, never reloaded, saves an unrelated change: the theme stays.
+        b.run("prefs.set", json!({"values": {"performance.historyStates": 12}})).unwrap();
+        tick(&mut b, &ctx);
+        let v = stored(&store);
+        assert_eq!((v["interface"]["theme"].as_str(), v["performance"]["historyStates"].as_u64()), (Some("anthracite"), Some(12)));
+        // And the first one's next save keeps the second one's change.
+        a.run("prefs.set", json!({"values": {"interface.showTooltips": false}})).unwrap();
+        tick(&mut a, &ctx);
+        let v = stored(&store);
+        assert_eq!(v["performance"]["historyStates"], 12);
+        assert_eq!(v["interface"]["showTooltips"], false);
+        // A value changed in both: the latest save wins.
+        b.run("prefs.set", json!({"values": {"interface.theme": "ocean"}})).unwrap();
+        tick(&mut b, &ctx);
+        assert_eq!(stored(&store)["interface"]["theme"], "ocean");
+        // Unreadable storage is overwritten with this instance's preferences.
+        *store.lock().unwrap() = Some("not json".into());
+        a.run("prefs.set", json!({"values": {"performance.historyStates": 30}})).unwrap();
+        tick(&mut a, &ctx);
+        let (mut c, _) = app_with_saved(store.lock().unwrap().clone());
+        tick(&mut c, &ctx);
+        assert_eq!(c.session.prefs().performance.history_states, 30);
+        assert_eq!(c.session.prefs().interface.theme, Theme::Anthracite);
+    }
+
+    #[test]
+    fn failed_preference_saves_are_retried() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let store = Arc::new(Mutex::new(None));
+        let fail = Arc::new(AtomicBool::new(true));
+        let mut app = app_on(&store, fail.clone());
+        tick(&mut app, &egui::Context::default());
+        app.run("prefs.set", json!({"values": {"interface.theme": "anthracite"}})).unwrap();
+        // The write fails: reported, and retried after a backoff rather than marked saved.
+        assert_eq!(persist(&mut app, 100.0), Some(SAVE_RETRY_S));
+        assert!(app.ui.status.starts_with("Couldn't save preferences: storage is full") && app.ui.status_error);
+        assert!(store.lock().unwrap().is_none());
+        assert_eq!(persist(&mut app, 101.0), Some(1.0), "not due yet");
+        // Storage works again: the pending change is written without another edit.
+        fail.store(false, Ordering::Relaxed);
+        assert_eq!(persist(&mut app, 102.0), None);
+        assert_eq!(stored(&store)["interface"]["theme"], "anthracite");
+        assert_eq!(app.ui.status, "Preferences saved");
+        assert_eq!(persist(&mut app, 103.0), None, "nothing left to save");
+
+        // A persistent failure backs off up to a cap and raises a notice once.
+        fail.store(true, Ordering::Relaxed);
+        app.run("prefs.set", json!({"values": {"interface.theme": "ocean"}})).unwrap();
+        let mut now = 200.0;
+        let mut delays = Vec::new();
+        for _ in 0..6 {
+            let wait = persist(&mut app, now).unwrap();
+            delays.push(wait);
+            now += wait;
+        }
+        assert_eq!(delays, [2.0, 4.0, 8.0, 16.0, SAVE_RETRY_MAX_S, SAVE_RETRY_MAX_S]);
+        assert_eq!(app.ui.notices.iter().filter(|n| n.error && n.title == "Preferences can't be saved").count(), 1);
+        // A newer change retries sooner than the backoff, but not on every frame.
+        app.run("prefs.set", json!({"values": {"interface.theme": "midnight"}})).unwrap();
+        assert_eq!(persist(&mut app, now - 29.0), Some(1.0));
+        fail.store(false, Ordering::Relaxed);
+        assert_eq!(persist(&mut app, now - 28.0), None);
+        assert_eq!(stored(&store)["interface"]["theme"], "midnight");
+        assert!(app.ui.notices.is_empty(), "the notice goes once preferences are saved");
     }
 
     #[test]
@@ -1281,7 +1628,7 @@ mod tests {
             step(vec2(1920.0, 1080.0), 1.0, 1.0);
             step(vec2(3840.0, 2160.0), 1.5, 2.0);
         }
-        for (pref, expected) in [("200", 2.0), ("100", 1.0), ("auto", 1.5)] {
+        for (pref, expected) in [("200", 2.0), ("125", 1.25), ("150", 1.5), ("100", 1.0), ("auto", 1.5)] {
             app.run("prefs.set", json!({"values": {"interface.uiScale": pref}})).unwrap();
             let mut input = egui::RawInput::default();
             input.viewports.get_mut(&egui::ViewportId::ROOT).unwrap().native_pixels_per_point = Some(1.5);
@@ -1430,6 +1777,109 @@ mod tests {
     }
 
     #[test]
+    fn preferences_apply_button_saves_without_closing_and_cancel_keeps_applied_values() {
+        use egui_kittest::{
+            Harness,
+            kittest::{NodeT, Queryable},
+        };
+
+        let (mut app, store) = app_with_store();
+        app.run("prefs.set", json!({"values": {"interface.language": "en", "type.smartQuotes": false}})).unwrap();
+        let id = open_preferences(&mut app, "interface");
+        let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
+            PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+            app
+        });
+        h.run_steps(4);
+        assert!(h.get_by_label("Apply").accesskit_node().is_disabled());
+
+        let values = h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap();
+        values["interface"]["theme"] = json!("pearl");
+        values["performance"]["historyStates"] = json!(12);
+        h.run_steps(2);
+        assert!(!h.get_by_label("Apply").accesskit_node().is_disabled());
+        h.get_by_label("Apply").click();
+        h.run_steps(4);
+
+        assert_eq!(h.state().session.prefs().performance.history_states, 12);
+        assert_eq!(h.state().ui.theme, ThemeKind::Pearl);
+        assert!(!h.state().session.prefs().type_.smart_quotes, "hidden settings round-trip unchanged");
+        let d = h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap();
+        assert_eq!(d.fields["section"], "interface");
+        assert_eq!(d.fields["values"]["performance"]["historyStates"], 12);
+        assert!(h.get_by_label("Apply").accesskit_node().is_disabled());
+        let saved: Value = serde_json::from_str(store.lock().unwrap().as_ref().unwrap()).unwrap();
+        assert_eq!(saved["performance"]["historyStates"], 12);
+        assert_eq!(saved["interface"]["theme"], "pearl");
+
+        // Repeated Apply starts from the validated values, not the dialog's original snapshot.
+        h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = json!(22);
+        h.run_steps(2);
+        h.get_by_label("Apply").click();
+        h.run_steps(4);
+        assert_eq!(h.state().session.prefs().performance.history_states, 22);
+        h.state_mut().ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = json!(33);
+        h.run_steps(2);
+        h.get_by_label("Cancel").click();
+        h.run_steps(4);
+        assert!(h.state().ui.dialogs.iter().all(|d| d.id != id));
+        assert_eq!(h.state().session.prefs().performance.history_states, 22);
+        let saved = store.lock().unwrap().clone().unwrap();
+        let (mut restarted, _) = app_with_saved(Some(saved));
+        tick(&mut restarted, &egui::Context::default());
+        assert_eq!(restarted.session.prefs().performance.history_states, 22);
+        assert_eq!(restarted.ui.theme, ThemeKind::Pearl);
+    }
+
+    #[test]
+    fn preferences_confirm_after_apply_commits_later_edits() {
+        let (mut app, _) = app_with_store();
+        let id = open_preferences(&mut app, "cursors");
+        app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["cursors"]["painting"] = json!("fullSizeTip");
+        apply(&mut app, id).unwrap();
+        app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["unitsAndRulers"]["rulers"] = json!("inches");
+        crate::dialogs::confirm(&mut app, id).unwrap();
+        assert!(app.ui.dialogs.iter().all(|d| d.id != id));
+        assert_eq!(app.session.prefs().cursors.painting, prefs::PaintingCursor::FullSizeTip);
+        assert_eq!(app.session.prefs().units_and_rulers.rulers, prefs::Unit::Inches);
+    }
+
+    #[test]
+    fn preferences_apply_rejects_invalid_drafts_and_keeps_them_open() {
+        let (mut app, _) = app_with_store();
+        let before = app.session.prefs().to_json();
+        for invalid in [json!(0), json!("invalid"), Value::Null] {
+            let id = open_preferences(&mut app, "performance");
+            app.ui.dialog_mut(id).unwrap().fields.get_mut("values").unwrap()["performance"]["historyStates"] = invalid;
+            let draft = app.ui.dialog_mut(id).unwrap().fields.clone();
+            assert!(apply(&mut app, id).is_err());
+            assert_eq!(app.session.prefs().to_json(), before);
+            assert_eq!(app.ui.dialog_mut(id).unwrap().fields, draft);
+            app.ui.close_dialog(id);
+        }
+        let id = open_preferences(&mut app, "interface");
+        app.ui.dialog_mut(id).unwrap().fields.remove("values");
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        assert_eq!(app.session.prefs().to_json(), before);
+    }
+
+    #[test]
+    fn apply_rejects_missing_and_non_preferences_dialogs() {
+        let (mut app, _) = app_with_store();
+        let before = app.session.prefs().to_json();
+        assert!(apply(&mut app, u64::MAX).is_err());
+        let id = open_shortcuts(&mut app, 0);
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        let fields = json!({"__prefsui": "prefs", "values": preference_values(app.session.prefs())}).as_object().unwrap().clone();
+        let id = app.ui.open_dialog(DialogKind::About, fields);
+        assert!(apply(&mut app, id).is_err());
+        assert!(app.ui.dialog_mut(id).is_some());
+        assert_eq!(app.session.prefs().to_json(), before);
+    }
+
+    #[test]
     fn shortcut_dialog_moves_shortcuts_and_shell_dispatch_follows() {
         let (mut app, _) = app_with_store();
         let ctx = egui::Context::default();
@@ -1504,6 +1954,42 @@ mod tests {
     }
 
     #[test]
+    fn recovered_documents_adopt_their_entries_until_saved_or_closed() {
+        type Log = Arc<Mutex<Vec<String>>>;
+        let log: Log = Arc::default();
+        let (l1, l2, l3) = (log.clone(), log.clone(), log.clone());
+        use photosuite_doc::{Color, ColorMode, Document, SampleType, Size};
+        let doc = || Document::with_background("R", Size::new(4, 4), ColorMode::Rgb, SampleType::U8, Color::WHITE);
+        let services = crate::Services {
+            autosave: Some(Box::new(move |d: &Arc<Document>, _: u64, _: Option<&str>| {
+                l1.lock().unwrap().push(format!("save {}", d.id.0));
+                Ok(())
+            })),
+            discard_autosave: Some(Box::new(move |id: u64| l2.lock().unwrap().push(format!("discard {id}")))),
+            recover: Some(Box::new(move || ["a", "b"].map(|key| crate::Recovered { key: key.into(), path: None, doc: doc() }).into())),
+            adopt_autosave: Some(Box::new(move |id: u64, key: &str| l3.lock().unwrap().push(format!("adopt {id} {key}")))),
+            ..Default::default()
+        };
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), services);
+        let ctx = egui::Context::default();
+        let ids: Vec<u64> = app.session.documents().iter().map(|d| d.doc.id.0).collect();
+        assert!(app.session.documents().iter().all(|d| d.is_dirty()), "recovered documents are unsaved");
+        let take = || std::mem::take(&mut *log.lock().unwrap());
+        assert_eq!(take(), [format!("adopt {} a", ids[0]), format!("adopt {} b", ids[1])]);
+        // Their entries are current: nothing to autosave until they change.
+        tick(&mut app, &ctx);
+        autosave_now(&mut app);
+        tick(&mut app, &ctx);
+        assert!(take().is_empty());
+        // Closing one drops its entry; editing the other autosaves over its own.
+        app.run("file.close", json!({"document": 0})).unwrap();
+        app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
+        autosave_now(&mut app);
+        tick(&mut app, &ctx);
+        assert_eq!(take(), [format!("discard {}", ids[0]), format!("save {}", ids[1])]);
+    }
+
+    #[test]
     fn edit_dialogs_open() {
         let (mut app, _) = app_with_store();
         let ctx = egui::Context::default();
@@ -1511,6 +1997,8 @@ mod tests {
         app.sync_views();
         let d = crate::menus::invoke(&mut app, &ctx, "edit.colorSettings", json!({})).unwrap()["dialog"].as_u64().unwrap();
         assert_eq!(app.ui.dialogs.iter().find(|x| x.id == d).unwrap().fields["workingRgb"], "srgb");
+        let note = app.ui.dialogs.iter().find(|x| x.id == d).unwrap().fields["__note"].as_str().unwrap().to_string();
+        assert!(note.starts_with("Monitor profile in use: sRGB") && note.contains("fallback"), "{note}");
         assert!(crate::menus::invoke(&mut app, &ctx, "edit.fade", json!({})).is_err());
         app.run("select.rect", json!({"x": 4, "y": 4, "width": 8, "height": 8})).unwrap();
         let d = crate::menus::invoke(&mut app, &ctx, "edit.contentAwareFill", json!({})).unwrap()["dialog"].as_u64().unwrap();

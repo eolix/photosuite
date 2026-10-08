@@ -19,6 +19,8 @@ pub const SPEED_SPACING_MS: f64 = 8.0;
 
 /// Densest speed spacing, in pixels between dabs (a slow, long stroke never floods the buffer).
 const MIN_SPEED_STEP: f64 = 0.5;
+/// Maximum airbrush catch-up dabs for one input segment.
+const MAX_AIRBRUSH_DABS_PER_SEGMENT: usize = 512;
 
 #[inline]
 fn lerp_pt(a: &StrokePoint, b: &StrokePoint, f: f64) -> StrokePoint {
@@ -240,12 +242,21 @@ impl PathWalker {
         }
         if let Some(iv) = self.interval {
             let dt = p.time - a.time;
-            if dt > 0.0 {
+            if dt > 0.0 && dt.is_finite() {
+                if dt > iv * MAX_AIRBRUSH_DABS_PER_SEGMENT as f64 {
+                    // A stalled or hostile timestamp must not replay an arbitrarily long backlog.
+                    self.time_acc = 0.0;
+                    self.emit(p, out);
+                    self.last = Some(p);
+                    return;
+                }
                 self.time_acc += dt;
-                while self.time_acc >= iv {
+                let mut n = 0;
+                while self.time_acc >= iv && n < MAX_AIRBRUSH_DABS_PER_SEGMENT {
                     self.time_acc -= iv;
                     let f = ((dt - self.time_acc) / dt).clamp(0.0, 1.0);
                     self.emit(lerp_pt(&a, &p, f), out);
+                    n += 1;
                 }
             }
         }
@@ -592,14 +603,15 @@ pub struct DabGenerator {
 
 impl DabGenerator {
     pub fn new(brush: &BrushSettings, zoom: f32) -> Self {
+        let brush = brush.bounded_for_render();
         let interval = brush.build_up.then(|| 1000.0 / f64::from(brush.build_up_rate.clamp(0.1, 1000.0)));
         let dual_on = brush.dual_brush.enabled;
         Self {
             smoother: Smoother::new(&brush.smoothing, zoom),
             walker: if brush.spacing_enabled { PathWalker::new(interval) } else { PathWalker::new(interval).speed_spacing(SPEED_SPACING_MS) },
             dual_walker: dual_on.then(|| PathWalker::new(None)),
-            builder: DabBuilder::new(brush),
-            dual: dual_on.then(|| DualBuilder::new(brush)),
+            builder: DabBuilder::new(&brush),
+            dual: dual_on.then(|| DualBuilder::new(&brush)),
             scratch: Vec::new(),
         }
     }

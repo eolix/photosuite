@@ -46,15 +46,16 @@ pub fn ranges_from_blend_if(b: &BlendIf, channels: usize) -> BlendingRanges {
 }
 
 /// `lspf` bits (Adobe spec: bit 0 transparency, 1 composite, 2 position).
-/// Artboard (bit 3... here `0x10` as observed by ag-psd) and "all" (bit 31)
-/// are undocumented.
+/// Artboard (bit 3, `0x08`, as reference files write it) and "all" (bit 31) are undocumented.
+/// Older PhotoSuite builds wrote the artboard lock at bit 4 (`0x10`); that value is still
+/// accepted on read so those files keep their lock, and is rewritten at `0x08`.
 pub fn locks_from_lspf(v: u32) -> Locks {
-    Locks { transparency: v & 1 != 0, pixels: v & 2 != 0, position: v & 4 != 0, artboard: v & 0x10 != 0, all: v & 0x8000_0000 != 0 }
+    Locks { transparency: v & 1 != 0, pixels: v & 2 != 0, position: v & 4 != 0, artboard: v & 0x08 != 0 || v & 0x10 != 0, all: v & 0x8000_0000 != 0 }
 }
 
 /// Inverse of [`locks_from_lspf`].
 pub fn lspf_from_locks(l: &Locks) -> u32 {
-    u32::from(l.transparency) | u32::from(l.pixels) << 1 | u32::from(l.position) << 2 | u32::from(l.artboard) << 4 | u32::from(l.all) << 31
+    u32::from(l.transparency) | u32::from(l.pixels) << 1 | u32::from(l.position) << 2 | u32::from(l.artboard) << 3 | u32::from(l.all) << 31
 }
 
 /// `lclr` index → label.
@@ -531,6 +532,31 @@ pub fn parse_smart(key: &[u8; 4], data: &[u8]) -> (String, Affine) {
     (id, affine)
 }
 
+/// The projective placement of a `SoLd` / `SoLE` block whose corners aren't a parallelogram
+/// (Distort, Perspective): source pixels → document pixels, row-major 3×3. Read from
+/// `nonAffineTransform` (the placed corners), else `Trnf`. `None` for affine placements, which
+/// [`parse_smart`]'s affine holds exactly.
+pub fn parse_smart_perspective(key: &[u8; 4], data: &[u8]) -> Option<[f64; 9]> {
+    if key != b"SoLd" && key != b"SoLE" {
+        return None;
+    }
+    let d = data.get(8..).and_then(parse_prefix_versioned)?;
+    let sz = get_desc(&d, "Sz  ")?;
+    let (w, h) = (num(sz.get("Wdth"))?, num(sz.get("Hght"))?);
+    let quad = |key: &str| -> Option<[[f64; 2]; 4]> {
+        let Some(Value::List(pts)) = d.get(key) else { return None };
+        let p: Vec<f64> = pts.iter().filter_map(|v| num(Some(v))).collect();
+        (p.len() == 8 && p.iter().all(|v| v.is_finite())).then(|| [[p[0], p[1]], [p[2], p[3]], [p[4], p[5]], [p[6], p[7]]])
+    };
+    let q = quad("nonAffineTransform").or_else(|| quad("Trnf"))?;
+    // A parallelogram (top-left + bottom-right = top-right + bottom-left) is affine.
+    let tol = 1e-6 * (1.0 + q.iter().flatten().fold(0.0f64, |m, v| m.max(v.abs())));
+    if (0..2).all(|i| (q[0][i] + q[2][i] - q[1][i] - q[3][i]).abs() <= tol) || w <= 0.0 || h <= 0.0 {
+        return None;
+    }
+    photosuite_algo::transform::Homography::rect_to_quad([0.0, 0.0, w, h], q).map(|m| m.0)
+}
+
 /// `masterFXSwitch` from an `lfx2` block (defaults to `true`).
 pub fn effects_enabled(lfx2: &[u8]) -> bool {
     lfx2.get(4..)
@@ -668,9 +694,15 @@ mod tests {
 
     #[test]
     fn locks_and_labels() {
-        for bits in [0u32, 1, 2, 4, 0x10, 0x8000_0000, 0x8000_0017] {
+        // Reference values round-trip byte for byte; Background layers carry 0x0D
+        // (transparency + position + the bit-3 lock reference files write).
+        for bits in [0u32, 1, 2, 4, 8, 0x0D, 0x8000_0000, 0x8000_000F] {
             assert_eq!(lspf_from_locks(&locks_from_lspf(bits)), bits);
         }
+        // Older PhotoSuite files wrote the artboard lock at 0x10; it reads back as artboard
+        // and is rewritten at the reference value 0x08.
+        assert!(locks_from_lspf(0x10).artboard);
+        assert_eq!(lspf_from_locks(&locks_from_lspf(0x10)), 0x08);
         for i in 0..8 {
             assert_eq!(label_index(label_from_index(i)), i);
         }

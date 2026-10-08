@@ -86,7 +86,8 @@ fn icc_warning_suppressed_when_not_embedding() {
 #[test]
 fn exif_xmp_dpi_text_dropped_for_qoi() {
     let mut img = test_image(ChannelLayout::Rgb, SampleType::U8);
-    img.meta = Metadata { exif: Some(sample_exif()), xmp: Some("x".into()), dpi: Some((72.0, 72.0)), text: vec![("a".into(), "b".into())] };
+    img.meta =
+        Metadata { exif: Some(sample_exif()), xmp: Some("x".into()), dpi: Some((72.0, 72.0)), text: vec![("a".into(), "b".into())], ..Default::default() };
     let w = warns(&img, Format::Qoi);
     for x in [W::ExifDropped, W::XmpDropped, W::DpiDropped, W::TextDropped] {
         assert!(w.contains(&x), "{x:?}");
@@ -95,7 +96,8 @@ fn exif_xmp_dpi_text_dropped_for_qoi() {
 #[test]
 fn webp_drops_dpi_and_text_only() {
     let mut img = test_image(ChannelLayout::Rgb, SampleType::U8);
-    img.meta = Metadata { exif: Some(sample_exif()), xmp: Some("x".into()), dpi: Some((72.0, 72.0)), text: vec![("a".into(), "b".into())] };
+    img.meta =
+        Metadata { exif: Some(sample_exif()), xmp: Some("x".into()), dpi: Some((72.0, 72.0)), text: vec![("a".into(), "b".into())], ..Default::default() };
     let w = warns(&img, Format::WebP);
     assert_eq!(w, vec![W::DpiDropped, W::TextDropped]);
 }

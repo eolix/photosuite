@@ -110,7 +110,11 @@ if has appimage; then
   APPDIR="$WORK/PhotoSuite.AppDir"
   # The whole staged tree, licences and notices included (NOTICE must travel with the binary).
   cp -R "$STAGE" "$APPDIR"
-  ln -s usr/bin/photosuite "$APPDIR/AppRun"
+  # AppRun is a script, not a symlink: it installs the .desktop entry and icons into
+  # $XDG_DATA_HOME before launching, so Wayland compositors can resolve the window's
+  # app_id to our icon instead of the generic Wayland logo (#593; opt-out env in the
+  # script header). Logic is covered by packaging/linux/apprun-test.sh.
+  install -Dm755 "$HERE/AppRun" "$APPDIR/AppRun"
   cp "$HERE/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
   cp "$ROOT/assets/app-icon/hicolor/256x256/apps/$APP_ID.png" "$APPDIR/$APP_ID.png"
   ln -s "$APP_ID.png" "$APPDIR/.DirIcon"

@@ -102,6 +102,21 @@ fn blob_session(depth: u32) -> Session {
 }
 
 #[test]
+fn content_aware_fill_huge_area_neither_panics_nor_wraps() {
+    let mut s = blob_session(8);
+    // `[1e30, 0, 1e30, 10]` overflowed the i32 additions in the area parser (a debug-build
+    // panic, a garbage sampling window in release); the additions saturate now, so this is
+    // simply a whole-canvas window.
+    let r = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": [1e30, 0.0, 1e30, 10.0], "colorAdaptation": "none"})).unwrap();
+    assert!(r["filled"].as_u64().unwrap() > 100);
+    // A malformed area names the problem instead of silently falling back.
+    for area in [json!([0.0, 0.0, null, 10.0]), json!([0.0, 0.0, 10.0]), json!("nope")] {
+        let err = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": area})).unwrap_err();
+        assert!(err.to_string().contains("`area`"), "{err}");
+    }
+}
+
+#[test]
 fn content_aware_fill_removes_object_at_all_depths() {
     for depth in [8, 16, 32] {
         let mut s = blob_session(depth);
@@ -182,6 +197,31 @@ fn content_aware_scale_params() {
     assert_eq!(r["to"], json!([48, 16]));
     assert!(s.execute("edit.contentAwareScale", json!({"width": 0})).is_err());
     assert!(s.execute("edit.contentAwareScale", json!({"protect": "no such channel"})).is_err());
+}
+
+#[test]
+fn content_aware_scale_enlarges_a_one_pixel_line() {
+    // A 1 px wide (or tall) layer has no seam to spare, so enlarging it used to return the line
+    // unchanged and crash or write a short buffer. The line's single column (row) is repeated.
+    for (line, params, to) in [
+        (Rect::new(10, 0, 11, 48), json!({"width": 5}), [5, 48]),
+        (Rect::new(10, 0, 11, 48), json!({"width": 6, "height": 30}), [6, 30]),
+        (Rect::new(0, 7, 64, 8), json!({"height": 4}), [64, 4]),
+        (Rect::new(0, 7, 64, 8), json!({"width": 20, "height": 3}), [20, 3]),
+    ] {
+        let mut s = session(8);
+        s.execute("layer.new.layer", json!({})).unwrap();
+        s.edit("paint", |doc, active| {
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(line, &[1.0, 0.0, 0.0, 1.0]);
+            Ok(())
+        })
+        .unwrap();
+        let r = s.execute("edit.contentAwareScale", params.clone()).unwrap();
+        assert_eq!(r["to"], json!(to), "{params}");
+        let b = active(&s).surface().unwrap().content_bounds();
+        assert_eq!([b.width(), b.height()], to, "{params}");
+        assert_eq!(px(&s, b.x0 + b.width() as i32 - 1, b.y0 + b.height() as i32 - 1), vec![1.0, 0.0, 0.0, 1.0], "{params}");
+    }
 }
 
 fn square_path(x: f64, y: f64, w: f64) -> Path {
@@ -277,4 +317,27 @@ fn find_and_replace_across_type_layers() {
     assert_eq!(f2["found"]["text"], "world");
     assert_ne!(f2["found"]["layer"], f2["changed"]["layer"]);
     assert!(s.execute("edit.findAndReplaceText", json!({"find": ""})).is_err());
+}
+
+#[test]
+fn find_in_the_active_layer_finds_nothing_when_it_is_not_type() {
+    // #703: `allLayers: false` with a raster layer active leaves nothing to search.
+    let mut s = session(8);
+    let id = s.execute("type.create", json!({"text": "abc def", "x": 2, "y": 12})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("layer.new.layer", json!({"name": "raster"})).unwrap();
+    let steps = s.active().unwrap().history.entries().len();
+    for action in ["find", "change", "changeFind"] {
+        for forward in [true, false] {
+            let r =
+                s.execute("edit.findAndReplaceText", json!({"find": "abc", "replace": "x", "allLayers": false, "action": action, "forward": forward})).unwrap();
+            assert!(r["found"].is_null() && r["changed"].is_null(), "{action} {forward}: {r}");
+        }
+    }
+    let r = s.execute("edit.findAndReplaceText", json!({"find": "abc", "replace": "x", "allLayers": false})).unwrap();
+    assert_eq!(r["count"].as_u64(), Some(0));
+    assert_eq!(s.active().unwrap().history.entries().len(), steps);
+    // With the type layer active, the same search finds it.
+    s.execute("layer.select", json!({"layer": id})).unwrap();
+    let r = s.execute("edit.findAndReplaceText", json!({"find": "abc", "allLayers": false, "action": "find"})).unwrap();
+    assert_eq!((r["found"]["layer"].as_u64(), r["found"]["text"].as_str()), (Some(id), Some("abc")));
 }

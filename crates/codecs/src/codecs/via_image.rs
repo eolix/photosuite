@@ -8,7 +8,7 @@ use image::{DynamicImage, ImageDecoder, ImageFormat};
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, SampleType};
 use crate::options::{EncodeOptions, Limits};
 
 fn image_format(f: Format) -> Option<ImageFormat> {
@@ -49,7 +49,47 @@ pub(crate) fn decode(f: Format, bytes: &[u8], limits: &Limits) -> Result<Image, 
     let mut img = from_dynamic(f, dynimg)?;
     img.icc = icc;
     img.meta.exif = exif;
+    if f == Format::Gif {
+        img.warnings.extend(gif_more_frames(bytes));
+    }
     Ok(img)
+}
+
+/// Counts a GIF's frames (image descriptors) by walking its blocks, without decompressing any.
+/// The total is unknown when the blocks end before the trailer or break off.
+fn gif_more_frames(b: &[u8]) -> Option<DecodeWarning> {
+    // Size of the colour table a packed-fields byte announces.
+    let table = |flags: u8| if flags & 0x80 != 0 { 3usize << ((flags & 7) + 1) } else { 0 };
+    // Skips the data sub-blocks starting at `i` (each length-prefixed, ended by a zero length).
+    let skip = |mut i: usize| -> Option<usize> {
+        loop {
+            let n = usize::from(*b.get(i)?);
+            i = i.checked_add(1 + n)?;
+            if n == 0 {
+                return Some(i);
+            }
+        }
+    };
+    // Header (6 bytes), logical screen descriptor (7) and the global colour table.
+    let mut i = 13 + table(*b.get(10)?);
+    let mut frames = 0u32;
+    let total = loop {
+        let next = match b.get(i) {
+            Some(0x3B) => break Some(frames),
+            Some(0x21) => skip(i + 2),
+            Some(0x2C) => {
+                frames = frames.saturating_add(1);
+                // Descriptor (10 bytes, packed fields last), local colour table, LZW code size.
+                b.get(i + 9).and_then(|&flags| skip(i + 11 + table(flags)))
+            }
+            _ => None,
+        };
+        match next {
+            Some(n) => i = n,
+            None => break None,
+        }
+    };
+    (frames > 1).then_some(DecodeWarning::MoreFrames { total })
 }
 
 pub(crate) fn from_dynamic(f: Format, d: DynamicImage) -> Result<Image, CodecError> {

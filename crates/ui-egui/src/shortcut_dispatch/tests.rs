@@ -297,3 +297,101 @@ fn a_disabled_shortcut_says_why() {
     assert!(matches!(log.as_slice(), [(id, Outcome::Disabled(_) | Outcome::Failed(_))] if id == "layer.mergeLayers"), "{log:?}");
     assert!(!h.state().ui.status.is_empty() && h.state().ui.status_error, "the status bar says why");
 }
+
+/// #352: ⌥[ ⌥] ⌥, ⌥. and ⇧⌥[ walk the Layers panel's rows from the keyboard.
+#[test]
+fn alt_brackets_walk_the_layers_panel() {
+    let mut h = harness();
+    // Rows, top to bottom: paint, Hello (type), group, in-group, Background.
+    assert_eq!(active_name(&h), "paint");
+    for (key, want) in [("Alt+[", "Hello"), ("Alt+[", "group"), ("Alt+[", "in-group"), ("Alt+]", "group"), ("Alt+,", "Background"), ("Alt+.", "paint")] {
+        press(&mut h, key);
+        assert_eq!(active_name(&h), want, "after {key}");
+    }
+    press(&mut h, "Alt+Shift+[");
+    assert_eq!(active_name(&h), "Hello");
+    assert_eq!(h.state().session.active().unwrap().selected_layers().len(), 2, "⇧⌥[ adds to the selection");
+}
+
+/// Bytes the app saved, newest last.
+type Saved = std::rc::Rc<std::cell::RefCell<Vec<Vec<u8>>>>;
+
+/// [`harness`] with a document that saves in place, an exporter writing its top-level layer count
+/// and a writer recording it; then one new layer on top (history to undo).
+fn saving_harness() -> (Harness<'static, PhotosuiteApp>, Saved) {
+    let saved = Saved::default();
+    let out = saved.clone();
+    let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
+        PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+        let services = crate::Services {
+            export: Some(Box::new(|doc, _, _| Ok((doc.layers.len().to_string().into_bytes(), Vec::new())))),
+            write: Some(Box::new(move |_, bytes| {
+                out.borrow_mut().push(bytes.to_vec());
+                Ok(())
+            })),
+            ..Default::default()
+        };
+        let mut session = realistic();
+        session.active_mut().unwrap().path = Some("/tmp/layout.psd".into());
+        session.execute("layer.new.layer", json!({"name": "added"})).unwrap();
+        PhotosuiteApp::new(session, services)
+    });
+    h.run_steps(8);
+    put_focus(&mut h, Place::Canvas);
+    (h, saved)
+}
+
+fn layer_count(h: &Harness<'_, PhotosuiteApp>) -> usize {
+    h.state().session.active().unwrap().doc.layers.len()
+}
+
+/// Press `shortcuts` one after another within a single frame (`Harness::event` runs a frame per
+/// event).
+fn press_in_one_frame(h: &mut Harness<'_, PhotosuiteApp>, shortcuts: &[&str]) {
+    let events = &mut h.input_mut().events;
+    for sc in shortcuts {
+        let sc = parse(sc).unwrap();
+        let m = platform(sc.modifiers);
+        events.push(egui::Event::ModifiersChanged(m));
+        events.push(egui::Event::Key { key: sc.logical_key, physical_key: None, pressed: true, repeat: false, modifiers: m });
+        events.push(egui::Event::Key { key: sc.logical_key, physical_key: None, pressed: false, repeat: false, modifiers: m });
+    }
+    events.push(egui::Event::ModifiersChanged(Modifiers::NONE));
+    h.run_steps(2);
+}
+
+fn logged(h: &Harness<'_, PhotosuiteApp>) -> Vec<String> {
+    take_log(&h.ctx).into_iter().map(|(id, _)| id).collect()
+}
+
+/// #440: shortcuts arriving in one frame run in the order they were pressed.
+#[test]
+fn shortcuts_in_one_frame_run_in_order() {
+    let (mut h, saved) = saving_harness();
+    assert_eq!(layer_count(&h), 5);
+    // ⌘Z then ⌘S: the undone document is saved.
+    press_in_one_frame(&mut h, &["Cmd+Z", "Cmd+S"]);
+    assert_eq!(layer_count(&h), 4, "⌘Z undid the new layer");
+    assert_eq!(saved.borrow().as_slice(), [b"4".to_vec()], "⌘S saved after the undo");
+    assert_eq!(logged(&h), ["edit.undo", "file.save"]);
+    // ⇧⌘Z redoes; then ⌘S before ⌘Z saves first and undoes after.
+    press_in_one_frame(&mut h, &["Cmd+Shift+Z"]);
+    assert_eq!(layer_count(&h), 5);
+    logged(&h);
+    saved.borrow_mut().clear();
+    press_in_one_frame(&mut h, &["Cmd+S", "Cmd+Z"]);
+    assert_eq!(saved.borrow().as_slice(), [b"5".to_vec()], "saved before the undo");
+    assert_eq!(layer_count(&h), 4, "then undone");
+    assert_eq!(logged(&h), ["file.save", "edit.undo"]);
+}
+
+/// A shortcut that opens a dialog leaves the frame's later keys to it: ⌘L then ⌘Z doesn't undo
+/// behind the Levels dialog.
+#[test]
+fn a_shortcut_opening_a_dialog_takes_the_frames_later_keys() {
+    let (mut h, _) = saving_harness();
+    press_in_one_frame(&mut h, &["Cmd+L", "Cmd+Z"]);
+    assert_eq!(h.state().ui.dialogs.len(), 1, "⌘L opened Levels");
+    assert_eq!(layer_count(&h), 5, "⌘Z didn't undo behind the dialog");
+    assert_eq!(logged(&h), ["image.adjustments.levels"]);
+}

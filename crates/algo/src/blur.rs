@@ -175,8 +175,13 @@ fn transpose(buf: &[f32], w: usize, h: usize, n: usize) -> Vec<f32> {
 
 /// Gaussian blur by three box passes per axis over a premultiplied window.
 fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
+    box_passes(src, out, alpha, &boxes_for_gauss(sigma, 3))
+}
+
+/// Box blurs of the given (odd) widths, one after another along each axis, over a premultiplied
+/// window; running sums make the cost independent of the widths.
+fn box_passes(src: &Image, out: Rect, alpha: bool, boxes: &[usize]) -> Vec<f32> {
     let n = src.ch;
-    let boxes = boxes_for_gauss(sigma, 3);
     let margin: i32 = boxes.iter().map(|w| (*w as i32 - 1) / 2).sum::<i32>() + 1;
     let win = Rect::new(out.x0 - margin, out.y0 - margin, out.x1 + margin, out.y1 + margin);
     let (ww, wh) = (win.width() as usize, win.height() as usize);
@@ -197,11 +202,11 @@ fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
     #[cfg(target_arch = "wasm32")]
     p.chunks_mut(ww * n).enumerate().for_each(|(y, row)| fill(y, row));
     premultiply(&mut p, n, alpha);
-    for w in &boxes {
+    for w in boxes {
         box_rows(&mut p, ww, n, (w - 1) / 2);
     }
     let mut t = transpose(&p, ww, wh, n);
-    for w in &boxes {
+    for w in boxes {
         box_rows(&mut t, wh, n, (w - 1) / 2);
     }
     let p = transpose(&t, wh, ww, n);
@@ -217,8 +222,12 @@ fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
 
 pub(crate) fn boxed(src: &Image, out: Rect, ctx: &Ctx, radius: f32) -> Vec<f32> {
     let r = radius.max(0.0).round() as usize;
-    let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
-    conv_sep(src, out, &k, &k, ctx.alpha)
+    // Running sums cost the same at any radius; the direct kernel is quicker for the smallest.
+    if r <= 4 {
+        let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
+        return conv_sep(src, out, &k, &k, ctx.alpha);
+    }
+    box_passes(src, out, ctx.alpha, &[2 * r + 1])
 }
 
 fn average_samples(src: &Image, out: Rect, ctx: &Ctx, mut offsets: impl FnMut(f32, f32, &mut Vec<(f32, f32)>)) -> Vec<f32> {
@@ -305,11 +314,102 @@ pub(crate) fn radial(src: &Image, out: Rect, ctx: &Ctx, amount: f32, method: Rad
     })
 }
 
-pub(crate) fn surface(src: &Image, out: Rect, ctx: &Ctx, radius: f32, threshold: f32) -> Vec<f32> {
+/// [`surface`] for 8-bit samples (every colour sample in the window is `k / 255`; `None`
+/// otherwise): a 256-bin histogram of each channel over the window slides along the row, adding
+/// and removing one column per step, so a pixel costs O(radius + levels) instead of O(radius^2).
+/// Each level is weighted with the same expression as the direct sum.
+fn surface_8bit(src: &Image, out: Rect, ctx: &Ctx, r: i32, t: f32, reach: usize) -> Option<Vec<f32>> {
     let n = src.ch;
     let cc = if ctx.alpha { n - 1 } else { n };
+    let win = out.inflate(r);
+    let (ww, wh) = (win.width() as usize, win.height() as usize);
+    // Level of every colour sample in the window; `SKIP` where the pixel is transparent (the
+    // direct sum skips those). Outside the source reads as 0, as `Image::get` does.
+    const SKIP: u16 = 256;
+    let mut lv = vec![0u16; ww * wh * cc];
+    for y in win.y0..win.y1 {
+        for x in win.x0..win.x1 {
+            let i = ((y - win.y0) as usize * ww + (x - win.x0) as usize) * cc;
+            let skip = ctx.alpha && src.get(x, y, n - 1) <= 0.0;
+            for c in 0..cc {
+                let v = src.get(x, y, c);
+                let k = (v * 255.0).round();
+                if !(0.0..=255.0).contains(&k) || (k / 255.0).to_bits() != v.to_bits() {
+                    return None;
+                }
+                lv[i + c] = if skip { SKIP } else { k as u16 };
+            }
+        }
+    }
+    let (ow, oh) = (out.width() as usize, out.height() as usize);
+    let side = (2 * r + 1) as usize;
+    let mut res = vec![0.0f32; ow * oh * n];
+    let mut hist = [0u32; 257];
+    for oy in 0..oh {
+        for c in 0..cc {
+            hist.fill(0);
+            // Window of output column 0: window rows oy..oy + side, columns 0..side.
+            let col = |hist: &mut [u32; 257], wx: usize, add: bool| {
+                for wy in oy..oy + side {
+                    let k = lv[(wy * ww + wx) * cc + c] as usize;
+                    if add {
+                        hist[k] += 1;
+                    } else {
+                        hist[k] -= 1;
+                    }
+                }
+            };
+            for wx in 0..side {
+                col(&mut hist, wx, true);
+            }
+            for ox in 0..ow {
+                let p = src.px(out.x0 + ox as i32, out.y0 + oy as i32);
+                let v0 = p[c];
+                let k0 = (v0 * 255.0).round() as usize;
+                let (mut acc, mut wsum) = (0.0f64, 0.0f64);
+                for (k, &cnt) in hist.iter().enumerate().take(256.min(k0 + reach + 1)).skip(k0.saturating_sub(reach)) {
+                    if cnt == 0 {
+                        continue;
+                    }
+                    let v = k as f32 / 255.0;
+                    let w = (1.0 - (v - v0).abs() / t).max(0.0);
+                    acc += f64::from(v * w) * f64::from(cnt);
+                    wsum += f64::from(w) * f64::from(cnt);
+                }
+                res[(oy * ow + ox) * n + c] = if wsum > 0.0 { (acc / wsum) as f32 } else { v0 };
+                if ox + 1 < ow {
+                    col(&mut hist, ox, false);
+                    col(&mut hist, ox + side, true);
+                }
+            }
+        }
+        if ctx.alpha {
+            for ox in 0..ow {
+                res[(oy * ow + ox) * n + n - 1] = src.px(out.x0 + ox as i32, out.y0 + oy as i32)[n - 1];
+            }
+        }
+    }
+    Some(res)
+}
+
+pub(crate) fn surface(src: &Image, out: Rect, ctx: &Ctx, radius: f32, threshold: f32) -> Vec<f32> {
     let r = radius.max(0.0).round() as i32;
     let t = (threshold.max(1.0) / 255.0) * 2.5;
+    // Levels within the threshold of the centre (the only ones with any weight), on each side.
+    let reach = ((t * 255.0).ceil() as usize).min(255);
+    let side = (2 * r + 1) as usize;
+    if side * side > 2 * reach + 1 + 4 * side
+        && let Some(res) = surface_8bit(src, out, ctx, r, t, reach)
+    {
+        return res;
+    }
+    surface_direct(src, out, ctx, r, t)
+}
+
+/// [`surface`] by summing the whole (2r + 1)^2 window of every pixel.
+fn surface_direct(src: &Image, out: Rect, ctx: &Ctx, r: i32, t: f32) -> Vec<f32> {
+    let n = src.ch;
+    let cc = if ctx.alpha { n - 1 } else { n };
     let mut res = Vec::with_capacity(out.width() as usize * out.height() as usize * n);
     for y in out.y0..out.y1 {
         for x in out.x0..out.x1 {
@@ -360,5 +460,64 @@ mod tests {
         let err = exact.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
         assert!(err < 0.02, "max error {err}");
         assert_eq!(boxes_for_gauss(10.0, 3).len(), 3);
+    }
+
+    #[test]
+    fn box_passes_match_the_direct_box_kernel() {
+        // Noisy RGBA with varying alpha, so premultiplication and every channel are exercised.
+        for r in [5usize, 17, 60] {
+            let (w, h, m) = (40, 24, r as i32 + 2);
+            let src_rect = Rect::new(-m, -m, w + m, h + m);
+            let mut img = Image::new(src_rect, 4);
+            let mut s = 0x9e37_79b9u32;
+            for v in img.data.iter_mut() {
+                s ^= s << 13;
+                s ^= s >> 17;
+                s ^= s << 5;
+                *v = (s % 256) as f32 / 255.0;
+            }
+            let out = Rect::new(0, 0, w, h);
+            let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
+            let direct = conv_sep(&img, out, &k, &k, true);
+            let ctx = Ctx { bounds: src_rect, mode: crate::ColorMode::Rgb, alpha: true };
+            let fast = boxed(&img, out, &ctx, r as f32);
+            let err = direct.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(err < 1e-5, "radius {r}: max error {err}");
+        }
+    }
+
+    #[test]
+    fn surface_blur_8bit_histogram_matches_the_direct_sum() {
+        // 8-bit levels with some fully transparent pixels, which the sum skips.
+        let src_rect = Rect::new(-14, -14, 40, 34);
+        let mut img = Image::new(src_rect, 4);
+        let mut s = 0x6c07_8965u32;
+        for px in img.data.as_chunks_mut::<4>().0 {
+            for v in px.iter_mut() {
+                s ^= s << 13;
+                s ^= s >> 17;
+                s ^= s << 5;
+                *v = (s % 256) as f32 / 255.0;
+            }
+            if s.is_multiple_of(7) {
+                px[3] = 0.0;
+            }
+        }
+        let ctx = Ctx { bounds: src_rect, mode: crate::ColorMode::Rgb, alpha: true };
+        // The output reaches the source edge, where samples read as transparent.
+        let out = Rect::new(-2, 0, 26, 20);
+        for (r, threshold) in [(1, 2.0), (4, 15.0), (12, 60.0), (12, 255.0)] {
+            let t = (threshold / 255.0) * 2.5;
+            let reach = ((t * 255.0f32).ceil() as usize).min(255);
+            let fast = surface_8bit(&img, out, &ctx, r, t, reach).expect("8-bit input");
+            let direct = surface_direct(&img, out, &ctx, r, t);
+            let err = direct.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(err < 1e-5, "r {r} threshold {threshold}: max error {err}");
+        }
+        // Not 8-bit: the histogram declines and the direct sum is used.
+        // (0, 0) is inside every window above.
+        let i = (14 * src_rect.width() as usize + 14) * 4;
+        img.data[i] = 0.5 / 255.0;
+        assert!(surface_8bit(&img, out, &ctx, 4, 0.1, 26).is_none());
     }
 }

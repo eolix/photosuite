@@ -101,10 +101,22 @@ pub fn status_info_text(doc: &Document, key: &str, tool: &str, profile: &str) ->
 }
 
 fn profile_name(doc: &Document) -> String {
-    if doc.icc_profile.is_none() {
-        return crate::i18n::fmt(tl!("Untagged {mode}"), &[("mode", tl!(&crate::canvas::mode_label(doc)))]);
+    let mode = crate::canvas::mode_label(doc);
+    let Some(bytes) = doc.icc_profile.as_ref() else {
+        return crate::i18n::fmt(tl!("Untagged {mode}"), &[("mode", tl!(mode))]);
+    };
+    let Ok(profile) = photosuite_engine::color_cmds::profile_from_bytes(bytes) else {
+        return crate::i18n::fmt(tl!("Invalid {mode} profile"), &[("mode", tl!(mode))]);
+    };
+    if profile.color_space != photosuite_engine::color_cmds::mode_space(doc.mode) {
+        return crate::i18n::fmt(tl!("Invalid {mode} profile"), &[("mode", tl!(mode))]);
     }
-    photosuite_engine::color_cmds::document_profile(doc).description.clone()
+    let name: String = profile.description.chars().filter(|c| !c.is_control()).take(128).collect();
+    let name = name.trim();
+    if name.is_empty() {
+        return crate::i18n::fmt(tl!("Unnamed {mode} profile"), &[("mode", tl!(mode))]);
+    }
+    name.to_owned()
 }
 
 /// Status bar body (Pro): zoom %, the chosen info field and its ">" menu, then status messages.
@@ -205,6 +217,47 @@ mod tests {
         assert_eq!(status_info_text(&d, "layers", "", ""), "1 Layer");
         assert_eq!(status_info_text(&d, "tool", "Brush Tool", ""), "Brush Tool");
         assert!(status_info_text(&d, "profile", "", "sRGB IEC61966-2.1").ends_with("(8bpc)"));
+    }
+
+    #[test]
+    fn status_profile_describes_rgb_gray_and_custom_profiles_without_mutating_the_document() {
+        let mut rgb = doc();
+        rgb.icc_profile = Some(photosuite_engine::color_cmds::working_profile(rgb.mode).to_bytes());
+        let before = rgb.icc_profile.clone();
+        assert_eq!(profile_name(&rgb), "sRGB IEC61966-2.1");
+        assert_eq!(status_info_text(&rgb, "profile", "", &profile_name(&rgb)), "sRGB IEC61966-2.1 (8bpc)");
+        assert_eq!(rgb.icc_profile, before);
+
+        let mut gray = doc();
+        gray.mode = photosuite_doc::ColorMode::Grayscale;
+        gray.icc_profile = Some(photosuite_engine::color_cmds::working_profile(gray.mode).to_bytes());
+        assert_eq!(profile_name(&gray), "sGray (sRGB tone curve, PhotoSuite)");
+
+        let mut custom = (*photosuite_engine::color_cmds::working_profile(photosuite_doc::ColorMode::Cmyk)).clone();
+        custom.description = "PhotoSuite Studio CMYK".into();
+        let mut custom_doc = doc();
+        custom_doc.mode = photosuite_doc::ColorMode::Cmyk;
+        custom_doc.icc_profile = Some(custom.with_encoded_bytes().to_bytes());
+        assert_eq!(profile_name(&custom_doc), "PhotoSuite Studio CMYK");
+    }
+
+    #[test]
+    fn status_profile_falls_back_for_malformed_unnamed_and_mismatched_profiles() {
+        let mut malformed = doc();
+        malformed.icc_profile = Some(std::sync::Arc::new(vec![1, 2, 3]));
+        assert_eq!(profile_name(&malformed), "Invalid RGB profile");
+
+        let mut unnamed_profile = (*photosuite_engine::color_cmds::working_profile(photosuite_doc::ColorMode::Cmyk)).clone();
+        unnamed_profile.description.clear();
+        let mut unnamed = doc();
+        unnamed.mode = photosuite_doc::ColorMode::Cmyk;
+        unnamed.icc_profile = Some(unnamed_profile.with_encoded_bytes().to_bytes());
+        assert_eq!(profile_name(&unnamed), "Unnamed CMYK profile");
+
+        let mut mismatched = doc();
+        mismatched.mode = photosuite_doc::ColorMode::Grayscale;
+        mismatched.icc_profile = Some(photosuite_engine::color_cmds::working_profile(photosuite_doc::ColorMode::Rgb).to_bytes());
+        assert_eq!(profile_name(&mismatched), "Invalid Gray profile");
     }
 
     #[test]

@@ -73,6 +73,15 @@ fn point_and_paragraph_conversion_keep_the_text_in_place() {
     }
 }
 
+/// Issue #446: vertical type renders vertically (see the test below), so the command's description
+/// must not claim it stays horizontal.
+#[test]
+fn vertical_orientation_params_match_horizontal() {
+    let specs = specs();
+    let params = |id: &str| specs.iter().find(|c| c.id == id).unwrap().params;
+    assert_eq!(params("type.orientation.vertical"), params("type.orientation.horizontal"));
+}
+
 /// Issue #199: vertical type is laid out top to bottom, columns right to left, on the canvas.
 #[test]
 fn vertical_orientation_renders_columns_inside_the_canvas() {

@@ -8,16 +8,16 @@ order = 4
 [[item]]
 id = "UI-217-1"
 target = "Tool options, last Export As / Save for Web / Fill settings and font recents persist"
-status = "missing"
+status = "partial"
 issue = 217
-note = "No tool_options/export fields in Preferences (prefs.rs:694); export_dialog.rs:21 png/85"
+note = "Fill (fill_ui.rs:72) and Liquify (liquify_ui.rs:64, #418) keep their settings in Preferences (prefs.dialogs); no tool_options/export fields in Preferences; export_dialog.rs:21 png/85"
 
 [[item]]
 id = "UI-217-2"
 target = "Window size and dock width remembered across restarts"
 status = "missing"
 issue = 217
-note = "main.rs:108 fixed 1440x900; dock.rs:529 snapshot omits the width"
+note = "main.rs:46 native_options(): fixed 1440x900, centred on the main monitor (#419); dock.rs:529 snapshot omits the width"
 
 [[item]]
 id = "UI-217-3"
@@ -43,9 +43,9 @@ note = "No floating groups in dock.rs/panels.rs"
 [[item]]
 id = "UI-217-6"
 target = "Document tabs: overflow list, context menu (Close/Others/All/Reveal), drag to reorder"
-status = "missing"
+status = "partial"
 issue = 217
-note = "canvas.rs:674-770 tabs click/close only"
+note = "canvas.rs: Close/Others/All context menu with unsaved prompt; overflow, Reveal, drag reorder still missing"
 
 [[item]]
 id = "UI-217-7"
@@ -59,7 +59,7 @@ id = "UI-217-8"
 target = "Tool-specific canvas right-click menu; right-click spelling suggestions in text fields"
 status = "partial"
 issue = 217
-note = "paint_mouse.rs:67 right-click opens the brush picker only"
+note = "paint_mouse.rs brush picker and canvas_tool_menu.rs selection actions; other tools and text spelling menus missing"
 
 [[item]]
 id = "UI-217-9"
@@ -94,7 +94,7 @@ id = "UI-217-13"
 target = "Numeric fields accept arithmetic and units; scrubby labels; double-click resets a slider"
 status = "partial"
 issue = 217
-note = "widgets.rs:131 DragValue scrubs; no expressions, label scrub or reset"
+note = "widgets.rs:132 DragValue scrubs and takes + - * / arithmetic; no units in expressions, label scrub or reset"
 
 [[item]]
 id = "UI-217-14"

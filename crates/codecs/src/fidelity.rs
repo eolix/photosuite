@@ -41,6 +41,12 @@ pub enum FidelityWarning {
     XmpDropped,
     DpiDropped,
     TextDropped,
+    /// Metadata larger than the format can hold in one piece (`what`: "EXIF", "XMP") will be
+    /// dropped.
+    MetadataTooLarge {
+        what: &'static str,
+        bytes: usize,
+    },
     /// Image exceeds the format's maximum size; encoding will fail.
     DimensionsExceeded {
         max_width: u32,
@@ -86,6 +92,7 @@ impl fmt::Display for FidelityWarning {
             XmpDropped => write!(f, "XMP not supported; it will be dropped"),
             DpiDropped => write!(f, "resolution (DPI) not supported; it will be dropped"),
             TextDropped => write!(f, "text metadata not supported; it will be dropped"),
+            MetadataTooLarge { what, bytes } => write!(f, "{what} ({bytes} bytes) is too large for the format; it will be dropped"),
             DimensionsExceeded { max_width, max_height } => {
                 write!(f, "image exceeds the format maximum of {max_width}x{max_height}")
             }
@@ -218,6 +225,14 @@ pub fn fidelity_warnings_with(image: &Image, format: Format, opts: &EncodeOption
         }
         if m.xmp.is_some() && !c.xmp {
             w.push(W::XmpDropped);
+        }
+        if format == Format::Jpeg {
+            if let Some(exif) = m.exif.as_deref().filter(|e| crate::codecs::jpeg::exif_segment(e).is_none()) {
+                w.push(W::MetadataTooLarge { what: "EXIF", bytes: exif.len() });
+            }
+            if let Some(xmp) = m.xmp.as_deref().filter(|x| crate::codecs::jpeg::xmp_segment(x).is_none()) {
+                w.push(W::MetadataTooLarge { what: "XMP", bytes: xmp.len() });
+            }
         }
         if m.dpi.is_some() && !c.dpi {
             w.push(W::DpiDropped);

@@ -159,7 +159,10 @@ pub fn menu(app: &mut PhotosuiteApp, id: &str, params: &Value) -> Option<Result<
             r
         }
         "file.import.notes" => {
-            let (name, bytes) = app.services.pick_open.as_mut().and_then(|f| f())?;
+            let (name, bytes) = match app.pick_file_bytes()? {
+                Ok(picked) => picked,
+                Err(e) => return Some(Err(e)),
+            };
             let r = photosuite_engine::notes_cmds::import_notes_from(&mut app.session, &name, &bytes).map_err(|e| e.to_string());
             if r.is_ok() {
                 app.ui.analysis.notes = true;
@@ -822,11 +825,14 @@ fn dialog(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if crate::widgets::primary_button(ui, tl!("OK"), 70.0).clicked() {
-                        result = Some(true);
-                    }
-                    if crate::widgets::secondary_button(ui, tl!("Cancel"), 70.0).clicked() {
-                        result = Some(false);
+                    if let Some(role) = crate::widgets::dialog_buttons(
+                        ui,
+                        &[
+                            crate::widgets::DialogButton::new(crate::widgets::ButtonRole::Default, tl!("OK"), 70.0),
+                            crate::widgets::DialogButton::new(crate::widgets::ButtonRole::Cancel, tl!("Cancel"), 70.0),
+                        ],
+                    ) {
+                        result = Some(role == crate::widgets::ButtonRole::Default);
                     }
                 });
             });
@@ -898,6 +904,23 @@ pub(crate) mod tests {
             "view.proofSetup.workingCyanPlate",
         ] {
             assert!(items.iter().any(|i| i.id == id && i.enabled), "{id} live");
+        }
+    }
+
+    #[test]
+    fn arbitrary_rotation_starts_at_the_ruler_angle() {
+        let (mut app, ctx) = app();
+        let open = |app: &mut PhotosuiteApp| {
+            let r = crate::menus::invoke(app, &ctx, "image.rotation.arbitrary", json!({})).unwrap();
+            let f = &app.ui.dialog_mut(r["dialog"].as_u64().unwrap()).unwrap().fields;
+            (f["angle"].as_f64().unwrap(), f["direction"].clone())
+        };
+        assert_eq!(open(&mut app), (0.0, json!("cw")));
+        // A line falling to the right straightens counter-clockwise, a near-vertical one to the y axis.
+        for (end, dir) in [([150, 60], "ccw"), ([150, 40], "cw"), ([60, -50], "ccw")] {
+            app.run("image.analysis.rulerTool", json!({"start": [50, 50], "end": end})).unwrap();
+            let (a, d) = open(&mut app);
+            assert!((a - 5.7106).abs() < 1e-3 && d == json!(dir), "{end:?}: {a} {d}");
         }
     }
 

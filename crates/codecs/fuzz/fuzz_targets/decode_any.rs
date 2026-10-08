@@ -8,6 +8,7 @@ use photosuite_codecs::{decode_with, encode, DecodeOptions, EncodeOptions, Limit
 fuzz_target!(|data: &[u8]| {
     let opts = DecodeOptions {
         limits: Limits { max_width: 4096, max_height: 4096, max_pixels: 1 << 22, max_alloc: 256 << 20 },
+        ..Default::default()
     };
     if let Ok(img) = decode_with(data, &opts)
         && let Some(f) = photosuite_codecs::detect(data)

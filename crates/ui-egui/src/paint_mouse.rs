@@ -58,15 +58,29 @@ pub fn right_erases(app: &PhotosuiteApp, tool: Tool) -> bool {
     matches!(tool, Tool::Brush | Tool::Eraser) && app.session.prefs().tools.right_click_with_painting_tools == RightClickPaint::Erase
 }
 
-/// Route the canvas response's buttons: the left one drives the tool; the right one erases (Erase
-/// preference) or opens the Brush Preset picker. Arms `secondary_erase` for this frame's `Down`.
+/// Route the canvas response's buttons: the left one drives the tool; the right one resizes the
+/// brush with Alt held (#297), erases (Erase preference) or opens the Brush Preset picker. Arms
+/// `secondary_erase` or `brush_resize_armed` for this frame's `Down`.
 pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) -> Buttons {
-    let erase = right_erases(app, tool);
+    let (mods, right_down) = response.ctx.input(|i| (i.modifiers, i.pointer.secondary_down()));
+    // Alt+right-drag resizes the brush (brush_resize.rs); its events reach `tool_event` like a
+    // left drag's, and nothing paints. A resize whose release was missed ends here.
+    crate::brush_resize::release_stale(app, right_down || response.drag_stopped_by(PointerButton::Secondary));
+    let resize_start = crate::brush_resize::applies(tool)
+        && app.drag.is_none()
+        && crate::brush_resize::is_right_gesture(crate::workspace_ui::sticky_mods(app, mods))
+        && response.drag_started_by(PointerButton::Secondary);
+    let resizing = app.brush_resize.is_some_and(|r| r.secondary);
+    app.brush_resize_armed = resize_start;
+    // ⌘/Ctrl+right-click lists the layers under the pointer instead (layer_pick_ui.rs, #307).
+    let layer_menu = crate::layer_pick_ui::is_gesture(tool, mods);
+    let erase = right_erases(app, tool) && !resize_start && !resizing && !layer_menu;
     let right_stroke = erase && app.drag.is_some();
     let right_start = erase && response.drag_started_by(PointerButton::Secondary);
     let right_click = response.secondary_clicked();
     if right_click
         && !erase
+        && !layer_menu
         && has_brush_picker(tool)
         && let Some(p) = response.interact_pointer_pos()
     {
@@ -74,26 +88,31 @@ pub fn canvas_buttons(app: &mut PhotosuiteApp, response: &Response, tool: Tool) 
     }
     let erase_click = erase && right_click;
     app.secondary_erase = right_start || erase_click;
+    let right_drag = right_stroke || resizing;
     Buttons {
-        started: response.drag_started_by(PointerButton::Primary) || right_start,
-        dragged: response.dragged_by(PointerButton::Primary) || (right_stroke && response.dragged_by(PointerButton::Secondary)),
-        stopped: response.drag_stopped_by(PointerButton::Primary) || (right_stroke && response.drag_stopped_by(PointerButton::Secondary)),
+        started: response.drag_started_by(PointerButton::Primary) || right_start || resize_start,
+        dragged: response.dragged_by(PointerButton::Primary) || (right_drag && response.dragged_by(PointerButton::Secondary)),
+        stopped: response.drag_stopped_by(PointerButton::Primary) || (right_drag && response.drag_stopped_by(PointerButton::Secondary)),
         clicked: response.clicked() || erase_click,
     }
 }
 
 /// `ui.pointer` with `"button": "secondary"`: true when its events should reach the tool (an
-/// erasing right stroke; `secondary_erase` is armed for its `Down`). Otherwise a right-click with
-/// a painting tool opens the Brush Preset picker over the canvas, and nothing paints.
-pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool) -> bool {
+/// Alt+right-drag brush resize, `brush_resize_armed` for its `Down`; or an erasing right stroke,
+/// `secondary_erase` armed for its `Down`). Otherwise a right-click with a painting tool opens
+/// the Brush Preset picker at screen point `at`, and nothing paints.
+pub fn pointer_secondary(app: &mut PhotosuiteApp, down: bool, mods: egui::Modifiers, at: [f32; 2]) -> bool {
     let tool = app.ui.tool;
+    if crate::brush_resize::applies(tool) && (crate::brush_resize::is_right_gesture(mods) || app.brush_resize.is_some_and(|r| r.secondary)) {
+        app.brush_resize_armed = down && app.drag.is_none();
+        return true;
+    }
     if right_erases(app, tool) {
         app.secondary_erase = down;
         return true;
     }
     if down && has_brush_picker(tool) {
-        let c = app.last_canvas_rect.center();
-        app.ui.brush_picker = Some([c.x, c.y]);
+        app.ui.brush_picker = Some(at);
     }
     false
 }
@@ -205,6 +224,38 @@ mod tests {
     }
 
     #[test]
+    fn shift_click_connects_to_the_previous_brush_stroke() {
+        use egui::{Event, Modifiers};
+
+        let mut h = harness(None);
+        let (_, end) = drag(&mut h, PointerButton::Primary);
+        let previous = h
+            .state()
+            .session
+            .journal
+            .iter()
+            .rev()
+            .find(|(id, _)| id == "paint.stroke")
+            .map(|(_, p)| p["points"].as_array().unwrap().last().unwrap().clone())
+            .unwrap();
+        let target = end + vec2(120.0, 80.0);
+        h.event(Event::PointerMoved(target));
+        h.run_steps(1);
+        for pressed in [true, false] {
+            h.event(Event::PointerButton { pos: target, button: PointerButton::Primary, pressed, modifiers: Modifiers::SHIFT });
+            h.run_steps(2);
+        }
+
+        let strokes = strokes(&h);
+        assert_eq!(strokes.len(), 2, "a Shift-click commits one connected stroke");
+        let points = strokes[1]["points"].as_array().unwrap();
+        assert_eq!(points.len(), 2, "a click has the previous endpoint and clicked endpoint");
+        assert_eq!(points[0][0], previous[0]);
+        assert_eq!(points[0][1], previous[1]);
+        assert!(alpha_at(&h, end + vec2(60.0, 40.0)) > 0.9, "the segment between the strokes is painted");
+    }
+
+    #[test]
     fn right_click_opens_the_brush_picker_and_never_paints() {
         let mut h = harness(None);
         let undo = h.state().session.active().unwrap().history.past_len();
@@ -281,7 +332,7 @@ mod tests {
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
         app.ui.tool = Tool::Brush;
         let m = Modifiers::NONE;
-        assert!(pointer_secondary(&mut app, true));
+        assert!(pointer_secondary(&mut app, true, egui::Modifiers::NONE, [0.0, 0.0]));
         tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 40.0, pressure: 0.4 }, m);
         assert!(!app.secondary_erase, "armed for one stroke only");
         tool_event(&mut app, ToolEvent::Move { x: 100.0, y: 40.0, pressure: 0.8 }, m);
@@ -294,7 +345,7 @@ mod tests {
         assert_eq!(st.doc.layers[0].surface().unwrap().rgba(50, 40), [1.0, 1.0, 1.0, 1.0]);
         // With the default preference the right button opens the picker and nothing paints.
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "brushPicker"})).unwrap();
-        assert!(!pointer_secondary(&mut app, true));
+        assert!(!pointer_secondary(&mut app, true, egui::Modifiers::NONE, [0.0, 0.0]));
         assert!(app.ui.brush_picker.is_some() && !app.secondary_erase);
     }
 
@@ -351,5 +402,52 @@ mod tests {
         assert_eq!(st.doc.layers[0].surface().unwrap().rgba(50, 40), [1.0, 0.0, 0.0, 1.0]);
         assert_eq!(st.history.undo_label(), Some("Eraser"));
         assert!(!app.ui.status_error, "{}", app.ui.status);
+    }
+
+    /// Assert the one committed stroke contains a point at each queued screen position.
+    fn assert_committed_points(h: &Harness<'static, PhotosuiteApp>, queued: &[Pos2]) {
+        let s = strokes(h);
+        assert_eq!(s.len(), 1);
+        let points = s[0]["points"].as_array().unwrap();
+        let app = h.state();
+        let v = app.ui.views[0].clone();
+        let r = app.last_canvas_rect;
+        for p in queued {
+            let d = (*p - r.center()) / v.zoom;
+            let want = [d.x as f64 + v.center[0] as f64, d.y as f64 + v.center[1] as f64];
+            assert!(
+                points.iter().any(|q| {
+                    let q = q.as_array().unwrap();
+                    (q[0].as_f64().unwrap() - want[0]).abs() < 1.0 && (q[1].as_f64().unwrap() - want[1]).abs() < 1.0
+                }),
+                "queued move {want:?} missing from {points:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn one_frame_feeds_every_pointer_move_not_just_the_latest() {
+        // Fast strokes used to lose the moves between two frames: the canvas read only
+        // `interact_pointer_pos()` once per frame, so the stroke was a coarse polyline. Every
+        // `PointerMoved` egui-winit delivered in one frame must now reach the stroke.
+        let mut h = harness(None);
+        let c = h.state().last_canvas_rect.center();
+        let a = c - vec2(90.0, 0.0);
+        h.event(egui::Event::PointerMoved(a));
+        h.run_steps(1);
+        press(&mut h, a, PointerButton::Primary, true);
+        // Cross egui's drag threshold on its own frame.
+        h.event(egui::Event::PointerMoved(a + vec2(20.0, 0.0)));
+        h.run_steps(1);
+        // Several moves in ONE frame: `Harness::event` would make one frame per event, so push
+        // them straight into the next frame's input. All of them must reach the committed stroke.
+        let queued: Vec<Pos2> = (1..=6).map(|i| a + vec2(20.0 + i as f32 * 8.0, 0.0)).collect();
+        for p in &queued {
+            h.input_mut().events.push(egui::Event::PointerMoved(*p));
+        }
+        h.run_steps(1);
+        let end = *queued.last().unwrap();
+        press(&mut h, end, PointerButton::Primary, false);
+        assert_committed_points(&h, &queued);
     }
 }

@@ -169,3 +169,23 @@ fn shared_attribute_names_accept_both_spellings() {
     let p = s.active().unwrap().doc.text_styles.resolve_para(Some(r["id"].as_u64().unwrap() as u32));
     assert_eq!((p.align, p.direction), (photosuite_doc::text::TextAlign::Center, photosuite_doc::text::TextDirection::Rtl));
 }
+
+#[test]
+fn exhausted_style_ids_return_errors_without_history_changes() {
+    let (mut s, _) = session("x");
+    let mut doc = (*s.active().unwrap().doc).clone();
+    doc.text_styles.character.push(CharacterStyleDef { id: u32::MAX, name: "Max".into(), ..Default::default() });
+    doc.text_styles.paragraph.push(ParagraphStyleDef { id: u32::MAX, name: "Max".into(), ..Default::default() });
+    s.active_mut().unwrap().doc = std::sync::Arc::new(doc);
+    let past = s.active().unwrap().history.past_len();
+    let revision = s.active().unwrap().revision;
+
+    assert!(s.execute("type.characterStyle.new", json!({"fromSelection": false})).unwrap_err().to_string().contains("character style id space exhausted"));
+    assert!(s.execute("type.characterStyle.duplicate", json!({"id": u32::MAX})).unwrap_err().to_string().contains("character style id space exhausted"));
+    assert!(s.execute("type.paragraphStyle.new", json!({"fromSelection": false})).unwrap_err().to_string().contains("paragraph style id space exhausted"));
+    assert!(s.execute("type.paragraphStyle.duplicate", json!({"id": u32::MAX})).unwrap_err().to_string().contains("paragraph style id space exhausted"));
+    assert_eq!(s.active().unwrap().history.past_len(), past);
+    assert_eq!(s.active().unwrap().revision, revision);
+    assert_eq!(s.active().unwrap().doc.text_styles.next_char_id(), None);
+    assert_eq!(s.active().unwrap().doc.text_styles.next_para_id(), None);
+}

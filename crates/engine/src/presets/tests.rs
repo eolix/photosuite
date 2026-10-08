@@ -18,6 +18,34 @@ fn layer_px(s: &Session, x: i32, y: i32) -> Vec<f32> {
     d.doc.layer(d.active_layer.unwrap()).unwrap().surface().unwrap().pixel(x, y)
 }
 
+// ------------------------------------------------------------------ styles
+
+#[test]
+fn style_preset_new_from_an_explicit_effect_list() {
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
+    s.execute("layer.new.layer", json!({})).unwrap();
+    // The Layer Style dialog's "New Style…" saves its pending state, not the layer.
+    let r = s
+        .execute(
+            "style.presets.new",
+            json!({"name": "Pending", "effects": [["stroke", {"size": 6, "color": "#123456"}]], "blend": "Multiply", "fillOpacity": 40}),
+        )
+        .unwrap();
+    assert_eq!(r["name"], json!("Pending"));
+    s.execute("layer.new.layer", json!({})).unwrap();
+    s.execute("style.presets.apply", json!({"preset": "Pending"})).unwrap();
+    let d = s.active().unwrap();
+    let l = d.doc.layer(d.active_layer.unwrap()).unwrap();
+    assert_eq!(l.effects.items.len(), 1);
+    assert!(matches!(&l.effects.items[0], photosuite_doc::Effect::Stroke(st) if st.size == 6.0));
+    assert_eq!(l.blend, photosuite_color::BlendMode::Multiply);
+    assert!((l.fill_opacity - 0.4).abs() < 1e-6);
+    // Malformed lists are graceful errors.
+    assert!(s.execute("style.presets.new", json!({"effects": [["nope", {}]]})).is_err());
+    assert!(s.execute("style.presets.new", json!({"effects": ["stroke"]})).is_err());
+}
+
 // ------------------------------------------------------------------ gradients
 
 #[test]
@@ -63,6 +91,42 @@ fn foreground_to_transparent_paints_alpha() {
     assert!(layer_px(&s, 63, 5)[3] < 0.05);
     let mid = layer_px(&s, 32, 5)[3];
     assert!((mid - 0.5).abs() < 0.05, "{mid}");
+}
+
+/// Issue #465: explicit `transparency` stops apply with `colors`, a `gradient` preset, explicit
+/// `stops` and the current gradient alike.
+#[test]
+fn paint_gradient_honours_explicit_transparency_stops() {
+    let transparency = json!([[0, 65], [1, 0]]);
+    for depth in [8, 16, 32] {
+        for extra in [
+            json!({"colors": ["#07111d", "#07111d"]}),
+            json!({"gradient": "Black, White"}),
+            json!({"gradient": "Foreground to Transparent", "transparency": [[0, 65], [0.5, 65], [1, 0]]}),
+            json!({"stops": [[0, "#07111d"], [1, "#07111d"]]}),
+            json!({}),
+        ] {
+            let mut s = Session::new();
+            s.execute("file.new", json!({"width": 16, "height": 16, "depth": depth, "background": "transparent"})).unwrap();
+            let mut p = json!({"from": [0, 0], "to": [0, 15], "transparency": transparency});
+            for (k, v) in extra.as_object().unwrap() {
+                p[k] = v.clone();
+            }
+            s.execute("paint.gradient", p).unwrap();
+            let (top, bottom) = (layer_px(&s, 8, 0)[3], layer_px(&s, 8, 15)[3]);
+            assert!((top - 0.65).abs() < 0.03, "depth {depth} {extra}: top alpha {top}");
+            assert!(bottom < 0.03, "depth {depth} {extra}: bottom alpha {bottom}");
+        }
+    }
+    // `colors` keeps its colour; a malformed stop list is an error, not a silent opaque fill.
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 16, "height": 16, "background": "transparent"})).unwrap();
+    s.execute("paint.gradient", json!({"from": [0, 0], "to": [0, 15], "colors": ["#07111d", "#07111d"], "transparency": transparency})).unwrap();
+    let top = layer_px(&s, 8, 0);
+    assert!((top[2] - 29.0 / 255.0).abs() < 0.01, "{top:?}");
+    for bad in [json!("65"), json!([[0]]), json!([[0, "a"]])] {
+        assert!(s.execute("paint.gradient", json!({"from": [0, 0], "to": [0, 15], "colors": ["#000000"], "transparency": bad})).is_err());
+    }
 }
 
 #[test]

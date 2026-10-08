@@ -3,7 +3,9 @@
 mod common;
 use common::*;
 use photosuite_color::{ColorMode, SampleType};
-use photosuite_doc::{Document, Layer, LayerId};
+use photosuite_doc::text::{CharStyle, ParagraphStyle, TextRun};
+use photosuite_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer};
 use photosuite_format::*;
 use photosuite_raster::Rgba8Image;
 
@@ -58,10 +60,79 @@ fn save_path_zip_file() {
     std::fs::remove_dir_all(dir).unwrap();
 }
 
+/// Deepest group nesting in `layers` (0 when there are no groups).
+fn group_depth(layers: &[Layer]) -> usize {
+    layers.iter().map(|l| if let photosuite_doc::LayerContent::Group(g) = &l.content { 1 + group_depth(&g.children) } else { 0 }).max().unwrap_or(0)
+}
+
+/// [`rich_doc`] with its layers wrapped in groups until they are nested `levels` deep.
+fn nested_doc(levels: usize, depth: SampleType) -> Document {
+    let mut doc = rich_doc(ColorMode::Rgb, depth);
+    let mut layers = std::mem::take(&mut doc.layers);
+    for i in group_depth(&layers)..levels {
+        layers = vec![Layer::group(format!("Level {i}"), layers)];
+    }
+    doc.layers = layers;
+    assert_eq!(group_depth(&doc.layers), levels);
+    doc
+}
+
+/// serde_json's default limit (128 levels) used to make bundles with 40+ nested groups unreadable.
+/// Runs on a 1 MiB stack, the smallest main-thread stack we ship on (Windows, wasm).
+#[test]
+fn deeply_nested_groups_roundtrip() {
+    let run = || {
+        for (levels, depth) in [(40, SampleType::U8), (MAX_GROUP_DEPTH, SampleType::U16), (MAX_GROUP_DEPTH, SampleType::F32)] {
+            let doc = nested_doc(levels, depth);
+            let back = load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap();
+            assert_eq!(back, doc, "{levels} levels at {depth:?}");
+        }
+    };
+    std::thread::Builder::new().stack_size(1 << 20).spawn(run).unwrap().join().unwrap();
+}
+
+/// A save never writes a bundle the loader would reject for its nesting.
+#[test]
+fn nesting_beyond_the_load_limit_is_refused_at_save() {
+    let e = save_to_bytes(&nested_doc(MAX_GROUP_DEPTH + 1, SampleType::U8), &SaveOptions::default()).unwrap_err();
+    assert!(matches!(e, FormatError::LimitExceeded(_)), "{e}");
+}
+
 #[test]
 fn empty_document_roundtrips() {
     let doc = Document::new("empty", photosuite_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     assert_eq!(load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap(), doc);
+}
+
+#[test]
+fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
+    let mut doc = Document::new("exhausted", photosuite_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    doc.slices.list.push(Slice { id: u32::MAX, ..Default::default() });
+    doc.text_styles.character.push(CharacterStyleDef { id: u32::MAX, ..Default::default() });
+    doc.text_styles.paragraph.push(ParagraphStyleDef { id: u32::MAX, ..Default::default() });
+    doc.layers.push(Layer::new(
+        "Text",
+        LayerContent::Text(TextLayer {
+            text: "ab".into(),
+            runs: vec![TextRun { len: 1, style: CharStyle::default() }, TextRun { len: usize::MAX, style: CharStyle { size_pt: 24.0, ..Default::default() } }],
+            paragraphs: vec![
+                photosuite_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
+                photosuite_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
+            ],
+            ..Default::default()
+        }),
+    ));
+
+    let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
+    let loaded = load_from_bytes(&bytes).unwrap();
+    assert_eq!(loaded.slices.next_id(), None);
+    assert_eq!(loaded.text_styles.next_char_id(), None);
+    assert_eq!(loaded.text_styles.next_para_id(), None);
+    let LayerContent::Text(text) = &loaded.layers.last().unwrap().content else { panic!("text layer must roundtrip") };
+    assert_eq!(text.char_runs().iter().map(|r| r.len).sum::<usize>(), text.text.len());
+    assert_eq!(text.char_runs()[1].len, 1);
+    assert_eq!(text.char_runs()[1].style.size_pt, 24.0);
+    assert_eq!(text.paragraph_runs().iter().map(|r| r.len).sum::<usize>(), text.text.len());
 }
 
 #[test]
@@ -90,6 +161,9 @@ fn directory_incremental_and_gc() {
     let mut w = PcraftWriter::new();
     let s1 = w.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
     assert_eq!(s1.tiles_written, s1.tiles_total);
+    let s2_same_writer = w.save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
+    assert_eq!(s2_same_writer.tiles_written, 0);
+    assert_eq!(s2_same_writer.tiles_reused, s2_same_writer.tiles_total);
     // A fresh writer still skips files already on disk.
     let s2 = PcraftWriter::new().save_dir(&doc, &dir, &SaveOptions::default()).unwrap();
     assert_eq!(s2.tiles_written, 0);

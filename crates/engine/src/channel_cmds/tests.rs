@@ -177,6 +177,9 @@ fn shortcut_slots_target_channels() {
     s.execute("channel.target.slot6", json!({})).unwrap();
     assert_eq!(s.active().unwrap().channel_view.target, ChannelTarget::Alpha(0));
     assert!(!s.is_enabled("channel.target.slot7"));
+    // The reason names the shortcut in the platform's notation (⌘7 on the Mac, Ctrl+7 elsewhere).
+    let err = s.execute("channel.target.slot7", json!({})).unwrap_err().to_string();
+    assert!(err.contains(if cfg!(target_os = "macos") { "no channel for ⌘7" } else { "no channel for Ctrl+7" }), "{err}");
     s.execute("channel.target.composite", json!({})).unwrap();
     assert_eq!(s.active().unwrap().channel_view.target, ChannelTarget::Composite);
     // Grayscale: ⌘3 is the first alpha channel.
@@ -352,6 +355,29 @@ fn apply_image_hand_computed() {
     s.set_active(0);
     assert!(s.execute("image.applyImage", json!({"source": {"document": 2}})).is_err());
     assert!(s.execute("image.applyImage", json!({"blending": "hue"})).is_err());
+}
+
+#[test]
+fn apply_image_onto_transparent_layer() {
+    for depth in [8, 16, 32] {
+        let mut s = session_depth(depth);
+        s.execute("edit.fill", json!({"color": "#c08040"})).unwrap();
+        let (r, g, b) = (192.0 / 255.0, 128.0 / 255.0, 64.0 / 255.0);
+        // An empty layer has no pixels to blend with: it takes the source, whatever the mode.
+        s.execute("layer.new.layer", json!({})).unwrap();
+        s.execute("image.applyImage", json!({"blending": "multiply"})).unwrap();
+        let p = px(&s, 3, 3);
+        assert!((p[0] - r).abs() < 0.003 && (p[1] - g).abs() < 0.003 && (p[2] - b).abs() < 0.003 && p[3] > 0.999, "depth {depth}: {p:?}");
+        s.undo();
+        // At 50% opacity the empty layer becomes the source at 50% alpha.
+        s.execute("image.applyImage", json!({"blending": "multiply", "opacity": 50})).unwrap();
+        let p = px(&s, 3, 3);
+        assert!((p[0] - r).abs() < 0.003 && (p[3] - 0.5).abs() < 0.003, "depth {depth}: {p:?}");
+        s.undo();
+        // Preserve Transparency leaves an empty layer empty.
+        s.execute("image.applyImage", json!({"blending": "multiply", "preserveTransparency": true})).unwrap();
+        assert!(px(&s, 3, 3)[3] < 0.001, "depth {depth}");
+    }
 }
 
 #[test]

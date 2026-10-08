@@ -143,7 +143,7 @@ pub fn builtin() -> Vec<Group<StylePreset>> {
     ]
 }
 
-fn find_style<'a>(s: &'a Session, p: &Value, cmd: &str) -> Result<&'a StylePreset> {
+pub fn find_style<'a>(s: &'a Session, p: &Value, cmd: &str) -> Result<&'a StylePreset> {
     let name = req_str(p, "preset", cmd)?;
     let (gi, ii) = find(&s.presets.styles, name, str_param(p, "group")).ok_or_else(|| bad(cmd, format!("no style \"{name}\" (see style.presets.list)")))?;
     Ok(&s.presets.styles[gi].items[ii])
@@ -229,11 +229,34 @@ fn new_preset(s: &mut Session, p: &Value) -> Result<Value> {
     if !with_fx && !with_blend {
         return Err(bad(CMD, "include effects and/or blending options"));
     }
+    // An explicit effect list (the Layer Style dialog's pending state, in
+    // `layer.layerStyle.<kind>` param form) replaces the layer's own effects.
+    let listed = p
+        .get("effects")
+        .and_then(Value::as_array)
+        .map(|list| -> Result<Vec<Effect>> {
+            list.iter()
+                .map(|e| {
+                    let kind = e.get(0).and_then(Value::as_str).ok_or_else(|| bad(CMD, "each effect is [kind, params]"))?;
+                    effect_from_params(kind, e.get(1).unwrap_or(&Value::Null)).ok_or_else(|| bad(CMD, format!("unknown effect {kind}")))
+                })
+                .collect()
+        })
+        .transpose()?;
     let style = StylePreset {
         name: unique_name(&s.presets.styles, str_param(p, "name").unwrap_or("Style")),
-        effects: if with_fx { l.effects.items.clone() } else { Vec::new() },
-        blend: with_blend.then_some(l.blend),
-        fill_opacity: with_blend.then_some(l.fill_opacity),
+        effects: match listed {
+            Some(fx) => fx,
+            None => {
+                if with_fx {
+                    l.effects.items.clone()
+                } else {
+                    Vec::new()
+                }
+            }
+        },
+        blend: p.get("blend").and_then(Value::as_str).and_then(crate::commands::blend_from_str).or_else(|| with_blend.then_some(l.blend)),
+        fill_opacity: p.get("fillOpacity").and_then(Value::as_f64).map(|v| (v / 100.0).clamp(0.0, 1.0) as f32).or_else(|| with_blend.then_some(l.fill_opacity)),
     };
     let gi = group_index(&mut s.presets.styles, str_param(p, "group"));
     let out = json!({"name": style.name, "group": s.presets.styles[gi].name, "effects": style.effects.len()});
@@ -334,7 +357,7 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "New Style…",
             menu: &[],
             shortcut: None,
-            params: r##"{"name":str="Style","group":name?,"layer":id?,"includeEffects":bool=true,"includeBlending":bool=true} (from the layer's effects)"##,
+            params: r##"{"name":str="Style","group":name?,"layer":id?,"includeEffects":bool=true,"includeBlending":bool=true,"effects":[[kind, params]]? (explicit list, e.g. the Layer Style dialog's pending state; overrides includeEffects),"blend":str?,"fillOpacity":0..100? (override the layer's blending options)}"##,
             enabled: has_layer,
             run: new_preset,
             journal: true,

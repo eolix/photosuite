@@ -185,7 +185,7 @@ fn pattern_texture(ctx: &egui::Context, pat: &photosuite_doc::Pattern) -> Textur
     })
 }
 
-fn style_texture(app: &PhotosuiteApp, ctx: &egui::Context, st: &photosuite_engine::presets::styles::StylePreset) -> TextureHandle {
+pub(crate) fn style_texture(app: &PhotosuiteApp, ctx: &egui::Context, st: &photosuite_engine::presets::styles::StylePreset) -> TextureHandle {
     let key = ("style", st.name.clone(), st.effects.len(), format!("{:?}{:?}", st.blend, st.fill_opacity));
     cached_texture(ctx, key, || {
         const S: u32 = 64;
@@ -1043,12 +1043,15 @@ pub fn clone_source_panel(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
 }
 
 /// Where the active clone source samples for document point `at` (for the canvas marker).
+/// The first stroke anchors at its press, so the marker follows before the stroke commits.
 pub fn clone_sample_point(app: &PhotosuiteApp, at: Option<[f64; 2]>) -> Option<[f64; 2]> {
     use photosuite_engine::presets::clone_source::{Mapping, transform_matrix};
     let s = app.session.presets.clone.active();
     let src = s.source?;
-    match (s.anchor, at) {
-        (Some(a), Some(h)) if app.ui.tool_options.clone_aligned => {
+    let stroking = app.drag.as_ref().filter(|d| matches!(d.tool, Tool::CloneStamp | Tool::Healing)).map(|d| d.start);
+    let anchor = if app.ui.tool_options.clone_aligned { s.anchor.or(stroking) } else { stroking };
+    match (anchor, at) {
+        (Some(a), Some(h)) => {
             let m = Mapping { source: (src[0], src[1]), anchor: (a[0], a[1]), m: transform_matrix(s.scale, s.rotation, s.flip_h, s.flip_v) };
             let (x, y) = m.map(h[0], h[1]);
             Some([x, y])
@@ -1126,6 +1129,9 @@ mod tests {
         assert_eq!(clone_sample_point(&app, Some([5.0, 5.0])), None);
         app.run("cloneSource.set", json!({"source": [10, 10]})).unwrap();
         assert_eq!(clone_sample_point(&app, Some([30.0, 30.0])), Some([10.0, 10.0]));
+        app.drag = Some(crate::canvas::Drag::new(Tool::CloneStamp, [40.0, 40.0], vec![[50.0, 30.0, 1.0]], egui::Modifiers::NONE, false));
+        assert_eq!(clone_sample_point(&app, Some([50.0, 30.0])), Some([20.0, 0.0]));
+        app.drag = None;
         app.session.presets.clone.active_mut().anchor = Some([20.0, 20.0]);
         assert_eq!(clone_sample_point(&app, Some([30.0, 30.0])), Some([20.0, 20.0]));
     }

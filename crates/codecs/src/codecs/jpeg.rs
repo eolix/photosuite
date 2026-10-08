@@ -10,8 +10,9 @@ use zune_core::options::DecoderOptions;
 use crate::Format;
 use crate::error::CodecError;
 use crate::fidelity::Plan;
-use crate::image::{ChannelLayout, Image, Metadata, SampleType};
+use crate::image::{ChannelLayout, DecodeWarning, Image, Metadata, SampleType};
 use crate::options::{EncodeOptions, Limits};
+use crate::orientation::{upright_exif, upright_xmp};
 
 const F: Format = Format::Jpeg;
 const EXIF_HEADER: &[u8] = b"Exif\0\0";
@@ -155,11 +156,70 @@ pub fn estimate_quality(bytes: &[u8]) -> Option<u8> {
     })
 }
 
+/// How a JPEG's data ends, seen from its marker structure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DataEnd {
+    /// An end-of-image marker follows the scans (or the structure is too odd to tell).
+    Complete,
+    /// The file ends inside the image data, before the end-of-image marker.
+    Truncated,
+    /// The file ends before the first scan holds any data: nothing can be decoded.
+    Empty,
+}
+
+/// Walks the marker segments (skipped by their length) and the entropy-coded scan data
+/// (skipped up to the next marker that isn't a stuffed `FF 00`, a restart or a fill byte),
+/// so an embedded thumbnail's end marker or data after the end of the image don't count.
+fn data_end(b: &[u8]) -> DataEnd {
+    // Where the bytes run out: inside the image data once a scan has held some.
+    let cut = |scan_data: bool| if scan_data { DataEnd::Truncated } else { DataEnd::Empty };
+    let mut i = 2; // past SOI
+    let mut scan_data = false;
+    loop {
+        let Some(&byte) = b.get(i) else { return cut(scan_data) };
+        if byte != 0xFF {
+            // Not where a marker should be: too odd to judge.
+            return DataEnd::Complete;
+        }
+        let Some(&code) = b.get(i + 1) else { return cut(scan_data) };
+        match code {
+            0xD9 => return DataEnd::Complete,
+            0xFF => i += 1,
+            0x01 | 0xD0..=0xD8 => i += 2,
+            _ => {
+                let Some(len) = b.get(i + 2..i + 4).and_then(|s| <[u8; 2]>::try_from(s).ok()).map(u16::from_be_bytes) else {
+                    return cut(scan_data);
+                };
+                i = i.saturating_add(2 + usize::from(len));
+                if code == 0xDA {
+                    let start = i;
+                    loop {
+                        let Some(p) = b.get(i..).and_then(|r| r.iter().position(|&v| v == 0xFF)) else {
+                            return cut(scan_data || b.len() > start);
+                        };
+                        i += p;
+                        match b.get(i + 1) {
+                            Some(0x00 | 0xD0..=0xD7) => i += 2,
+                            Some(0xFF) => i += 1,
+                            _ => break,
+                        }
+                    }
+                    scan_data |= i > start;
+                }
+            }
+        }
+    }
+}
+
 fn err(e: impl std::fmt::Display) -> CodecError {
     CodecError::malformed(F, e)
 }
 
 pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError> {
+    let end = data_end(bytes);
+    if end == DataEnd::Empty {
+        return Err(err("the file ends before any image data"));
+    }
     let meta = scan_metadata(bytes);
     if let Some((w, h, nc)) = meta.frame {
         limits.check_bytes(w, h, u64::from(nc.max(1)))?;
@@ -203,7 +263,10 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
     }
     let mut img = Image::from_raw(w, h, layout, SampleType::U8, px)?;
     img.icc = meta.icc;
-    img.meta = Metadata { exif: meta.exif, xmp: meta.xmp, dpi: meta.dpi, text: Vec::new() };
+    img.meta = Metadata { exif: meta.exif, xmp: meta.xmp, dpi: meta.dpi, ..Default::default() };
+    if end == DataEnd::Truncated {
+        img.warnings.push(DecodeWarning::Truncated { format: F });
+    }
     Ok(img)
 }
 
@@ -240,14 +303,12 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
         {
             enc.set_density(jpeg_encoder::Density::Inch { x: x.round().min(65535.0) as u16, y: y.round().min(65535.0) as u16 });
         }
-        if let Some(exif) = &img.meta.exif {
-            let mut seg = EXIF_HEADER.to_vec();
-            seg.extend_from_slice(exif);
+        // Metadata too large for its one segment is left out (and reported by the fidelity
+        // warnings) rather than failing the whole export.
+        if let Some(seg) = img.meta.exif.as_deref().and_then(exif_segment) {
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
-        if let Some(xmp) = &img.meta.xmp {
-            let mut seg = XMP_HEADER.to_vec();
-            seg.extend_from_slice(xmp.as_bytes());
+        if let Some(seg) = img.meta.xmp.as_deref().and_then(xmp_segment) {
             enc.add_app_segment(1, &seg).map_err(e)?;
         }
     }
@@ -258,4 +319,64 @@ pub(crate) fn encode(src: &Image, plan: Plan, opts: &EncodeOptions) -> Result<Ve
     }
     enc.encode(img.data(), w16, h16, ct).map_err(e)?;
     Ok(out)
+}
+
+/// The most data one APP segment holds (its 16-bit length counts its own two bytes).
+const MAX_SEGMENT: usize = 65533;
+
+/// XMP properties (local names, any namespace prefix) that only describe the layered document:
+/// every document ever placed in it, the text of every type layer. A flat image doesn't need them,
+/// and they alone can outgrow a segment.
+const LAYERED_ONLY_XMP: [&str; 2] = ["DocumentAncestors", "TextLayers"];
+
+/// The EXIF APP1 segment, or `None` when it doesn't fit in one segment.
+pub(crate) fn exif_segment(exif: &[u8]) -> Option<Vec<u8>> {
+    // The pixels are written as they are shown: never let a viewer rotate them again.
+    let seg = [EXIF_HEADER, upright_exif(exif).as_ref()].concat();
+    (seg.len() <= MAX_SEGMENT).then_some(seg)
+}
+
+/// The XMP APP1 segment. When the packet doesn't fit in one segment, the layered-document
+/// properties are left out; `None` when it still doesn't fit.
+pub(crate) fn xmp_segment(xmp: &str) -> Option<Vec<u8>> {
+    let xmp = upright_xmp(xmp);
+    let seg = |x: &str| [XMP_HEADER, x.as_bytes()].concat();
+    if XMP_HEADER.len() + xmp.len() <= MAX_SEGMENT {
+        return Some(seg(&xmp));
+    }
+    let trimmed = LAYERED_ONLY_XMP.iter().fold(xmp.into_owned(), |x, name| remove_element(&x, name));
+    (XMP_HEADER.len() + trimmed.len() <= MAX_SEGMENT).then(|| seg(&trimmed))
+}
+
+/// `xmp` without its `<prefix:name …>…</prefix:name>` and `<prefix:name …/>` elements. Unbalanced
+/// markup is kept as is.
+fn remove_element(xmp: &str, name: &str) -> String {
+    let local = format!(":{name}");
+    let mut out = String::with_capacity(xmp.len());
+    let mut rest = xmp;
+    while let Some(j) = rest.find(&local) {
+        let head = rest.get(..j).unwrap_or_default();
+        let prefix_len = head.bytes().rev().take_while(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.')).count();
+        let lt = j - prefix_len;
+        let after = rest.get(j + local.len()..).unwrap_or_default();
+        // An opening tag of exactly this name (not a closing tag, an attribute or a longer name).
+        let opening = prefix_len > 0 && lt > 0 && rest.get(lt - 1..lt) == Some("<");
+        if !opening || !after.starts_with(['>', '/', ' ', '\t', '\r', '\n']) {
+            out.push_str(rest.get(..j + local.len()).unwrap_or_default());
+            rest = after;
+            continue;
+        }
+        let Some(gt) = after.find('>') else { break };
+        let end = if after.get(..gt).is_some_and(|s| s.ends_with('/')) {
+            gt + 1
+        } else {
+            let close = format!("</{}{local}>", rest.get(lt..j).unwrap_or_default());
+            let Some(c) = after.find(&close) else { break };
+            c + close.len()
+        };
+        out.push_str(rest.get(..lt - 1).unwrap_or_default());
+        rest = after.get(end..).unwrap_or_default();
+    }
+    out.push_str(rest);
+    out
 }

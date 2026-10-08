@@ -204,9 +204,30 @@ fn has_doc(s: &Session) -> std::result::Result<(), String> {
 
 // ---------- commands ----------
 
+/// Image › Adjustments run as a smart filter (`image.adjustments.<kind>` recorded on a smart
+/// object): the adjustment applied to a copy of `surf`. `None` for kinds or params it can't run.
+pub(crate) fn adjust_as_filter(kind: &str, p: &Value, surf: &Surface) -> Option<Surface> {
+    let mut out = surf.clone();
+    if kind == "shadowsHighlights" {
+        let sh = shadows_highlights_params(p);
+        process_surface(&mut out, None, &mut |px, r| tone::shadows_highlights(px, r.width() as usize, r.height() as usize, &sh));
+    } else {
+        let mode = surf.format().mode;
+        let adj = crate::adjust_params::from_params(kind, p, None, mode).ok()?;
+        crate::pixels::adjust_surface(&mut out, &adj, None, mode);
+    }
+    out.prune();
+    Some(out)
+}
+
 fn shadows_highlights(s: &mut Session, p: &Value) -> Result<Value> {
+    let sh = shadows_highlights_params(p);
+    rgba_edit(s, "Shadows/Highlights", p, |px, r| tone::shadows_highlights(px, r.width() as usize, r.height() as usize, &sh))
+}
+
+fn shadows_highlights_params(p: &Value) -> ShadowsHighlights {
     let d = ShadowsHighlights::default();
-    let sh = ShadowsHighlights {
+    ShadowsHighlights {
         shadow_amount: num(p, "shadowAmount", d.shadow_amount).clamp(0.0, 100.0),
         shadow_tone: num(p, "shadowTone", d.shadow_tone).clamp(0.0, 100.0),
         shadow_radius: num(p, "shadowRadius", d.shadow_radius).clamp(0.0, 2500.0),
@@ -217,8 +238,7 @@ fn shadows_highlights(s: &mut Session, p: &Value) -> Result<Value> {
         midtone: num(p, "midtone", d.midtone).clamp(-100.0, 100.0),
         black_clip: num(p, "blackClip", d.black_clip).clamp(0.0, 50.0),
         white_clip: num(p, "whiteClip", d.white_clip).clamp(0.0, 50.0),
-    };
-    rgba_edit(s, "Shadows/Highlights", p, |px, r| tone::shadows_highlights(px, r.width() as usize, r.height() as usize, &sh))
+    }
 }
 
 fn replace_color(s: &mut Session, p: &Value) -> Result<Value> {

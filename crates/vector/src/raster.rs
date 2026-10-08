@@ -93,13 +93,14 @@ impl Rasterizer {
     }
 
     /// Pixel bounds of everything that may be covered (`None` = nothing; the whole plane
-    /// when inverted is reported as `None` too — callers clip to their own area).
+    /// when inverted is reported as `None` too — callers clip to their own area). The upper
+    /// edge is clipped to `i32::MAX`, the largest representable exclusive rectangle edge.
     pub fn pixel_bounds(&self) -> Option<Rect> {
         if self.inverted {
             return None;
         }
         let (x0, y0, x1, y1) = self.bounds?;
-        let r = Rect::new(x0.floor() as i32, y0.floor() as i32, x1.ceil() as i32 + 1, y1.ceil() as i32 + 1);
+        let r = Rect::new(x0.floor() as i32, y0.floor() as i32, (x1.ceil() as i32).saturating_add(1), (y1.ceil() as i32).saturating_add(1));
         (!r.is_empty()).then_some(r)
     }
 
@@ -374,6 +375,8 @@ fn draw(acc: &mut [f32], x0: i32, xa: f64, ya: f64, xb: f64, yb: f64, w: f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::coverage_surface;
+    use photosuite_color::PixelFormat;
 
     fn square(x: f64, y: f64, s: f64) -> Vec<(f64, f64)> {
         vec![(x, y), (x + s, y), (x + s, y + s), (x, y + s)]
@@ -416,5 +419,36 @@ mod tests {
     fn inverted_empty_is_full() {
         let r = Rasterizer::new(true);
         assert!(r.render(Rect::new(0, 0, 4, 4)).iter().all(|v| *v == 1.0));
+    }
+
+    #[test]
+    fn pixel_bounds_clip_upper_edge_at_i32_max() {
+        let mut r = Rasterizer::new(false);
+        let max = f64::from(i32::MAX);
+        r.add_component(&[square(max - 2.0, max - 2.0, 4.0)], PathOp::Combine, FillRule::NonZero);
+
+        assert_eq!(r.pixel_bounds(), Some(Rect::new(i32::MAX - 2, i32::MAX - 2, i32::MAX, i32::MAX)));
+
+        // Raster work clipped to a normal document area stays empty and does not use the
+        // extreme bounds as an allocation size.
+        let clipped = coverage_surface(&r, PixelFormat::GRAY8, Rect::new(0, 0, 8, 8));
+        assert_eq!(clipped.tile_count(), 0);
+    }
+
+    #[test]
+    fn pixel_bounds_beyond_i32_max_are_empty() {
+        let mut r = Rasterizer::new(false);
+        let max = f64::from(i32::MAX);
+        r.add_component(&[square(max + 10.0, max + 10.0, 4.0)], PathOp::Combine, FillRule::NonZero);
+
+        assert_eq!(r.pixel_bounds(), None);
+    }
+
+    #[test]
+    fn pixel_bounds_keep_normal_boundary_rounding() {
+        let mut r = Rasterizer::new(false);
+        r.add_component(&[square(1.0, 2.0, 3.0)], PathOp::Combine, FillRule::NonZero);
+
+        assert_eq!(r.pixel_bounds(), Some(Rect::new(1, 2, 5, 6)));
     }
 }

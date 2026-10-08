@@ -8,12 +8,23 @@
   <style>
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #262626; }
     #photosuite_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-    #photosuite_loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      color: #b8b8b8; font: 14px system-ui, sans-serif; pointer-events: none; }
+    #photosuite_loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 0 16px; text-align: center; color: #b8b8b8; font: 14px system-ui, sans-serif; pointer-events: none; }
+    #photosuite_loading p { margin: 0 0 8px; max-width: 420px; line-height: 1.5; }
+    #photosuite_loading a { color: #e0e0e0; pointer-events: auto; }
+    /* The app removes this element once it runs. If the WebAssembly never downloads or doesn't match
+       this page, no Rust runs to say so, so the page itself shows what to do after a while. */
+    #photosuite_stalled { color: #8c8c8c; visibility: hidden; animation: photosuite-stalled 0s 20s forwards; }
+    @keyframes photosuite-stalled { to { visibility: visible; } }
   </style>
 </head>
 <body>
   <canvas id="photosuite_canvas"></canvas>
-  <div id="photosuite_loading">Loading PhotoSuite&hellip;</div>
+  <div id="photosuite_loading">
+    <p>Loading PhotoSuite&hellip;</p>
+    <p id="photosuite_stalled">This is taking longer than usual. If PhotoSuite doesn't start, its files may have failed to
+      download or come from a different version of this page. <a href="">Reload</a> to try again; the browser
+      console lists what failed.</p>
+  </div>
 </body>
 </html>

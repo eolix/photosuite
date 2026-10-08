@@ -53,6 +53,13 @@ pub(crate) struct Ctx<'a> {
     pub dpi: f32,
     /// The parsed `Txt2` block (type settings EngineData lacks, e.g. optical kerning).
     pub txt2: Option<photosuite_text::engine_data::Value>,
+    /// Smart-filter caches from the global `FEid`/`FXid` blocks (filter masks, by placed id).
+    pub filter_effects: Vec<photosuite_psd::filter_effects::FilterEffectsItem>,
+    /// Cancellation and progress for background opens (checked per layer record).
+    pub ctl: photosuite_raster::Interrupt<'a>,
+    /// Layer records decoded so far, out of `total` (progress).
+    pub done: usize,
+    pub total: usize,
 }
 
 fn doc_mode(m: PsdMode) -> Option<ColorMode> {
@@ -120,6 +127,12 @@ impl Ctx<'_> {
             planes.push(self.channel_plane(rec, c as i16, name));
         }
         planes.push(self.channel_plane(rec, CHANNEL_TRANSPARENCY, name));
+        // A channel that is in the file but could not be decoded leaves the layer empty, as the
+        // warning says. Filling in for it would paint an opaque black layer over the document.
+        let ids = (0..self.cc as i16).chain([CHANNEL_TRANSPARENCY]);
+        if ids.zip(&planes).any(|(id, p)| p.is_none() && rec.channel(id).is_some()) {
+            return Surface::new(self.fmt);
+        }
         let refs: Vec<Option<&[u8]>> = planes.iter().map(|p| p.as_deref()).collect();
         let mut fill: Vec<Vec<u8>> = vec![zero_sample(s); self.cc];
         fill.push(max_sample(s));
@@ -161,6 +174,20 @@ impl Ctx<'_> {
             density: params.and_then(|p| p.user_density).map_or(1.0, |d| f32::from(d) / 255.0),
             feather: params.and_then(|p| p.user_feather).map_or(0.0, |f| f as f32),
         })
+    }
+
+    /// The filter mask of the smart object whose `placed` id is `placed`, from the `FEid` cache:
+    /// document coordinates, white beyond its bounds (`filterMaskExtendWithWhite`). An all-white
+    /// mask is no mask.
+    fn filter_mask(&mut self, placed: &str, stack: &crate::smart_map::FilterStack, name: &str) -> Option<LayerMask> {
+        let item = self.filter_effects.iter().find(|i| i.id == placed)?;
+        match crate::smart_map::mask_from_item(item, self.mask_fmt.sample, stack) {
+            Ok(m) => m,
+            Err(e) => {
+                self.warn(format!("layer \"{name}\": {e}; the filter mask was ignored"));
+                None
+            }
+        }
     }
 
     fn apply_common(&mut self, l: &mut Layer, rec: &LayerRecord, blend_override: Option<photosuite_psd::BlendMode>) {
@@ -261,16 +288,25 @@ impl Ctx<'_> {
             LayerContent::Text(t)
         } else if let Some(k) = smart_key {
             let (id, transform) = rec.block(k).map(|b| blocks::parse_smart(k, &b.data)).unwrap_or_default();
+            // Smart filters (`filterFX` in the placed-layer data) and their mask (`FEid`).
+            let placed = rec.block(b"SoLd").or_else(|| rec.block(b"SoLE")).and_then(|b| crate::smart_map::parse_sold(&b.data));
+            let stack = placed.as_ref().and_then(|p| p.stack.clone()).unwrap_or_default();
+            let filter_mask = match &placed {
+                Some(p) if !stack.filters.is_empty() => self.filter_mask(&p.placed, &stack, &name),
+                _ => None,
+            };
             LayerContent::Smart(SmartObject {
                 source: SmartSource::Linked { path: id },
                 transform,
-                smart_filters: Vec::new(),
+                smart_filters: stack.filters,
                 cache: Some(self.record_surface(rec, &name)),
                 psd_raw: principal(k),
-                filters_enabled: true,
-                filter_mask: None,
+                filters_enabled: stack.enabled,
+                filter_mask,
                 warp: rec.block(k).and_then(|b| blocks::parse_placed_warp(k, &b.data)),
                 stack_mode: None,
+                // Distort / Perspective: the fourth corner (the affine `transform` drops it).
+                perspective: rec.block(k).and_then(|b| blocks::parse_smart_perspective(k, &b.data)),
             })
         } else if let Some(f) = soft_shape_fill(rec, vector_key.is_some(), fill_key) {
             // A shape whose vector mask has a density or feather is a fill layer seen through a
@@ -341,15 +377,35 @@ impl Ctx<'_> {
         l.vector_mask = Some(vm);
     }
 
-    fn build(&mut self, nodes: &[LayerNode]) -> Vec<Layer> {
+    fn build(&mut self, nodes: &[LayerNode], depth: usize) -> Vec<Layer> {
         let layers = self.file.layers();
+        let ctl = self.ctl;
         nodes
             .iter()
+            // A cancelled open stops decoding; the caller discards the partial document.
+            .take_while(|_| !ctl.cancelled())
             .map(|n| match n {
-                LayerNode::Layer { index } => self.layer_from_record(&layers[*index]),
+                LayerNode::Layer { index } => {
+                    let l = self.layer_from_record(&layers[*index]);
+                    self.done += 1;
+                    // Layers are 10–95 % of an open (the merged image and channels the rest).
+                    self.ctl.progress(0.1 + 0.85 * self.done as f32 / self.total.max(1) as f32);
+                    l
+                }
                 LayerNode::Group { index, children, .. } => {
                     let rec = &layers[*index];
-                    let children = self.build(children);
+                    // The recursion here (and in every later consumer of the tree) is bounded by
+                    // the document model's nesting cap; a deeper subtree is not imported.
+                    let children = if depth >= photosuite_doc::MAX_GROUP_DEPTH {
+                        self.warn(format!(
+                            "group `{}` nests deeper than {} groups; its contents were not imported",
+                            rec.name(),
+                            photosuite_doc::MAX_GROUP_DEPTH
+                        ));
+                        Vec::new()
+                    } else {
+                        self.build(children, depth + 1)
+                    };
                     let sd = rec.section_divider();
                     let expanded = sd.is_none_or(|s| s.kind != photosuite_psd::SectionType::ClosedFolder);
                     let artboard = crate::comps_map::ARTBOARD_KEYS.iter().find_map(|k| rec.block(k)).and_then(|b| crate::comps_map::parse_artboard(&b.data));
@@ -366,18 +422,42 @@ impl Ctx<'_> {
 
 /// Sets `Layer::link_group` from resource 1026's per-record ids (`nodes` and `layers` correspond).
 fn apply_link_groups(nodes: &[LayerNode], layers: &mut [Layer], ids: &[u16]) {
-    for (n, l) in nodes.iter().zip(layers.iter_mut()) {
-        let index = match n {
-            LayerNode::Layer { index } => *index,
-            LayerNode::Group { index, children, .. } => {
-                if let LayerContent::Group(g) = &mut l.content {
-                    apply_link_groups(children, &mut g.children, ids);
+    fn rec(nodes: &[LayerNode], layers: &mut [Layer], ids: &[u16], depth: usize) {
+        for (n, l) in nodes.iter().zip(layers.iter_mut()) {
+            let index = match n {
+                LayerNode::Layer { index } => *index,
+                LayerNode::Group { index, children, .. } => {
+                    // Matches the importer's nesting cap: deeper children were not imported.
+                    if depth < photosuite_doc::MAX_GROUP_DEPTH
+                        && let LayerContent::Group(g) = &mut l.content
+                    {
+                        rec(children, &mut g.children, ids, depth + 1);
+                    }
+                    *index
                 }
-                *index
-            }
-        };
-        l.link_group = ids.get(index).copied().filter(|&g| g != 0).map(u64::from);
+            };
+            l.link_group = ids.get(index).copied().filter(|&g| g != 0).map(u64::from);
+        }
     }
+    rec(nodes, layers, ids, 0);
+}
+
+/// Deepest group nesting of the file's layer records (a layer inside this many groups is the
+/// deepest), computed like `layer_tree`'s stack — iteratively, so no file can make it recurse.
+pub(crate) fn group_depth(file: &PsdFile) -> usize {
+    use photosuite_psd::tagged::SectionType;
+    let (mut open, mut depth) = (0usize, 0usize);
+    for rec in file.layers() {
+        match rec.section_type() {
+            SectionType::BoundingDivider => {
+                open += 1;
+                depth = depth.max(open);
+            }
+            SectionType::OpenFolder | SectionType::ClosedFolder => open = open.saturating_sub(1),
+            _ => {}
+        }
+    }
+    depth
 }
 
 fn preserved_blocks(rec: &LayerRecord) -> Vec<([u8; 4], Arc<Vec<u8>>)> {
@@ -419,6 +499,14 @@ fn parse_guides(data: &[u8], doc: &mut Document) {
 
 /// Converts a parsed PSD into a document. Never fails: problems become warnings.
 pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
+    // Never cancelled, so always `Some`; the fallback is unreachable.
+    psd_to_document_with(file, &photosuite_raster::Interrupt::NONE)
+        .unwrap_or_else(|| (Document::new("Untitled", Size::new(1, 1), ColorMode::Rgb, SampleType::U8), Vec::new()))
+}
+
+/// [`psd_to_document`] for a background open: checks `ctl` per layer record and reports
+/// progress. `None` when cancelled.
+pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) -> Option<(Document, Vec<String>)> {
     let h = &file.header;
     let mut warnings = Vec::new();
     let mode = doc_mode(h.color_mode).unwrap_or_else(|| {
@@ -496,12 +584,33 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
         warnings,
         dpi: doc.resolution_dpi,
         txt2: file.global_blocks.iter().find(|b| &b.key == b"Txt2").and_then(|b| photosuite_text::psd::parse_txt2(&b.data)),
+        filter_effects: Vec::new(),
+        ctl: *ctl,
+        done: 0,
+        total: file.layers().len(),
     };
+    for b in file.global_blocks.iter().filter(|b| matches!(&b.key, b"FEid" | b"FXid")) {
+        // Smart-filter caches can be large: a cancelled open stops between blocks.
+        if ctl.cancelled() {
+            return None;
+        }
+        match photosuite_psd::filter_effects::FilterEffects::parse(&b.data) {
+            Ok(fx) => cx.filter_effects.extend(fx.items),
+            Err(e) => cx.warn(format!("smart filter masks ({}) could not be read: {e}", b.key_str())),
+        }
+    }
+    if ctl.cancelled() {
+        return None;
+    }
 
     let (w, hh) = (h.width as usize, h.height as usize);
     let n = w * hh;
     let canvas = Rect::new(0, 0, h.width as i32, h.height as i32);
     let merged = file.decode_merged();
+    if ctl.cancelled() {
+        return None;
+    }
+    ctl.progress(0.1);
     if let Err(e) = &merged {
         cx.warn(format!("merged image could not be decoded: {e}"));
     }
@@ -517,7 +626,7 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
         }
     } else if layered {
         let tree = file.layer_tree();
-        doc.layers = cx.build(&tree);
+        doc.layers = cx.build(&tree, 0);
         // Layer › Link Layers: resource 1026 holds one group id per layer record (0 = unlinked).
         if let Some(Ok(photosuite_psd::resources::ResourceData::LayerGroupInfo(groups))) =
             file.resources.iter().find(|r| r.id == ids::LAYER_GROUP_INFO).and_then(photosuite_psd::resources::ImageResource::parsed)
@@ -653,7 +762,11 @@ pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
     // Slices (resource 1050), after layer ids are known; the raw data stays for verbatim export.
     crate::slices_map::import(&mut doc);
     // Character and paragraph styles from the type layers' engine data.
-    crate::text_styles_map::import(&mut doc);
+    cx.warnings.extend(crate::text_styles_map::import(&mut doc));
 
-    (doc, cx.warnings)
+    if ctl.cancelled() {
+        return None;
+    }
+    ctl.progress(1.0);
+    Some((doc, cx.warnings))
 }

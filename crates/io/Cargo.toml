@@ -32,6 +32,8 @@ photosuite-paint = { workspace = true }
 photosuite-vector = { workspace = true }
 photosuite-format = { path = "../format" }
 thiserror = { workspace = true }
+serde_json = { workspace = true }
+blake3 = { version = "1.8", default-features = false, features = ["pure"] }
 
 [dev-dependencies]
 photosuite-psd = { workspace = true, features = ["testgen"] }

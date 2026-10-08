@@ -28,9 +28,9 @@ note = "Panel deletes whole actions only (actions.rs:146)"
 [[item]]
 id = "AUTO-219-3"
 target = "actions.record/stop/play/list commands for agents and the CLI"
-status = "missing"
+status = "done"
 issue = 219
-note = "Recording is UI-only (actions.rs:37-60)"
+note = "actions.list/get/record/stop/play/delete in actions_cmds.rs; the panel, CLI and MCP share them. Nested steps pass the session authorize hook."
 
 [[item]]
 id = "AUTO-219-4"
@@ -70,9 +70,9 @@ note = "No such xtask check"
 [[item]]
 id = "AUTO-219-9"
 target = "Headless commands for in-canvas type editing, Liquify/Puppet strokes, transform handles"
-status = "partial"
+status = "done"
 issue = 219
-note = "filter.liquify strokes, edit.puppetWarp pins, type.edit, edit.transform; no caret API"
+note = "type.hitTest, type.caret, type.navigate; filter.liquify strokes, edit.puppetWarp pins, type.edit, edit.transform"
 
 [[item]]
 id = "AUTO-219-10"

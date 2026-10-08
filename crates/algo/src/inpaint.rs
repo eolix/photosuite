@@ -164,6 +164,8 @@ struct Solver<'a> {
     valid_list: Vec<(i32, i32)>,
     /// Target centres (patch overlaps the hole), row-major.
     targets: Vec<bool>,
+    /// Cancellation: checked per row band; a cancelled solve's output is discarded.
+    ctl: photosuite_raster::Interrupt<'a>,
 }
 
 impl Solver<'_> {
@@ -211,6 +213,9 @@ impl Solver<'_> {
         let w = self.w;
         let reverse = pass % 2 == 1;
         let band_fn = |bi: usize, nn: &mut [(i32, i32)], co: &mut [f32]| {
+            if self.ctl.cancelled() {
+                return;
+            }
             let mut rng = Rng::new(seed ^ (bi as u64).wrapping_mul(0x2545_F491_4F6C_DD1D) ^ ((pass as u64) << 40));
             let y0 = bi * BAND;
             let rows = nn.len() / w;
@@ -292,6 +297,9 @@ impl Solver<'_> {
         let img = &*self.img;
         let row = |y: usize| -> Vec<(usize, Vec<f32>)> {
             let mut out = Vec::new();
+            if self.ctl.cancelled() {
+                return out;
+            }
             for x in 0..w {
                 if !self.hole[y * w + x] {
                     continue;
@@ -349,9 +357,24 @@ impl Solver<'_> {
 /// Content-aware completion of `hole` (see module docs). Returns `None` when there is no fully-known
 /// patch to copy from (the caller can fall back to [`membrane_fill`]).
 pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &CompleteParams) -> Option<Vec<f32>> {
+    // Never cancelled, so never `Err`.
+    complete_with(w, h, ch, img, hole, p, &photosuite_raster::Interrupt::NONE).unwrap_or(None)
+}
+
+/// [`complete`] that can be cancelled (checked per EM iteration, PatchMatch pass and row band)
+/// and reports progress (by pyramid level). `Err(Cancelled)` when `ctl` was cancelled.
+pub fn complete_with(
+    w: usize,
+    h: usize,
+    ch: usize,
+    img: &[f32],
+    hole: &[bool],
+    p: &CompleteParams,
+    ctl: &photosuite_raster::Interrupt,
+) -> Result<Option<Vec<f32>>, photosuite_raster::Cancelled> {
     assert_eq!(img.len(), w * h * ch);
     assert_eq!(hole.len(), w * h);
-    let Some((bx0, by0, bx1, by1)) = hole_bbox(w, h, hole) else { return Some(img.to_vec()) };
+    let Some((bx0, by0, bx1, by1)) = hole_bbox(w, h, hole) else { return Ok(Some(img.to_vec())) };
     let r = p.patch_radius.max(1);
     let psz = 2 * r + 1;
     // Pyramid: shrink until the hole is a few patches across.
@@ -359,6 +382,7 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
     let mut ext = (bx1 - bx0).max(by1 - by0);
     let mut exts = vec![ext];
     while let Some(l) = levels.last() {
+        ctl.check()?;
         if ext <= 2 * psz || l.w / 2 < 3 * psz || l.h / 2 < 3 * psz {
             break;
         }
@@ -370,7 +394,10 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
     let nlev = levels.len();
     let mut nnf: Vec<(i32, i32)> = Vec::new();
     let mut prev: Option<(usize, usize, Vec<f32>)> = None;
+    let total_px: usize = levels.iter().map(|l| l.w * l.h).sum();
+    let mut done_px = 0usize;
     for li in (0..nlev).rev() {
+        ctl.check()?;
         let Level { w: lw, h: lh, img: mut limg, hole: lhole } = levels[li].clone();
         // Initialise the hole: membrane at the coarsest level, upsampled result elsewhere.
         match &prev {
@@ -393,6 +420,9 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
         let mut valid_list = Vec::new();
         let mut targets = vec![false; lw * lh];
         for y in 0..lh as i32 {
+            if y % 32 == 0 {
+                ctl.check()?;
+            }
             for x in 0..lw as i32 {
                 let cnt = window_count(&hs, lw, lh, x - ri, y - ri, x + ri + 1, y + ri + 1);
                 let inside = x >= ri && y >= ri && x + ri < lw as i32 && y + ri < lh as i32;
@@ -406,19 +436,22 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
         }
         if valid_list.is_empty() {
             if li == 0 {
-                return None;
+                return Ok(None);
             }
             prev = Some((lw, lh, limg));
             nnf.clear();
             continue;
         }
-        let mut solver = Solver { w: lw, h: lh, ch, r: ri, img: &mut limg, hole: &lhole, valid, valid_list, targets };
+        let mut solver = Solver { w: lw, h: lh, ch, r: ri, img: &mut limg, hole: &lhole, valid, valid_list, targets, ctl: *ctl };
         // NNF init: upsampled from the coarser level where possible, random otherwise.
         let mut rng = Rng::new(p.seed ^ (li as u64) << 20);
         let pw_prev = prev.as_ref().map_or(0, |p| p.0);
         let old = std::mem::take(&mut nnf);
         let mut new_nnf = vec![(0i32, 0i32); lw * lh];
         for y in 0..lh {
+            if y % 32 == 0 {
+                ctl.check()?;
+            }
             for x in 0..lw {
                 if !solver.targets[y * lw + x] {
                     continue;
@@ -451,6 +484,9 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
         for it in 0..em {
             // Costs change as hole pixels are re-estimated: refresh before each PatchMatch.
             for (i, c) in cost.iter_mut().enumerate() {
+                if i % (lw * 32).max(1) == 0 {
+                    ctl.check()?;
+                }
                 if solver.targets[i] {
                     *c = solver.dist(((i % lw) as i32, (i / lw) as i32), nnf[i], f32::INFINITY);
                 }
@@ -464,13 +500,19 @@ pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &C
                 (4 * psz as i32).min(full_search)
             };
             for pass in 0..pm_iters {
+                ctl.check()?;
                 solver.patchmatch(&mut nnf, &mut cost, pass + it * pm_iters, p.seed.wrapping_add((li * 1000 + it) as u64), radius);
             }
+            ctl.check()?;
             solver.vote(&nnf, &cost);
+            ctl.check()?;
         }
+        // Finer levels cost ~4× the previous one: weight progress by pixel count.
+        done_px += lw * lh;
+        ctl.progress(done_px as f32 / total_px.max(1) as f32);
         prev = Some((lw, lh, limg));
     }
-    prev.map(|(_, _, img)| img)
+    Ok(prev.map(|(_, _, img)| img))
 }
 
 /// Proximity match: the displacement `(dx, dy)` (within `max_radius`) whose surroundings best match the

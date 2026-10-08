@@ -51,6 +51,19 @@ fn user_slices_and_options() {
 }
 
 #[test]
+fn rect_param_rejects_corner_overflow() {
+    assert_eq!(rect_param(&json!({"rect": [1, 2, 3, 4]})), Some(Rect::new(1, 2, 4, 6)));
+    assert_eq!(rect_param(&json!({"x": 1, "y": 2, "width": 3, "height": 4})), Some(Rect::new(1, 2, 4, 6)));
+    assert_eq!(rect_param(&json!({"rect": [i32::MAX, 0, 1, 1]})), None);
+    assert_eq!(rect_param(&json!({"x": 0, "y": i32::MAX, "width": 1, "height": 1})), None);
+
+    let mut s = session(8);
+    assert!(s.execute("slice.new", json!({"rect": [i32::MAX, 0, 1, 1]})).is_err());
+    let id = s.execute("slice.new", json!({"rect": [1, 1, 8, 8]})).unwrap()["slice"].as_u64().unwrap();
+    assert!(s.execute("slice.set", json!({"slice": id, "rect": [0, i32::MAX, 1, 1]})).is_err());
+}
+
+#[test]
 fn promote_auto_slice_and_divide() {
     let mut s = session(8);
     s.execute("slice.new", json!({"rect": [0, 0, 60, 45]})).unwrap();
@@ -156,5 +169,30 @@ fn slices_round_trip_through_psd_and_pcraft() {
         let layer = back.layer(ls.layer.unwrap()).unwrap();
         assert_eq!(layer.name, "Layer 1", "{ext}: the slice still names its layer");
         assert_eq!(ls.rect, Rect::new(50, 40, 70, 60));
+    }
+}
+
+#[test]
+fn exhausted_slice_ids_fail_without_mutating_document_or_history() {
+    let mut s = session(8);
+    s.edit("loaded max slice", |doc, _| {
+        doc.slices.list.push(Slice { id: 1, rect: Rect::new(10, 10, 20, 20), ..Default::default() });
+        doc.slices.list.push(Slice { id: u32::MAX, rect: Rect::new(10, 10, 20, 20), ..Default::default() });
+        Ok(())
+    })
+    .unwrap();
+    let past = s.active().unwrap().history.past_len();
+    let revision = s.active().unwrap().revision;
+
+    for (command, params) in [
+        ("slice.new", json!({"rect": [30, 30, 10, 10]})),
+        ("slice.divide", json!({"slice": 1, "horizontal": 1, "vertical": 2})),
+        ("slice.promote", json!({"number": 1})),
+    ] {
+        assert!(s.execute(command, params).unwrap_err().to_string().contains("slice id space exhausted"), "{command}");
+        assert_eq!(doc(&s).slices.list.len(), 2, "{command}");
+        assert!(doc(&s).slices.get(u32::MAX).is_some(), "{command}");
+        assert_eq!(s.active().unwrap().history.past_len(), past, "{command}");
+        assert_eq!(s.active().unwrap().revision, revision, "{command}");
     }
 }

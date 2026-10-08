@@ -92,6 +92,17 @@ fn liquify_respects_the_selection() {
 }
 
 #[test]
+fn liquify_elapsed_time_is_wasm_safe() {
+    let mut s = session(8);
+    let r = s.execute(LIQUIFY, json!({"strokes": [{"tool": "forwardWarp", "size": 30, "points": [[30, 25], [42, 25]]}]})).unwrap();
+    assert_eq!(r["changed"], true);
+    let ms = r["ms"].as_f64().unwrap();
+    assert!(ms.is_finite() && ms >= 0.0);
+    #[cfg(target_arch = "wasm32")]
+    assert_eq!(ms, 0.0, "the web build uses the wasm-safe stopwatch fallback");
+}
+
+#[test]
 fn puppet_identity_translation_and_undo() {
     for depth in [8u64, 16, 32] {
         let mut s = session(depth);

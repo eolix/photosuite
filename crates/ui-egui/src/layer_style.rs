@@ -51,6 +51,7 @@ fn spec(kind: &str) -> &'static [(&'static str, &'static str, P)] {
             ("color", "Color", P::Color),
             ("opacity", "Opacity", P::Slider(0.0, 100.0, "%")),
             ("angle", "Angle", P::Slider(-180.0, 180.0, "°")),
+            ("useGlobalLight", "Use Global Light", P::Check),
             ("distance", "Distance", P::Slider(0.0, 300.0, "px")),
             ("spread", "Spread", P::Slider(0.0, 100.0, "%")),
             ("size", "Size", P::Slider(0.0, 250.0, "px")),
@@ -61,6 +62,7 @@ fn spec(kind: &str) -> &'static [(&'static str, &'static str, P)] {
             ("color", "Color", P::Color),
             ("opacity", "Opacity", P::Slider(0.0, 100.0, "%")),
             ("angle", "Angle", P::Slider(-180.0, 180.0, "°")),
+            ("useGlobalLight", "Use Global Light", P::Check),
             ("distance", "Distance", P::Slider(0.0, 300.0, "px")),
             ("choke", "Choke", P::Slider(0.0, 100.0, "%")),
             ("size", "Size", P::Slider(0.0, 250.0, "px")),
@@ -114,6 +116,7 @@ fn spec(kind: &str) -> &'static [(&'static str, &'static str, P)] {
             ("size", "Size", P::Slider(0.0, 250.0, "px")),
             ("soften", "Soften", P::Slider(0.0, 16.0, "px")),
             ("angle", "Angle", P::Slider(-180.0, 180.0, "°")),
+            ("useGlobalLight", "Use Global Light", P::Check),
             ("altitude", "Altitude", P::Slider(0.0, 90.0, "°")),
         ],
         "satin" => &[
@@ -136,8 +139,12 @@ fn spec(kind: &str) -> &'static [(&'static str, &'static str, P)] {
 
 fn defaults(kind: &str) -> Value {
     match kind {
-        "dropShadow" => json!({"blend": "Multiply", "color": "#000000", "opacity": 75, "angle": 120, "distance": 5, "spread": 0, "size": 5, "knocksOut": true}),
-        "innerShadow" => json!({"blend": "Multiply", "color": "#000000", "opacity": 75, "angle": 120, "distance": 5, "choke": 0, "size": 5}),
+        "dropShadow" => {
+            json!({"blend": "Multiply", "color": "#000000", "opacity": 75, "angle": 120, "useGlobalLight": true, "distance": 5, "spread": 0, "size": 5, "knocksOut": true})
+        }
+        "innerShadow" => {
+            json!({"blend": "Multiply", "color": "#000000", "opacity": 75, "angle": 120, "useGlobalLight": true, "distance": 5, "choke": 0, "size": 5})
+        }
         "outerGlow" => json!({"blend": "Screen", "opacity": 75, "color": "#ffffbe", "spread": 0, "size": 5, "range": 50}),
         "innerGlow" => json!({"blend": "Screen", "opacity": 75, "color": "#ffffbe", "source": "edge", "choke": 0, "size": 5}),
         "stroke" => json!({"size": 3, "position": "outside", "blend": "Normal", "opacity": 100, "color": "#000000"}),
@@ -146,7 +153,9 @@ fn defaults(kind: &str) -> Value {
             json!({"blend": "Normal", "opacity": 100, "from": "#000000", "to": "#ffffff", "reverse": false, "style": "linear", "angle": 90, "scale": 100})
         }
         "patternOverlay" => json!({"blend": "Normal", "opacity": 100, "pattern": "", "angle": 0, "scale": 100, "link": true}),
-        "bevelEmboss" => json!({"style": "inner", "depth": 100, "direction": "up", "size": 5, "soften": 0, "angle": 120, "altitude": 30}),
+        "bevelEmboss" => {
+            json!({"style": "inner", "depth": 100, "direction": "up", "size": 5, "soften": 0, "angle": 120, "useGlobalLight": true, "altitude": 30})
+        }
         "satin" => json!({"blend": "Multiply", "color": "#000000", "opacity": 50, "angle": 19, "distance": 11, "size": 14, "invert": true}),
         _ => json!({}),
     }
@@ -173,7 +182,8 @@ fn kind_of(e: &Effect) -> &'static str {
 }
 
 /// Current values of an existing effect, in the command's parameter units.
-fn values_of(e: &Effect) -> Value {
+/// `light` is the document's global light angle: an effect that uses it shows that angle.
+fn values_of(e: &Effect, light: f32) -> Value {
     let mut v = defaults(kind_of(e));
     let set = |v: &mut Value, k: &str, x: Value| {
         v[k] = x;
@@ -183,7 +193,8 @@ fn values_of(e: &Effect) -> Value {
             set(&mut v, "blend", json!(s.common.blend.label()));
             set(&mut v, "opacity", json!((s.common.opacity * 100.0).round()));
             set(&mut v, "color", json!(hex(&s.color)));
-            set(&mut v, "angle", json!(s.angle));
+            set(&mut v, "angle", json!(if s.use_global_light { light } else { s.angle }));
+            set(&mut v, "useGlobalLight", json!(s.use_global_light));
             set(&mut v, "distance", json!(s.distance));
             set(&mut v, if matches!(e, Effect::DropShadow(_)) { "spread" } else { "choke" }, json!((s.spread * 100.0).round()));
             set(&mut v, "size", json!(s.size));
@@ -237,7 +248,8 @@ fn values_of(e: &Effect) -> Value {
             set(&mut v, "depth", json!(b.depth));
             set(&mut v, "size", json!(b.size));
             set(&mut v, "soften", json!(b.soften));
-            set(&mut v, "angle", json!(b.angle));
+            set(&mut v, "angle", json!(if b.use_global_light { light } else { b.angle }));
+            set(&mut v, "useGlobalLight", json!(b.use_global_light));
             set(&mut v, "altitude", json!(b.altitude));
             set(&mut v, "direction", json!(if b.up { "up" } else { "down" }));
         }
@@ -265,10 +277,12 @@ fn blend_mode_key(mode: ColorMode) -> Option<&'static str> {
     }
 }
 
-/// Dialog fields for a layer: selected kind, and per kind {enabled, params}.
-pub fn initial_fields(layer: &Layer, mode: ColorMode, select: Option<&str>) -> Map<String, Value> {
+/// Dialog fields for a layer: selected kind, and per kind {enabled, params}. `light` is the
+/// document's global light angle, shown by effects that use it.
+pub fn initial_fields(layer: &Layer, mode: ColorMode, select: Option<&str>, light: f32) -> Map<String, Value> {
     let mut f = Map::new();
     f.insert("layer".into(), json!(layer.id.0));
+    f.insert("globalLight".into(), json!(light));
     let mut bo = json!({"blend": layer.blend.label(), "opacity": (layer.opacity * 100.0).round(), "fillOpacity": (layer.fill_opacity * 100.0).round()});
     if let Some(key) = blend_mode_key(mode) {
         let n = mode.color_channels();
@@ -294,7 +308,14 @@ pub fn initial_fields(layer: &Layer, mode: ColorMode, select: Option<&str>) -> M
             first = Some(kind);
         }
         f.insert(format!("on:{kind}"), json!(existing.is_some_and(|e| e.enabled())));
-        f.insert(format!("p:{kind}"), existing.map(values_of).unwrap_or_else(|| defaults(kind)));
+        let params = existing.map(|e| values_of(e, light)).unwrap_or_else(|| {
+            let mut params = defaults(kind);
+            if params.get("useGlobalLight").and_then(Value::as_bool) == Some(true) {
+                params["angle"] = json!(light);
+            }
+            params
+        });
+        f.insert(format!("p:{kind}"), params);
     }
     let sel = select.or(first).unwrap_or("dropShadow");
     f.insert("selected".into(), json!(sel));
@@ -307,7 +328,8 @@ pub fn initial_fields(layer: &Layer, mode: ColorMode, select: Option<&str>) -> M
 pub fn open(app: &mut PhotosuiteApp, select: Option<&str>) -> Option<u64> {
     let st = app.session.active()?;
     let layer = st.doc.layer(st.active_layer?)?.clone();
-    let mut f = initial_fields(&layer, st.doc.mode, select);
+    let light = st.doc.global_light.angle;
+    let mut f = initial_fields(&layer, st.doc.mode, select, light);
     f.insert("patternList".into(), pattern_list(app));
     Some(app.ui.open_dialog(crate::state::DialogKind::LayerStyle, f))
 }
@@ -330,21 +352,53 @@ pub fn confirm(app: &mut PhotosuiteApp, f: &Map<String, Value>) -> Result<Value,
     apply(f, |id, p| app.run(id, p))
 }
 
+/// Every parameter group is edited as an object. Validate before preview or confirmation so
+/// malformed values supplied through `ui.dialog.set` are reported before any command runs.
+fn validate_params(f: &Map<String, Value>) -> Result<(), String> {
+    for kind in std::iter::once(BLENDING).chain(KINDS.iter().map(|(kind, _)| *kind)) {
+        let key = format!("p:{kind}");
+        if let Some(value) = f.get(&key)
+            && !value.is_object()
+        {
+            return Err(format!("invalid layer style parameters: `{key}` must be an object"));
+        }
+    }
+    Ok(())
+}
+
 /// Runs the dialog's commands through `run`: blending options, clear, then each enabled effect.
 fn apply(f: &Map<String, Value>, mut run: impl FnMut(&str, Value) -> Result<Value, String>) -> Result<Value, String> {
+    validate_params(f)?;
     let layer = f.get("layer").cloned().unwrap_or(Value::Null);
-    if let Some(Value::Object(bo)) = f.get(&format!("p:{BLENDING}")) {
+    let initial_light_angle = f.get("globalLight").and_then(Value::as_f64);
+    if let Some(bo) = f.get(&format!("p:{BLENDING}")).and_then(Value::as_object) {
         let mut p = Value::Object(bo.clone());
-        p["layer"] = layer.clone();
+        if let Some(params) = p.as_object_mut() {
+            params.insert("layer".into(), layer.clone());
+        }
         run("layer.layerStyle.blendingOptions", p)?;
     }
     let _ = run("layer.layerStyle.clear", json!({"layer": layer}));
+    // An effect lit by the global light follows the document's light angle, so the Angle slider
+    // drives that shared angle rather than the per-effect angle the compositor ignores.
+    let mut light_angle: Option<f64> = None;
     for &(kind, _) in KINDS {
         if f.get(&format!("on:{kind}")).and_then(Value::as_bool) == Some(true) {
             let mut p = f.get(&format!("p:{kind}")).cloned().unwrap_or_else(|| json!({}));
-            p["layer"] = layer.clone();
+            if let Some(params) = p.as_object_mut() {
+                params.insert("layer".into(), layer.clone());
+            }
+            if p.get("useGlobalLight").and_then(Value::as_bool) == Some(true)
+                && let Some(angle) = p.get("angle").and_then(Value::as_f64)
+                && initial_light_angle.is_none_or(|initial| angle != initial)
+            {
+                light_angle = Some(angle);
+            }
             run(&format!("layer.layerStyle.{kind}"), p)?;
         }
+    }
+    if let Some(angle) = light_angle {
+        run("layer.layerStyle.globalLight", json!({"angle": angle}))?;
     }
     Ok(Value::Null)
 }
@@ -362,18 +416,19 @@ pub fn preview_document(
     doc: &photosuite_doc::Document,
     patterns: &photosuite_engine::pattern_cmds::PatternLibrary,
     f: &Map<String, Value>,
-) -> Option<photosuite_doc::Document> {
+) -> Result<photosuite_doc::Document, String> {
     let mut s = photosuite_engine::Session::new();
     s.patterns = patterns.clone();
     s.add_document(doc.clone(), None);
-    apply(f, |id, p| s.execute(id, p).map_err(|e| e.to_string())).ok()?;
-    s.active().map(|d| (*d.doc).clone())
+    apply(f, |id, p| s.execute(id, p).map_err(|e| e.to_string()))?;
+    s.active().map(|d| (*d.doc).clone()).ok_or_else(|| "no preview document".into())
 }
 
 /// Dialog body (left list, right parameters).
 pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, patterns: &photosuite_engine::pattern_cmds::PatternLibrary) {
     let t = Tokens::get(ui.ctx());
     let selected = f.get("selected").and_then(Value::as_str).unwrap_or("dropShadow").to_string();
+    let invalid = validate_params(f).err();
     // Column separators: gaps laid out with the columns, drawn afterwards over the row's full height.
     let mut seps = Vec::new();
     let gap = |ui: &mut egui::Ui| ui.allocate_exact_size(vec2(17.0, 1.0), Sense::hover()).0.center().x;
@@ -436,87 +491,94 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>, patterns: &photosuite
             ui.label(RichText::new(tl!(&label)).font(crate::theme::semibold(14.0)).color(t.text));
             ui.add_space(6.0);
             let pkey = format!("p:{selected}");
-            let mut p = f.get(&pkey).cloned().unwrap_or_else(|| defaults(&selected));
-            for &(key, label, kind) in spec(&selected) {
-                match (selected.as_str(), key) {
-                    (BLENDING, "blend") => group(ui, "General Blending", false),
-                    (BLENDING, "fillOpacity") => group(ui, "Advanced Blending", true),
-                    _ => {}
-                }
-                match kind {
-                    P::Slider(min, max, unit) => {
-                        let mut v = p.get(key).and_then(Value::as_f64).unwrap_or(min as f64) as f32;
-                        if widgets::slider_row(ui, label, &mut v, min..=max, unit, None).changed() {
-                            p[key] = json!(v.round());
+            // Only reachable through `ui.dialog.set`: say what is wrong once, keep the bad value.
+            if let Some(error) = &invalid {
+                ui.colored_label(t.danger, error);
+            }
+            let params = f.get(&pkey).cloned().unwrap_or_else(|| defaults(&selected));
+            // A group that isn't an object keeps its value and draws no controls.
+            if let Some(mut p) = params.as_object().map(|o| Value::Object(o.clone())) {
+                for &(key, label, kind) in spec(&selected) {
+                    match (selected.as_str(), key) {
+                        (BLENDING, "blend") => group(ui, "General Blending", false),
+                        (BLENDING, "fillOpacity") => group(ui, "Advanced Blending", true),
+                        _ => {}
+                    }
+                    match kind {
+                        P::Slider(min, max, unit) => {
+                            let mut v = p.get(key).and_then(Value::as_f64).unwrap_or(min as f64) as f32;
+                            if widgets::slider_row(ui, label, &mut v, min..=max, unit, None).changed() {
+                                p[key] = json!(v.round());
+                            }
                         }
-                    }
-                    P::Color => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let hexs = p.get(key).and_then(Value::as_str).unwrap_or("#000000").to_string();
-                            let mut c = parse_hex(&hexs);
-                            if ui.color_edit_button_srgba(&mut c).changed() {
-                                p[key] = json!(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
-                            }
-                        });
-                    }
-                    P::Blend => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p.get(key).and_then(Value::as_str).unwrap_or("Normal").to_string();
-                            let opts: Vec<(String, &str)> =
-                                photosuite_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
-                            if widgets::dropdown(ui, &format!("fx-blend-{selected}"), &mut cur, &opts, 150.0) {
-                                p[key] = json!(cur);
-                            }
-                        });
-                    }
-                    P::Choice(options) => {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p.get(key).and_then(Value::as_str).unwrap_or(options[0].0).to_string();
-                            let opts: Vec<(String, &str)> = options.iter().map(|(v, l)| (v.to_string(), *l)).collect();
-                            if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 150.0) {
-                                p[key] = json!(cur);
-                            }
-                        });
-                    }
-                    P::Pattern => {
-                        let list: Vec<(String, String)> = f
-                            .get("patternList")
-                            .and_then(Value::as_array)
-                            .map(|a| a.iter().filter_map(|e| Some((e.get(0)?.as_str()?.to_string(), e.get(1)?.as_str()?.to_string()))).collect())
-                            .unwrap_or_default();
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(tl!(&label)).color(t.text_dim));
-                            let mut cur = p
-                                .get(key)
-                                .and_then(Value::as_str)
-                                .filter(|c| !c.is_empty())
-                                .map(str::to_string)
-                                .or_else(|| list.first().map(|l| l.0.clone()))
+                        P::Color => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let hexs = p.get(key).and_then(Value::as_str).unwrap_or("#000000").to_string();
+                                let mut c = parse_hex(&hexs);
+                                if ui.color_edit_button_srgba(&mut c).changed() {
+                                    p[key] = json!(format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b()));
+                                }
+                            });
+                        }
+                        P::Blend => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p.get(key).and_then(Value::as_str).unwrap_or("Normal").to_string();
+                                let opts: Vec<(String, &str)> =
+                                    photosuite_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
+                                if widgets::dropdown(ui, &format!("fx-blend-{selected}"), &mut cur, &opts, 150.0) {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Choice(options) => {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p.get(key).and_then(Value::as_str).unwrap_or(options[0].0).to_string();
+                                let opts: Vec<(String, &str)> = options.iter().map(|(v, l)| (v.to_string(), *l)).collect();
+                                if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 150.0) {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Pattern => {
+                            let list: Vec<(String, String)> = f
+                                .get("patternList")
+                                .and_then(Value::as_array)
+                                .map(|a| a.iter().filter_map(|e| Some((e.get(0)?.as_str()?.to_string(), e.get(1)?.as_str()?.to_string()))).collect())
                                 .unwrap_or_default();
-                            let opts: Vec<(String, &str)> = list.iter().map(|(id, n)| (id.clone(), n.as_str())).collect();
-                            if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 180.0)
-                                || p.get(key).and_then(Value::as_str).is_none_or(str::is_empty)
-                            {
-                                p[key] = json!(cur);
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(tl!(&label)).color(t.text_dim));
+                                let mut cur = p
+                                    .get(key)
+                                    .and_then(Value::as_str)
+                                    .filter(|c| !c.is_empty())
+                                    .map(str::to_string)
+                                    .or_else(|| list.first().map(|l| l.0.clone()))
+                                    .unwrap_or_default();
+                                let opts: Vec<(String, &str)> = list.iter().map(|(id, n)| (id.clone(), n.as_str())).collect();
+                                if widgets::dropdown(ui, &format!("fx-{selected}-{key}"), &mut cur, &opts, 180.0)
+                                    || p.get(key).and_then(Value::as_str).is_none_or(str::is_empty)
+                                {
+                                    p[key] = json!(cur);
+                                }
+                            });
+                        }
+                        P::Check => {
+                            let mut b = p.get(key).and_then(Value::as_bool).unwrap_or(false);
+                            if widgets::checkbox(ui, &mut b, label).changed() {
+                                p[key] = json!(b);
                             }
-                        });
-                    }
-                    P::Check => {
-                        let mut b = p.get(key).and_then(Value::as_bool).unwrap_or(false);
-                        if widgets::checkbox(ui, &mut b, label).changed() {
-                            p[key] = json!(b);
                         }
                     }
+                    ui.add_space(2.0);
                 }
-                ui.add_space(2.0);
+                if selected == BLENDING {
+                    advanced_blending(ui, f, &mut p);
+                }
+                f.insert(pkey, p);
             }
-            if selected == BLENDING {
-                advanced_blending(ui, f, &mut p);
-            }
-            f.insert(pkey, p);
         });
         seps.push(gap(ui));
         // Preview: the live canvas preview, and a swatch of the style on a grey square.
@@ -594,7 +656,7 @@ fn swatch_image(f: &Map<String, Value>, patterns: &photosuite_engine::pattern_cm
             bo.remove(k);
         }
     }
-    let shown = preview_document(&doc, patterns, &sf)?;
+    let shown = preview_document(&doc, patterns, &sf).ok()?;
     Some(crate::canvas::buffer_to_image(&photosuite_compose::flatten(&shown)))
 }
 
@@ -618,7 +680,8 @@ fn advanced_blending(ui: &mut egui::Ui, f: &mut Map<String, Value>, p: &mut Valu
     widgets::hairline(ui);
     ui.add_space(8.0);
     // Dropdown entries: (position in the `blendIf` list, label). Gray documents edit entry 1.
-    let opts: Vec<(usize, &str)> = if mode == "gray" { vec![(1, "Gray")] } else { std::iter::once((0, "Gray")).chain(names.iter().enumerate().map(|(i, n)| (i + 1, n.1))).collect() };
+    let opts: Vec<(usize, &str)> =
+        if mode == "gray" { vec![(1, "Gray")] } else { std::iter::once((0, "Gray")).chain(names.iter().enumerate().map(|(i, n)| (i + 1, n.1))).collect() };
     let mut ch = f.get("__blendIfChannel").and_then(Value::as_u64).and_then(|c| usize::try_from(c).ok()).unwrap_or(0);
     ui.horizontal(|ui| {
         ui.label(RichText::new(tl!("Blend If:")).color(t.text_dim));
@@ -792,7 +855,8 @@ mod tests {
     #[test]
     fn initial_fields_select_requested_kind() {
         let l = Layer::raster("x", photosuite_doc::PixelFormat::RGBA8);
-        let f = initial_fields(&l, ColorMode::Rgb, Some("stroke"));
+        let f = initial_fields(&l, ColorMode::Rgb, Some("stroke"), 120.0);
+        assert_eq!(f["globalLight"], json!(120.0));
         assert_eq!(f["selected"], "stroke");
         assert_eq!(f["on:stroke"], true);
         assert_eq!(f["on:dropShadow"], false);
@@ -804,7 +868,7 @@ mod tests {
         s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         let st = s.active().unwrap();
-        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"));
+        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"), st.doc.global_light.angle);
         let h = preview_hash(&f);
         f.insert("selected".into(), json!("stroke"));
         assert_eq!(preview_hash(&f), h, "switching pages doesn't re-render");
@@ -824,7 +888,7 @@ mod tests {
             s.execute("layer.new.layer", json!({})).unwrap();
             let st = s.active().unwrap();
             let id = st.active_layer.unwrap();
-            let mut f = initial_fields(st.doc.layer(id).unwrap(), st.doc.mode, Some(BLENDING));
+            let mut f = initial_fields(st.doc.layer(id).unwrap(), st.doc.mode, Some(BLENDING), st.doc.global_light.angle);
             let bo = f.get_mut(&format!("p:{BLENDING}")).unwrap();
             assert_eq!(bo["channels"].as_array().unwrap().len(), st.doc.mode.color_channels(), "{mode}");
             bo["channels"][0] = json!(false);
@@ -836,13 +900,13 @@ mod tests {
             assert_eq!(l.excluded_channels, 1, "{mode}");
             assert_eq!(l.blend_if.get(entry), [BlendRange::from_bytes([10, 40, 200, 255]), BlendRange::from_bytes([0, 0, 128, 128])], "{mode}");
             // Reopening shows what was set.
-            let again = initial_fields(l, st.doc.mode, None);
+            let again = initial_fields(l, st.doc.mode, None, st.doc.global_light.angle);
             assert_eq!(again[&format!("p:{BLENDING}")]["blendIf"][entry]["thisLayer"], json!([10, 40, 200, 255]), "{mode}");
             assert_eq!(again[&format!("p:{BLENDING}")]["channels"][0], json!(false), "{mode}");
         }
         // CMYK and Lab: the compositor doesn't apply them, so the dialog doesn't offer them.
         let l = Layer::raster("x", photosuite_doc::PixelFormat::RGBA8);
-        let f = initial_fields(&l, ColorMode::Cmyk, None);
+        let f = initial_fields(&l, ColorMode::Cmyk, None, 120.0);
         assert!(f[&format!("p:{BLENDING}")].get("blendIf").is_none() && !f.contains_key("__mode"));
     }
 
@@ -883,12 +947,71 @@ mod tests {
         s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         let st = s.active().unwrap();
-        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"));
+        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"), 120.0);
         f[&format!("p:{BLENDING}")]["blend"] = json!("Pass Through");
         let img = swatch_image(&f, &s.patterns).expect("swatch");
         let c = img.pixels[img.width() * img.height() / 2 + img.width() / 2];
         assert_eq!((c.r(), c.g(), c.b()), (255, 0, 0), "the red overlay on the square");
         assert_eq!(img.pixels[0].a(), 0, "transparent around it");
+    }
+
+    #[test]
+    fn preview_rejects_non_object_effect_params() {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let st = s.active().unwrap();
+        let mut f = initial_fields(st.doc.layer(st.active_layer.unwrap()).unwrap(), st.doc.mode, Some("colorOverlay"), st.doc.global_light.angle);
+        f.insert("p:colorOverlay".into(), json!("invalid"));
+
+        assert!(preview_document(&st.doc, &s.patterns, &f).is_err());
+    }
+
+    #[test]
+    fn apply_rejects_non_object_params_before_running_commands() {
+        let mut f = Map::new();
+        f.insert("p:stroke".into(), json!([1, 2]));
+        f.insert("on:stroke".into(), json!(true));
+        let mut calls = 0;
+
+        let result = apply(&f, |_, _| {
+            calls += 1;
+            Ok(Value::Null)
+        });
+
+        assert!(result.is_err());
+        assert_eq!(calls, 0, "invalid params must not partially apply the style");
+    }
+
+    #[test]
+    fn body_keeps_invalid_params_and_renders_without_panicking() {
+        let ctx = egui::Context::default();
+        PhotosuiteApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut fields = Map::new();
+        fields.insert("selected".into(), json!("dropShadow"));
+        fields.insert("p:dropShadow".into(), json!(7));
+
+        let patterns = photosuite_engine::pattern_cmds::PatternLibrary::default();
+        let mut out = ctx.run_ui(Default::default(), |ui| body(ui, &mut fields, &patterns));
+        out.textures_delta.clear();
+
+        assert_eq!(fields.get("p:dropShadow"), Some(&json!(7)));
+    }
+
+    #[test]
+    fn confirm_rejects_invalid_params_and_applies_valid_effects() {
+        let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
+        app.run("layer.new.layer", json!({})).unwrap();
+        let layer = app.session.active().unwrap().doc.layer(app.session.active().unwrap().active_layer.unwrap()).unwrap().clone();
+        let mut invalid = initial_fields(&layer, ColorMode::Rgb, Some("colorOverlay"), 0.0);
+        invalid.insert("p:colorOverlay".into(), json!(null));
+        assert!(confirm(&mut app, &invalid).is_err());
+        assert!(app.session.active().unwrap().doc.layer(layer.id).unwrap().effects.items.is_empty());
+
+        let valid = initial_fields(&layer, ColorMode::Rgb, Some("colorOverlay"), 0.0);
+        confirm(&mut app, &valid).unwrap();
+        assert_eq!(app.session.active().unwrap().doc.layer(layer.id).unwrap().effects.items.len(), 1);
     }
 
     #[test]
@@ -900,9 +1023,89 @@ mod tests {
         s.execute("layer.layerStyle.dropShadow", json!({"spread": 12, "add": true})).unwrap();
         let st = s.active().unwrap();
         let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
-        let f = initial_fields(l, st.doc.mode, None);
+        let f = initial_fields(l, st.doc.mode, None, st.doc.global_light.angle);
         assert_eq!(f["p:outerGlow"]["spread"], json!(6.0));
         assert_eq!(f["p:outerGlow"]["range"], json!(40.0));
         assert_eq!(f["p:dropShadow"]["spread"], json!(12.0));
+    }
+
+    #[test]
+    fn drop_shadow_angle_reaches_the_effect() {
+        // #350: the Angle slider was dead — the dialog never sent `useGlobalLight`, so the engine
+        // defaulted it to true and the compositor used the fixed global light angle, ignoring the slider.
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let id = s.active().unwrap().active_layer.unwrap();
+        let shadow = |s: &photosuite_engine::Session| {
+            s.active().unwrap().doc.layer(id).unwrap().effects.items.iter().find_map(|e| match e {
+                Effect::DropShadow(sh) => Some(sh.clone()),
+                _ => None,
+            })
+        };
+
+        // Use Global Light off: the per-effect angle is stored and used.
+        let mut f = Map::new();
+        f.insert("layer".into(), json!(id));
+        f.insert("on:dropShadow".into(), json!(true));
+        f.insert("p:dropShadow".into(), json!({"angle": 45.0, "useGlobalLight": false, "distance": 5, "size": 5}));
+        apply(&f, |cmd, p| s.execute(cmd, p).map_err(|e| e.to_string())).unwrap();
+        let eff = shadow(&s).unwrap();
+        assert!(!eff.use_global_light, "Use Global Light off keeps the per-effect angle");
+        assert_eq!(eff.angle, 45.0);
+
+        // Use Global Light on: the Angle slider drives the document's shared light angle.
+        let mut f = Map::new();
+        f.insert("layer".into(), json!(id));
+        f.insert("on:dropShadow".into(), json!(true));
+        f.insert("p:dropShadow".into(), json!({"angle": 30.0, "useGlobalLight": true, "distance": 5, "size": 5}));
+        apply(&f, |cmd, p| s.execute(cmd, p).map_err(|e| e.to_string())).unwrap();
+        assert_eq!(s.active().unwrap().doc.global_light.angle, 30.0, "the Angle slider moves the shared light");
+        assert!(shadow(&s).unwrap().use_global_light);
+
+        // Reopening the dialog shows the effective angle and the checkbox state.
+        let st = s.active().unwrap();
+        let f = initial_fields(st.doc.layer(id).unwrap(), st.doc.mode, None, st.doc.global_light.angle);
+        assert_eq!(f["p:dropShadow"]["useGlobalLight"], json!(true));
+        assert_eq!(f["p:dropShadow"]["angle"], json!(30.0));
+    }
+
+    #[test]
+    fn bevel_angle_change_is_not_overridden_by_unchanged_drop_shadow_angle() {
+        let mut s = photosuite_engine::Session::new();
+        s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
+        s.execute("layer.new.layer", json!({})).unwrap();
+        let (id, mut f, initial_light) = {
+            let st = s.active().unwrap();
+            let id = st.active_layer.unwrap();
+            let f = initial_fields(st.doc.layer(id).unwrap(), st.doc.mode, None, st.doc.global_light.angle);
+            (id, f, st.doc.global_light.angle)
+        };
+        f.insert("on:bevelEmboss".into(), json!(true));
+        f["p:bevelEmboss"]["angle"] = json!(45.0);
+        f.insert("on:dropShadow".into(), json!(true));
+        assert_eq!(f["p:dropShadow"]["angle"].as_f64(), Some(f64::from(initial_light)));
+
+        apply(&f, |cmd, p| s.execute(cmd, p).map_err(|e| e.to_string())).unwrap();
+
+        assert_eq!(s.active().unwrap().doc.global_light.angle, 45.0);
+        assert_eq!(s.active().unwrap().doc.layer(id).unwrap().effects.items.len(), 2);
+    }
+
+    #[test]
+    fn unchanged_global_light_angle_is_not_applied() {
+        let layer = Layer::raster("x", photosuite_doc::PixelFormat::RGBA8);
+        let mut f = initial_fields(&layer, ColorMode::Rgb, None, 47.5);
+        f.insert("on:bevelEmboss".into(), json!(true));
+        assert_eq!(f["p:bevelEmboss"]["angle"].as_f64(), Some(47.5));
+        let mut commands = Vec::new();
+
+        apply(&f, |cmd, _| {
+            commands.push(cmd.to_string());
+            Ok(Value::Null)
+        })
+        .unwrap();
+
+        assert!(!commands.iter().any(|cmd| cmd == "layer.layerStyle.globalLight"));
     }
 }

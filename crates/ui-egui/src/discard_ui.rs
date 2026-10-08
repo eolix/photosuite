@@ -5,10 +5,12 @@
 //! once every affected document has been answered. Cancel at any point drops it. Documents are
 //! tracked by id, not tab index, so closing one elsewhere while the prompt is up can't retarget it.
 
+use egui::Key;
 use photosuite_doc::DocId;
 use serde_json::{Value, json};
 
 use crate::PhotosuiteApp;
+use crate::widgets::{ButtonRole, DialogButton};
 
 const EXIT: &str = "file.exit";
 
@@ -85,6 +87,7 @@ pub fn guard_window_close(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     }
     if intercept(app, EXIT, &Value::Null) {
         ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
     }
 }
 
@@ -151,7 +154,25 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         };
         (tl!("Unsaved changes"), crate::i18n::fmt(template, &[("name", &name)]))
     };
-    let (mut save_it, mut discard_it, mut cancel) = (false, false, false);
+    let mac = ctx.os() == egui::os::OperatingSystem::Mac;
+    // The answers in the platform's words; `dialog_buttons` puts them in its order. Windows (and
+    // Linux) ask Yes / No / Cancel with Y, N and Esc, as Photoshop does there; macOS asks
+    // Don't Save / Cancel / Save. Esc always cancels (the modal closes on it).
+    let cancel = (ButtonRole::Cancel, "Cancel", mac.then_some(Key::C), 84.0, Answer::Cancel);
+    let buttons = if reverts {
+        vec![(ButtonRole::Default, "Revert", Some(Key::R), 84.0, Answer::Discard), cancel]
+    } else if mac {
+        vec![
+            (ButtonRole::Default, "Save", Some(Key::S), 84.0, Answer::Save),
+            (ButtonRole::Alternate, "Don't Save", Some(Key::D), 100.0, Answer::Discard),
+            cancel,
+        ]
+    } else {
+        vec![(ButtonRole::Default, "Yes", Some(Key::Y), 84.0, Answer::Save), (ButtonRole::Alternate, "No", Some(Key::N), 84.0, Answer::Discard), cancel]
+    };
+    let mut answer = ctx.input_mut(|i| buttons.iter().find(|b| b.2.is_some_and(|k| i.consume_key(egui::Modifiers::NONE, k))).map(|b| b.4));
+    let labels: Vec<String> = buttons.iter().map(|b| b.2.map_or_else(|| tl!(b.1).to_string(), |k| mnemonic(b.1, k))).collect();
+    let row: Vec<DialogButton> = buttons.iter().zip(&labels).map(|(b, label)| DialogButton::new(b.0, label, b.3)).collect();
     let modal = egui::Modal::new(egui::Id::new("discard-prompt")).show(ctx, |ui| {
         ui.set_max_width(420.0);
         ui.label(egui::RichText::new(tl!(&title)).font(crate::theme::semibold(15.0)));
@@ -162,21 +183,39 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         ui.add_space(12.0);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 10.0;
-            if reverts {
-                discard_it = crate::widgets::primary_button(ui, tl!("Revert"), 84.0).clicked();
-                cancel = crate::widgets::secondary_button(ui, tl!("Cancel"), 84.0).clicked();
-            } else {
-                save_it = crate::widgets::primary_button(ui, tl!("Save"), 84.0).clicked();
-                cancel = crate::widgets::secondary_button(ui, tl!("Cancel"), 84.0).clicked();
-                discard_it = crate::widgets::secondary_button(ui, tl!("Don't Save"), 100.0).clicked();
+            if let Some(role) = crate::widgets::dialog_buttons(ui, &row) {
+                answer = buttons.iter().find(|b| b.0 == role).map(|b| b.4);
             }
         });
     });
-    cancel |= modal.should_close();
-    if cancel {
-        app.discard = None;
-    } else if discard_it || (save_it && save(app, doc)) {
-        advance(app, ctx);
+    if modal.should_close() {
+        answer = Some(Answer::Cancel);
+    }
+    // Enter takes the default answer, unless Tab focused a button: that one took the Enter as a click.
+    if answer.is_none() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Enter)) {
+        answer = buttons.iter().find(|b| b.0 == ButtonRole::Default).map(|b| b.4);
+    }
+    match answer {
+        Some(Answer::Cancel) => app.discard = None,
+        Some(Answer::Discard) => advance(app, ctx),
+        Some(Answer::Save) if save(app, doc) => advance(app, ctx),
+        _ => {}
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Answer {
+    Save,
+    Discard,
+    Cancel,
+}
+
+/// "(S)ave": the key in parentheses, or appended ("Guardar (S)") when the translation doesn't start with it.
+fn mnemonic(label: &str, key: Key) -> String {
+    let (label, k) = (tl!(label), key.name());
+    match label.split_at_checked(1) {
+        Some((first, rest)) if first.eq_ignore_ascii_case(k) => format!("({first}){rest}"),
+        _ => format!("{label} ({k})"),
     }
 }
 
@@ -291,6 +330,117 @@ mod tests {
         assert!(app.allow_close);
     }
 
+    #[test]
+    fn mnemonic_labels_bracket_the_key() {
+        assert_eq!(mnemonic("Don't Save", Key::D), "(D)on't Save");
+        assert_eq!(mnemonic("Guardar", Key::S), "Guardar (S)");
+        assert_eq!(mnemonic("保存", Key::S), "保存 (S)");
+    }
+
+    type Prompted = egui_kittest::Harness<'static, PhotosuiteApp>;
+
+    /// The unsaved-changes prompt for Close All over two dirty documents, as `os` draws it.
+    fn prompt_on(os: egui::os::OperatingSystem) -> Prompted {
+        let mut app = app_with_docs(2);
+        make_dirty(&mut app, 0);
+        make_dirty(&mut app, 1);
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
+        PhotosuiteApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        h.ctx.set_os(os);
+        assert!(intercept(h.state_mut(), "file.closeAll", &Value::Null));
+        h.run_steps(2);
+        h
+    }
+
+    /// The buttons named `labels`, sorted by where they are drawn, left to right.
+    fn drawn_order<'a>(h: &Prompted, labels: [&'a str; 3]) -> Vec<&'a str> {
+        use egui_kittest::kittest::Queryable;
+        let mut v = labels.map(|l| (h.get_by_label(l).rect().left(), l)).to_vec();
+        v.sort_by(|a, b| a.0.total_cmp(&b.0));
+        v.into_iter().map(|(_, l)| l).collect()
+    }
+
+    /// Tab walks `labels` left to right and wraps; Shift+Tab steps back.
+    fn tab_walks(h: &mut Prompted, labels: [&str; 3]) {
+        use egui_kittest::kittest::Queryable;
+        let focused = |h: &Prompted| labels.into_iter().find(|l| h.get_by_label(l).is_focused());
+        for want in [labels[0], labels[1], labels[2], labels[0]] {
+            h.key_press(Key::Tab);
+            h.run_steps(2);
+            assert_eq!(focused(h), Some(want));
+        }
+        h.key_press_modifiers(egui::Modifiers::SHIFT, Key::Tab);
+        h.run_steps(2);
+        assert_eq!(focused(h), Some(labels[2]));
+    }
+
+    fn docs_left(h: &Prompted) -> Option<usize> {
+        h.state().discard.as_ref().map(|p| p.docs.len())
+    }
+
+    #[test]
+    fn windows_and_linux_ask_yes_no_cancel_with_the_default_first() {
+        for os in [egui::os::OperatingSystem::Windows, egui::os::OperatingSystem::Nix] {
+            let mut h = prompt_on(os);
+            let labels = ["(Y)es", "(N)o", "Cancel"];
+            assert_eq!(drawn_order(&h, labels), labels, "{os:?}");
+            tab_walks(&mut h, labels);
+            h.key_press(Key::N);
+            h.run_steps(2);
+            assert_eq!(docs_left(&h), Some(1), "N answered the first document");
+            // Cancel has no letter here: C does nothing, Esc cancels.
+            h.key_press(Key::C);
+            h.run_steps(2);
+            assert_eq!(docs_left(&h), Some(1));
+            h.key_press(Key::Escape);
+            h.run_steps(2);
+            assert!(h.state().discard.is_none());
+            assert_eq!(h.state().session.documents().len(), 2, "Cancel closed nothing");
+        }
+    }
+
+    #[test]
+    fn macos_asks_dont_save_cancel_save_with_the_default_last() {
+        let mut h = prompt_on(egui::os::OperatingSystem::Mac);
+        let labels = ["(D)on't Save", "(C)ancel", "(S)ave"];
+        assert_eq!(drawn_order(&h, labels), labels);
+        tab_walks(&mut h, labels);
+        h.key_press(Key::D);
+        h.run_steps(2);
+        assert_eq!(docs_left(&h), Some(1), "D answered the first document");
+        h.key_press(Key::C);
+        h.run_steps(2);
+        assert!(h.state().discard.is_none());
+        assert_eq!(h.state().session.documents().len(), 2, "Cancel closed nothing");
+    }
+
+    #[test]
+    fn enter_takes_the_default_answer_or_the_focused_button() {
+        use std::{cell::Cell, rc::Rc};
+        let mut h = prompt_on(egui::os::OperatingSystem::Windows);
+        let asked = Rc::new(Cell::new(false));
+        let seen = asked.clone();
+        // Backing out of the save dialog keeps the prompt.
+        h.state_mut().services.pick_save = Some(Box::new(move |_| {
+            seen.set(true);
+            None
+        }));
+        h.key_press(Key::Enter);
+        h.run_steps(2);
+        assert!(asked.get(), "Enter answered Yes, which saves");
+        assert_eq!(docs_left(&h), Some(2));
+        // Tab to No: Enter now presses it.
+        for _ in 0..2 {
+            h.key_press(Key::Tab);
+            h.run_steps(2);
+        }
+        asked.set(false);
+        h.key_press(Key::Enter);
+        h.run_steps(2);
+        assert!(!asked.get());
+        assert_eq!(docs_left(&h), Some(1), "Enter pressed the focused No");
+    }
+
     /// One frame with the window's close button pressed; whether the guard cancelled the close.
     fn press_window_close(app: &mut PhotosuiteApp) -> bool {
         let mut info = egui::ViewportInfo::default();
@@ -299,7 +449,10 @@ mod tests {
         input.viewports.insert(egui::ViewportId::ROOT, info);
         let mut out = egui::Context::default().run_ui(input, |ui| guard_window_close(app, ui.ctx()));
         out.textures_delta.clear();
-        out.viewport_output[&egui::ViewportId::ROOT].commands.iter().any(|c| matches!(c, egui::ViewportCommand::CancelClose))
+        let commands = &out.viewport_output[&egui::ViewportId::ROOT].commands;
+        let cancelled = commands.iter().any(|c| matches!(c, egui::ViewportCommand::CancelClose));
+        assert_eq!(commands.iter().any(|c| matches!(c, egui::ViewportCommand::Focus)), cancelled);
+        cancelled
     }
 
     #[test]

@@ -163,6 +163,14 @@ pub struct Effects {
     pub reference: Option<(f64, f64)>,
 }
 
+/// Deepest group nesting a document may hold: a layer inside this many nested groups is the
+/// deepest legal one. Everything that walks the layer tree (engine lookups, the layers panel,
+/// PSD export, `.pcraft` save and load) recurses once per level, so deeper trees risk
+/// overflowing the 1 MiB main-thread stacks of Windows and wasm. PSD import and the engine
+/// commands that nest layers (`layer.groupLayers`, `layer.moveTo`, Artboard from Layers) enforce
+/// this up front; `photosuite-format` refuses to save deeper trees.
+pub const MAX_GROUP_DEPTH: usize = 100;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Group {
     pub children: Vec<Layer>,
@@ -310,7 +318,7 @@ fn normalize_runs<S: Clone>(text: &str, runs: Vec<(usize, S)>, base: S) -> Vec<(
         if at >= total {
             break;
         }
-        let mut end = (at + len).min(total);
+        let mut end = at.saturating_add(len).min(total);
         while !text.is_char_boundary(end) {
             end += 1;
         }
@@ -354,12 +362,27 @@ pub struct SmartObject {
     /// Layer › Smart Objects › Stack Mode: when set, the source's top-level layers are combined
     /// per pixel with this statistic instead of composited.
     pub stack_mode: Option<StackMode>,
+    /// Distort / Perspective (or an imported placement whose corners aren't a parallelogram): the
+    /// full projective map from source pixels to document pixels, row-major 3×3. It overrides
+    /// `transform`, which then holds its affine approximation at the source origin.
+    pub perspective: Option<[f64; 9]>,
 }
 
 impl SmartObject {
     /// A smart object with no filters and no PSD data.
     pub fn new(source: SmartSource, transform: Affine, cache: Option<Surface>) -> Self {
-        Self { source, transform, smart_filters: Vec::new(), cache, psd_raw: None, filters_enabled: true, filter_mask: None, warp: None, stack_mode: None }
+        Self {
+            source,
+            transform,
+            smart_filters: Vec::new(),
+            cache,
+            psd_raw: None,
+            filters_enabled: true,
+            filter_mask: None,
+            warp: None,
+            stack_mode: None,
+            perspective: None,
+        }
     }
 }
 
@@ -728,6 +751,27 @@ impl Document {
         Rect::from_size(self.size)
     }
 
+    /// Nesting depth of the deepest layer: 0 for a root-level layer, 1 inside one group, and so
+    /// on. Computed over an explicit stack, so it cannot overflow on any tree it measures.
+    pub fn max_group_depth(&self) -> usize {
+        let mut max = 0;
+        let mut stack: Vec<(&[Layer], usize)> = vec![(&self.layers, 0)];
+        while let Some((layers, depth)) = stack.pop() {
+            if layers.is_empty() {
+                continue;
+            }
+            max = max.max(depth);
+            for l in layers {
+                if let Some(ch) = l.children()
+                    && !ch.is_empty()
+                {
+                    stack.push((ch, depth + 1));
+                }
+            }
+        }
+        max
+    }
+
     /// Depth-first walk yielding `(path, depth, layer)` bottom-to-top.
     pub fn walk(&self) -> Vec<(LayerPath, usize, &Layer)> {
         fn rec<'a>(layers: &'a [Layer], prefix: &mut LayerPath, out: &mut Vec<(LayerPath, usize, &'a Layer)>) {
@@ -855,11 +899,54 @@ mod tests {
     }
 
     #[test]
+    fn max_group_depth_counts_nesting_without_recursing() {
+        let mut d = doc();
+        let bg = d.layers[0].id;
+        let mut chain = Layer::raster("L", d.pixel_format());
+        for _ in 0..3 {
+            chain = Layer::group("G", vec![chain]);
+        }
+        d.insert_above(Some(bg), chain);
+        assert_eq!(d.max_group_depth(), 3);
+        // An unfilled group does not add a level (nothing lives inside it).
+        d.insert_above(Some(bg), Layer::group("empty", vec![]));
+        assert_eq!(d.max_group_depth(), 3);
+    }
+
+    #[test]
     fn pixel_format_follows_mode_and_depth() {
         let d = Document::new("c", Size::new(1, 1), ColorMode::Cmyk, SampleType::U16);
         assert_eq!(d.pixel_format(), PixelFormat::new(ColorMode::Cmyk, SampleType::U16, true));
         let b = Document::new("b", Size::new(1, 1), ColorMode::Bitmap, SampleType::U8);
         assert_eq!(b.pixel_format().mode, ColorMode::Grayscale);
+    }
+
+    #[test]
+    fn text_runs_with_maximal_lengths_normalize_to_text_length() {
+        let t = TextLayer {
+            text: "ab".into(),
+            runs: vec![
+                text::TextRun { len: 1, style: text::CharStyle::default() },
+                text::TextRun { len: usize::MAX, style: text::CharStyle { size_pt: 24.0, ..Default::default() } },
+            ],
+            paragraphs: vec![
+                text::ParagraphRun { len: 1, style: text::ParagraphStyle::default() },
+                text::ParagraphRun { len: usize::MAX, style: text::ParagraphStyle { align: text::TextAlign::Center, ..Default::default() } },
+            ],
+            ..Default::default()
+        };
+
+        let chars = t.char_runs();
+        assert_eq!(chars.iter().map(|r| r.len).sum::<usize>(), t.text.len());
+        assert_eq!(chars.len(), 2);
+        assert_eq!(chars[1].len, 1);
+        assert_eq!(chars[1].style.size_pt, 24.0);
+
+        let paragraphs = t.paragraph_runs();
+        assert_eq!(paragraphs.iter().map(|r| r.len).sum::<usize>(), t.text.len());
+        assert_eq!(paragraphs.len(), 2);
+        assert_eq!(paragraphs[1].len, 1);
+        assert_eq!(paragraphs[1].style.align, text::TextAlign::Center);
     }
 
     #[test]

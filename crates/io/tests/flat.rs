@@ -43,6 +43,9 @@ codec_rt!(png_rgb8_opaque, "png", ColorMode::Rgb, SampleType::U8, false, 0.0);
 codec_rt!(png_rgba16, "png", ColorMode::Rgb, SampleType::U16, true, 0.0);
 codec_rt!(png_gray8, "png", ColorMode::Grayscale, SampleType::U8, false, 0.0);
 codec_rt!(png_graya16, "png", ColorMode::Grayscale, SampleType::U16, true, 0.0);
+codec_rt!(tga_rgba8, "tga", ColorMode::Rgb, SampleType::U8, true, 0.0);
+codec_rt!(tga_rgb8_opaque, "tga", ColorMode::Rgb, SampleType::U8, false, 0.0);
+codec_rt!(tga_gray8, "tga", ColorMode::Grayscale, SampleType::U8, false, 0.0);
 codec_rt!(tiff_rgba8, "tiff", ColorMode::Rgb, SampleType::U8, true, 0.0);
 codec_rt!(tiff_rgb16, "tif", ColorMode::Rgb, SampleType::U16, false, 0.0);
 codec_rt!(tiff_cmyk8, "tiff", ColorMode::Cmyk, SampleType::U8, false, 0.0);
@@ -237,4 +240,145 @@ fn heic_opens_as_a_document() {
     assert!(d.icc_profile.is_some(), "the profile is kept");
     // Not a HEIC after all: an error, not a panic.
     assert!(import("broken.heic", b"\0\0\0\x18ftypheic\0\0\0\0mif1heic").is_err());
+}
+
+/// A one-layer document of 16-pixel-wide columns, each one straight colour (colour channels, then alpha).
+fn columns(mode: ColorMode, depth: SampleType, cols: &[&[f32]]) -> photosuite_doc::Document {
+    let mut d = photosuite_doc::Document::new("c", photosuite_geom::Size::new(16 * cols.len() as u32, 16), mode, depth);
+    let mut s = photosuite_raster::Surface::new(d.pixel_format());
+    for (i, px) in cols.iter().enumerate() {
+        let x = 16 * i as i32;
+        s.fill_rect(photosuite_geom::Rect::new(x, 0, x + 16, 16), px);
+    }
+    d.layers.push(photosuite_doc::Layer::new("Layer", photosuite_doc::LayerContent::Raster(s)));
+    d
+}
+
+/// The pixel at the centre of each column of `doc`.
+fn column_pixels(doc: &photosuite_doc::Document, n: usize) -> Vec<Vec<f32>> {
+    let s = doc.layers[0].surface().unwrap();
+    (0..n).map(|i| s.pixel(16 * i as i32 + 8, 8)).collect()
+}
+
+/// Asserts the leading (colour) channels of `got` are within `tol` of `want`.
+fn assert_colors(got: &[Vec<f32>], want: &[Vec<f32>], tol: f32, what: &str) {
+    for (g, w) in got.iter().zip(want) {
+        assert!(w.iter().zip(g).all(|(a, b)| (a - b).abs() <= tol), "{what}: got {got:?}, want {want:?}");
+    }
+}
+
+/// Formats without alpha get the document composited over white, as flattening does, instead of
+/// its alpha dropped (which shows the colours stored under transparent pixels).
+#[test]
+fn transparency_is_composited_over_white_for_formats_without_alpha() {
+    let rgb: [&[f32]; 3] = [&[0.0, 0.0, 0.0, 0.0], &[0.0, 0.0, 1.0, 0.5], &[0.0, 0.63, 0.0, 1.0]];
+    let over_white = vec![vec![1.0, 1.0, 1.0], vec![0.5, 0.5, 1.0], vec![0.0, 0.63, 0.0]];
+    let gray: [&[f32]; 2] = [&[0.0, 0.0], &[0.0, 0.5]];
+    // CMYK white is no ink.
+    let cmyk: [&[f32]; 2] = [&[1.0, 1.0, 1.0, 1.0, 0.0], &[0.0, 0.0, 0.0, 1.0, 0.5]];
+    let cases = [
+        (ColorMode::Rgb, SampleType::U8, &rgb[..], over_white.clone()),
+        (ColorMode::Rgb, SampleType::U16, &rgb[..], over_white.clone()),
+        (ColorMode::Rgb, SampleType::F32, &rgb[..], over_white),
+        (ColorMode::Grayscale, SampleType::U8, &gray[..], vec![vec![1.0], vec![0.5]]),
+        (ColorMode::Cmyk, SampleType::U8, &cmyk[..], vec![vec![0.0; 4], vec![0.0, 0.0, 0.0, 0.5]]),
+    ];
+    for (mode, depth, cols, want) in cases {
+        let what = format!("{mode:?} {depth:?}");
+        let d = columns(mode, depth, cols);
+        let r = export(&d, "a.jpg", &ExportOptions::default()).unwrap();
+        assert!(r.warnings.iter().any(|w| w.contains("composited over white")), "{what}: {:?}", r.warnings);
+        assert!(!r.warnings.iter().any(|w| w.contains("alpha will be discarded")), "{what}: {:?}", r.warnings);
+        let back = import("a.jpg", &r.bytes).unwrap().document;
+        assert_eq!(back.mode, mode, "{what}");
+        assert_colors(&column_pixels(&back, cols.len()), &want, 0.03, &what);
+        // PNG keeps the transparency itself.
+        let r = export(&d, "a.png", &ExportOptions::default()).unwrap();
+        assert!(!r.warnings.iter().any(|w| w.contains("composited")), "{what}: {:?}", r.warnings);
+        let back = import("a.png", &r.bytes).unwrap().document;
+        let alpha = column_pixels(&back, cols.len())[1].last().copied().unwrap();
+        assert!((alpha - 0.5).abs() <= 1.0 / 255.0, "{what}: alpha {alpha}");
+    }
+    // Opaque documents are written as before.
+    let r = export(&columns(ColorMode::Rgb, SampleType::U8, &[&[0.2, 0.4, 0.6, 1.0]]), "a.jpg", &ExportOptions::default()).unwrap();
+    assert!(!r.warnings.iter().any(|w| w.contains("composited")), "{:?}", r.warnings);
+}
+
+/// Formats that can't embed a profile get sRGB values (what an untagged file means), converted
+/// through the colour engine, instead of values that only mean something under the dropped profile.
+#[test]
+fn non_srgb_rgb_is_converted_to_srgb_for_formats_without_a_profile() {
+    use photosuite_cms::{Builtin, Intent, Transform};
+    let cols: [&[f32]; 3] = [&[0.0, 0.05, 0.0, 1.0], &[0.2, 0.5, 0.8, 1.0], &[1.0, 0.25, 0.0, 1.0]];
+    for (profile, depth) in [(Builtin::LinearSrgb, SampleType::F32), (Builtin::LinearSrgb, SampleType::U16), (Builtin::DisplayP3, SampleType::U8)] {
+        let mut d = columns(ColorMode::Rgb, depth, &cols);
+        d.icc_profile = Some(profile.profile().to_bytes());
+        let stored = column_pixels(&d, cols.len());
+        let t = Transform::new(profile.profile(), Builtin::Srgb.profile(), Intent::Perceptual, true).unwrap();
+        let want: Vec<Vec<f32>> = stored
+            .iter()
+            .map(|p| {
+                let mut v = p.clone();
+                t.apply(&mut v, 4);
+                // The formats hold 8-bit sRGB: out-of-gamut colours clip.
+                v.iter().map(|c| c.clamp(0.0, 1.0)).collect()
+            })
+            .collect();
+        for ext in ["bmp", "gif", "qoi", "tga"] {
+            let what = format!("{profile:?} {depth:?} {ext}");
+            let r = export(&d, ext, &ExportOptions::default()).unwrap();
+            assert!(r.warnings.iter().any(|w| w.contains("converted to sRGB")), "{what}: {:?}", r.warnings);
+            assert!(!r.warnings.iter().any(|w| w.contains("ICC profile")), "{what}: {:?}", r.warnings);
+            let back = import(&format!("a.{ext}"), &r.bytes).unwrap().document;
+            assert_eq!(back.icc_profile, None, "{what}");
+            assert_colors(&column_pixels(&back, cols.len()), &want, 1.5 / 255.0, &what);
+        }
+        // Formats that embed the profile keep it and the values.
+        let r = export(&d, "a.png", &ExportOptions::default()).unwrap();
+        let back = import("a.png", &r.bytes).unwrap().document;
+        assert_eq!(back.icc_profile, d.icc_profile, "{profile:?} {depth:?}");
+        assert_colors(&column_pixels(&back, cols.len()), &stored, 1e-4, &format!("{profile:?} {depth:?} png"));
+    }
+    // sRGB (tagged or not) is written unchanged.
+    for icc in [None, Some(Builtin::Srgb.profile().to_bytes())] {
+        let mut d = columns(ColorMode::Rgb, SampleType::U8, &cols);
+        d.icc_profile = icc;
+        let r = export(&d, "a.bmp", &ExportOptions::default()).unwrap();
+        assert!(!r.warnings.iter().any(|w| w.contains("converted to sRGB")), "{:?}", r.warnings);
+        let back = import("a.bmp", &r.bytes).unwrap().document;
+        assert_colors(&column_pixels(&back, cols.len()), &column_pixels(&d, cols.len()), 0.0, "sRGB bmp");
+    }
+}
+
+/// #518: a JPEG cut off inside its image data opens with a warning, never silently.
+#[test]
+fn truncated_jpeg_imports_with_a_warning() {
+    for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
+        let full = export(&smooth(mode), "jpg", &ExportOptions::default()).unwrap().bytes;
+        assert_eq!(import("x.jpg", &full).unwrap().warnings, Vec::<String>::new(), "{mode:?}");
+        // Cut inside the scan data (most of this small file is headers).
+        let r = import("x.jpg", &full[..full.len() - 4]).unwrap();
+        assert_eq!(r.document.size, photosuite_geom::Size::new(32, 16));
+        assert!(r.warnings.first().is_some_and(|w| w.starts_with("JPEG data ends early")), "{mode:?}: {:?}", r.warnings);
+    }
+}
+
+/// A GIF of `frames` identical 1x1 black frames.
+fn gif_frames(frames: usize) -> Vec<u8> {
+    let mut b = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xFF\xFF\xFF".to_vec();
+    for _ in 0..frames {
+        b.extend_from_slice(b"\x2C\0\0\0\0\x01\0\x01\0\0\x02\x02\x44\x01\0");
+    }
+    b.push(0x3B);
+    b
+}
+
+/// #523: an animation opens its first frame, unchanged, with a warning that the rest was left out.
+#[test]
+fn animation_imports_the_first_frame_with_a_warning() {
+    let one = import("a.gif", &gif_frames(1)).unwrap();
+    assert_eq!(one.warnings, Vec::<String>::new());
+    let three = import("a.gif", &gif_frames(3)).unwrap();
+    assert_eq!(three.warnings, ["only the first of 3 frames was imported"]);
+    pixels_eq(&one.document, &three.document, 0.0);
 }

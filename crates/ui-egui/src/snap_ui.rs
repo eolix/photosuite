@@ -94,6 +94,7 @@ fn is_point_tool(t: Tool) -> bool {
             | Tool::Polygon
             | Tool::Line
             | Tool::Type
+            | Tool::VerticalType
     )
 }
 
@@ -115,7 +116,7 @@ fn in_quad(q: &[[f64; 2]; 4], p: [f64; 2]) -> bool {
     inside
 }
 
-/// Near a Free Transform corner or edge handle (within 8 screen px)?
+/// Near a Free Transform corner or edge handle (within its grab radius)?
 fn near_handle(q: &[[f64; 2]; 4], p: [f64; 2], tol: f64) -> bool {
     (0..4).any(|i| {
         let (a, b) = (q[i], q[(i + 1) % 4]);
@@ -141,7 +142,11 @@ fn begin(app: &mut PhotosuiteApp, p: [f64; 2]) {
     let tool = app.ui.tool;
     let tol = tolerance(app);
     let gesture = if let Some(t) = &app.ui.transform {
-        if near_handle(&t.quad, p, tol) {
+        if t.mode == crate::state::TransformMode::Distort {
+            // Distort is freehand corner placement (fitting an image onto a screen, say): guides
+            // and edges pulling the corners about only get in the way.
+            None
+        } else if near_handle(&t.quad, p, crate::transform_tool::handle_tolerance(app)) {
             Some((Gesture::Point, vec![LayerId(t.layer)]))
         } else if in_quad(&t.quad, p) {
             Some((Gesture::TransformMove { rect: quad_rect(&t.quad) }, vec![LayerId(t.layer)]))
@@ -350,6 +355,8 @@ mod tests {
         app.ui.tool = Tool::Move;
         app.ui.view.show.smart_guides = false;
         app.ui.extras.snap = false;
+        // The presses land beside the moved layer: keep moving it (no Auto-Select pick).
+        app.ui.tool_options.move_auto_select = false;
         let m = egui::Modifiers::NONE;
         crate::canvas::tool_event(&mut app, ToolEvent::Down { x: 60.0, y: 60.0, pressure: 1.0 }, m);
         crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 323.0, y: 100.0 }, m);
@@ -381,10 +388,27 @@ mod tests {
         assert_eq!((sel.x0, sel.y0, sel.x1), (0, 0, 120));
         // Zoomed in to 800%, 4 px is beyond the 1 px threshold: no snap.
         app.ui.views[0].zoom = 8.0;
+        // (Deselect first: a drag starting inside the selection would move it.)
+        app.run("select.deselect", json!({})).unwrap();
         crate::canvas::tool_event(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 }, m);
         crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 116.0, y: 50.0 }, m);
         let sel = app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();
         assert_eq!(sel.x1, 116);
+    }
+
+    #[test]
+    fn distort_mode_never_snaps() {
+        let mut app = app_with_box();
+        let ctx = egui::Context::default();
+        crate::menus::invoke(&mut app, &ctx, "edit.transform.distort", json!({})).unwrap();
+        let q = app.ui.transform.as_ref().unwrap().quad;
+        let m = egui::Modifiers::NONE;
+        // Drag the top-right corner to 2 px short of the target's right edge (x = 350).
+        crate::canvas::tool_event(&mut app, ToolEvent::Down { x: q[1][0], y: q[1][1], pressure: 1.0 }, m);
+        crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 348.0, y: q[1][1] }, m);
+        let q = app.ui.transform.as_ref().unwrap().quad;
+        assert_eq!(q[1][0], 348.0, "the corner stays where it was dropped");
+        assert!(app.prefs_rt.snap_lines.is_empty());
     }
 
     #[test]

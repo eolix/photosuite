@@ -111,6 +111,7 @@ fn prepare_pattern(b: &BrushSettings) -> Option<Arc<PatternImage>> {
 
 impl BrushContext {
     pub fn new(brush: &BrushSettings) -> Self {
+        let brush = brush.bounded_for_render();
         let mips = |t: &TipShape| match t {
             TipShape::Sampled(g) if g.is_valid() => Some(Arc::new(Mips::new(g))),
             _ => None,
@@ -118,8 +119,8 @@ impl BrushContext {
         Self {
             tip: mips(&brush.tip),
             dual_tip: if brush.dual_brush.enabled { mips(&brush.dual_brush.tip) } else { None },
-            texture: prepare_pattern(brush),
-            brush: brush.clone(),
+            texture: prepare_pattern(&brush),
+            brush,
         }
     }
 
@@ -365,6 +366,30 @@ impl CoverageMap {
         v.sort_unstable();
         v
     }
+
+    /// Union two passes of the same brush stroke without applying opacity twice where they
+    /// overlap. The stronger coverage wins, including its per-dab colour when present.
+    fn union_max(&mut self, other: &Self) {
+        self.bounds = self.bounds.union(&other.bounds);
+        for (&key, source) in &other.tiles {
+            let Some(target) = self.tiles.get_mut(&key) else {
+                self.tiles.insert(key, source.clone());
+                self.dirty.insert(key);
+                continue;
+            };
+            for (index, (dst, src)) in target.cov.iter_mut().zip(&source.cov).enumerate() {
+                if *src > *dst {
+                    *dst = *src;
+                    let start = index.saturating_mul(self.nc);
+                    let end = start.saturating_add(self.nc);
+                    if let (Some(dst_color), Some(src_color)) = (target.col.get_mut(start..end), source.col.get(start..end)) {
+                        dst_color.copy_from_slice(src_color);
+                    }
+                }
+            }
+            self.dirty.insert(key);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -388,6 +413,16 @@ pub struct StrokeRenderer {
 }
 
 impl StrokeRenderer {
+    /// Composite the union of this stroke and a mirrored pass as one stroke. This keeps
+    /// overlapping dabs on a symmetry axis under one opacity ceiling at every bit depth.
+    pub fn composite_union(&self, other: &Self, pre: &Surface, target: &mut Surface, selection: Option<&Surface>, lock_transparency: bool) -> Rect {
+        let mut merged = self.clone();
+        merged.cov.union_max(&other.cov);
+        if let (Some(to), Some(from)) = (&mut merged.dual, &other.dual) {
+            to.union_max(from);
+        }
+        merged.composite(pre, target, selection, lock_transparency, true)
+    }
     /// `fmt` = target pixel format (needed for per-dab colour); `zoom` for smoothing.
     pub fn new(brush: &BrushSettings, fmt: Option<PixelFormat>, zoom: f32) -> Self {
         let per_dab_color = brush.color_dynamics.enabled && !brush.erase && fmt.is_some();

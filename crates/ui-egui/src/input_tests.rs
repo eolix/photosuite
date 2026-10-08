@@ -133,9 +133,151 @@ fn clicking_outside_a_dialog_keeps_it_open_and_the_canvas_pans_and_zooms() {
     assert!(h.state().ui.dialogs.is_empty());
 }
 
+fn press(h: &mut Harness<'static, PhotosuiteApp>, p: Pos2, pressed: bool) {
+    h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+}
+
+fn picker_color(h: &Harness<'static, PhotosuiteApp>) -> String {
+    let d = h.state().ui.dialogs.last().unwrap();
+    d.fields.get("color").and_then(serde_json::Value::as_str).unwrap().to_string()
+}
+
+/// The Color Picker's eyedropper, as in Photoshop: over the image the pointer is a pipette, and a
+/// click or drag there samples into the picker's new colour, whatever the tool. OK applies it.
+#[test]
+fn color_picker_samples_the_image_under_its_pipette() {
+    let mut h = harness();
+    h.state_mut().run("shape.create", json!({"kind": "rect", "rect": [0, 0, 200, 300], "fill": "#ff0000"})).unwrap();
+    h.state_mut().run("shape.create", json!({"kind": "rect", "rect": [200, 0, 200, 300], "fill": "#00ff00"})).unwrap();
+    // 400 %: the image covers the whole canvas, red on the left of the dialog, green on its right.
+    let v = &mut h.state_mut().ui.views[0];
+    (v.zoom, v.center, v.fit_pending) = (4.0, [200.0, 150.0], false);
+    crate::color_picker_ui::open(h.state_mut(), "foreground");
+    h.run_steps(3);
+    let r = h.state().last_canvas_rect;
+    let (red, green) = (pos2(r.left() + 60.0, r.center().y), pos2(r.right() - 60.0, r.center().y));
+    assert_eq!(doc_at(&h, red)[0] < 200.0, doc_at(&h, green)[0] > 200.0);
+    let foreground = h.state().session.tools.foreground;
+
+    h.hover_at(red);
+    h.run_steps(1);
+    assert_eq!(h.output().platform_output.cursor_icon, egui::CursorIcon::None, "the pipette replaces the pointer");
+    h.hover_at(r.center());
+    h.run_steps(1);
+    assert_ne!(h.output().platform_output.cursor_icon, egui::CursorIcon::None, "over the dialog it is the normal pointer");
+
+    // A click samples; the press and release may land in one frame (`ui.click`).
+    h.hover_at(red);
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton { pos: red, button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    press(&mut h, red, false);
+    assert_eq!(picker_color(&h), "#ff0000");
+    assert_eq!(h.state().session.tools.foreground, foreground, "only OK sets the foreground");
+
+    // A drag keeps sampling, skipping the dialog on the way.
+    press(&mut h, red, true);
+    for i in 1..=6 {
+        h.hover_at(red + (green - red) * (i as f32 / 6.0));
+        h.run_steps(1);
+    }
+    press(&mut h, green, false);
+    assert_eq!(picker_color(&h), "#00ff00");
+
+    // Space-drag still pans instead of sampling.
+    h.hover_at(red);
+    h.run_steps(1);
+    let c0 = h.state().ui.views[0].center;
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(1);
+    press(&mut h, red, true);
+    h.hover_at(red + vec2(40.0, 0.0));
+    h.run_steps(1);
+    press(&mut h, red + vec2(40.0, 0.0), false);
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    let c1 = h.state().ui.views[0].center;
+    assert!((c1[0] - (c0[0] - 10.0)).abs() < 0.5, "space-drag pans by 40 pt at 400 %: {c0:?} -> {c1:?}");
+    assert_eq!(picker_color(&h), "#00ff00");
+
+    // With the Hand tool a click samples too (the tool doesn't matter); OK applies the sample.
+    h.state_mut().ui.tool = crate::state::Tool::Hand;
+    h.hover_at(red);
+    h.run_steps(1);
+    press(&mut h, red, true);
+    press(&mut h, red, false);
+    assert_eq!(picker_color(&h), "#ff0000");
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().ui.dialogs.is_empty());
+    assert_eq!(h.state().session.tools.foreground, [1.0, 0.0, 0.0, 1.0]);
+}
+
 /// Type tool (#206): Alt+←/→ at a collapsed caret kerns the pair before it by 20/1000 em (100
 /// with ⌘/Ctrl), one history step per press; ⌘/Ctrl+←/→ moves by word; Alt+Shift+→ extends
 /// the selection by a word.
+fn wheel(h: &Harness<'static, PhotosuiteApp>, dy: f32, modifiers: Modifiers) {
+    h.event_modifiers(egui::Event::MouseWheel { unit: egui::MouseWheelUnit::Line, delta: vec2(0.0, dy), phase: egui::TouchPhase::Move, modifiers }, modifiers);
+}
+
+/// The document point under screen point `p` (no flip).
+fn doc_at(h: &Harness<'static, PhotosuiteApp>, p: Pos2) -> [f32; 2] {
+    let v = &h.state().ui.views[0];
+    let c = h.state().last_canvas_rect.center();
+    [v.center[0] + (p.x - c.x) / v.zoom, v.center[1] + (p.y - c.y) / v.zoom]
+}
+
+#[test]
+fn alt_scroll_zooms_gently_around_the_pointer() {
+    let mut h = harness();
+    let r = h.state().last_canvas_rect;
+    let p = pos2(r.center().x + 120.0, r.center().y - 70.0);
+    h.hover_at(p);
+    h.run_steps(2);
+    let (z0, d0) = (zoom(&h), doc_at(&h, p));
+    // One notch with ⌥ held: +5%, the point under the pointer stays put. The modifiers are
+    // released right after the event, while egui still smooths the notch over later frames.
+    wheel(&h, 1.0, Modifiers::ALT);
+    h.run_steps(40);
+    let (z1, d1) = (zoom(&h), doc_at(&h, p));
+    assert!((z1 / z0 - 1.05).abs() < 1e-3, "one ⌥ notch is 5%: {z0} -> {z1}");
+    assert!((d1[0] - d0[0]).abs() < 0.05 && (d1[1] - d0[1]).abs() < 0.05, "centred on the pointer: {d0:?} -> {d1:?}");
+    // Three notches back out.
+    wheel(&h, -3.0, Modifiers::ALT);
+    h.run_steps(40);
+    assert!((zoom(&h) / z1 - 1.05f32.powi(-3)).abs() < 1e-3, "{z1} -> {}", zoom(&h));
+
+    // A plain notch still pans, and does not zoom.
+    let (z2, c2) = (zoom(&h), h.state().ui.views[0].center);
+    wheel(&h, -1.0, Modifiers::NONE);
+    h.run_steps(40);
+    assert_eq!(zoom(&h), z2, "a plain scroll never zooms");
+    assert!(h.state().ui.views[0].center[1] > c2[1], "a plain scroll pans");
+
+    // ⌘/Ctrl + scroll is still the faster gesture zoom.
+    wheel(&h, 1.0, Modifiers::COMMAND);
+    h.run_steps(40);
+    assert!(zoom(&h) / z2 > 1.05, "⌘-scroll zooms in bigger steps: {z2} -> {}", zoom(&h));
+}
+
+#[test]
+fn alt_scroll_zooms_while_a_temporary_tool_is_held() {
+    let mut h = harness();
+    let p = h.state().last_canvas_rect.center();
+    h.hover_at(p);
+    // Space (the temporary Hand, #249) is down: ⌥ + scroll still zooms by notches, and the
+    // held key never changes the current tool.
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    let z0 = zoom(&h);
+    wheel(&h, 2.0, Modifiers::ALT);
+    h.run_steps(40);
+    assert!((zoom(&h) / z0 - 1.05f32.powi(2)).abs() < 1e-3, "{z0} -> {}", zoom(&h));
+    h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(2);
+    assert_eq!(h.state().ui.tool, crate::state::Tool::Brush);
+}
+
 #[test]
 fn type_tool_alt_arrows_kern_the_pair() {
     use photosuite_doc::text::Kerning;
@@ -155,8 +297,16 @@ fn type_tool_alt_arrows_kern_the_pair() {
     };
     let steps = |h: &Harness<'static, PhotosuiteApp>| h.state().session.active().unwrap().history.entries().len();
     let metric = photosuite_text::shared().lock().unwrap().pair_kerning(&text(&h), 72.0, 0).unwrap().round();
-    h.state_mut().ui.text_edit =
-        Some(crate::state::TextEdit { layer: id, caret: 1, anchor: 1, session: "kern-test".into(), created: false, dragging: false, preedit: None });
+    h.state_mut().ui.text_edit = Some(crate::state::TextEdit {
+        layer: id,
+        caret: 1,
+        anchor: 1,
+        session: "kern-test".into(),
+        created: false,
+        dragging: false,
+        resize: None,
+        preedit: None,
+    });
     h.run_steps(2);
     let s0 = steps(&h);
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowRight);

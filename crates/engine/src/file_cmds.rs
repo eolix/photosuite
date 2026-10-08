@@ -75,8 +75,10 @@ fn is_file(_path: &str) -> bool {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Every file the engine opens is read here: in bounded reads, with a clear error when it does
+/// not fit in memory (see [`photosuite_format::read`]).
 pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
-    std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))
+    photosuite_format::read_file(std::path::Path::new(path)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
 }
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
@@ -122,6 +124,34 @@ pub(crate) fn file_name(path: &str) -> String {
     path.rsplit(['/', '\\']).next().unwrap_or(path).to_string()
 }
 
+/// The lower-case extension of the file name in `path` (none for `.hidden` or `name`).
+pub fn extension(path: &str) -> Option<String> {
+    file_name(path).rsplit_once('.').filter(|(base, ext)| !base.is_empty() && !ext.is_empty()).map(|(_, ext)| ext.to_ascii_lowercase())
+}
+
+/// Whether a save without a new path may write back to `path`: only layered files (PSD, PSB,
+/// .pcraft). A flat file goes through Save As instead, so it is never flattened over the original.
+pub fn saves_in_place(path: &str) -> bool {
+    extension(path).is_some_and(|ext| matches!(ext.as_str(), "psd" | "psb" | "pcraft"))
+}
+
+/// Whether `path` names a document template (.psdt). A template opens as a new untitled document
+/// without its path, so a save never writes over the template.
+pub fn is_template(path: &str) -> bool {
+    extension(path).as_deref() == Some("psdt")
+}
+
+/// The first "`base`-N" that isn't `taken`.
+pub fn untitled_name(base: &str, taken: impl Fn(&str) -> bool) -> String {
+    (1..).map(|i| format!("{base}-{i}")).find(|n| !taken(n)).unwrap_or_default()
+}
+
+/// The name a document opened from `path` gets when `path` is a template: the first "Untitled-N"
+/// no open document has.
+pub fn template_name(s: &Session, path: &str) -> Option<String> {
+    is_template(path).then(|| untitled_name("Untitled", |n| s.documents().iter().any(|d| d.doc.name == n)))
+}
+
 pub(crate) fn stem(path: &str) -> String {
     let n = file_name(path);
     match n.rfind('.') {
@@ -151,17 +181,45 @@ pub(crate) fn import(name: &str, bytes: &[u8]) -> Result<Document> {
     photosuite_io::import(name, bytes).map(|r| r.document).map_err(|e| EngineError::Other(format!("{name}: {e}")))
 }
 
-/// Encodes `doc` for `path`'s extension. `quality` is Photoshop's 0–12 JPEG scale.
-pub(crate) fn encode(doc: &Document, path: &str, quality: Option<f64>) -> Result<(Vec<u8>, Vec<String>)> {
-    let mut opts = photosuite_io::ExportOptions::default();
-    if let Some(q) = quality {
+/// What a headless save writes beyond the format: JPEG quality and TIFF layers.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct SaveOpts {
+    /// Photoshop's 0–12 JPEG scale.
+    pub quality: Option<f64>,
+    /// TIFF: keep the layers. Off unless a command's params ask (`"tiffLayers": true`).
+    pub tiff_layers: bool,
+}
+
+impl SaveOpts {
+    /// `quality` and `tiffLayers` from a command's params.
+    pub(crate) fn from_params(p: &Value) -> Self {
+        SaveOpts { quality: f64_param(p, "quality"), tiff_layers: p.get("tiffLayers").and_then(Value::as_bool).unwrap_or(false) }
+    }
+
+    pub(crate) fn or_quality(mut self, q: f64) -> Self {
+        self.quality = self.quality.or(Some(q));
+        self
+    }
+}
+
+impl From<Option<f64>> for SaveOpts {
+    fn from(quality: Option<f64>) -> Self {
+        SaveOpts { quality, ..Default::default() }
+    }
+}
+
+/// Encodes `doc` for `path`'s extension.
+pub(crate) fn encode(doc: &Document, path: &str, save: impl Into<SaveOpts>) -> Result<(Vec<u8>, Vec<String>)> {
+    let save = save.into();
+    let mut opts = photosuite_io::ExportOptions { tiff_layers: save.tiff_layers, ..Default::default() };
+    if let Some(q) = save.quality {
         opts.encode.jpeg_quality = (q.clamp(0.0, 12.0) / 12.0 * 99.0 + 1.0).round() as u8;
     }
     photosuite_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
 }
 
-pub(crate) fn save_doc(doc: &Document, path: &str, quality: Option<f64>) -> Result<Vec<String>> {
-    let (bytes, warnings) = encode(doc, path, quality)?;
+pub(crate) fn save_doc(doc: &Document, path: &str, save: impl Into<SaveOpts>) -> Result<Vec<String>> {
+    let (bytes, warnings) = encode(doc, path, save)?;
     write_file(path, &bytes)?;
     Ok(warnings)
 }
@@ -256,7 +314,7 @@ fn save_a_copy(s: &mut Session, p: &Value) -> Result<Value> {
         let px = flattened(&doc, fmt);
         doc.layers = vec![Layer::new("Background", LayerContent::Raster(px))];
     }
-    let warnings = save_doc(&doc, &path, f64_param(p, "quality"))?;
+    let warnings = save_doc(&doc, &path, SaveOpts::from_params(p))?;
     Ok(json!({"path": path, "warnings": warnings}))
 }
 
@@ -268,7 +326,16 @@ pub fn open_bytes_as(s: &mut Session, name: &str, bytes: &[u8], as_ext: Option<&
     };
     let r = photosuite_io::import(&decode_name, bytes).map_err(|e| EngineError::Other(format!("{decode_name}: {e}")))?;
     let mut doc = r.document;
-    doc.name = file_name(name);
+    let path = match template_name(s, name) {
+        Some(untitled) => {
+            doc.name = untitled;
+            None
+        }
+        None => {
+            doc.name = file_name(name);
+            path
+        }
+    };
     // Color Settings policies (preserve / convert / discard the embedded profile).
     let (i, color) = s.open_document(doc, path);
     // Import notes (e.g. how a camera raw was developed, or that only its preview opened).
@@ -305,6 +372,9 @@ fn import_pdf(s: &mut Session, p: &Value) -> Result<Value> {
 
 // ---------- place ----------
 
+/// History label of an embedded place.
+pub const PLACE_EMBEDDED: &str = "Place Embedded";
+
 /// Place a file's bytes as a smart object layer, centred and (when larger than the canvas)
 /// scaled down to fit, like Photoshop's Place with "Resize Image During Place". `linked` makes it
 /// a linked smart object that refers to that path instead of embedding the bytes.
@@ -335,7 +405,7 @@ pub fn place_bytes(s: &mut Session, name: &str, bytes: Vec<u8>, linked: Option<S
     };
     let so = SmartObject::new(source, Affine { m: [scale, 0.0, 0.0, scale, dx, dy] }, Some(px));
     let layer_name = stem(name);
-    let label = if matches!(so.source, SmartSource::Linked { .. }) { "Place Linked" } else { "Place Embedded" };
+    let label = if matches!(so.source, SmartSource::Linked { .. }) { "Place Linked" } else { PLACE_EMBEDDED };
     let id = s.edit(label, |doc, active| {
         let id = doc.insert_above(*active, Layer::new(layer_name, LayerContent::Smart(so)));
         *active = Some(id);
@@ -616,39 +686,55 @@ pub(crate) fn batch_inputs(p: &Value, cmd: &str) -> Result<Vec<String>> {
 
 /// Opens each input in a scratch session, runs `f` on it and saves it to `output` as `format`
 /// (`"same"` keeps the input's extension). Errors per file are collected, not fatal.
-pub(crate) fn process_files(
-    inputs: &[String],
-    output: &str,
-    format: &str,
-    quality: Option<f64>,
-    suffix: &str,
-    f: &dyn Fn(&mut Session) -> Result<()>,
-) -> Value {
+pub(crate) fn process_files(inputs: &[String], output: &str, format: &str, save: SaveOpts, suffix: &str, f: &dyn Fn(&mut Session) -> Result<()>) -> Value {
     let mut files = Vec::new();
     let mut errors = Vec::new();
+    let mut written = OutputClaims::default();
     for path in inputs {
-        let r = (|| -> Result<String> {
+        let ext =
+            if format == "same" { path.rsplit('.').next().unwrap_or("png").to_ascii_lowercase() } else { format.trim_start_matches('.').to_ascii_lowercase() };
+        let out = join(output, &format!("{}{suffix}.{ext}", stem(path)));
+        let r = (|| -> Result<()> {
+            written.check(&out).map_err(EngineError::Other)?;
             let bytes = read_file(path)?;
             let mut scratch = Session::new();
             let doc = import(&file_name(path), &bytes)?;
             scratch.add_document(doc, Some(path.clone()));
             f(&mut scratch)?;
-            let ext = if format == "same" {
-                path.rsplit('.').next().unwrap_or("png").to_ascii_lowercase()
-            } else {
-                format.trim_start_matches('.').to_ascii_lowercase()
-            };
-            let out = join(output, &format!("{}{suffix}.{ext}", stem(path)));
             let d = scratch.active().ok_or(EngineError::NoDocument)?;
-            save_doc(&d.doc, &out, quality)?;
-            Ok(out)
+            save_doc(&d.doc, &out, save)?;
+            Ok(())
         })();
         match r {
-            Ok(out) => files.push(out),
+            Ok(()) => {
+                written.record(&out, path);
+                files.push(out);
+            }
             Err(e) => errors.push(json!({"file": path, "error": e.to_string()})),
         }
     }
     json!({"files": files, "errors": errors})
+}
+
+/// The output paths a batch run has written, so a later input whose output name matches an
+/// earlier one's (`a.png` and `a.jpg` saved as JPEG, or the same name in two input folders) is
+/// reported instead of silently replacing that result (#420, #422). Names are compared ignoring
+/// case, because macOS and Windows file systems do.
+#[derive(Default)]
+pub struct OutputClaims(std::collections::HashMap<String, String>);
+
+impl OutputClaims {
+    /// `Err` (naming the earlier input) when `out` was already written in this run.
+    pub fn check(&self, out: &str) -> std::result::Result<(), String> {
+        match self.0.get(&out.to_lowercase()) {
+            Some(first) => Err(format!("not written: {out} already holds the result of {first} from this run (same output name)")),
+            None => Ok(()),
+        }
+    }
+    /// Remember that `input`'s result was written to `out`.
+    pub fn record(&mut self, out: &str, input: &str) {
+        self.0.insert(out.to_lowercase(), input.to_string());
+    }
 }
 
 fn batch(_s: &mut Session, p: &Value) -> Result<Value> {
@@ -661,7 +747,7 @@ fn batch(_s: &mut Session, p: &Value) -> Result<Value> {
     let inputs = batch_inputs(p, cmd)?;
     let output = str_param(p, "output", cmd)?.to_string();
     let format = p.get("format").and_then(Value::as_str).unwrap_or("same").to_string();
-    let r = process_files(&inputs, &output, &format, f64_param(p, "quality"), "", &|scratch| {
+    let r = process_files(&inputs, &output, &format, SaveOpts::from_params(p), "", &|scratch| {
         for (id, params) in &steps {
             scratch.execute(id, params.clone())?;
         }
@@ -680,7 +766,7 @@ fn image_processor(_s: &mut Session, p: &Value) -> Result<Value> {
         (w, h) => Some(json!({"width": w.unwrap_or(1e9), "height": h.unwrap_or(1e9), "dontEnlarge": true})),
     };
     let to_srgb = p.get("convertToSrgb").and_then(Value::as_bool).unwrap_or(false);
-    let r = process_files(&inputs, &output, &format, f64_param(p, "quality").or(Some(8.0)), "", &|scratch| {
+    let r = process_files(&inputs, &output, &format, SaveOpts::from_params(p).or_quality(8.0), "", &|scratch| {
         if to_srgb && scratch.active().is_some_and(|d| d.doc.mode != ColorMode::Rgb) {
             scratch.execute("image.mode.rgb", json!({}))?;
         }
@@ -837,7 +923,7 @@ fn layers_to_files(s: &mut Session, p: &Value) -> Result<Value> {
         only.clipped = false;
         one.layers = vec![only];
         let path = join(&dir, &format!("{}_{:04}_{}.{format}", sanitize(&prefix), i, sanitize(&l.name)));
-        save_doc(&one, &path, f64_param(p, "quality"))?;
+        save_doc(&one, &path, SaveOpts::from_params(p))?;
         files.push(path);
     }
     Ok(json!({"files": files}))
@@ -937,8 +1023,19 @@ fn new_guide_layout(s: &mut Session, p: &Value) -> Result<Value> {
         _ => [0.0; 4],
     };
     let [top, left, bottom, right] = m;
-    let cols = p.get("columns").and_then(Value::as_u64).unwrap_or(0) as u32;
-    let rows = p.get("rows").and_then(Value::as_u64).unwrap_or(0) as u32;
+    let cols = p.get("columns").and_then(Value::as_u64).unwrap_or(0);
+    let rows = p.get("rows").and_then(Value::as_u64).unwrap_or(0);
+    // Each column/row costs a loop iteration plus a duplicate scan, so an
+    // absurd count from the caller would block the app for minutes (#704).
+    // Photoshop's own dialog caps at 32; 1000 is a generous ceiling that
+    // still finishes instantly.
+    const MAX_GUIDE_LINES: u64 = 1000;
+    for (n, what) in [(cols, "columns"), (rows, "rows")] {
+        if n > MAX_GUIDE_LINES {
+            return Err(EngineError::BadParams { cmd: "view.newGuideLayout".into(), msg: format!("{what} must be {MAX_GUIDE_LINES} or fewer (got {n})") });
+        }
+    }
+    let (cols, rows) = (cols as u32, rows as u32);
     let mut v: Vec<f32> = Vec::new();
     let mut h: Vec<f32> = Vec::new();
     let has_margin = m.iter().any(|x| *x != 0.0);
@@ -1035,7 +1132,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Save a Copy…",
             &["File"],
             Some("Cmd+Alt+S"),
-            r##"{"path":str (format from the extension),"quality":0..12? (JPEG),"layers":bool=true}"##,
+            r##"{"path":str (format from the extension),"quality":0..12? (JPEG),"layers":bool=true,"tiffLayers":bool=false (TIFF: keep the layers; flat by default)}"##,
             native_doc,
             save_a_copy
         ),
@@ -1101,7 +1198,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Batch…",
             &["File", "Automate"],
             None,
-            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?} → {files, errors}"##,
+            r##"{"steps":[[commandId,params]|{"command":id,"params":{}}…] (a recorded action),"input":folder|[paths],"output":folder,"format":"same|png|jpg|psd|tiff|…"="same","quality":0..12?,"tiffLayers":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             batch
         ),
@@ -1110,7 +1207,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Image Processor…",
             &["File", "Scripts"],
             None,
-            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors}"##,
+            r##"{"input":folder|[paths],"output":folder,"format":"jpg|png|psd|tiff|…"="jpg","quality":0..12=8,"tiffLayers":bool=false,"width":px?,"height":px? (fit, never enlarge),"convertToSrgb":bool=false} → {files, errors} (an input whose output name was already written in the run goes to errors)"##,
             native,
             image_processor
         ),
@@ -1138,7 +1235,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Layers to Files…",
             &["File", "Export"],
             None,
-            r##"{"dir":folder,"format":"png|jpg|psd|tiff|…"="png","prefix":str=document name,"visibleOnly":bool=true,"quality":0..12?} → {files}"##,
+            r##"{"dir":folder,"format":"png|jpg|psd|tiff|…"="png","prefix":str=document name,"visibleOnly":bool=true,"quality":0..12?,"tiffLayers":bool=false} → {files}"##,
             native_doc,
             layers_to_files
         ),

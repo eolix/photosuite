@@ -7,7 +7,7 @@
 //! command, so it is journaled, drivable, and persisted by the preset store.
 
 use egui::{Color32, RichText, Sense, Stroke, pos2, vec2};
-use photosuite_engine::paint::BrushPreset;
+use photosuite_engine::paint::{BrushPreset, MAX_BRUSH_SIZE};
 use serde_json::json;
 
 use crate::brush_panel::{BrushesView, Renaming, UNGROUPED, WIDTH, commit_gesture, full_uv, grouped_presets, is_current, new_preset_name, run_or_status};
@@ -92,18 +92,6 @@ pub fn apply(app: &mut PhotosuiteApp, acts: Vec<Action>) {
     }
 }
 
-/// An accent insertion line on one edge of `r` while a drag hovers it.
-fn drop_line(ui: &egui::Ui, r: egui::Rect, after: bool, vertical: bool, t: &Tokens) {
-    let s = Stroke::new(2.0, t.accent);
-    if vertical {
-        let x = if after { r.right() } else { r.left() };
-        ui.painter().line_segment([pos2(x, r.top() + 2.0), pos2(x, r.bottom() - 2.0)], s);
-    } else {
-        let y = if after { r.bottom() } else { r.top() };
-        ui.painter().line_segment([pos2(r.left() + 4.0, y), pos2(r.right() - 4.0, y)], s);
-    }
-}
-
 /// Is the pointer on the second half of `r` (lower in a list, right in a grid)?
 fn second_half(ui: &egui::Ui, r: egui::Rect, grid: bool) -> bool {
     ui.ctx().pointer_interact_pos().is_some_and(|p| if grid { p.x > r.center().x } else { p.y > r.center().y })
@@ -116,7 +104,7 @@ fn preset_interactions(ui: &egui::Ui, resp: &egui::Response, r: egui::Rect, p: &
     if let Some(d) = resp.dnd_hover_payload::<BrushDrag>()
         && matches!(&*d, BrushDrag::Preset(n) if *n != p.name)
     {
-        drop_line(ui, r, second_half(ui, r, grid), grid, &t);
+        widgets::drop_line(ui, r, second_half(ui, r, grid), grid, &t);
     }
     if let Some(d) = resp.dnd_release_payload::<BrushDrag>()
         && let BrushDrag::Preset(n) = &*d
@@ -225,7 +213,7 @@ fn group_header(ui: &mut egui::Ui, label: &str, key: &str, open: bool, count: us
     resp.dnd_set_drag_payload(BrushDrag::Group(key.to_string()));
     if let Some(d) = resp.dnd_hover_payload::<BrushDrag>() {
         match &*d {
-            BrushDrag::Group(g) if g != key => drop_line(ui, r, false, false, &t),
+            BrushDrag::Group(g) if g != key => widgets::drop_line(ui, r, false, false, &t),
             BrushDrag::Preset(_) => {
                 ui.painter().rect_stroke(r, t.radius_sm, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
             }
@@ -270,10 +258,17 @@ fn rename_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, acts: &mut Vec<Action>
             resp.request_focus();
         }
         let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if widgets::primary_button(ui, "OK", 52.0).clicked() || enter {
+        let clicked = widgets::dialog_buttons(
+            ui,
+            &[
+                widgets::DialogButton::new(widgets::ButtonRole::Default, tl!("OK"), 52.0),
+                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 60.0),
+            ],
+        );
+        if clicked == Some(widgets::ButtonRole::Default) || enter {
             acts.push(Action::Rename(r.clone()));
         }
-        if widgets::secondary_button(ui, "Cancel", 60.0).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        if clicked == Some(widgets::ButtonRole::Cancel) || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             cancel = true;
         }
     });
@@ -293,15 +288,15 @@ pub fn show(app: &mut PhotosuiteApp, ui: &mut egui::Ui) {
         ui.label(RichText::new(tl!("Size")).color(t.text_dim));
         let mut lv = b.size.max(1.0).ln();
         ui.add_sized(vec2(WIDTH - 140.0, 18.0), |ui: &mut egui::Ui| {
-            let r = widgets::slider(ui, &mut lv, 0.0..=5000f32.ln(), None);
+            let r = widgets::slider(ui, &mut lv, 0.0..=MAX_BRUSH_SIZE.ln(), None);
             if r.changed() {
-                b.size = lv.exp().round().clamp(1.0, 5000.0);
+                b.size = lv.exp().round().clamp(1.0, MAX_BRUSH_SIZE);
             }
             r
         });
         let mut s = b.size;
-        if widgets::value_field(ui, &mut s, 1.0..=5000.0, "px", 74.0).changed() {
-            b.size = s.round().clamp(1.0, 5000.0);
+        if widgets::value_field(ui, &mut s, 1.0..=MAX_BRUSH_SIZE, "px", 74.0).changed() {
+            b.size = s.round().clamp(1.0, MAX_BRUSH_SIZE);
         }
     });
     commit_gesture(app, ui.ctx(), &before, &b);

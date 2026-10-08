@@ -11,7 +11,7 @@ use crate::state::DialogKind;
 use crate::theme::Tokens;
 use crate::{ExportSettings, PhotosuiteApp};
 
-const FORMATS: [(&str, &str); 5] = [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP"), ("webpLossless", "WebP (lossless)"), ("tif", "TIFF")];
+const FORMATS: [(&str, &str); 6] = [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP"), ("webpLossless", "WebP (lossless)"), ("tif", "TIFF"), ("tga", "TGA")];
 
 /// The file extension a format choice writes.
 fn file_ext(fmt: &str) -> &str {
@@ -103,7 +103,7 @@ fn s_fmt(f: &Map<String, Value>) -> String {
 fn settings(f: &Map<String, Value>) -> ExportSettings {
     let fmt = s_fmt(f);
     let q = n(f, "quality", 85.0).clamp(1.0, 100.0) as u8;
-    ExportSettings { jpeg_quality: (fmt == "jpg").then_some(q), webp_quality: (fmt == "webp").then_some(q) }
+    ExportSettings { jpeg_quality: (fmt == "jpg").then_some(q), webp_quality: (fmt == "webp").then_some(q), ..Default::default() }
 }
 
 /// Estimated size (bytes) from a ≤512 px proxy encode, scaled by pixel count.

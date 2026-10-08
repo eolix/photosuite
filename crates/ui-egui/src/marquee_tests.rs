@@ -204,3 +204,89 @@ fn marquee_drag_bench() {
     eprintln!("marquee drag on 6000x4000 (shift+alt, readout): {ms:.2} ms per frame");
     assert!(h.query_by_label("W:").is_some());
 }
+
+/// An 80×60 transparent document, red over (10..30)², that square selected, Rectangular Marquee.
+fn painted() -> (PhotosuiteApp, photosuite_doc::LayerId) {
+    let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+    app.run("file.new", json!({"width": 80, "height": 60, "background": "transparent"})).unwrap();
+    app.sync_views();
+    app.ui.extras.snap = false;
+    app.ui.tool = Tool::RectMarquee;
+    let layer = app.session.active().unwrap().active_layer.unwrap();
+    app.session
+        .edit("paint", |doc, _| {
+            doc.layer_mut(layer).unwrap().surface_mut().unwrap().fill_rect(Rect::new(10, 10, 30, 30), &[1.0, 0.0, 0.0, 1.0]);
+            Ok(())
+        })
+        .unwrap();
+    app.run("select.rect", json!({"x": 10, "y": 10, "width": 20, "height": 20})).unwrap();
+    (app, layer)
+}
+
+fn drag(app: &mut PhotosuiteApp, from: [f64; 2], to: [f64; 2], m: Modifiers) {
+    use crate::canvas::{ToolEvent, tool_event};
+    tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
+    tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
+    tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
+}
+
+/// A drag inside the ants moves the outline (`select.transformSelection`); ⇧ still draws (adds);
+/// a click inside deselects.
+#[test]
+fn drag_inside_the_selection_moves_the_outline() {
+    let (mut app, layer) = painted();
+    let sel = |app: &PhotosuiteApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
+    drag(&mut app, [20.0, 20.0], [30.0, 25.0], Modifiers::NONE);
+    assert_eq!(sel(&app), Some(Rect::new(20, 15, 40, 35)));
+    assert_eq!(app.session.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().rgba(12, 12)[3], 1.0, "pixels stay put");
+    drag(&mut app, [30.0, 20.0], [60.0, 50.0], Modifiers::SHIFT);
+    assert_eq!(sel(&app), Some(Rect::new(20, 15, 60, 50)));
+    drag(&mut app, [30.0, 20.0], [30.0, 20.0], Modifiers::NONE);
+    assert_eq!(sel(&app), None);
+}
+
+/// ⌘-drag cuts the selected pixels into a floating piece (`select.float`): shown at the pointer
+/// while dragging, moved again by plain drags, put back by Undo, dropped by Deselect.
+#[test]
+fn cmd_drag_floats_the_selected_pixels() {
+    use crate::canvas::{ToolEvent, tool_event};
+    let (mut app, layer) = painted();
+    let alpha = |d: &photosuite_doc::Document, x, y| d.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
+    let doc = |app: &PhotosuiteApp| app.session.active().unwrap().doc.clone();
+    let offset = |app: &PhotosuiteApp| photosuite_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
+    let steps = app.session.active().unwrap().history.past_len();
+    tool_event(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, Modifiers::COMMAND);
+    tool_event(&mut app, ToolEvent::Move { x: 35.0, y: 20.0, pressure: 1.0 }, Modifiers::COMMAND);
+    let (shown, _) = crate::move_ui::display_doc(&mut app, 0).expect("the piece shows at the pointer while dragging");
+    assert!(alpha(&shown, 12, 20) == 0.0 && alpha(&shown, 40, 20) == 1.0);
+    tool_event(&mut app, ToolEvent::Up { x: 35.0, y: 20.0 }, Modifiers::COMMAND);
+    assert_eq!(offset(&app), Some((15, 0)));
+    assert_eq!(alpha(&doc(&app), 12, 20), 1.0, "the document waits for the drop");
+    // A plain drag on the piece moves it again.
+    drag(&mut app, [30.0, 20.0], [30.0, 30.0], Modifiers::NONE);
+    assert_eq!(offset(&app), Some((15, 10)));
+    assert_eq!(app.session.active().unwrap().history.past_len(), steps);
+    // Undo puts it back.
+    crate::menus::invoke(&mut app, &egui::Context::default(), "edit.undo", json!({})).unwrap();
+    assert!(offset(&app).is_none() && alpha(&doc(&app), 12, 20) == 1.0);
+    // Float again and deselect: dropped (one history step) where it was shown, then deselected.
+    drag(&mut app, [20.0, 20.0], [35.0, 30.0], Modifiers::COMMAND);
+    crate::menus::invoke(&mut app, &egui::Context::default(), "select.deselect", json!({})).unwrap();
+    let d = doc(&app);
+    assert!(d.selection.is_none() && offset(&app).is_none());
+    assert!(alpha(&d, 12, 12) == 0.0 && alpha(&d, 26, 21) == 1.0 && alpha(&d, 44, 39) == 1.0);
+    let labels: Vec<String> = app.session.active().unwrap().history.entries().into_iter().skip(steps + 1).map(|e| e.to_string()).collect();
+    assert_eq!(labels.first().map(String::as_str), Some("Move Selected Pixels"), "{labels:?}");
+}
+
+/// Through the real canvas (mouse events): a drag inside the ants moves the selection.
+#[test]
+fn mouse_drag_inside_the_selection_moves_it() {
+    let mut h = harness(Tool::RectMarquee);
+    press_at(&mut h, 100.0, 80.0, Modifiers::NONE);
+    release_at(&mut h, 200.0, 160.0, Modifiers::NONE);
+    assert_eq!(selection(&h), Rect::new(100, 80, 200, 160), "drawn");
+    press_at(&mut h, 150.0, 120.0, Modifiers::NONE);
+    release_at(&mut h, 170.0, 130.0, Modifiers::NONE);
+    assert_eq!(selection(&h), Rect::new(120, 90, 220, 170), "moved by (20, 10)");
+}

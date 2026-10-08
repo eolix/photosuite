@@ -1,13 +1,13 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
-default-members = ["crates/*", "apps/photosuite-cli", "xtask"]
+default-members = ["crates/*", "apps/photosuite", "apps/photosuite-cli", "xtask"]
 
 [workspace.package]
 version = "0.9.18"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-rust-version = "1.90"
+rust-version = "1.95"
 
 [workspace.dependencies]
 # internal

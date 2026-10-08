@@ -46,7 +46,12 @@ fn has_ident(text: &str, prefix: &str, ident: &str) -> bool {
 
 /// Production source of a file: everything before its unit-test module.
 fn production(text: &str) -> &str {
-    let cut = text.find("#[cfg(test)]\nmod ").or_else(|| text.find("#[cfg(test)]\npub mod ")).unwrap_or(text.len());
+    // Windows checkouts may use CRLF; test-only reads must stay excluded.
+    let cut = ["#[cfg(test)]\nmod ", "#[cfg(test)]\r\nmod ", "#[cfg(test)]\npub mod ", "#[cfg(test)]\r\npub mod "]
+        .into_iter()
+        .filter_map(|marker| text.find(marker))
+        .min()
+        .unwrap_or(text.len());
     &text[..cut]
 }
 
@@ -166,4 +171,24 @@ fn the_scanner_finds_reads() {
     assert!(!has_ident("my_file_handling", "", "file_handling"));
     assert_eq!(snake("recentFileCount"), "recent_file_count");
     assert_eq!(production("fn a() {}\n#[cfg(test)]\nmod tests {\n p.x.y\n}"), "fn a() {}\n");
+}
+
+#[test]
+fn production_excludes_test_modules_with_lf_or_crlf() {
+    for newline in ["\n", "\r\n"] {
+        for visibility in ["", "pub "] {
+            let prefix = format!("// Préférences{newline}fn a() {{}}{newline}");
+            let source = format!(
+                "{prefix}#[cfg(test)]{newline}{visibility}mod tests {{{newline}    #[test]{newline}    fn hidden_setting() {{ let _ = \"type.smartQuotes\"; }}{newline}}}{newline}"
+            );
+            assert_eq!(production(&source), prefix, "newline={newline:?}, visibility={visibility:?}");
+        }
+    }
+}
+
+#[test]
+fn production_keeps_sources_without_a_test_module() {
+    for source in ["", "fn a() {}\n", "// Préférences\r\nfn a() {}\r\n"] {
+        assert_eq!(production(source), source);
+    }
 }

@@ -189,7 +189,7 @@ fn default_true() -> bool {
 }
 
 /// Byte length of the mask parameter values announced by the parameter flags byte `pf`.
-fn mask_parameter_bytes(pf: u8) -> usize {
+pub(crate) fn mask_parameter_bytes(pf: u8) -> usize {
     usize::from(pf & 1 != 0) + 8 * usize::from(pf & 2 != 0) + usize::from(pf & 4 != 0) + 8 * usize::from(pf & 8 != 0)
 }
 
@@ -215,7 +215,7 @@ impl LayerMask {
     /// Whether `d` (a whole mask record with mask parameters) stores the real-mask fields before
     /// the parameters, as Photoshop does. The spec's order wins when it reads as parameters
     /// followed by padding alone (no real mask), the one layout the two orders can share.
-    fn real_before_parameters(d: &[u8]) -> bool {
+    pub(crate) fn real_before_parameters(d: &[u8]) -> bool {
         let fits =
             |pf_at: usize| d.get(pf_at).is_some_and(|&pf| (pf_at + 1 + mask_parameter_bytes(pf)..=pf_at + 4 + mask_parameter_bytes(pf)).contains(&d.len()));
         !fits(18) && fits(36)

@@ -165,3 +165,31 @@ fn several_strokes_stack_top_instance_first() {
     assert!(close4(px(&d, 20, 30), [1.0, 1.0, 0.0, 1.0]));
     assert!(close4(px(&d, 14, 30), [1.0; 4]));
 }
+
+#[test]
+fn hairline_vector_stroke_keeps_the_files_edge_pixel_colour() {
+    // The file's shape was snapped to whole pixels (Align Edges) with a 0.25 px stroke: its edge
+    // pixels are opaque and mostly fill. Our path sits off the pixel grid, so our fill covers only
+    // part of an edge pixel; fitting the stroke to the file's pixels must keep their colour there,
+    // not paint the edge in the stroke's full colour. At every depth.
+    for (sample, fmt) in [(SampleType::U8, PixelFormat::RGBA8), (SampleType::U16, PixelFormat::RGBA16), (SampleType::F32, PixelFormat::RGBA32F)] {
+        let mut d = Document::with_background("t", Size::new(40, 40), ColorMode::Rgb, sample, Color::WHITE);
+        let edge = 0.86;
+        let vs = ShapeStroke { width: 0.25, paint: Fill::Solid(Color::rgb(0.48, 0.48, 0.48)), ..ShapeStroke::default() };
+        let path = Path::new(vec![Subpath::polygon(&[(10.3, 10.3), (29.7, 10.3), (29.7, 29.7), (10.3, 29.7)])]);
+        let mut cache = photosuite_raster::Surface::new(fmt);
+        cache.fill_rect(Rect::new(10, 10, 30, 30), &[edge, edge, edge, 1.0]);
+        cache.fill_rect(Rect::new(11, 11, 29, 29), &[1.0, 1.0, 1.0, 1.0]);
+        let sh = ShapeLayer { path, fill: Some(Fill::Solid(Color::WHITE)), stroke: Some(vs), live: None, cache: Some(cache), psd_raw: None };
+        let mut l = Layer::new("shape", LayerContent::Shape(sh));
+        // Any layer effect sends the shape through the fill/stroke split.
+        l.effects.items = vec![Effect::default_drop_shadow()];
+        d.layers.push(l);
+        for (x, y) in [(10, 20), (29, 20), (20, 10), (20, 29)] {
+            let p = px(&d, x, y);
+            assert!(close4(p, [edge, edge, edge, 1.0]), "{sample:?} edge pixel ({x}, {y}): {p:?}");
+        }
+        // The interior keeps the fill.
+        assert!(close4(px(&d, 20, 20), [1.0, 1.0, 1.0, 1.0]), "{sample:?} {:?}", px(&d, 20, 20));
+    }
+}

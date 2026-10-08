@@ -21,6 +21,15 @@ fn err(e: impl std::fmt::Display) -> CodecError {
     CodecError::malformed(F, e)
 }
 
+/// An `exr`-crate error, with its `NotSupported` kind kept distinct from malformed data
+/// (the same split the TIFF codec makes), so unsupported features say so.
+fn map_exr(e: exr::error::Error) -> CodecError {
+    match e {
+        exr::error::Error::NotSupported(message) => CodecError::unsupported(F, format!("not supported: {message}")),
+        e => err(e),
+    }
+}
+
 /// Strip an optional `layer.` prefix from a channel name.
 fn base_name(name: &str) -> &str {
     name.rsplit('.').next().unwrap_or(name)
@@ -36,8 +45,21 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Image, CodecError>
         limits.check_bytes(w, h, bpp)?;
     }
 
-    let image =
-        read().no_deep_data().largest_resolution_level().all_channels().first_valid_layer().all_attributes().from_buffered(Cursor::new(bytes)).map_err(err)?;
+    // Deep parts are rejected by the `exr` crate's reader; walk their chunks ourselves and
+    // composite the samples into the flat image (a warning says what was lost).
+    if meta.requirements.has_deep_data {
+        let deep = super::deep_exr::decode_deep(&meta, bytes, limits)?;
+        return super::deep_exr::flatten(&deep);
+    }
+
+    let image = read()
+        .no_deep_data()
+        .largest_resolution_level()
+        .all_channels()
+        .first_valid_layer()
+        .all_attributes()
+        .from_buffered(Cursor::new(bytes))
+        .map_err(map_exr)?;
     let layer = &image.layer_data;
     let (w, h) = (layer.size.0, layer.size.1);
     let channels = &layer.channel_data.list;

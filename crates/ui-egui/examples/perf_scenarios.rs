@@ -571,6 +571,155 @@ fn job_scenarios(b: &mut Bench, sz: &Sizes) {
             Err(e) => b.errors.push((caf.into(), e)),
         }
     }
+    background_job_scenarios(b, sz);
+}
+
+/// Wait (polling like the UI's frame loop) until job `id` has ended.
+fn wait_job(s: &mut Session, id: photosuite_engine::jobs::JobId) -> Res<()> {
+    let t = Instant::now();
+    loop {
+        if s.poll_jobs().iter().any(|e| e.id == id) {
+            return Ok(());
+        }
+        if t.elapsed().as_secs() > 120 {
+            return Err("job did not finish in 120 s".into());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
+
+fn start_job(s: &mut Session, id: &str, p: Value) -> Res<photosuite_engine::jobs::JobId> {
+    match s.start(id, p).map_err(|e| format!("{id}: {e}"))? {
+        photosuite_engine::jobs::Started::Job(j) => Ok(j),
+        photosuite_engine::jobs::Started::Done(_) => Err(format!("{id} did not run as a background job")),
+    }
+}
+
+/// #210 background jobs: cancel latency (from `cancel_job` until the worker has exited) at
+/// several points of a 24 MP Gaussian Blur and Content-Aware Fill; the UI thread's longest step
+/// while 500 brushes import; the app's frame time while a 24 MP Gaussian Blur runs.
+fn background_job_scenarios(b: &mut Bench, sz: &Sizes) {
+    let reps = b.reps.min(8);
+    let (w, h) = sz.big_photo;
+    let blur = "cancel Gaussian Blur r 50 job on 24 MP";
+    let caf = "cancel Content-Aware Fill job on 24 MP";
+    if b.wanted(blur) || b.wanted(caf) {
+        match open_photo(w, h) {
+            Ok(mut s) => {
+                for (name, cmd, params, select) in
+                    [(blur, "filter.blur.gaussianBlur", json!({"radius": 50}), false), (caf, "edit.contentAwareFill", json!({}), true)]
+                {
+                    if select && let Err(e) = exec(&mut s, "select.rect", json!({"x": w / 3, "y": h / 3, "width": w / 5, "height": h / 4})) {
+                        b.errors.push((name.into(), e));
+                        continue;
+                    }
+                    b.time(name, &mut s, reps, false, |_, s, i| {
+                        let job = start_job(s, cmd, params.clone())?;
+                        // Cancel early, midway and late in the run.
+                        std::thread::sleep(std::time::Duration::from_millis(20 + (i as u64 * 97) % 700));
+                        let t = Instant::now();
+                        s.cancel_job(job);
+                        s.join_cancelled_jobs();
+                        let v = ms(t);
+                        wait_job(s, job)?;
+                        Ok(v)
+                    });
+                }
+            }
+            Err(e) => b.errors.push((blur.into(), e)),
+        }
+    }
+    let brushes = "import 500 brushes: longest UI-thread step";
+    if b.wanted(brushes) {
+        use photosuite_psd::abr::{AbrSample, LegacyBrush, LegacyTip, write_v12};
+        let list: Vec<LegacyBrush> = (0..500)
+            .map(|i| {
+                let side = 40 + (i % 60) as u32;
+                let data = (0..side * side).map(|k| ((k * 7 + i as u32) % 255) as u8).collect();
+                LegacyBrush {
+                    name: format!("Brush {i}"),
+                    spacing: 25,
+                    anti_alias: true,
+                    tip: LegacyTip::Sampled(AbrSample { id: String::new(), width: side, height: side, depth: 8, data }),
+                }
+            })
+            .collect();
+        match write_v12(2, &list, true) {
+            Ok(abr) => {
+                let data = photosuite_engine::paint::tile::b64_encode(&abr);
+                let mut s = Session::new();
+                b.time(brushes, &mut s, reps.min(5), true, |_, s, _| {
+                    // The UI thread's work: starting the job, then each frame's poll (the last one
+                    // applies the 500 presets).
+                    let t = Instant::now();
+                    let job = start_job(s, "brush.presets.importAbr", json!({"data": data, "group": "Bench"}))?;
+                    let mut worst = ms(t);
+                    let t0 = Instant::now();
+                    loop {
+                        let t = Instant::now();
+                        let done = s.poll_jobs().iter().any(|e| e.id == job);
+                        worst = worst.max(ms(t));
+                        if done {
+                            break;
+                        }
+                        if t0.elapsed().as_secs() > 120 {
+                            return Err("import did not finish".into());
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(4));
+                    }
+                    Ok(worst)
+                });
+            }
+            Err(e) => b.errors.push((brushes.into(), e.to_string())),
+        }
+    }
+    let frame = "app frame during 24 MP Gaussian Blur r 50 job";
+    if b.wanted(frame) {
+        frame_scenario(b, frame, w, h);
+    }
+}
+
+/// The whole app (kittest harness, CPU canvas) with a 24 MP document: frame times while a
+/// Gaussian Blur r 50 job runs, one sample per frame.
+fn frame_scenario(b: &mut Bench, name: &str, w: u32, h: u32) {
+    let mut s = match open_photo(w, h) {
+        Ok(s) => s,
+        Err(e) => return b.errors.push((name.into(), e)),
+    };
+    let doc = std::mem::take(&mut s);
+    let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(4).build_eframe(move |cc| {
+        photosuite_ui_egui::PhotosuiteApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = photosuite_ui_egui::PhotosuiteApp::new(doc, photosuite_ui_egui::Services::default());
+        app.background_jobs = true;
+        app
+    });
+    // Warm up: first frames build the canvas cache of the 24 MP document.
+    harness.run_steps(6);
+    b.current = Some(name.to_string());
+    b.sampler.reset();
+    let mut samples = Vec::new();
+    let run = (|| -> Res<()> {
+        let r = harness.state_mut().run("filter.blur.gaussianBlur", json!({"radius": 50}))?;
+        if r.get("pending").is_none() {
+            return Err("the blur did not start as a job".into());
+        }
+        let t0 = Instant::now();
+        while harness.state().session.has_jobs() {
+            let t = Instant::now();
+            harness.step();
+            samples.push(ms(t));
+            if t0.elapsed().as_secs() > 120 {
+                return Err("the job did not finish".into());
+            }
+        }
+        if samples.len() < 10 {
+            return Err(format!("only {} frames while the job ran", samples.len()));
+        }
+        Ok(())
+    })();
+    // The rows' document handle: the harness's session.
+    let st = std::mem::take(&mut harness.state_mut().session);
+    b.record(name, &st, &samples, run);
 }
 
 /// #211 rows: selection algorithms, Content-Aware Scale and Select Subject on 24 MP, and a brush

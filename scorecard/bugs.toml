@@ -1,6 +1,7 @@
 # Scorecard checklist: open bugs (#203–#208).
 # Each item: id, short target, status (done | partial | missing), issue, note (evidence).
-# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05.
+# Statuses must be true on main. BUG-203 verified against 47f9306 on 2026-10-07; the rest
+# against 4b53f62 on 2026-10-05.
 area = "bugs"
 title = "Open bugs"
 order = 9
@@ -8,44 +9,44 @@ order = 9
 [[item]]
 id = "BUG-203-1"
 target = "Every document write goes through one atomic_write (temp, fsync, rename)"
-status = "missing"
+status = "done"
 issue = 203
-note = "services.rs:125 std::fs::write; file_cmds.rs:91 fs::write; automation/files.rs:67 in place"
+note = "photosuite_format::atomic_write (format/src/atomic.rs, #230/8227071); every write site routes through it: engine file_cmds.rs write_file and preset_store.rs, automation files.rs/headless.rs/workspace.rs, app services.rs write_atomic, format store.rs and autosave.rs"
 
 [[item]]
 id = "BUG-203-2"
 target = "Temp file in the same dir, sync_all, rename over target, fsync dir on Unix"
-status = "missing"
+status = "done"
 issue = 203
-note = "No sync_all anywhere; services.rs:71 write_atomic (prefs only) does tmp + rename, no fsync"
+note = "atomic.rs: temp_name in the same dir, create_new + write_all + sync_all, Unix directory fsync after the rename"
 
 [[item]]
 id = "BUG-203-3"
 target = "Windows: retry the rename with backoff on PermissionDenied"
-status = "missing"
+status = "done"
 issue = 203
-note = "No retry around fs::rename (services.rs:77, preset_store.rs:189, format/store.rs:457)"
+note = "atomic.rs RenameRetry::platform(): seven retries from 10 ms on Windows; retry_rename is shared with automation's cap-std workspace write"
 
 [[item]]
 id = "BUG-203-4"
 target = "Unwritable directory errors clearly, never falls back to writing in place"
-status = "missing"
+status = "done"
 issue = 203
-note = "No atomic path exists for documents; all document writes are in place"
+note = "atomic.rs maps read-only dir, disk-full and cross-device rename errors to messages that say the original was not changed; there is no in-place fallback path"
 
 [[item]]
 id = "BUG-203-5"
 target = "On any failure the original file is untouched and the temp file removed"
-status = "missing"
+status = "done"
 issue = 203
-note = "services.rs:76 write_atomic leaves .tmp behind if rename fails; documents write in place"
+note = "atomic.rs removes the temp file on every failure; tests assert the original bytes survive write and rename failures"
 
 [[item]]
 id = "BUG-203-6"
 target = "Failure-injection tests: mid-write, rename and read-only dir errors keep original bytes"
-status = "missing"
+status = "done"
 issue = 203
-note = "No such tests under crates/ or apps/"
+note = "format/src/atomic/tests.rs: Faulty AtomicFs injects mid-write StorageFull, rename failure and a read-only dir; locked-target retries, symlink and file-mode preservation covered too"
 
 [[item]]
 id = "BUG-204-1"
@@ -64,23 +65,23 @@ note = "prefs.rs:163,166,229; no reader outside prefs.rs"
 [[item]]
 id = "BUG-204-3"
 target = "RAW prefs and ask_before_saving_layered_tiff read, or hidden"
-status = "missing"
+status = "partial"
 issue = 204
-note = "raw_defaults (prefs.rs:712), ask_before_saving_layered_tiff (prefs.rs:312) have no readers"
+note = "ask_before_saving_layered_tiff drives the TIFF Options prompt (ui-egui tiff_options_ui.rs); raw_defaults (prefs.rs:712) still has no readers"
 
 [[item]]
 id = "BUG-204-4"
 target = "Recent files persisted through prefs across restarts"
-status = "missing"
+status = "done"
 issue = 204
-note = "ui-egui lib.rs:461 push_recent only touches app.ui.recent_files"
+note = "crates/ui-egui/src/lib.rs::push_recent stores the list in preferences; prefs_ui::load restores it and recent_files_survive_a_restart_and_honour_the_count verifies reload"
 
 [[item]]
 id = "BUG-204-5"
 target = "Recent-files list honours recent_file_count (default 20)"
-status = "missing"
+status = "done"
 issue = 204
-note = "lib.rs:465 truncate(10) hard-coded; menus.rs:1065 test asserts 'capped at 10'"
+note = "lib.rs push_recent caps the list with recent_cap (recent_file_count); menus.rs covers default and custom limits"
 
 [[item]]
 id = "BUG-204-6"
@@ -197,23 +198,23 @@ note = "Only smudge_drags_colour_along_the_stroke (retouch.rs:407)"
 [[item]]
 id = "BUG-208-1"
 target = "Shift while dragging a Rect/Elliptical Marquee constrains to a square/circle"
-status = "missing"
+status = "done"
 issue = 208
-note = "canvas.rs:1498 and :1769 pass shift=false to marquee_end"
+note = "canvas.rs marquee_corners applies Shift via Drag::marquee_mods; marquee_tests.rs::shift_during_the_drag_draws_a_square_and_the_readout_follows covers the drag"
 
 [[item]]
 id = "BUG-208-2"
 target = "Alt while dragging a marquee draws from the centre"
-status = "missing"
+status = "done"
 issue = 208
-note = "marquee_end (chrome_ui.rs:157) has no centre mode"
+note = "canvas.rs marquee_corners centres Alt drags; marquee_tests.rs::alt_draws_from_the_centre_and_shift_alt_a_centred_circle verifies rectangles and ellipses"
 
 [[item]]
 id = "BUG-208-3"
 target = "W x H px readout beside the cursor while dragging a marquee"
-status = "missing"
+status = "done"
 issue = 208
-note = "No size readout in canvas.rs or tool_feedback.rs"
+note = "canvas.rs marquee_readout draws the readout; marquee_tests.rs asserts dimensions while dragging and its removal after release"
 
 [[item]]
 id = "BUG-208-4"
@@ -225,6 +226,6 @@ note = "Mods captured at press (canvas.rs:1679, used :1779); only a badge test (
 [[item]]
 id = "BUG-208-5"
 target = "Kittest: Shift drag gives a square, Alt drag is centred, readout matches the size"
-status = "missing"
+status = "done"
 issue = 208
-note = "No marquee drag tests"
+note = "crates/ui-egui/src/marquee_tests.rs covers Shift, Alt, selection bounds, W/H readout and drag completion"

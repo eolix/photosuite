@@ -61,6 +61,18 @@ impl ThemeKind {
         }
     }
 
+    /// The canonical name: `ui.set {theme}` accepts it and the Window › Theme commands are
+    /// `window.theme.<id>`.
+    pub fn id(self) -> &'static str {
+        match self {
+            ThemeKind::Midnight => "midnight",
+            ThemeKind::Anthracite => "anthracite",
+            ThemeKind::Slate => "slate",
+            ThemeKind::Pearl => "pearl",
+            ThemeKind::Aubergine => "aubergine",
+            ThemeKind::Ocean => "ocean",
+        }
+    }
     pub fn next(self) -> Self {
         let i = Self::ALL.iter().position(|k| *k == self).unwrap_or(0);
         Self::ALL[(i + 1) % Self::ALL.len()]

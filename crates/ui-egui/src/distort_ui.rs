@@ -157,7 +157,7 @@ pub fn keys(app: &mut PhotosuiteApp, ctx: &egui::Context) -> bool {
         if enter(ctx) {
             crate::liquify_ui::commit(app);
         } else if esc(ctx) {
-            app.distort.liquify = None;
+            crate::liquify_ui::cancel(app);
         } else {
             crate::liquify_ui::keys(app, ctx);
         }

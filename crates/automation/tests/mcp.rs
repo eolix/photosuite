@@ -169,6 +169,39 @@ async fn command_list_filters() {
     client.cancel().await.unwrap();
 }
 
+/// The backticked examples in every `id` property description of a schema.
+fn id_examples(schema: &Value, out: &mut Vec<String>) {
+    match schema {
+        Value::Object(m) => {
+            if let Some(d) = m.get("properties").and_then(|p| p["id"]["description"].as_str()) {
+                out.extend(d.split('`').skip(1).step_by(2).map(str::to_owned));
+            }
+            m.values().for_each(|v| id_examples(v, out));
+        }
+        Value::Array(a) => a.iter().for_each(|v| id_examples(v, out)),
+        _ => {}
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn command_ids_in_tool_schemas_exist() {
+    // Agents copy these examples verbatim (#378).
+    let client = connect(PhotosuiteMcp::headless()).await;
+    let all = json_of(&call(&client, "command_list", json!({})).await);
+    let ids: Vec<&str> = all.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    let tools = client.list_all_tools().await.unwrap();
+    for name in ["command_run", "command_batch"] {
+        let tool = tools.iter().find(|t| t.name == name).unwrap();
+        let mut examples = Vec::new();
+        id_examples(&Value::Object((*tool.input_schema).clone()), &mut examples);
+        assert!(!examples.is_empty(), "{name}: no example ids");
+        for id in examples {
+            assert!(ids.contains(&id.as_str()), "{name}: `{id}` is not a registered command");
+        }
+    }
+    client.cancel().await.unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn errors_are_tool_errors_not_crashes() {
     let client = connect(PhotosuiteMcp::headless()).await;
@@ -254,6 +287,86 @@ async fn open_png_and_inspect() {
     cleanup(&dir);
 }
 
+/// #518, #523: `doc_open` returns why an opened image is incomplete.
+#[tokio::test(flavor = "multi_thread")]
+async fn open_reports_decode_warnings() {
+    let dir = tmp("open-warnings");
+    let jpeg = write_image(&dir, "whole.jpg", photosuite_codecs::Format::Jpeg);
+    std::fs::write(dir.join("cut.jpg"), &jpeg[..jpeg.len() - 4]).unwrap();
+    // Two 1x1 frames.
+    let mut gif = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xFF\xFF\xFF".to_vec();
+    for _ in 0..2 {
+        gif.extend_from_slice(b"\x2C\0\0\0\0\x01\0\x01\0\0\x02\x02\x44\x01\0");
+    }
+    gif.push(0x3B);
+    std::fs::write(dir.join("anim.gif"), gif).unwrap();
+    let client = connect(headless_in(&dir)).await;
+    let warnings = async |path: &str| json_of(&call(&client, "doc_open", json!({"path": path})).await)["warnings"].clone();
+    assert_eq!(warnings("whole.jpg").await, json!([]));
+    assert_eq!(warnings("cut.jpg").await, json!(["JPEG data ends early (the file is truncated or damaged); part of the image is missing"]));
+    assert_eq!(warnings("anim.gif").await, json!(["only the first of 2 frames was imported"]));
+    client.cancel().await.unwrap();
+    cleanup(&dir);
+}
+
+fn write_image(dir: &std::path::Path, name: &str, format: photosuite_codecs::Format) -> Vec<u8> {
+    let img = photosuite_codecs::Image::from_u8(16, 8, photosuite_codecs::ChannelLayout::Rgb, (0..384).map(|i| (i * 7 % 251) as u8).collect()).unwrap();
+    let bytes = photosuite_codecs::encode(&img, format, &Default::default()).unwrap();
+    std::fs::write(dir.join(name), &bytes).unwrap();
+    bytes
+}
+
+/// A save without `path` writes back only to a layered file in its own format (#416).
+#[tokio::test(flavor = "multi_thread")]
+async fn save_without_path_never_flattens_over_the_opened_file() {
+    let dir = tmp("save-in-place");
+    let png = write_image(&dir, "seed.png", photosuite_codecs::Format::Png);
+    let jpg = write_image(&dir, "seed.jpg", photosuite_codecs::Format::Jpeg);
+    let client = connect(headless_in(&dir)).await;
+    let refused = |r: &CallToolResult| r.is_error == Some(true) && text(r).contains("pass `path`");
+
+    // A flat file, edited or not, is left unchanged.
+    json_of(&call(&client, "doc_open", json!({"path": "seed.png"})).await);
+    json_of(&call(&client, "command_run", json!({"id": "layer.newAdjustmentLayer.curves", "params": {"points": [[0, 0], [128, 170], [255, 255]]}})).await);
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("seed.png")).unwrap(), png);
+    json_of(&call(&client, "doc_open", json!({"path": "seed.jpg"})).await);
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("seed.jpg")).unwrap(), jpg);
+
+    // An explicit path, even the opened file's own, still writes and reports what was lost.
+    let r = json_of(&call(&client, "doc_save", json!({"path": "seed.jpg"})).await);
+    assert!(r["warnings"].to_string().contains("lossy"), "{r}");
+
+    // A layered file saves in place in its own format, but not converted over itself.
+    json_of(&call(&client, "doc_select", json!({"index": 0})).await);
+    json_of(&call(&client, "doc_save", json!({"path": "layered.psd"})).await);
+    json_of(&call(&client, "doc_open", json!({"path": "layered.psd"})).await);
+    let psd = std::fs::read(dir.join("layered.psd")).unwrap();
+    let r = call(&client, "doc_save", json!({"format": "png"})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("layered.psd")).unwrap(), psd);
+    assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "layered.psd");
+    assert!(photosuite_io::is_psd(&std::fs::read(dir.join("layered.psd")).unwrap()));
+
+    // Once saved as .pcraft, a flat-born document saves in place there.
+    json_of(&call(&client, "doc_select", json!({"index": 0})).await);
+    json_of(&call(&client, "doc_save", json!({"path": "work.pcraft"})).await);
+    assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "work.pcraft");
+    assert_eq!(std::fs::read(dir.join("seed.png")).unwrap(), png);
+
+    // A template opens untitled, without its path.
+    std::fs::write(dir.join("card.psdt"), &psd).unwrap();
+    assert_eq!(json_of(&call(&client, "doc_open", json!({"path": "card.psdt"})).await)["name"], "Untitled-1");
+    let r = call(&client, "doc_save", json!({})).await;
+    assert!(refused(&r), "{}", text(&r));
+    assert_eq!(std::fs::read(dir.join("card.psdt")).unwrap(), psd);
+    client.cancel().await.unwrap();
+    cleanup(&dir);
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn filesystem_policy_rejects_absolute_and_escaping_paths_before_effects() {
     let base = tmp("filesystem-policy");
@@ -293,6 +406,10 @@ async fn filesystem_policy_rejects_absolute_and_escaping_paths_before_effects() 
 // ---------------------------------------------------------------------------
 
 async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
+    fake_app_with_screenshot(None).await
+}
+
+async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, tokio::task::JoinHandle<Vec<Value>>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();
     let h = tokio::spawn(async move {
@@ -317,14 +434,17 @@ async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
                     json!({"id": id, "ok": true, "result": {"tool": "brush", "panels": ["layers"]}})
                 }
                 "engine.execute" => {
-                    json!({"id": id, "ok": true, "result": {"ran": req["params"]["command"]}})
+                    json!({"id": id, "ok": true, "result": {"ran": req["params"]["command"], "params": req["params"]["params"], "wait": req["params"]["wait"]}})
                 }
                 "engine.commands" => {
                     json!({"id": id, "ok": true, "result": [{"id": "file.new", "label": "New…", "enabled": true}]})
                 }
+                "ui.pointer" => json!({"id": id, "ok": true, "result": req["params"]}),
                 "ui.screenshot" => {
-                    let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
-                    let bytes = photosuite_codecs::encode(&img, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+                    let bytes = screenshot_png.clone().unwrap_or_else(|| {
+                        let img = photosuite_codecs::Image::from_u8(40, 20, photosuite_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
+                        photosuite_codecs::encode(&img, photosuite_codecs::Format::Png, &Default::default()).unwrap()
+                    });
                     let png = base64::engine::general_purpose::STANDARD.encode(bytes);
                     json!({"id": id, "ok": true, "result": {"mimeType": "image/png", "base64": png}})
                 }
@@ -349,6 +469,9 @@ async fn bridge_forwards_to_control_protocol() {
     assert_eq!(ui["tool"], "brush");
     let r = json_of(&call(&client, "command_run", json!({"id": "layer.new.layer", "params": {"name": "X"}})).await);
     assert_eq!(r["ran"], "layer.new.layer");
+    let inspected = json_of(&call(&client, "doc_inspect", json!({"index": 1})).await);
+    assert_eq!(inspected["ran"], "document.inspect");
+    assert_eq!(inspected["params"], json!({"document": 1}));
     let l = json_of(&call(&client, "command_list", json!({})).await);
     assert_eq!(l[0]["id"], "file.new");
     let shot = call(&client, "ui_screenshot", json!({"max_side": 20})).await;
@@ -360,6 +483,44 @@ async fn bridge_forwards_to_control_protocol() {
     assert!(text(&e).contains("unknown tool"));
     let r = call(&client, "doc_select", json!({"index": 0})).await;
     assert_eq!(r.is_error, Some(true));
+
+    client.cancel().await.unwrap();
+    app.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
+    use photosuite_automation::budgets::MAX_PNG_BYTES;
+
+    let (width, height) = (1400, 1000);
+    let mut pixels = vec![0; width * height * 4];
+    let mut state = 0x6d2b_79f5_u32;
+    for pixel in &mut pixels {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        *pixel = state as u8;
+    }
+    let image = photosuite_codecs::Image::from_u8(width as u32, height as u32, photosuite_codecs::ChannelLayout::Rgba, pixels).unwrap();
+    let source_png = photosuite_codecs::encode(&image, photosuite_codecs::Format::Png, &Default::default()).unwrap();
+    assert!(source_png.len() > MAX_PNG_BYTES, "fixture must exceed the PNG budget");
+
+    let (addr, app) = fake_app_with_screenshot(Some(source_png)).await;
+    let client = connect(PhotosuiteMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+
+    for (tool, args) in [("ui_screenshot", json!({"max_side": 32})), ("doc_render_preview", json!({"max_side": 32}))] {
+        let reply = call(&client, tool, args).await;
+        assert_ne!(reply.is_error, Some(true), "{tool}: {}", text(&reply));
+        let img = reply.content.iter().find_map(|content| content.as_image()).expect("preview image");
+        let png = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
+        assert!(png.len() <= MAX_PNG_BYTES, "{tool} returned {} bytes", png.len());
+        let decoded = photosuite_codecs::decode(&png).unwrap();
+        assert_eq!(decoded.dimensions(), (32, 22), "{tool}");
+    }
+
+    let full_size = call(&client, "ui_screenshot", json!({})).await;
+    assert_eq!(full_size.is_error, Some(true));
+    assert!(text(&full_size).contains("automation PNG exceeds"), "{}", text(&full_size));
 
     client.cancel().await.unwrap();
     app.abort();
@@ -415,6 +576,97 @@ async fn command_batch_runs_steps_in_order() {
     assert_eq!(r["failed"], 1);
     let doc = json_of(&call(&client, "doc_inspect", json!({})).await).to_string();
     assert!(doc.contains("\"Two\"") && !doc.contains("\"Three\""));
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn command_batch_step_without_waiting_starts_a_background_job() {
+    let client = connect(PhotosuiteMcp::headless()).await;
+    json_of(&call(&client, "doc_new", json!({"width": 600, "height": 400})).await);
+    let blur = json!({"id": "filter.blur.gaussianBlur", "params": {"radius": 40}, "wait": false});
+    let r = json_of(
+        &call(&client, "command_batch", json!({"steps": [{"id": "layer.new.layer"}, {"id": "edit.fill", "params": {"color": "#808080"}}, blur]})).await,
+    );
+    assert_eq!(r["completed"], 3, "{r}");
+    let started = &r["results"][2]["result"];
+    assert_eq!(started["pending"], true, "the step returned without waiting: {r}");
+    let job = started["job"].as_u64().expect("a job id");
+    // The job is listed and finishes like one started by command_run.
+    let t = std::time::Instant::now();
+    loop {
+        let l = json_of(&call(&client, "jobs_list", json!({})).await);
+        let state = l["jobs"].as_array().unwrap().iter().find(|j| j["id"] == job).map(|j| j["state"].clone());
+        assert!(state.is_some(), "job {job} not listed: {l}");
+        if state == Some(json!("done")) {
+            break;
+        }
+        assert!(t.elapsed().as_secs() < 60, "{l}");
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    // Without `wait` a step still returns the command's own result.
+    let r = json_of(&call(&client, "command_batch", json!({"steps": [{"id": "filter.blur.gaussianBlur", "params": {"radius": 2}}]})).await);
+    assert!(r["results"][0]["result"]["filter"].is_object(), "{r}");
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn bridge_command_batch_forwards_each_steps_wait() {
+    let (addr, app) = fake_app().await;
+    let client = connect(PhotosuiteMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let r = json_of(&call(&client, "command_batch", json!({"steps": [{"id": "filter.blur.gaussianBlur", "wait": false}, {"id": "layer.new.layer"}]})).await);
+    assert_eq!(r["completed"], 2, "{r}");
+    assert_eq!(r["results"][0]["result"]["wait"], false, "{r}");
+    assert_eq!(r["results"][1]["result"]["wait"], true, "{r}");
+    client.cancel().await.unwrap();
+    app.abort();
+}
+
+/// #514: `ui_pointer` forwards `button` (a right-click opens the layer menu or the Brush Preset
+/// picker) and rejects arguments it doesn't forward instead of dropping them.
+#[tokio::test(flavor = "multi_thread")]
+async fn bridge_ui_pointer_forwards_the_button_and_rejects_unknown_arguments() {
+    let (addr, app) = fake_app().await;
+    let client = connect(PhotosuiteMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let events = json!([{"kind": "down", "x": 5, "y": 6}, {"kind": "up", "x": 5, "y": 6}]);
+    let sent = json_of(&call(&client, "ui_pointer", json!({"events": events, "button": "right", "modifiers": {"command": true}})).await);
+    assert_eq!(sent, json!({"events": events, "button": "right", "modifiers": {"command": true}}));
+    let sent = json_of(&call(&client, "ui_pointer", json!({"events": events})).await);
+    assert_eq!(sent, json!({"events": events}), "unset fields are not sent");
+    for bad in [json!({"events": events, "buton": "right"}), json!({"events": events, "space": true})] {
+        let Value::Object(args) = bad.clone() else { unreachable!() };
+        let r = client.call_tool(CallToolRequestParams::new("ui_pointer").with_arguments(args)).await;
+        assert!(!r.as_ref().is_ok_and(|r| r.is_error != Some(true)), "{bad} accepted: {r:?}");
+    }
+    let tools = client.list_all_tools().await.unwrap();
+    let schema = &tools.iter().find(|t| t.name == "ui_pointer").unwrap().input_schema;
+    assert_eq!(schema.get("additionalProperties"), Some(&json!(false)), "{schema:?}");
+    assert!(schema.get("properties").and_then(|p| p.get("button")).is_some(), "{schema:?}");
+    client.cancel().await.unwrap();
+    app.abort();
+}
+
+/// #368: agents can open the clipboard as a document of its own.
+#[tokio::test(flavor = "multi_thread")]
+async fn new_from_clipboard_opens_the_copy_as_a_document() {
+    let client = connect(PhotosuiteMcp::headless()).await;
+    json_of(&call(&client, "doc_new", json!({"width": 40, "height": 30})).await);
+    let r = json_of(
+        &call(
+            &client,
+            "command_batch",
+            json!({"steps": [
+                {"id": "select.rect", "params": {"x": 5, "y": 5, "width": 12, "height": 7}},
+                {"id": "edit.copy"},
+                {"id": "file.newFromClipboard"}
+            ]}),
+        )
+        .await,
+    );
+    assert_eq!(r["completed"], 3, "{r}");
+    let doc = json_of(&call(&client, "doc_inspect", json!({})).await);
+    assert_eq!((doc["width"].as_u64(), doc["height"].as_u64()), (Some(12), Some(7)), "{doc}");
+    let sess = json_of(&call(&client, "session_list", json!({})).await);
+    assert_eq!(sess["documents"].as_array().unwrap().len(), 2);
     client.cancel().await.unwrap();
 }
 

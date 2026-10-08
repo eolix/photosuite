@@ -28,3 +28,18 @@ fn main() {
 fn main() {
     eprintln!("photosuite-web only runs in the browser: build it with `trunk build --release` in apps/photosuite-web");
 }
+
+#[cfg(test)]
+mod tests {
+    /// A WebAssembly module that never downloads (or doesn't match the page) runs no Rust, so the
+    /// page itself replaces the endless "Loading" with what may have gone wrong and a way to
+    /// retry, without a hand-written script.
+    #[test]
+    fn loading_page_offers_a_reload_when_startup_stalls() {
+        let html = include_str!("../index.html");
+        let (_, hint) = html.split_once("<p id=\"photosuite_stalled\">").expect("stalled-startup hint in the loading element");
+        assert!(hint.contains("failed to") && hint.contains("<a href=\"\">Reload</a>"), "{hint}");
+        assert!(html.contains("animation: photosuite-stalled"), "the hint appears after a delay");
+        assert!(!html.contains("<script"), "trunk injects the generated loader; the page has no script of its own");
+    }
+}

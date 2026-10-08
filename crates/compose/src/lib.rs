@@ -445,7 +445,7 @@ impl<'a> Ctx<'a> {
     fn for_doc(doc: &Document, patterns: &'a pattern::PreparedPatterns<'a>) -> Self {
         Self {
             canvas: doc.bounds(),
-            transfer: adjust::Transfer::for_mode(doc.mode),
+            transfer: adjust::Transfer::for_document(doc.mode, doc.depth),
             light: doc.global_light,
             patterns,
             mode: doc.mode,
@@ -1115,7 +1115,7 @@ fn composite_layer_plain(layer: &Layer, clipped: &[Layer], backdrop: &mut Buffer
     // Adjustment layers transform the backdrop, then blend the result back in.
     if let LayerContent::Adjustment(adj) = &layer.content {
         let mut adjusted = backdrop.clone();
-        adjust::apply_depth(adj, &mut adjusted, cx.transfer, adjustment_quantum(cx.depth));
+        adjust::apply_depth(adj, &mut adjusted, cx.transfer, Some(cx.depth));
         // Clipped layers onto an adjustment are uncommon; they composite atop the adjusted result.
         for c in clipped.iter().filter(|c| c.visible) {
             composite_atop(c, &mut adjusted, cx);
@@ -1411,7 +1411,7 @@ fn composite_atop_any(layer: &Layer, base: &mut Buffer, cx: &Ctx) {
     let rect = base.rect;
     if let LayerContent::Adjustment(adj) = &layer.content {
         let mut adjusted = base.clone();
-        adjust::apply_depth(adj, &mut adjusted, cx.transfer, adjustment_quantum(cx.depth));
+        adjust::apply_depth(adj, &mut adjusted, cx.transfer, Some(cx.depth));
         let mv = mask_vals(layer, rect, cx);
         for (i, p) in base.px.iter_mut().enumerate() {
             let k = layer.opacity * layer.fill_opacity * mask_k(&mv, i);

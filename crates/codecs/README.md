@@ -15,7 +15,8 @@ It follows the "avoid GIMP's hole" rules in `plan/architecture.md` §1.1:
 * **Honest.** `caps(format)` says what each format holds, and
   `fidelity_warnings(&image, format)` lists what an export will lose before you write it. Both
   functions use the same encode plan as `encode`, so a warning appears exactly when the file
-  changes.
+  changes. On the way in, `Image::warnings` lists what the decoded image doesn't show: frames or
+  pages left out, or data that ended early.
 
 ```rust
 use photosuite_codecs::*;
@@ -72,12 +73,27 @@ the same.
   (pure Rust, MIT), re-wrapped so ICC/EXIF/XMP are kept. Both kinds read back.
 * **Animation and multi-page files** (APNG, animated GIF/WebP, multi-page TIFF): only the first
   frame or page is decoded, and a single frame is written. `FormatCaps::animation` marks
-  containers that can hold more frames.
+  containers that can hold more frames. The decoded image then carries a
+  `DecodeWarning::MoreFrames` / `MorePages` in `Image::warnings`, with the total when the file
+  states it (frames and TIFF directories are counted without decoding them; reduced-resolution
+  TIFF directories and transparency masks are not pages).
 * **EXIF in TIFF** is stored as a sub-IFD rather than a blob, so it is not preserved yet.
   `caps.exif = false` for TIFF, and a warning is raised.
-* **EXIF orientation** is preserved as data but not applied to the pixels.
+* **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the IFD0 tag in TIFF) is applied on
+  decode, like Photoshop: the pixels come back upright and the EXIF/XMP orientation is rewritten
+  to 1 (`DecodeOptions::keep_orientation` opts out). Encoders always write Orientation = 1
+  (`upright_exif`, `upright_xmp`, which change only the tag's value, kept in its own type), so upright pixels
+  are never rotated twice. Parsing is strict: an IFD0 inside the 8-byte header or cut off before
+  its next-IFD pointer, an Orientation that is not exactly one SHORT or LONG, or an out-of-range value
+  reads as 1; with duplicate entries the first wins. `Limits` are checked again on the upright
+  size (5–8 swap width and height), and the rotated buffer is allocated fallibly.
+  `Image::oriented` turns any layout and depth in parallel bands (about 10 ms for 24 MP RGB8 in
+  release).
 * **JPEG**
   * 8-bit only. Neither decoder backend supports 12-bit.
+  * A file cut off inside its image data decodes leniently (a baseline JPEG's missing rows come
+    out grey) but never silently: the image carries `DecodeWarning::Truncated`. A file that ends
+    before any scan data is an error.
   * CMYK is always written 4:4:4 (subsampled CMYK is not portable) as Adobe-inverted CMYK with an
     APP14 marker.
   * Text is not written because there is no COM-segment support.
@@ -101,7 +117,7 @@ the same.
 
 ## Limits (decompression bombs)
 
-`DecodeOptions { limits: Limits { max_width, max_height, max_pixels, max_alloc } }` guards
+`DecodeOptions { limits: Limits { max_width, max_height, max_pixels, max_alloc }, .. }` guards
 decoding. Header dimensions are checked before the pixel buffer is allocated, and the budget is
 also passed to the underlying decoders. A violation returns `CodecError::LimitExceeded`. The
 defaults are 262144 px per side, 2^30 pixels and 8 GiB (2 GiB on 32-bit targets such as wasm).

@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use eframe::{egui_wgpu, wgpu};
-use photosuite_engine::prefs::GpuBackend;
+use photosuite_engine::prefs::{GpuBackend, RenderingMode};
 use serde_json::{Value, json};
 
 /// The marker's file name in the config directory.
@@ -154,6 +154,19 @@ pub fn plan(pref: GpuBackend, crashed: Option<&Marker>, env: Option<&str>, safe_
     Plan { backend: pref, env: None, reason: None, remember: false }
 }
 
+/// Resolve the rendering policy before the window exists. Explicit GPU/Automatic selections
+/// reset a legacy CPU backend to automatic; CPU keeps software-preferred window presentation.
+pub fn plan_with_mode(pref: GpuBackend, mode: RenderingMode, crashed: Option<&Marker>, env: Option<&str>, safe_gpu: bool, os: Os) -> Plan {
+    let backend = match mode {
+        RenderingMode::Cpu => GpuBackend::Cpu,
+        RenderingMode::Auto | RenderingMode::Gpu if pref == GpuBackend::Cpu => GpuBackend::Auto,
+        _ => pref,
+    };
+    let env = if safe_gpu || mode == RenderingMode::Cpu { None } else { env };
+    let crashed = if mode == RenderingMode::Cpu { None } else { crashed };
+    plan(backend, crashed, env, safe_gpu, os)
+}
+
 /// Instance backends for `plan` (`None`: egui's default, which honours `WGPU_BACKEND`).
 pub fn backends(plan: &Plan, os: Os) -> Option<wgpu::Backends> {
     if plan.env.is_some() {
@@ -171,6 +184,22 @@ pub fn backends(plan: &Plan, os: Os) -> Option<wgpu::Backends> {
             Os::Other => wgpu::Backends::GL,
         },
     })
+}
+
+/// The DX12 shader compiler (#712). wgpu's default loads `dxcompiler.dll` by name, and the
+/// Windows DLL search falls through to the current directory and `PATH`, so another program's DXC
+/// build (a browser's, an SDK's) got loaded and failed device creation or crashed the first shader
+/// compile. Use a `dxcompiler.dll` shipped beside the executable, by its full path; otherwise FXC
+/// (`d3dcompiler_47.dll`, part of Windows). `WGPU_DX12_COMPILER` still picks one explicitly.
+pub fn dx12_compiler(env: Option<&str>, exe_dir: Option<&Path>) -> wgpu::Dx12Compiler {
+    if let Some(c) = env.and_then(|v| v.trim().parse().ok()) {
+        return c;
+    }
+    let beside_exe = exe_dir.map(|d| d.join("dxcompiler.dll")).filter(|p| p.is_file());
+    match beside_exe.as_deref().and_then(Path::to_str) {
+        Some(p) => wgpu::Dx12Compiler::DynamicDxc { dxc_path: p.to_string() },
+        None => wgpu::Dx12Compiler::Fxc,
+    }
 }
 
 /// What adapter selection needs to know about an adapter.
@@ -211,8 +240,7 @@ fn rank(a: &Candidate, backend: GpuBackend, os: Os) -> (u8, u8) {
 
 /// The adapter to use among `adapters` (`None` when there is none).
 pub fn pick(adapters: &[Candidate], backend: GpuBackend, os: Os) -> Option<usize> {
-    let any_ok = adapters.iter().any(|a| a.surface_ok);
-    adapters.iter().enumerate().filter(|(_, a)| a.surface_ok || !any_ok).min_by_key(|(i, a)| (rank(a, backend, os), *i)).map(|(i, _)| i)
+    adapters.iter().enumerate().filter(|(_, a)| a.surface_ok).min_by_key(|(i, a)| (rank(a, backend, os), *i)).map(|(i, _)| i)
 }
 
 /// Whether picking `chosen` applied the Intel-on-Windows DX12 default (a Vulkan adapter of the
@@ -225,13 +253,18 @@ pub fn intel_dx12_applied(adapters: &[Candidate], chosen: usize, os: Os) -> bool
         && adapters.iter().any(|a| a.vendor == INTEL && a.backend == wgpu::Backend::Vulkan)
 }
 
-/// Configure eframe's wgpu setup for `plan`: instance backends, adapter selection (Intel on
-/// Windows, software adapters for `cpu`) and the marker update once the adapter is chosen.
-/// `note` receives a remark for System Info (e.g. the Intel default).
+/// Configure eframe's wgpu setup for `plan`: instance backends, the DX12 shader compiler, adapter
+/// selection (Intel on Windows, software adapters for `cpu`) and the marker update once the
+/// adapter is chosen. `note` receives a remark for System Info (e.g. the Intel default).
 pub fn configure(setup: &mut egui_wgpu::WgpuSetup, plan: &Plan, os: Os, sentinel: SharedSentinel, note: Arc<Mutex<Option<String>>>) {
     if let egui_wgpu::WgpuSetup::CreateNew(create) = setup {
         if let Some(b) = backends(plan, os) {
             create.instance_descriptor.backends = b;
+        }
+        if os == Os::Windows {
+            let exe = std::env::current_exe().ok();
+            let env = std::env::var("WGPU_DX12_COMPILER").ok();
+            create.instance_descriptor.backend_options.dx12.shader_compiler = dx12_compiler(env.as_deref(), exe.as_deref().and_then(Path::parent));
         }
         let select = plan.env.is_none() && (plan.backend == GpuBackend::Cpu || (plan.backend == GpuBackend::Auto && os == Os::Windows));
         if select {
@@ -250,6 +283,10 @@ pub fn configure(setup: &mut egui_wgpu::WgpuSetup, plan: &Plan, os: Os, sentinel
                     })
                     .collect();
                 let i = pick(&cands, backend, os).ok_or_else(|| "no graphics adapter found".to_string())?;
+                if backend == GpuBackend::Cpu && cands.get(i).is_some_and(|c| c.device_type != wgpu::DeviceType::Cpu) {
+                    *note.lock().unwrap_or_else(PoisonError::into_inner) =
+                        Some("CPU image rendering; no software graphics adapter is available, so the window uses hardware graphics".into());
+                }
                 if backend == GpuBackend::Auto && intel_dx12_applied(&cands, i, os) {
                     *note.lock().unwrap_or_else(PoisonError::into_inner) =
                         Some("Intel graphics on Windows: using DirectX 12 (the Intel Vulkan driver is known to crash)".into());
@@ -357,14 +394,15 @@ impl Sentinel {
     }
 }
 
-/// `performance.gpuBackend` and `performance.useGpu` from the preferences file, read before the
-/// app (and its full preference load) exists. Unreadable values are the defaults.
-pub fn read_prefs(path: Option<&Path>) -> (GpuBackend, bool) {
+/// Read the policy leniently at startup, including old settings without renderingMode.
+pub fn read_rendering_prefs(path: Option<&Path>) -> (GpuBackend, RenderingMode) {
     let v: Value = path.and_then(|p| std::fs::read_to_string(p).ok()).and_then(|t| serde_json::from_str(&t).ok()).unwrap_or(Value::Null);
     let perf = v.get("performance");
     let backend = perf.and_then(|p| p.get("gpuBackend")).and_then(Value::as_str).and_then(GpuBackend::parse).unwrap_or_default();
     let use_gpu = perf.and_then(|p| p.get("useGpu")).and_then(Value::as_bool).unwrap_or(true);
-    (backend, use_gpu)
+    let explicit = perf.and_then(|p| p.get("renderingMode")).and_then(Value::as_str).and_then(RenderingMode::parse);
+    let mode = explicit.unwrap_or(if !use_gpu || backend == GpuBackend::Cpu { RenderingMode::Cpu } else { RenderingMode::Auto });
+    (backend, mode)
 }
 
 #[cfg(test)]
@@ -374,6 +412,17 @@ mod tests {
 
     fn crashed(backend: &str, adapter_backend: &str) -> Marker {
         Marker { backend: backend.into(), adapter: "Intel(R) UHD Graphics".into(), adapter_backend: adapter_backend.into(), ..Default::default() }
+    }
+
+    #[test]
+    fn cpu_policy_ignores_hardware_backend_override() {
+        let p = plan_with_mode(Vulkan, RenderingMode::Cpu, None, Some("vulkan"), false, Os::Windows);
+        assert_eq!(p.backend, Cpu);
+        assert!(p.env.is_none());
+        assert_eq!(plan_with_mode(Vulkan, RenderingMode::Cpu, Some(&crashed("vulkan", "vulkan")), None, false, Os::Windows).backend, Cpu);
+        let p = plan_with_mode(Auto, RenderingMode::Gpu, None, Some("vulkan"), true, Os::Windows);
+        assert_eq!(p.backend, Cpu);
+        assert!(p.env.is_none());
     }
 
     #[test]
@@ -475,6 +524,21 @@ mod tests {
     }
 
     #[test]
+    fn adapters_must_present_even_when_none_support_the_surface() {
+        let mut a = cand(INTEL, wgpu::DeviceType::IntegratedGpu, wgpu::Backend::Dx12);
+        a.surface_ok = false;
+        assert_eq!(pick(&[a], Auto, Os::Windows), None);
+        assert_eq!(pick(&[a], Cpu, Os::Windows), None);
+    }
+
+    #[test]
+    fn explicit_policy_overrides_legacy_cpu_backend() {
+        assert_eq!(plan_with_mode(Cpu, RenderingMode::Gpu, None, None, false, Os::Mac).backend, Auto);
+        assert_eq!(plan_with_mode(Metal, RenderingMode::Cpu, None, None, false, Os::Mac).backend, Cpu);
+        assert_eq!(plan_with_mode(Auto, RenderingMode::Gpu, None, None, true, Os::Mac).backend, Cpu);
+    }
+
+    #[test]
     fn marker_round_trip_and_lenient_parse() {
         let m = Marker {
             backend: "auto".into(),
@@ -556,14 +620,48 @@ mod tests {
         let dir = temp_dir("prefs");
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("preferences.json");
-        assert_eq!(read_prefs(None), (Auto, true));
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(None), (Auto, RenderingMode::Auto));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
         std::fs::write(&p, r#"{"performance": {"gpuBackend": "dx12", "useGpu": false}, "interface": {}}"#).unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Dx12, false));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Dx12, RenderingMode::Cpu));
         std::fs::write(&p, r#"{"performance": {"gpuBackend": "quantum"}}"#).unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
+        std::fs::write(&p, r#"{"performance": {"useGpu": false, "renderingMode": "gpu"}}"#).unwrap();
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Gpu));
         std::fs::write(&p, "{not json").unwrap();
-        assert_eq!(read_prefs(Some(&p)), (Auto, true));
+        assert_eq!(read_rendering_prefs(Some(&p)), (Auto, RenderingMode::Auto));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// #712: never a `dxcompiler.dll` found through the DLL search path (current directory, PATH).
+    #[test]
+    fn dx12_compiler_is_fxc_or_dxc_beside_the_exe() {
+        use wgpu::Dx12Compiler as C;
+        let dir = temp_dir("dxc");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(matches!(dx12_compiler(None, None), C::Fxc));
+        assert!(matches!(dx12_compiler(None, Some(&dir)), C::Fxc));
+        std::fs::write(dir.join("dxcompiler.dll"), b"MZ").unwrap();
+        let expected = dir.join("dxcompiler.dll");
+        assert!(matches!(dx12_compiler(None, Some(&dir)), C::DynamicDxc { dxc_path } if Path::new(&dxc_path) == expected));
+        // An explicit WGPU_DX12_COMPILER wins; an unknown value is ignored.
+        assert!(matches!(dx12_compiler(Some(" FXC "), Some(&dir)), C::Fxc));
+        assert!(matches!(dx12_compiler(Some("dxc"), None), C::DynamicDxc { dxc_path } if dxc_path == "dxcompiler.dll"));
+        assert!(matches!(dx12_compiler(Some("quantum"), None), C::Fxc));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // The app's setup replaces wgpu's default (`Auto`: DXC by name from the search path).
+        let mut setup = egui_wgpu::WgpuSetup::without_display_handle();
+        let plan = plan(Auto, None, None, false, Os::Windows);
+        configure(&mut setup, &plan, Os::Windows, Arc::new(Mutex::new(None)), Arc::default());
+        let egui_wgpu::WgpuSetup::CreateNew(create) = &setup else { panic!("a new instance") };
+        if std::env::var_os("WGPU_DX12_COMPILER").is_none() {
+            let safe = match &create.instance_descriptor.backend_options.dx12.shader_compiler {
+                C::Fxc => true,
+                C::DynamicDxc { dxc_path } => Path::new(dxc_path).is_absolute(),
+                C::StaticDxc | C::Auto => false,
+            };
+            assert!(safe, "{:?}", create.instance_descriptor.backend_options.dx12.shader_compiler);
+        }
     }
 }

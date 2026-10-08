@@ -14,7 +14,7 @@ use photosuite_text::render::PathEl;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
-use crate::type_cmds::{refresh, replace_text, style_paragraphs, style_range};
+use crate::type_cmds::{is_auto_named, layer_name, refresh, replace_text, style_paragraphs, style_range};
 use crate::{EngineError, Result, Session};
 
 /// Photoshop's Paste Lorem Ipsum filler.
@@ -70,11 +70,16 @@ fn with_text<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&mut Tex
     s.edit(label, |doc, _| {
         let snapshot = doc.clone();
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+        let auto_named = is_auto_named(l);
         let LayerContent::Text(t) = &mut l.content else {
             return Err(EngineError::Other(format!("layer {} is a {} layer, not a type layer", id.0, l.content.kind_name())));
         };
         let r = f(t, &snapshot)?;
         refresh(&snapshot, t);
+        let name = auto_named.then(|| layer_name(&t.text));
+        if let Some(n) = name {
+            l.name = n;
+        }
         Ok(r)
     })
 }
@@ -389,7 +394,7 @@ fn paste_lorem(s: &mut Session, p: &Value) -> Result<Value> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let (w, h) = (d.doc.size.width as f64, d.doc.size.height as f64);
     let size = p.get("size").and_then(Value::as_f64).unwrap_or((h / 20.0 * 72.0 / f64::from(d.doc.resolution_dpi)).clamp(6.0, 72.0));
-    let r = s.execute("type.create", json!({"box": [w * 0.1, h * 0.1, w * 0.8, h * 0.8], "text": LOREM_IPSUM, "size": size, "name": "Lorem ipsum"}))?;
+    let r = s.execute("type.create", json!({"box": [w * 0.1, h * 0.1, w * 0.8, h * 0.8], "text": LOREM_IPSUM, "size": size}))?;
     Ok(json!({"layer": r["layer"]}))
 }
 
@@ -525,14 +530,7 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!("type.antiAlias.windowsLcd", "Windows LCD", &["Type", "Anti-Alias"], LP, has_text, |s, p| set_aa(s, p, AntiAlias::WindowsLcd)),
         spec!("type.antiAlias.windows", "Windows", &["Type", "Anti-Alias"], LP, has_text, |s, p| set_aa(s, p, AntiAlias::Windows)),
         spec!("type.orientation.horizontal", "Horizontal", &["Type", "Orientation"], LP, has_text, |s, p| set_orientation(s, p, Orientation::Horizontal)),
-        spec!(
-            "type.orientation.vertical",
-            "Vertical",
-            &["Type", "Orientation"],
-            r##"{"layer":id?} (stored and saved; rendered horizontally for now)"##,
-            has_text,
-            |s, p| set_orientation(s, p, Orientation::Vertical)
-        ),
+        spec!("type.orientation.vertical", "Vertical", &["Type", "Orientation"], LP, has_text, |s, p| set_orientation(s, p, Orientation::Vertical)),
         spec!("type.openType.standardLigatures", "Standard Ligatures", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "liga")),
         spec!("type.openType.contextualAlternates", "Contextual Alternates", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "calt")),
         spec!("type.openType.discretionaryLigatures", "Discretionary Ligatures", &["Type", "OpenType"], OT, has_text, |s, p| toggle_opentype(s, p, "dlig")),

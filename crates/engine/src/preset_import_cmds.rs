@@ -56,13 +56,35 @@ fn unique(name: &str, taken: &[String]) -> String {
 
 fn import_abr(s: &mut Session, p: &Value) -> Result<Value> {
     let cmd = "brush.presets.importAbr";
-    let (bytes, stem) = file_bytes(p, cmd, ".abr file")?;
-    let group = match p.get("group") {
-        Some(v) => v.as_str().map(str::trim).filter(|g| !g.is_empty()).ok_or_else(|| bad(cmd, "`group` must be a non-empty string"))?.to_string(),
-        None if !stem.is_empty() => stem,
-        None => "Imported Brushes".to_string(),
-    };
-    let imp = photosuite_io::abr_map::read_abr(&bytes, &group).map_err(|e| bad(cmd, e))?;
+    let label = "Import Brushes";
+    // A background job when started with `Session::start` (#210): reading and decoding the
+    // file run on a worker, cancellable before each brush; the library changes on apply.
+    let params = p.clone();
+    let params_apply = p.clone();
+    crate::jobs::run(
+        s,
+        label,
+        false,
+        move |ctx| {
+            ctx.progress(0.0, "Importing brushes");
+            let p = &params;
+            let (bytes, stem) = file_bytes(p, cmd, ".abr file")?;
+            let group = match p.get("group") {
+                Some(v) => v.as_str().map(str::trim).filter(|g| !g.is_empty()).ok_or_else(|| bad(cmd, "`group` must be a non-empty string"))?.to_string(),
+                None if !stem.is_empty() => stem,
+                None => "Imported Brushes".to_string(),
+            };
+            ctx.check()?;
+            let imp = ctx
+                .stage(0.05, 1.0, "Importing brushes", |ctl| photosuite_io::abr_map::read_abr_with(&bytes, &group, ctl))
+                .map_err(|e| if ctx.cancelled() { EngineError::Cancelled } else { bad(cmd, e) })?;
+            Ok((group, imp))
+        },
+        move |s, (group, imp)| add_abr_presets(s, &params_apply, group, imp),
+    )
+}
+
+fn add_abr_presets(s: &mut Session, p: &Value, group: String, imp: photosuite_io::abr_map::AbrImport) -> Result<Value> {
     // Re-importing a file replaces its group instead of duplicating it.
     if p.get("replace").and_then(Value::as_bool).unwrap_or(true) {
         s.tools.presets.retain(|x| x.builtin || x.group != group);

@@ -1067,6 +1067,9 @@ fn target_cmd(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(list(s))
 }
 
+/// The channel shortcuts' modifier as the platform writes it, for error messages (`⌘4`, `Ctrl+4`).
+const SLOT_KEY: &str = if cfg!(target_os = "macos") { "⌘" } else { "Ctrl+" };
+
 /// ⌘2 composite, ⌘3… colour channels then alpha channels (Photoshop CC defaults).
 fn target_slot(s: &mut Session, slot: usize) -> Result<Value> {
     let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
@@ -1076,7 +1079,7 @@ fn target_slot(s: &mut Session, slot: usize) -> Result<Value> {
         2 => ChannelTarget::Composite,
         n if n - 3 < shown_colors => ChannelTarget::Color(n - 3),
         n if n - 3 - shown_colors < doc.channels.len() => ChannelTarget::Alpha(n - 3 - shown_colors),
-        _ => return Err(EngineError::Other(format!("no channel for ⌘{slot}"))),
+        _ => return Err(EngineError::Other(format!("no channel for {SLOT_KEY}{slot}"))),
     };
     target(s, t);
     Ok(list(s))
@@ -1368,20 +1371,25 @@ fn apply_image(s: &mut Session, p: &Value) -> Result<Value> {
         let colors = sf.mode.color_channels();
         let mut v = surf.read_region(area);
         for (i, px) in v.chunks_exact_mut(n).enumerate() {
+            let base_a = if sf.alpha { px[colors].clamp(0.0, 1.0) } else { 1.0 };
             let mut w = weight(i);
-            if preserve && sf.alpha {
-                w *= px[colors].clamp(0.0, 1.0);
+            if preserve {
+                w *= base_a;
             }
             if w <= 0.0 {
                 continue;
             }
+            // Painted over the layer like a brush: the blend only acts where the layer has
+            // pixels (where it is transparent the source shows as is), and the alpha grows by
+            // source-over, so applying to an empty layer copies the source in any mode.
+            let out_a = if preserve { base_a } else { w + base_a * (1.0 - w) };
             for (c, b) in px[..colors].iter_mut().enumerate() {
                 let top = src.get(c).unwrap_or(&src[0])[i];
-                *b += (blending.apply(*b, top) - *b) * w;
+                let blended = top + (blending.apply(*b, top) - top) * base_a;
+                *b = if preserve { *b + (blended - *b) * w } else { (w * blended + base_a * (1.0 - w) * *b) / out_a };
             }
-            // Painting a transparent pixel makes it opaque, as Apply Image does on layers.
-            if !preserve && sf.alpha {
-                px[colors] = px[colors].max(w);
+            if sf.alpha {
+                px[colors] = out_a;
             }
         }
         surf.write_region(area, &v);
@@ -1595,7 +1603,7 @@ fn slot_ok<const N: usize>(s: &Session) -> std::result::Result<(), String> {
     let d = s.active().ok_or("no document open")?;
     let colors = color_count(&d.doc);
     let shown = if colors > 1 { colors } else { 0 };
-    if N - 3 < shown + d.doc.channels.len() { Ok(()) } else { Err(format!("no channel for ⌘{N}")) }
+    if N - 3 < shown + d.doc.channels.len() { Ok(()) } else { Err(format!("no channel for {SLOT_KEY}{N}")) }
 }
 
 fn has_apply_target(s: &Session) -> std::result::Result<(), String> {

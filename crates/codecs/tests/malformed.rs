@@ -6,7 +6,7 @@ use photosuite_codecs::*;
 use proptest::prelude::*;
 
 fn tight() -> DecodeOptions {
-    DecodeOptions { limits: Limits { max_width: 4096, max_height: 4096, max_pixels: 1 << 22, max_alloc: 64 << 20 } }
+    DecodeOptions { limits: Limits { max_width: 4096, max_height: 4096, max_pixels: 1 << 22, max_alloc: 64 << 20 }, ..Default::default() }
 }
 
 fn samples() -> Vec<(Format, Vec<u8>)> {
@@ -55,6 +55,13 @@ fn truncated_files_mostly_error() {
         if matches!(f, Format::Png | Format::Pnm | Format::Qoi | Format::OpenExr | Format::Tiff | Format::Bmp) {
             let r = decode_as_with(f, &bytes[..bytes.len() / 2], &tight());
             assert!(r.is_err(), "{f:?} decoded half a file");
+        }
+        // JPEG decodes leniently (the missing part grey) but never silently (#518).
+        if f == Format::Jpeg {
+            match decode_as_with(f, &bytes[..bytes.len() / 2], &tight()) {
+                Ok(img) => assert_eq!(img.warnings, [DecodeWarning::Truncated { format: f }]),
+                Err(e) => assert!(e.to_string().contains("before any image data"), "{e}"),
+            }
         }
     }
 }

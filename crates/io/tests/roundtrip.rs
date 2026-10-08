@@ -73,6 +73,22 @@ fn empty_document() {
     assert_eq!(back.size, d.size);
 }
 
+/// A header declaring a zero width or height is corrupt (the spec range starts at 1): opening it
+/// fails instead of producing an empty document, and a zero-sized document is never written.
+#[test]
+fn zero_sized_psd_is_rejected() {
+    let d = gen_doc(ColorMode::Rgb, SampleType::U8, Features::PIXELS);
+    let good = export(&d, "x.psd", &ExportOptions::default()).unwrap().bytes;
+    for range in [14..18, 18..22, 14..22] {
+        let mut b = good.clone();
+        b[range.clone()].fill(0);
+        let err = import("z.psd", &b).expect_err("zero-sized header must not open");
+        assert!(err.to_string().contains("at least 1x1"), "{range:?}: {err}");
+    }
+    let empty = photosuite_doc::Document::new("e", photosuite_geom::Size::new(0, 3), ColorMode::Rgb, SampleType::U8);
+    assert!(export(&empty, "x.psd", &ExportOptions::default()).is_err());
+}
+
 #[test]
 fn round_trip_reaches_a_fixed_point() {
     // The first export renders fill layers ourselves; after import they carry
@@ -108,6 +124,7 @@ fn text_shape_smart_raw_blocks_survive() {
             filter_mask: None,
             warp: None,
             stack_mode: None,
+            perspective: None,
         }),
     );
     smart.psd_blocks = vec![(*b"PlLd", Arc::new(vec![0; 4])), (*b"vmsk", Arc::new(vec![5; 8])), (*b"luni", Arc::new(vec![0; 8]))];

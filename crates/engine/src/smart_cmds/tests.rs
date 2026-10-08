@@ -189,6 +189,36 @@ fn filter_stack_order_blend_disable_and_clear() {
     assert!(!s.is_enabled("layer.smartFilter.clearSmartFilters"));
 }
 
+/// Issue #466: an explicit `layer` target is checked instead of the active layer, which stays
+/// active; without one the commands still follow the active layer (menus).
+#[test]
+fn smart_filter_commands_check_an_explicit_layer_target() {
+    let mut s = session(8);
+    paint(&mut s);
+    let so = convert(&mut s);
+    s.execute("filter.sharpen.smartSharpen", json!({"amount": 65, "radius": 1})).unwrap();
+    let curves = s.execute("layer.newAdjustmentLayer.curves", json!({"points": [[0, 0], [255, 255]]})).unwrap()["layer"].as_u64().unwrap();
+    let active = |s: &Session| s.active().unwrap().active_layer.unwrap().0;
+    assert_eq!(active(&s), curves);
+    let filter = |s: &Session| match &s.active().unwrap().doc.layer(LayerId(so)).unwrap().content {
+        LayerContent::Smart(sm) => sm.smart_filters[0].clone(),
+        other => panic!("not smart: {}", other.kind_name()),
+    };
+    // No target: the active Curves layer decides, as the menu shows.
+    assert!(!s.is_enabled("layer.smartFilter.setParams"));
+    assert!(matches!(s.execute("layer.smartFilter.setParams", json!({"params": {"amount": 80}})), Err(EngineError::Disabled(..))));
+    let r = s.execute("layer.smartFilter.setParams", json!({"layer": so, "index": 0, "params": {"amount": 80}})).unwrap();
+    assert_eq!(r, json!({"layer": so}));
+    assert_eq!(filter(&s).params["amount"], json!(80));
+    s.execute("layer.smartFilter.setVisible", json!({"layer": so, "visible": false})).unwrap();
+    assert!(!filter(&s).visible);
+    assert_eq!(active(&s), curves, "the active layer stays");
+    // A target that isn't a smart object with filters is still refused, and the active layer stays.
+    assert!(matches!(s.execute("layer.smartFilter.setParams", json!({"layer": curves, "params": {}})), Err(EngineError::Disabled(..))));
+    assert!(s.execute("layer.smartFilter.setParams", json!({"layer": 999_999, "params": {}})).is_err());
+    assert_eq!(active(&s), curves);
+}
+
 #[test]
 fn selection_becomes_the_filter_mask() {
     let mut s = session(8);
@@ -245,8 +275,9 @@ fn transforms_re_render_from_source_losslessly() {
     // Whole-pixel moves (Move tool) shift without re-rendering.
     smart.execute("layer.translate", json!({"dx": 3, "dy": -2})).unwrap();
     assert_eq!(active_smart(&smart).transform, Affine::translate(-3.0, 3.0));
-    // Perspective is refused (for now) rather than silently rasterizing.
-    assert!(smart.execute("edit.transform", json!({"layer": sid, "quad": [[0, 0], [10, 0], [12, 10], [-2, 10]]})).is_err());
+    // Perspective keeps the full projective placement (and stays a smart object).
+    smart.execute("edit.transform", json!({"layer": sid, "quad": [[0, 0], [10, 0], [12, 10], [-2, 10]]})).unwrap();
+    assert!(active_smart(&smart).perspective.is_some());
 }
 
 #[test]
@@ -497,4 +528,64 @@ fn smart_filter_blur_repeats_the_canvas_edge_like_a_layer_filter() {
         assert!((b[0][3] - 1.0).abs() < 1e-3, "corner alpha {}", b[0][3]);
         assert!(max_diff(&a, &b) < 2.0 / 255.0, "smart re-render matches the layer filter ({depth}-bit)");
     }
+}
+
+/// A distorted smart object keeps its fourth corner: through Edit Contents → Save (which
+/// re-renders from the source) the placement and the rendered corners don't move.
+#[test]
+fn distort_survives_edit_contents() {
+    let mut s = session(8);
+    paint(&mut s);
+    let id = convert(&mut s);
+    let r = active_smart(&s).cache.unwrap().content_bounds();
+    let (x0, y0, x1, y1) = (r.x0, r.y0, r.x1, r.y1);
+    // Distort: only the bottom-right corner moves (in by 12, up by 8): not a parallelogram.
+    let quad = json!([[x0, y0], [x1, y0], [x1 - 12, y1 - 8], [x0, y1]]);
+    s.execute("edit.transform", json!({"layer": id, "rect": [x0, y0, x1, y1], "quad": quad})).unwrap();
+    let placed = active_smart(&s);
+    assert!(placed.perspective.is_some(), "Distort keeps a projective placement");
+    let before = flat(&s);
+    s.execute("layer.smartObjects.editContents", json!({})).unwrap();
+    s.execute("layer.smartObjects.saveContents", json!({})).unwrap();
+    s.set_active(0);
+    assert_eq!(active_smart(&s).perspective, placed.perspective, "the placement survives the save");
+    assert!(mean_diff(&before, &flat(&s)) < 0.01, "the re-render matches the distorted look");
+    // The bottom-right of the original frame is now empty: the corner really moved in.
+    let sm = active_smart(&s);
+    let c = sm.cache.as_ref().unwrap();
+    assert_eq!(c.rgba(x1 - 2, y1 - 2)[3], 0.0, "no pixels where the corner used to be");
+}
+
+/// Warp handles on a distorted smart object sit on its four distorted corners (the warp is mapped
+/// through the full projective placement, not its affine approximation), and warping it keeps the
+/// Distort placement.
+#[test]
+fn warp_on_a_distorted_smart_object_follows_the_corners() {
+    let mut s = session(8);
+    paint(&mut s);
+    let id = convert(&mut s);
+    let r = active_smart(&s).cache.unwrap().content_bounds();
+    let (x0, y0, x1, y1) = (f64::from(r.x0), f64::from(r.y0), f64::from(r.x1), f64::from(r.y1));
+    let quad = [[x0, y0], [x1, y0], [x1 - 12.0, y1 - 8.0], [x0, y1]];
+    s.execute("edit.transform", json!({"layer": id, "rect": [x0, y0, x1, y1], "quad": quad})).unwrap();
+    let mut sm = active_smart(&s);
+    let h = placement(&sm);
+    let inv = h.inverse().unwrap();
+    let src: Vec<(f64, f64)> = quad.iter().map(|p| inv.apply(p[0], p[1])).collect();
+    let b = src.iter().fold([f64::MAX, f64::MAX, f64::MIN, f64::MIN], |b, p| [b[0].min(p.0), b[1].min(p.1), b[2].max(p.0), b[3].max(p.1)]);
+    sm.warp = Some(photosuite_geom::warp::Warp::custom(photosuite_geom::warp::BezierMesh::identity(b, 1, 1), b));
+    let layer = Layer::new("w", LayerContent::Smart(sm));
+    let doc_warp = crate::warp_cmds::smart_warp_doc_space(&layer).unwrap();
+    let pts = doc_warp.mesh.unwrap().points;
+    for (q, i) in quad.iter().zip([0usize, 3, 15, 12]) {
+        let p = pts[i];
+        assert!((p[0] - q[0]).abs() < 1e-6 && (p[1] - q[1]).abs() < 1e-6, "corner {i}: {p:?} vs {q:?}");
+    }
+    // Warping the distorted smart object works and keeps its projective placement.
+    let before = active_smart(&s).perspective;
+    assert!(before.is_some());
+    s.execute("edit.transform.warp", json!({"style": "arc", "bend": 30})).unwrap();
+    let after = active_smart(&s);
+    assert!(after.warp.is_some());
+    assert_eq!(after.perspective, before);
 }

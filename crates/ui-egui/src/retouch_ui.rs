@@ -1,6 +1,6 @@
-//! UI for the retouching tools (healing, clone, history brush, blur/sharpen/smudge, dodge/burn/
-//! sponge) and the smart selection tools (Quick Selection, Object Selection): gesture → engine
-//! command, options bars, and the clone-source marker.
+//! UI for the retouching tools (healing, patch, clone, history brush, blur/sharpen/smudge,
+//! dodge/burn/sponge, Mixer Brush) and the smart selection tools (Quick Selection, Object
+//! Selection): gesture → engine command, options bars, and the clone-source marker.
 
 use egui::{Color32, Stroke, vec2};
 use serde_json::{Value, json};
@@ -15,7 +15,8 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
     let o = app.ui.tool_options.clone();
     let pts = json!(points);
     let (cmd, mut p): (&str, Value) = match tool {
-        Tool::SpotHealing => ("paint.spotHealing", json!({"type": o.spot_type})),
+        Tool::SpotHealing => ("paint.spotHealing", json!({"type": o.spot_type, "sampleAllLayers": o.sample_all_layers})),
+        Tool::MixerBrush => ("paint.mixerBrush", json!({})),
         Tool::Healing | Tool::CloneStamp => {
             let mut p = json!({"aligned": o.clone_aligned, "sampleLayer": o.clone_sample});
             // The Clone Source panel's active slot (set by ⌥-click) drives the stroke: the engine
@@ -26,7 +27,13 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
                 (Some(off), _) => p["offset"] = json!(off),
                 (None, Some(src)) => p["source"] = json!(src),
                 (None, None) => {
-                    app.ui.status = tl!("Option-click to define a source point to clone from").into();
+                    // Photoshop says Option-click on the Mac and Alt-click on Windows.
+                    app.ui.status = if cfg!(target_os = "macos") {
+                        tl!("Option-click to define a source point to clone from")
+                    } else {
+                        tl!("Alt-click to define a source point to clone from")
+                    }
+                    .into();
                     app.ui.status_error = true;
                     return true;
                 }
@@ -69,6 +76,70 @@ pub fn finish_stroke(app: &mut PhotosuiteApp, tool: Tool, points: &[[f64; 3]], m
     true
 }
 
+/// Patch Tool and Content-Aware Move Tool: a drag that starts inside the selection (without ⇧ or
+/// ⌥) drags the selection; any other drag draws a lasso selection.
+pub fn patch_drags_selection(app: &PhotosuiteApp, at: [f64; 2], mods: egui::Modifiers) -> bool {
+    if mods.shift || mods.alt {
+        return false;
+    }
+    let Some(sel) = app.session.active().and_then(|st| st.doc.selection.as_ref()) else { return false };
+    sel.sample_channel(at[0].floor() as i32, at[1].floor() as i32, 0) > 0.0
+}
+
+/// Whole-pixel offset for a drag from `start` to `end`, limited so the dragged outline stays on the
+/// canvas (the engine rejects a patch or move that leaves it).
+pub fn patch_offset(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) -> [i32; 2] {
+    let (dx, dy) = ((end[0] - start[0]).round(), (end[1] - start[1]).round());
+    let (dx, dy) = if dx.is_finite() && dy.is_finite() { (dx.clamp(-1e7, 1e7) as i32, dy.clamp(-1e7, 1e7) as i32) } else { (0, 0) };
+    let Some((canvas, sel)) = app.session.active().and_then(|st| Some((st.doc.bounds(), st.doc.selection.clone()?))) else { return [dx, dy] };
+    let key = u64::MAX - app.session.active().map_or(0, |st| st.doc.id.0);
+    let b = app.cached_bounds(key, &sel).intersect(&canvas);
+    if b.is_empty() {
+        return [dx, dy];
+    }
+    let clamp = |d: i32, lo: i32, hi: i32| if lo > hi { 0 } else { d.clamp(lo, hi) };
+    [clamp(dx, canvas.x0 - b.x0, canvas.x1 - b.x1), clamp(dy, canvas.y0 - b.y0, canvas.y1 - b.y1)]
+}
+
+/// Patch Tool: the patch was dragged from `start` to `end`.
+pub fn finish_patch(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
+    let off = patch_offset(app, start, end);
+    if off == [0, 0] {
+        return;
+    }
+    let preview = crate::patch_preview::take(app);
+    let p = json!({"offset": off, "mode": app.ui.tool_options.patch_mode, "target": crate::canvas::paint_target(app)});
+    match app.run("paint.patch", p) {
+        Ok(_) => crate::patch_preview::committed(app, preview, off),
+        Err(e) => {
+            app.ui.status = e;
+            app.ui.status_error = true;
+        }
+    }
+}
+
+/// Content-Aware Move Tool: the selection was dragged from `start` to `end`. The engine runs it as
+/// a background job (progress dialog, Esc cancels); the selection follows the content.
+pub fn finish_content_aware_move(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
+    let off = patch_offset(app, start, end);
+    if off == [0, 0] {
+        return;
+    }
+    let o = &app.ui.tool_options;
+    let p = json!({
+        "offset": off,
+        "mode": o.cam_mode,
+        "structure": o.cam_structure.round().clamp(1.0, 7.0),
+        "color": o.cam_color.round().clamp(0.0, 10.0),
+        "sampleAllLayers": o.sample_all_layers,
+        "target": crate::canvas::paint_target(app),
+    });
+    if let Err(e) = app.run("paint.contentAwareMove", p) {
+        app.ui.status = e;
+        app.ui.status_error = true;
+    }
+}
+
 /// Object Selection: the dragged rectangle.
 pub fn finish_object_selection(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
     let (x, y) = (start[0].min(end[0]), start[1].min(end[1]));
@@ -103,7 +174,9 @@ pub fn draw_source_marker(app: &PhotosuiteApp, painter: &egui::Painter, xf: &Vie
     if !matches!(app.ui.tool, Tool::CloneStamp | Tool::Healing) {
         return;
     }
-    let src = match (crate::preset_panels::clone_sample_point(app, app.hover_doc), app.ui.clone_offset, app.hover_doc, app.ui.clone_source) {
+    let at =
+        app.drag.as_ref().filter(|d| matches!(d.tool, Tool::CloneStamp | Tool::Healing)).and_then(|d| d.points.last().map(|p| [p[0], p[1]])).or(app.hover_doc);
+    let src = match (crate::preset_panels::clone_sample_point(app, at), app.ui.clone_offset, at, app.ui.clone_source) {
         (Some(p), ..) => Some(p),
         (None, Some(off), Some(h), _) => Some([h[0] + off[0], h[1] + off[1]]),
         (None, None, _, Some(s)) => Some(s),
@@ -129,7 +202,9 @@ fn pct(ui: &mut egui::Ui, label: &str, v: &mut f32) {
 
 /// Options bar for the retouching and smart-selection tools. Returns false for other tools.
 pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, tool: Tool) -> bool {
-    if !tool.is_brushlike() && !matches!(tool, Tool::QuickSelection | Tool::ObjectSelection) || matches!(tool, Tool::Brush | Tool::Pencil | Tool::Eraser) {
+    if !tool.is_brushlike() && !matches!(tool, Tool::QuickSelection | Tool::ObjectSelection | Tool::Patch | Tool::ContentAwareMove)
+        || matches!(tool, Tool::Brush | Tool::Pencil | Tool::MixerBrush | Tool::Eraser)
+    {
         return false;
     }
     let o = &mut app.ui.tool_options;
@@ -144,6 +219,29 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, tool: Tool) -> bo
             }
             crate::widgets::vline(ui, 22.0);
             crate::widgets::checkbox(ui, &mut o.sample_all_layers, tl!("Sample All Layers"));
+        }
+        Tool::Patch => {
+            opt(ui, tl!("Patch:"));
+            for (k, l) in [("source", tl!("Source")), ("destination", tl!("Destination"))] {
+                let mut on = o.patch_mode == k;
+                if crate::widgets::checkbox(ui, &mut on, l).clicked() {
+                    o.patch_mode = k.into();
+                }
+            }
+            crate::widgets::vline(ui, 22.0);
+            opt(ui, tl!("Lasso around an area, then drag the selection"));
+        }
+        Tool::ContentAwareMove => {
+            opt(ui, tl!("Mode:"));
+            let modes = [("move".to_string(), tl!("Move")), ("extend".to_string(), tl!("Extend"))];
+            crate::widgets::dropdown(ui, "cam-mode", &mut o.cam_mode, &modes, 90.0);
+            opt(ui, tl!("Structure:"));
+            crate::widgets::value_field(ui, &mut o.cam_structure, 1.0..=7.0, "", 40.0);
+            opt(ui, tl!("Color:"));
+            crate::widgets::value_field(ui, &mut o.cam_color, 0.0..=10.0, "", 40.0);
+            crate::widgets::checkbox(ui, &mut o.sample_all_layers, tl!("Sample All Layers"));
+            crate::widgets::vline(ui, 22.0);
+            opt(ui, tl!("Lasso around an area, then drag the selection"));
         }
         Tool::Healing | Tool::CloneStamp => {
             crate::widgets::checkbox(ui, &mut o.clone_aligned, tl!("Aligned"));
@@ -238,6 +336,19 @@ mod tests {
     }
 
     #[test]
+    fn clone_without_a_source_names_the_platform_modifier() {
+        // Option-click on the Mac, Alt-click elsewhere (#251).
+        for tool in [Tool::CloneStamp, Tool::Healing] {
+            let mut app = app();
+            app.ui.tool = tool;
+            assert!(finish_stroke(&mut app, tool, &[[10.0, 30.0, 1.0], [50.0, 30.0, 1.0]], egui::Modifiers::NONE));
+            assert!(app.ui.status_error, "{tool:?}");
+            let want = if cfg!(target_os = "macos") { "Option-click" } else { "Alt-click" };
+            assert!(app.ui.status.starts_with(want), "{tool:?}: {}", app.ui.status);
+        }
+    }
+
+    #[test]
     fn retouch_strokes_paint_the_targeted_mask() {
         // #207: with the mask targeted, retouching changes the mask, never the pixels.
         for tool in [Tool::Blur, Tool::Sharpen, Tool::Smudge, Tool::Dodge, Tool::Burn] {
@@ -258,9 +369,9 @@ mod tests {
     }
 
     #[test]
-    fn sample_all_layers_reaches_blur_sharpen_and_smudge() {
-        // #207: the options-bar checkbox reaches the command.
-        for tool in [Tool::Blur, Tool::Sharpen, Tool::Smudge] {
+    fn sample_all_layers_reaches_the_command() {
+        // #207, #731: the options-bar checkbox reaches the command.
+        for tool in [Tool::SpotHealing, Tool::Blur, Tool::Sharpen, Tool::Smudge] {
             for all in [false, true] {
                 let mut app = app();
                 stripes(&mut app, 4, "pixels");
@@ -270,6 +381,108 @@ mod tests {
                 let a = active(&app).surface().unwrap().rgba(30, 30)[3];
                 assert_eq!(a > 0.0, all, "{tool:?} sampleAllLayers={all}: alpha {a}");
             }
+        }
+    }
+
+    #[test]
+    fn mixer_brush_is_selectable_and_paints_only_inside_the_selection_via_control() {
+        use crate::control::{ControlRequest, Outcome, handle};
+
+        let mut app = app();
+        app.run("paint.pencil", json!({"points": [[50, 30]], "size": 200, "color": "#204080"})).unwrap();
+        app.run("tools.setColors", json!({"foreground": "#f02010"})).unwrap();
+        app.run(
+            "tools.setBrush",
+            json!({
+                "pressureSize": false,
+                "size": 12,
+                "mixer": {"wet": 0.0, "load": 1.0, "mix": 0.0, "flow": 1.0}
+            }),
+        )
+        .unwrap();
+        app.run("select.rect", json!({"x": 35, "y": 20, "width": 30, "height": 20})).unwrap();
+        let before = {
+            let surface = active(&app).surface().unwrap();
+            [surface.rgba(20, 30), surface.rgba(50, 30), surface.rgba(80, 30)]
+        };
+
+        let ctx = egui::Context::default();
+        let (req, _rx) = ControlRequest::new(
+            "ui.pointer",
+            json!({
+                "tool": "mixerBrush",
+                "events": [
+                    {"kind": "down", "x": 8, "y": 30},
+                    {"kind": "move", "x": 92, "y": 30},
+                    {"kind": "up", "x": 92, "y": 30}
+                ]
+            }),
+        );
+        assert!(matches!(handle(&mut app, &ctx, &req), Outcome::Done(_)));
+        assert_eq!(app.ui.tool, Tool::MixerBrush);
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("paint.mixerBrush"));
+
+        let surface = active(&app).surface().unwrap();
+        assert_ne!(surface.rgba(50, 30), before[1], "the selected pixels are mixed");
+        assert_eq!(surface.rgba(20, 30), before[0], "outside the selection is unchanged");
+        assert_eq!(surface.rgba(80, 30), before[2], "the far side outside the selection is unchanged");
+    }
+
+    #[test]
+    fn patch_tool_lassoes_then_drags_the_patch() {
+        let mut app = app();
+        app.run("paint.pencil", json!({"points": [[68, 30], [74, 30]], "size": 6, "color": "#ff0000"})).unwrap();
+        let red = |app: &PhotosuiteApp| active(app).surface().unwrap().rgba(71, 30)[1] < 0.5;
+        assert!(red(&app));
+        app.ui.tool = Tool::Patch;
+        let m = egui::Modifiers::NONE;
+        // Outside any selection the drag is a lasso.
+        tool_event(&mut app, ToolEvent::Down { x: 60.0, y: 20.0, pressure: 1.0 }, m);
+        for [x, y] in [[84.0, 20.0], [84.0, 40.0], [60.0, 40.0]] {
+            tool_event(&mut app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
+        }
+        tool_event(&mut app, ToolEvent::Up { x: 60.0, y: 40.0 }, m);
+        assert!(app.session.active().unwrap().doc.selection.is_some(), "lasso made a selection");
+        assert!(red(&app), "the lasso alone changes no pixels");
+        // ⇧-drag inside the selection adds to it rather than patching.
+        assert!(!patch_drags_selection(&app, [70.0, 30.0], egui::Modifiers::SHIFT));
+        // Dragging inside it patches from where it is dropped; the offset is limited to the canvas.
+        assert!(patch_drags_selection(&app, [70.0, 30.0], m));
+        assert_eq!(patch_offset(&mut app, [70.0, 30.0], [-200.0, 30.0]), [-60, 0]);
+        tool_event(&mut app, ToolEvent::Down { x: 70.0, y: 30.0, pressure: 1.0 }, m);
+        tool_event(&mut app, ToolEvent::Move { x: 50.0, y: 31.0, pressure: 1.0 }, m);
+        tool_event(&mut app, ToolEvent::Up { x: 30.0, y: 30.0 }, m);
+        assert!(!app.ui.status_error, "{}", app.ui.status);
+        let px = active(&app).surface().unwrap().rgba(71, 30);
+        assert!(px[0] > 0.95 && px[1] > 0.95 && px[2] > 0.95, "blemish patched with the white background: {px:?}");
+    }
+
+    #[test]
+    fn content_aware_move_tool_lassoes_then_moves_or_extends() {
+        for (mode, keeps) in [("move", false), ("extend", true)] {
+            let mut app = app();
+            app.run("paint.pencil", json!({"points": [[20, 30], [24, 30]], "size": 6, "color": "#0000ff"})).unwrap();
+            let blue = |app: &PhotosuiteApp, x: i32| active(app).surface().unwrap().rgba(x, 30)[0] < 0.5;
+            app.ui.tool = Tool::ContentAwareMove;
+            app.ui.tool_options.cam_mode = mode.into();
+            app.ui.tool_options.cam_structure = 7.0;
+            let m = egui::Modifiers::NONE;
+            tool_event(&mut app, ToolEvent::Down { x: 12.0, y: 20.0, pressure: 1.0 }, m);
+            for [x, y] in [[32.0, 20.0], [32.0, 40.0], [12.0, 40.0]] {
+                tool_event(&mut app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
+            }
+            tool_event(&mut app, ToolEvent::Up { x: 12.0, y: 40.0 }, m);
+            assert!(app.session.active().unwrap().doc.selection.is_some(), "lasso made a selection");
+            assert!(blue(&app, 22), "the lasso alone changes no pixels");
+            tool_event(&mut app, ToolEvent::Down { x: 22.0, y: 30.0, pressure: 1.0 }, m);
+            tool_event(&mut app, ToolEvent::Move { x: 50.0, y: 31.0, pressure: 1.0 }, m);
+            tool_event(&mut app, ToolEvent::Up { x: 72.0, y: 30.0 }, m);
+            assert!(!app.ui.status_error, "{mode}: {}", app.ui.status);
+            assert!(blue(&app, 72), "{mode}: the content lands where it was dropped");
+            assert_eq!(blue(&app, 22), keeps, "{mode}: the original place");
+            assert_eq!(app.session.journal.last().map(|(id, p)| (id.as_str(), p["mode"].as_str())), Some(("paint.contentAwareMove", Some(mode))));
+            let sel = app.session.active().unwrap().doc.selection.as_ref().unwrap();
+            assert!(sel.sample_channel(72, 30, 0) > 0.0 && sel.sample_channel(22, 30, 0) == 0.0, "{mode}: the selection follows");
         }
     }
 }

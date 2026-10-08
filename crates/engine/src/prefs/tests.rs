@@ -46,6 +46,18 @@ fn get_set_reset_by_path() {
 }
 
 #[test]
+fn reset_one_colour_setting() {
+    let mut s = session();
+    s.execute("prefs.set", json!({"values": {"colorSettings.bpc": false, "colorSettings.workingRgb": "display-p3"}})).unwrap();
+    assert_eq!(s.execute("prefs.reset", json!({"path": "colorSettings.bpc"})).unwrap(), json!(true));
+    assert!(s.color.settings.bpc);
+    assert_eq!(s.color.settings.working_rgb, "display-p3", "other colour settings are untouched");
+    s.execute("prefs.reset", json!({"path": "colorSettings.workingRgb"})).unwrap();
+    assert_eq!(s.color.settings, crate::color_cmds::ColorSettings::default());
+    assert!(s.execute("prefs.reset", json!({"path": "colorSettings.notAField"})).is_err());
+}
+
+#[test]
 fn set_validates_and_is_all_or_nothing() {
     let mut s = session();
     for (path, value) in [
@@ -250,7 +262,11 @@ fn choice_and_range_tables_cover_enum_fields() {
         for (k, v) in p[id].as_object().unwrap() {
             let path = format!("{id}.{k}");
             if let Some(c) = choices(&path) {
-                assert!(c.contains(&v.as_str().unwrap()), "{path}");
+                if path == "performance.renderingMode" && v.is_null() {
+                    assert_eq!(p["performance"]["renderingMode"], json!(null), "legacy mode is inferred until explicitly selected");
+                } else {
+                    assert!(c.contains(&v.as_str().unwrap()), "{path}");
+                }
             }
             if let Some((lo, hi)) = range(&path) {
                 let x = v.as_f64().unwrap();

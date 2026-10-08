@@ -31,8 +31,8 @@ pub mod rng;
 pub mod tile;
 
 pub use brush::{
-    BrushPreset, BrushSettings, ColorDynamics, Control, DualBrush, Dynamic, MaskMode, Pattern, PatternStyle, Pose, Scattering, SectionLocks, ShapeDynamics,
-    Smoothing, Texture, TipShape, Transfer,
+    BrushPreset, BrushSettings, ColorDynamics, Control, DualBrush, Dynamic, MAX_BRUSH_SIZE, MaskMode, Pattern, PatternStyle, Pose, Scattering, SectionLocks,
+    ShapeDynamics, Smoothing, Texture, TipShape, Transfer,
 };
 pub use mixer::MixerSettings;
 pub use render::{BrushContext, StrokeRenderer, grid_center, grid_square, render_stroke};

@@ -34,16 +34,40 @@ pub enum LineRead {
 }
 
 /// Read one line without ever buffering more than [`MAX_REQUEST_BYTES`] plus one byte.
+///
+/// `TooLong` leaves the bytes read so far in `line` (lossily decoded); the rest of that line is
+/// still unread unless `line` ends with a newline (see [`discard_rest_of_line`]). A line within
+/// the limit that is not UTF-8 is an `InvalidData` error, and the whole line has been consumed.
 pub fn read_bounded_line(reader: &mut impl BufRead, line: &mut String) -> std::io::Result<LineRead> {
     line.clear();
-    let mut limited = std::io::Read::take(reader, (MAX_REQUEST_BYTES + 1) as u64);
-    let n = limited.read_line(line)?;
+    let mut bytes = Vec::new();
+    let n = std::io::Read::take(reader, (MAX_REQUEST_BYTES + 1) as u64).read_until(b'\n', &mut bytes)?;
     if n == 0 {
         Ok(LineRead::Eof)
     } else if n > MAX_REQUEST_BYTES {
+        // A cut can split a multi-byte character; the length, not the text, decides.
+        line.push_str(&String::from_utf8_lossy(&bytes));
         Ok(LineRead::TooLong)
     } else {
+        *line = String::from_utf8(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(LineRead::Line)
+    }
+}
+
+/// Skip the rest of the current line (through its newline, or to EOF) without buffering it, so
+/// a stream transport can answer an over-long request and keep reading the next one.
+pub fn discard_rest_of_line(reader: &mut impl BufRead) -> std::io::Result<()> {
+    loop {
+        let buf = reader.fill_buf()?;
+        if buf.is_empty() {
+            return Ok(());
+        }
+        if let Some(end) = buf.iter().position(|&b| b == b'\n') {
+            reader.consume(end + 1);
+            return Ok(());
+        }
+        let n = buf.len();
+        reader.consume(n);
     }
 }
 
@@ -235,6 +259,25 @@ mod tests {
         let mut line = String::new();
         assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap(), LineRead::TooLong);
         assert_eq!(line.len(), MAX_REQUEST_BYTES + 1);
+        discard_rest_of_line(&mut reader).unwrap();
+        assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap(), LineRead::Eof);
+    }
+
+    #[test]
+    fn bounded_reader_reports_a_cut_multibyte_line_as_too_long_and_bad_utf8_as_invalid_data() {
+        // The cut at the limit falls inside a two-byte character.
+        let input = format!("xx{}\nnext\n", "é".repeat(MAX_REQUEST_BYTES / 2));
+        let mut reader = std::io::Cursor::new(input);
+        let mut line = String::new();
+        assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap(), LineRead::TooLong);
+        discard_rest_of_line(&mut reader).unwrap();
+        assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap(), LineRead::Line);
+        assert_eq!(line, "next\n");
+        // Invalid UTF-8 consumes its whole line, so the next read starts on the next line.
+        let mut reader = std::io::Cursor::new(b"\xff\xfe\nnext\n".to_vec());
+        assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap_err().kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(read_bounded_line(&mut reader, &mut line).unwrap(), LineRead::Line);
+        assert_eq!(line, "next\n");
     }
 
     #[test]

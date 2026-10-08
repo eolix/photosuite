@@ -199,9 +199,14 @@ pub struct ColorState {
     /// Edit › Color Settings (persisted with the preferences).
     pub settings: ColorSettings,
     proofs: HashMap<DocId, ProofView>,
-    /// The main display's ICC profile as read by the platform (used when Color Settings ›
-    /// Monitor Profile is `auto`; `None` = sRGB display).
-    pub monitor_profile: Option<Arc<Vec<u8>>>,
+    /// The displays and their ICC profiles as read by the platform, primary (menu-bar) display
+    /// first (used when Color Settings › Monitor Profile is `auto`; none = sRGB display).
+    pub displays: Vec<crate::display_color::Display>,
+    /// Whether `displays` was read, or why not (see [`ColorState::set_displays`]).
+    pub monitor_detection: crate::display_color::MonitorDetection,
+    /// The display showing the main window (set by the UI each frame; `None` = unknown, the
+    /// primary display). Other windows pass their own display to the `*_for` methods.
+    pub main_display: Option<u32>,
     display_cache: Mutex<HashMap<DisplayKey, Arc<Transform>>>,
     pub(crate) display: crate::display_color::DisplayCaches,
     /// View › 32-bit Preview Options per document.
@@ -243,11 +248,12 @@ impl ColorState {
         let embedded = doc.icc_profile.as_ref().and_then(|b| profile_from_bytes(b).ok()).filter(|p| p.color_space == space);
         match embedded {
             Some(emb) => {
-                let mismatch = emb.content_hash() != working.content_hash();
+                // Compared by colour, not bytes: Photoshop's sRGB IEC61966-2.1 is our working sRGB.
+                let mismatch = !emb.same_colors(&working);
                 let base = json!({"embedded": emb.description, "working": working.description, "mismatch": mismatch, "policy": policy.id()});
                 // 32-bit linear images (EXR/HDR are tagged linear sRGB on import) stay linear, as
                 // Photoshop keeps 32-bit documents in a linear version of the working space.
-                let linear_hdr = doc.depth == SampleType::F32 && emb.content_hash() == Builtin::LinearSrgb.profile().content_hash();
+                let linear_hdr = doc.depth == SampleType::F32 && emb.same_colors(Builtin::LinearSrgb.profile());
                 if !mismatch || linear_hdr {
                     return merge(base, json!({"action": "kept"}));
                 }
@@ -295,8 +301,13 @@ impl ColorState {
     /// the monitor, including the soft proof when View › Proof Colors is on. Cached per
     /// profile pair and proof settings.
     pub fn display_transform(&self, doc: &Document) -> Result<Arc<Transform>> {
-        let src = self.canvas_display(doc)?.source.clone();
-        let dst = self.monitor();
+        self.display_transform_for(doc, self.main_display)
+    }
+
+    /// [`ColorState::display_transform`] to `display`'s monitor profile.
+    pub fn display_transform_for(&self, doc: &Document, display: Option<u32>) -> Result<Arc<Transform>> {
+        let src = self.canvas_display_for(doc, display)?.source.clone();
+        let dst = self.monitor_for(display);
         let pv = self.proof(doc.id);
         let proof = pv.enabled.then(|| (pv.setup.profile.content_hash(), pv.setup.intent, pv.setup.bpc, pv.setup.simulate_paper));
         let key = (src.content_hash(), dst.content_hash(), proof);
@@ -321,15 +332,16 @@ impl ColorState {
     /// The display transform as an `size³` RGBA 3D LUT (upload with
     /// [`Lut3d::to_rgba16f_bytes`] and apply in the canvas shader).
     pub fn display_lut(&self, doc: &Document, size: usize) -> Result<Lut3d> {
-        self.display_lut_with(doc, size, true)
+        self.display_lut_with(doc, size, true, self.main_display)
     }
 
-    /// [`ColorState::display_lut`], with or without the 32-bit preview (exposure/gamma).
-    fn display_lut_with(&self, doc: &Document, size: usize, hdr: bool) -> Result<Lut3d> {
-        if let Some(lut) = crate::proof_sim::display_lut_with(self, doc, size, hdr)? {
+    /// [`ColorState::display_lut`], with or without the 32-bit preview (exposure/gamma), for
+    /// `display`.
+    fn display_lut_with(&self, doc: &Document, size: usize, hdr: bool, display: Option<u32>) -> Result<Lut3d> {
+        if let Some(lut) = crate::proof_sim::display_lut_with(self, doc, size, hdr, display)? {
             return Ok(lut);
         }
-        let t = self.display_transform(doc)?;
+        let t = self.display_transform_for(doc, display)?;
         Ok(Lut3d::from_transform(&t, size))
     }
 
@@ -345,24 +357,29 @@ impl ColorState {
     /// mapping canvas texture values to the monitor, whose alpha is 255 where the colour is out
     /// of the proof gamut (only with Gamut Warning on).
     pub fn canvas_lut(&self, doc: &Document, size: usize) -> Result<Option<Vec<u8>>> {
-        self.canvas_lut_with(doc, size, true)
+        self.canvas_lut_with(doc, size, true, self.main_display)
     }
 
     /// [`ColorState::canvas_lut`] without the 32-bit preview, which the GPU canvas shader applies
     /// itself (see [`ColorState::hdr_preview`]) so that 32-bit values above 1.0, kept by its float
     /// texture, are exposed into range rather than clipped by the LUT's 0..1 domain.
     pub fn gpu_canvas_lut(&self, doc: &Document, size: usize) -> Result<Option<Vec<u8>>> {
-        self.canvas_lut_with(doc, size, false)
+        self.gpu_canvas_lut_for(doc, size, self.main_display)
     }
 
-    fn canvas_lut_with(&self, doc: &Document, size: usize, hdr: bool) -> Result<Option<Vec<u8>>> {
+    /// [`ColorState::gpu_canvas_lut`] for a window on `display`.
+    pub fn gpu_canvas_lut_for(&self, doc: &Document, size: usize, display: Option<u32>) -> Result<Option<Vec<u8>>> {
+        self.canvas_lut_with(doc, size, false, display)
+    }
+
+    fn canvas_lut_with(&self, doc: &Document, size: usize, hdr: bool, on: Option<u32>) -> Result<Option<Vec<u8>>> {
         let size = size.max(2);
         let pv = self.proof(doc.id);
-        let display = self.canvas_display(doc)?;
+        let display = self.canvas_display_for(doc, on)?;
         if !(pv.enabled || pv.gamut_warning || hdr && crate::proof_sim::hdr_active(self, doc)) {
             return Ok(display.transform.as_ref().map(|t| Lut3d::from_transform(t, size).to_rgba8()));
         }
-        let lut = self.display_lut_with(doc, size, hdr)?;
+        let lut = self.display_lut_with(doc, size, hdr, on)?;
         let mut bytes = lut.to_rgba8();
         let check = if pv.gamut_warning { Some(GamutCheck::new(&display.source, &pv.setup.profile, pv.gamut_threshold).map_err(cms_err)?) } else { None };
         let s = (size - 1) as f32;
@@ -871,7 +888,9 @@ fn color_settings(s: &mut Session, p: &Value) -> Result<Value> {
         "settings": c,
         "working": {"rgb": desc(ColorMode::Rgb), "cmyk": desc(ColorMode::Cmyk), "gray": desc(ColorMode::Grayscale)},
         "monitor": s.color.monitor().description,
-        "monitorDetected": s.color.monitor_profile.is_some(),
+        "monitorDetected": !s.color.displays.is_empty(),
+        "monitorStatus": s.color.monitor_status(),
+        "displays": s.color.display_statuses(),
     }))
 }
 
@@ -954,7 +973,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "edit.colorSettings",
             "Color Settings…",
             ["Edit"],
-            r##"{"workingRgb":"srgb|display-p3|adobe-rgb-compat|prophoto-compat|linear-srgb|rec2020","workingCmyk":"coated-cmyk","workingGray":"sgray|gray-gamma-2.2","policyRgb":"preserve|convert|off","policyCmyk":"preserve|convert|off","policyGray":"preserve|convert|off","askOnMismatch":bool=true,"askOnPaste":bool=true,"askOnMissing":bool=false,"intent":"relative|perceptual|saturation|absolute","blendTextGamma":1.0..2.2|bool=1.45,"bpc":bool=true,"dither":bool=true,"monitorProfile":"auto|srgb|display-p3|adobe-rgb-compat|prophoto-compat|rec2020","reset":bool=false} (working spaces and the monitor profile also accept .icc paths; monitor `auto` = the main display's profile when the platform provides it, else sRGB)"##,
+            r##"{"workingRgb":"srgb|display-p3|adobe-rgb-compat|prophoto-compat|linear-srgb|rec2020","workingCmyk":"coated-cmyk","workingGray":"sgray|gray-gamma-2.2","policyRgb":"preserve|convert|off","policyCmyk":"preserve|convert|off","policyGray":"preserve|convert|off","askOnMismatch":bool=true,"askOnPaste":bool=true,"askOnMissing":bool=false,"intent":"relative|perceptual|saturation|absolute","blendTextGamma":1.0..2.2|bool=1.45,"bpc":bool=true,"dither":bool=true,"monitorProfile":"auto|srgb|display-p3|adobe-rgb-compat|prophoto-compat|rec2020","reset":bool=false} (working spaces and the monitor profile also accept .icc paths; monitor `auto` = the main display's profile when the platform provides it, else sRGB; the reply's `monitorStatus` says which profile is in use and why: source auto|manual|fallback, reason)"##,
             always,
             color_settings,
             true,
@@ -1234,6 +1253,34 @@ mod settings_tests {
         // Matching profiles never ask.
         let (_, r) = s.open_document(tagged("srgb"), None);
         assert_eq!(r["mismatch"], false);
+        // Nor does the same space in other bytes: sRGB as Photoshop embeds it (v2, 1024-entry
+        // tables) is the working sRGB, even under Convert, and the file keeps its own profile.
+        s.execute("edit.colorSettings", json!({"policyRgb": "convert"})).unwrap();
+        let mut v2 = Builtin::Srgb.profile().clone();
+        let trc = v2.trc.clone().unwrap();
+        let table = |c: &photosuite_cms::Curve| photosuite_cms::Curve::Table((0..1024).map(|i| c.eval64(f64::from(i) / 1023.0) as f32).collect());
+        v2.trc = Some([table(&trc[0]), table(&trc[1]), table(&trc[2])]);
+        v2.version = (2, 0x10);
+        let bytes = v2.with_encoded_bytes().to_bytes();
+        assert_ne!(bytes, Builtin::Srgb.profile().to_bytes());
+        let mut d = tagged("srgb");
+        d.icc_profile = Some(bytes.clone());
+        let (_, r) = s.open_document(d, None);
+        assert_eq!((r["action"].as_str(), r["mismatch"].as_bool(), r.get("ask")), (Some("kept"), Some(false), None));
+        assert_eq!(s.active().unwrap().doc.icc_profile.as_ref(), Some(&bytes));
+        // A 32-bit document in Photoshop's linear sRGB (a v2 profile recording the D65 display
+        // white) stays linear without asking, like one tagged with our own linear sRGB.
+        let mut lin = Builtin::LinearSrgb.profile().clone();
+        lin.version = (2, 0x10);
+        lin.white_point = [0.95047, 1.0, 1.08905];
+        let bytes = lin.with_encoded_bytes().to_bytes();
+        assert_ne!(bytes, Builtin::LinearSrgb.profile().to_bytes());
+        let mut d = Document::with_background("t", photosuite_doc::Size::new(8, 8), ColorMode::Rgb, SampleType::F32, Color::rgba(0.2, 0.6, 0.9, 1.0));
+        d.icc_profile = Some(bytes.clone());
+        let (_, r) = s.open_document(d, None);
+        assert_eq!((r["action"].as_str(), r.get("ask")), (Some("kept"), None));
+        assert_eq!(s.active().unwrap().doc.icc_profile.as_ref(), Some(&bytes));
+        s.execute("edit.colorSettings", json!({"policyRgb": "preserve"})).unwrap();
         // Convert to working: pixels converted and the document tagged with sRGB.
         s.execute("edit.colorSettings", json!({"policyRgb": "convert"})).unwrap();
         let (_, r) = s.open_document(tagged("adobe-rgb-compat"), None);

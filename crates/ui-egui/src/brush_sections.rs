@@ -5,7 +5,7 @@
 
 use egui::{Color32, RichText, Sense, Stroke, pos2, vec2};
 use photosuite_engine::BrushSettings;
-use photosuite_engine::paint::{self, BrushPreset, Control, Dynamic, MaskMode, Pattern, PatternStyle, TipShape};
+use photosuite_engine::paint::{self, BrushPreset, Control, Dynamic, MAX_BRUSH_SIZE, MaskMode, Pattern, PatternStyle, TipShape};
 
 use crate::brush_preview;
 use crate::theme::{self, Tokens};
@@ -295,7 +295,7 @@ fn tip_shape(ui: &mut egui::Ui, b: &mut BrushSettings, presets: &[BrushPreset]) 
         TipShape::Sampled(g) => Some(g.width.max(g.height) as f32),
         TipShape::Round => None,
     };
-    size_row(ui, tl!("Size"), &mut b.size, 5000.0, orig);
+    size_row(ui, tl!("Size"), &mut b.size, MAX_BRUSH_SIZE, orig);
     ui.horizontal(|ui| {
         widgets::checkbox(ui, &mut b.flip_x, tl!("Flip X"));
         ui.add_space(8.0);

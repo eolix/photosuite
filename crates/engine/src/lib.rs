@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod actions_cmds;
 pub mod adjust_cmds;
 pub mod adjust_params;
 pub mod align_cmds;
@@ -21,6 +22,7 @@ pub mod channel_cmds;
 pub mod color_cmds;
 pub mod commands;
 pub mod comps_cmds;
+pub mod cutout_cmds;
 pub mod display_color;
 pub mod distort_cmds;
 pub mod edit_cmds;
@@ -32,6 +34,7 @@ pub mod fill_cmds;
 pub mod fill_key_cmds;
 pub mod filters;
 pub mod filters_ext;
+pub mod float_cmds;
 mod frame_cmds;
 pub mod fx_view_cmds;
 pub mod gallery_cmds;
@@ -39,8 +42,10 @@ pub mod gradient_fill_cmds;
 pub mod group_view_cmds;
 pub mod image_cmds;
 pub mod inspect;
+pub mod jobs;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
+pub mod layer_nav_cmds;
 pub mod layer_style;
 pub mod lens_cmds;
 pub mod mask_view_cmds;
@@ -69,9 +74,12 @@ pub mod slice_cmds;
 pub mod smart_cmds;
 pub mod smartselect_cmds;
 pub mod snap;
+pub mod stamp_cmds;
+pub mod symmetry_cmds;
 mod timeline_cmds;
 pub mod transform_cmds;
 mod trap_cmds;
+pub mod type_caret_cmds;
 pub mod type_cmds;
 pub mod type_extra_cmds;
 pub mod type_spell_cmds;
@@ -87,7 +95,7 @@ mod wia_cmds;
 use std::sync::Arc;
 
 use photosuite_doc::{Document, LayerId};
-use photosuite_ops::History;
+use photosuite_ops::{History, LayerTarget};
 use serde_json::Value;
 
 pub use commands::{CommandSpec, command_specs};
@@ -109,6 +117,9 @@ pub enum EngineError {
     NoLayer(LayerId),
     #[error("{0}")]
     Other(String),
+    /// A background job was cancelled (see [`jobs`]); nothing changed.
+    #[error("cancelled")]
+    Cancelled,
 }
 
 pub type Result<T> = std::result::Result<T, EngineError>;
@@ -148,7 +159,8 @@ pub struct DocState {
     /// `selected_layers` when set.
     pub active_layer: Option<LayerId>,
     /// Every selected layer in the Layers panel (⌘/⇧-click), in selection order. Like
-    /// `active_layer` this is UI state, not history; see [`DocState::selected_layers`].
+    /// `active_layer`, selecting is not a history step, but undo and redo restore the layers each
+    /// state targeted when it was created; see [`DocState::selected_layers`].
     pub selected_layers: Vec<LayerId>,
     /// Anchor of ⇧-click range selection (the last plainly or ⌘-clicked layer).
     pub layer_anchor: Option<LayerId>,
@@ -167,17 +179,27 @@ pub struct DocState {
     pub channel_view: channel_cmds::ChannelView,
     /// Select › Isolate Layers: the Layers panel lists only these layers (empty = off; view state).
     pub isolated_layers: Vec<LayerId>,
+    /// Painting symmetry axis made from the selected path (tool state, not document pixels).
+    pub symmetry_path: Option<symmetry_cmds::SymmetryAxis>,
     /// Layers panel: layers whose effects list is collapsed under their row (the fx triangle;
     /// view state, not history). Effects lists start open.
     pub fx_collapsed: Vec<LayerId>,
+    /// ⌥-click on a layer's eye (`layer.showOnly`): the layer shown alone and every layer's
+    /// visibility before, so the next ⌥-click restores it (view state, not history).
+    pub show_only: Option<(LayerId, Vec<(LayerId, bool)>)>,
+    /// A floating selection (`select.float`): the cut piece and where it floats, until dropped
+    /// (view state: the document is unchanged until `select.drop`).
+    pub floating: Option<float_cmds::Floating>,
 }
 
 impl DocState {
     pub fn new(doc: Document, path: Option<String>) -> Self {
         let active_layer = doc.top_layer();
+        let mut history = History::default();
+        history.set_current_layers(LayerTarget { active: active_layer, selected: active_layer.into_iter().collect() });
         Self {
             doc: Arc::new(doc),
-            history: History::default(),
+            history,
             active_layer,
             selected_layers: active_layer.into_iter().collect(),
             layer_anchor: active_layer,
@@ -189,7 +211,10 @@ impl DocState {
             coalesce: None,
             channel_view: Default::default(),
             isolated_layers: Vec::new(),
+            symmetry_path: None,
             fx_collapsed: Vec::new(),
+            show_only: None,
+            floating: None,
         }
     }
     /// The selected layers in bottom-to-top document order, always including the active layer.
@@ -205,6 +230,10 @@ impl DocState {
     }
     pub fn is_dirty(&self) -> bool {
         self.revision != self.saved_revision
+    }
+    /// The targeted layers, as history stores them with each state.
+    fn layer_target(&self) -> LayerTarget {
+        LayerTarget { active: self.active_layer, selected: self.selected_layers.clone() }
     }
 }
 
@@ -257,6 +286,9 @@ pub struct Session {
     pub clipboard: Option<edit_cmds::Clip>,
     /// Layer › Layer Style › Copy Layer Style: effects, blend mode and fill opacity.
     pub style_clipboard: Option<(photosuite_doc::Effects, photosuite_color::BlendMode, f32)>,
+    /// Shape path context menu: copied vector fill and stroke styles.
+    pub path_fill_clipboard: Option<photosuite_doc::Fill>,
+    pub path_stroke_clipboard: Option<photosuite_doc::ShapeStroke>,
     /// Colour management: proofing state, monitor profile, display transforms.
     pub color: color_cmds::ColorState,
     /// Open Edit Contents documents and the smart objects they update.
@@ -281,8 +313,28 @@ pub struct Session {
     /// event log (see `automate_cmds`).
     pub file_menu: automate_cmds::FileMenuState,
     /// Persistent brush preset store (desktop only; `None` keeps presets session-only, as in
-    /// headless and test sessions). See `preset_store`.
+    /// headless and test sessions). See `preset_store`. The same store holds the Actions list.
     pub preset_store: Option<preset_store::PresetStore>,
+    /// Window › Actions. The list persists with the preset store when one is attached.
+    pub actions: actions_cmds::ActionState,
+    /// Per-step gate for `actions.play`. Untrusted sessions (MCP, the control channel) install
+    /// the same check a top-level command sees. `None` runs every step, which is what a local
+    /// UI and `photosuite-cli run` do.
+    pub authorize: Option<fn(&str, &serde_json::Value) -> Result<()>>,
+    /// Background jobs (see [`jobs`]).
+    jobs: jobs::Jobs,
+}
+
+/// Move item `i` of `v` to position `to`, clamped to the end. Returns where it went; `None` when
+/// `i` is out of range.
+pub fn move_item<T>(v: &mut Vec<T>, i: usize, to: usize) -> Option<usize> {
+    if i >= v.len() {
+        return None;
+    }
+    let x = v.remove(i);
+    let to = to.min(v.len());
+    v.insert(to, x);
+    Some(to)
 }
 
 impl Session {
@@ -311,6 +363,15 @@ impl Session {
         }
     }
 
+    /// Move the document at `from` to tab position `to` (clamped to the last), keeping the active
+    /// document active. Returns its new index; `None` when `from` is out of range.
+    pub fn move_document(&mut self, from: usize, to: usize) -> Option<usize> {
+        let active = self.active().map(|d| d.doc.id);
+        let to = move_item(&mut self.docs, from, to)?;
+        self.active = active.and_then(|id| self.docs.iter().position(|d| d.doc.id == id));
+        Some(to)
+    }
+
     /// Add a document (from File → New, an import, etc.) and make it active.
     /// Preserve its identity unless another open document already owns it.
     /// Identity-dependent callers must read the admitted document at the returned index.
@@ -333,6 +394,9 @@ impl Session {
             return None;
         }
         smart_cmds::on_close(self, index);
+        if let Some(id) = self.docs.get(index).map(|d| d.doc.id) {
+            self.cancel_jobs_on(id);
+        }
         let d = self.docs.remove(index);
         self.active = if self.docs.is_empty() { None } else { Some(index.min(self.docs.len() - 1)) };
         Some(d)
@@ -343,39 +407,27 @@ impl Session {
     /// Any command accepts an optional `"coalesce": "<key>"` param: consecutive edits with the same
     /// key (and no other edit, undo or redo in between) share one history step, like Photoshop's
     /// single "Edit Type Layer" step for a whole typing session or one step per slider drag.
+    ///
+    /// Runs synchronously, including job-capable commands (see [`jobs`]; [`Session::start`] runs
+    /// those in the background).
     pub fn execute(&mut self, id: &str, params: Value) -> Result<Value> {
-        let spec = commands::find(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
-        if let Err(why) = (spec.enabled)(self) {
-            return Err(EngineError::Disabled(id.to_string(), why));
+        match self.dispatch(id, params, false)? {
+            jobs::Started::Done(v) => Ok(v),
+            // Not reached: inline dispatch never starts a job. Waiting is still correct.
+            jobs::Started::Job(j) => self.wait_job(j),
         }
-        self.coalesce_request = params.get("coalesce").and_then(Value::as_str).map(str::to_string);
-        // Pixel commands follow the Channels panel target unless the caller names one.
-        let run_params = channel_cmds::inject_target(self, id, commands::inject_kind(id, params.clone()));
-        self.color_restrict = channel_cmds::color_restriction(self, id, &run_params);
-        // Last-resort guard (AGENTS.md, Never crash): a command that panics anyway fails with an
-        // error instead of taking the app down. `edit` only commits a document after its closure
-        // returns, so the documents are unchanged.
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (spec.run)(self, &run_params)))
-            .unwrap_or_else(|_| Err(EngineError::Other(format!("`{id}` failed with an internal error (logged); the document is unchanged"))));
-        self.coalesce_request = None;
-        self.color_restrict = None;
-        let r = r?;
-        // A layer-mask view ends when another layer becomes active (#196).
-        if let Some(st) = self.active_mut() {
-            mask_view_cmds::fix(st);
-        }
-        edit_menu_cmds::after_command(self, id);
-        automate_cmds::after_command(self, id);
-        self.sync_preset_store();
-        if spec.journal && !brush_cmds::coalesce_journal(self, id, &params) {
-            self.journal.push((id.to_string(), params));
-        }
-        Ok(r)
     }
 
     /// Is the command currently runnable? (drives menu enablement)
     pub fn is_enabled(&self, id: &str) -> bool {
-        commands::find(id).is_some_and(|s| (s.enabled)(self).is_ok())
+        commands::find(id).is_some_and(|s| (s.enabled)(self).is_ok() && self.job_conflict(id, s.journal).is_none())
+    }
+
+    /// Why the command can't run now (None = it can): its own precondition, or a background job
+    /// running on the active document.
+    pub fn disabled_reason(&self, id: &str) -> Option<String> {
+        let Some(s) = commands::find(id) else { return Some(format!("unknown command `{id}`")) };
+        (s.enabled)(self).err().or_else(|| self.job_conflict(id, s.journal))
     }
 
     /// Apply an undoable edit to the active document.
@@ -395,9 +447,12 @@ impl Session {
         channel_cmds::fix_view(st);
         let key = self.coalesce_request.clone();
         let st = self.active_mut().ok_or(EngineError::NoDocument)?;
+        let layers = st.layer_target();
         if key.is_none() || st.coalesce != key || !st.history.can_undo() {
-            st.history.record(label, before);
+            st.history.record(label, before, layers);
             st.history.trim(&st.doc);
+        } else {
+            st.history.set_current_layers(layers);
         }
         st.coalesce = key;
         st.revision += 1;
@@ -425,12 +480,16 @@ impl Session {
     }
 
     pub fn undo(&mut self) -> bool {
+        // A background job is computing from the current state: it must not move under it.
+        if self.active_job().is_some() {
+            return false;
+        }
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.undo(st.doc.clone()) {
-            Some(d) => {
+            Some((d, layers)) => {
                 st.doc = d;
-                fix_active(st);
+                restore_target(st, layers);
                 st.revision += 1;
                 st.last_damage = None;
                 true
@@ -440,12 +499,15 @@ impl Session {
     }
 
     pub fn redo(&mut self) -> bool {
+        if self.active_job().is_some() {
+            return false;
+        }
         let Some(st) = self.active_mut() else { return false };
         st.coalesce = None;
         match st.history.redo(st.doc.clone()) {
-            Some(d) => {
+            Some((d, layers)) => {
                 st.doc = d;
-                fix_active(st);
+                restore_target(st, layers);
                 st.revision += 1;
                 st.last_damage = None;
                 true
@@ -453,6 +515,15 @@ impl Session {
             None => false,
         }
     }
+}
+
+/// Undo / redo: target the layers the restored state targeted, as far as they still exist.
+fn restore_target(st: &mut DocState, layers: LayerTarget) {
+    if layers.active.is_some_and(|id| st.doc.layer(id).is_some()) {
+        st.active_layer = layers.active;
+        st.selected_layers = layers.selected;
+    }
+    fix_active(st);
 }
 
 fn fix_active(st: &mut DocState) {

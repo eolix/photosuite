@@ -10,7 +10,8 @@ use photosuite_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef, diff_att
 use photosuite_doc::{Document, LayerContent, LayerId, TextLayer, TextStyles};
 
 /// Builds `doc.text_styles` from the type layers' engine data and links the runs.
-pub fn import(doc: &mut Document) {
+pub fn import(doc: &mut Document) -> Vec<String> {
+    let mut warnings = Vec::new();
     let dpi = doc.resolution_dpi;
     let mut styles = std::mem::take(&mut doc.text_styles);
     let mut char_ids: HashMap<String, u32> = styles.character.iter().map(|d| (d.name.clone(), d.id)).collect();
@@ -25,29 +26,42 @@ pub fn import(doc: &mut Document) {
         let Some(sh) = photosuite_text::psd_styles::read_style_sheets(&raw, dpi) else { continue };
         let mut cmap: HashMap<usize, u32> = HashMap::new();
         for (ix, name, st) in &sh.char_sheets {
-            let id = *char_ids.entry(name.clone()).or_insert_with(|| {
-                let id = styles.next_char_id();
+            let id = if let Some(id) = char_ids.get(name).copied() {
+                id
+            } else {
+                let Some(id) = styles.next_char_id() else {
+                    warnings.push(format!("character style {:?} was not imported: style id space exhausted", name));
+                    continue;
+                };
                 let mut attrs = diff_attrs(st, &sh.normal_char);
                 attrs.remove("postscript_name");
                 styles.character.push(CharacterStyleDef { id, name: name.clone(), attrs });
+                char_ids.insert(name.clone(), id);
                 id
-            });
+            };
             cmap.insert(*ix, id);
         }
         let mut pmap: HashMap<usize, u32> = HashMap::new();
         for (ix, name, p, cs) in &sh.para_sheets {
-            let id = *para_ids.entry(name.clone()).or_insert_with(|| {
-                let id = styles.next_para_id();
+            let id = if let Some(id) = para_ids.get(name).copied() {
+                id
+            } else {
+                let Some(id) = styles.next_para_id() else {
+                    warnings.push(format!("paragraph style {:?} was not imported: style id space exhausted", name));
+                    continue;
+                };
                 let mut char_attrs = cs.as_ref().map(|c| diff_attrs(c, &sh.normal_char)).unwrap_or_default();
                 char_attrs.remove("postscript_name");
                 styles.paragraph.push(ParagraphStyleDef { id, name: name.clone(), para_attrs: diff_attrs(p, &sh.normal_para), char_attrs });
+                para_ids.insert(name.clone(), id);
                 id
-            });
+            };
             pmap.insert(*ix, id);
         }
         link(t, &sh.run_char, &sh.run_char_lens, &cmap, &sh.run_para, &pmap);
     }
     doc.text_styles = styles;
+    warnings
 }
 
 fn link(

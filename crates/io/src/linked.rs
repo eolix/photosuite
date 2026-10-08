@@ -94,29 +94,98 @@ pub fn find_linked_file(meta: &Metadata, uuid: &str) -> Option<LinkedFile> {
         .find(|f| f.uuid == uuid)
 }
 
-/// Encodes one `liFD` item (version 2, no open descriptor). Used by tests and writers that
-/// need a minimal linked-layer block.
+/// The four-character file type Photoshop records for an embedded file, from its contents.
+pub fn file_type(bytes: &[u8]) -> [u8; 4] {
+    match bytes {
+        [b'8', b'B', b'P', b'S', 0, 2, ..] => *b"8BPB",
+        [b'8', b'B', b'P', b'S', ..] => *b"8BPS",
+        [0x89, b'P', b'N', b'G', ..] => *b"PNGf",
+        [0xFF, 0xD8, ..] => *b"JPEG",
+        [b'I', b'I', 42, 0, ..] | [b'M', b'M', 0, 42, ..] => *b"TIFF",
+        [b'G', b'I', b'F', ..] => *b"GIFf",
+        _ => *b"    ",
+    }
+}
+
+/// Encodes one `liFD` item (version 7: no open descriptor, empty child document id, no
+/// modification time, unlocked), length-prefixed and padded to 4 bytes.
 pub fn encode_linked_file(f: &LinkedFile) -> Vec<u8> {
     let mut item = Vec::new();
     item.extend_from_slice(b"liFD");
-    item.extend_from_slice(&2u32.to_be_bytes());
-    item.push(f.uuid.len().min(255) as u8);
-    item.extend_from_slice(&f.uuid.as_bytes()[..f.uuid.len().min(255)]);
-    let units: Vec<u16> = f.file_name.encode_utf16().collect();
+    item.extend_from_slice(&7u32.to_be_bytes());
+    let id = f.uuid.as_bytes().get(..f.uuid.len().min(255)).unwrap_or_default();
+    item.push(id.len() as u8);
+    item.extend_from_slice(id);
+    // NUL-terminated, the terminator counted (as Photoshop writes and reads it).
+    let units: Vec<u16> = f.file_name.encode_utf16().chain(std::iter::once(0)).collect();
     item.extend_from_slice(&(units.len() as u32).to_be_bytes());
     for u in units {
         item.extend_from_slice(&u.to_be_bytes());
     }
-    item.extend_from_slice(b"    8BIM");
+    item.extend_from_slice(&file_type(&f.bytes));
+    item.extend_from_slice(b"8BIM");
     item.extend_from_slice(&(f.bytes.len() as u64).to_be_bytes());
     item.push(0);
     item.extend_from_slice(&f.bytes);
+    item.extend_from_slice(&0u32.to_be_bytes()); // child document id (version 5)
+    item.extend_from_slice(&0f64.to_be_bytes()); // asset modification time (version 6)
+    item.push(0); // asset locked (version 7)
     let mut out = (item.len() as u64).to_be_bytes().to_vec();
     out.extend_from_slice(&item);
     while !out.len().is_multiple_of(4) {
         out.push(0);
     }
     out
+}
+
+/// The uuid of one linked-layer item (any type), if its header is readable.
+fn item_uuid(item: &[u8]) -> Option<String> {
+    let n = usize::from(*item.get(8)?);
+    Some(String::from_utf8_lossy(item.get(9..9 + n)?).into_owned())
+}
+
+/// The items of a linked-layer block: each item's uuid (when readable) and its bytes including
+/// the length prefix and padding. A malformed tail is returned as one unnamed piece.
+fn split_items(data: &[u8]) -> Vec<(Option<String>, &[u8])> {
+    let mut out = Vec::new();
+    let mut at = 0usize;
+    while let Some(rest) = data.get(at..).filter(|r| !r.is_empty()) {
+        let len = rest.get(..8).map(|b| u64::from_be_bytes(b.try_into().unwrap_or([0; 8])));
+        let end = len.and_then(|l| usize::try_from(l).ok()).and_then(|l| l.checked_add(8)).filter(|&e| e <= rest.len());
+        let (Some(end), Some(item)) = (end, end.and_then(|e| rest.get(8..e))) else {
+            out.push((None, rest));
+            break;
+        };
+        let padded = end.next_multiple_of(4).min(rest.len());
+        out.push((item_uuid(item), rest.get(..padded).unwrap_or(rest)));
+        at += padded;
+    }
+    out
+}
+
+/// Rewrites a linked-layer block: keeps the items `keep` accepts (and anything unreadable), then
+/// appends `add`. `None` when nothing would change.
+pub fn rebuild_block(data: &[u8], keep: &dyn Fn(&str) -> bool, add: &[LinkedFile]) -> Option<Vec<u8>> {
+    let items = split_items(data);
+    let dropped = items.iter().any(|(u, _)| u.as_deref().is_some_and(|u| !keep(u)));
+    if !dropped && add.is_empty() {
+        return None;
+    }
+    let mut out = Vec::with_capacity(data.len());
+    for (u, bytes) in items {
+        if u.as_deref().is_none_or(keep) {
+            out.extend_from_slice(bytes);
+        }
+    }
+    for f in add {
+        out.extend(encode_linked_file(f));
+    }
+    Some(out)
+}
+
+/// The uuids of every item in a linked-layer block.
+pub fn block_uuids(data: &[u8]) -> Vec<String> {
+    split_items(data).into_iter().filter_map(|(u, _)| u).collect()
 }
 
 #[cfg(test)]
@@ -136,6 +205,27 @@ mod tests {
         assert_eq!(find_linked_file(&meta, "def-2"), Some(b));
         assert_eq!(find_linked_file(&meta, "zzz"), None);
         assert_eq!(find_linked_file(&meta, ""), None);
+    }
+
+    #[test]
+    fn blocks_are_pruned_and_extended() {
+        let a = LinkedFile { uuid: "a".into(), file_name: "a.png".into(), bytes: vec![0x89, b'P', b'N', b'G', 1] };
+        let b = LinkedFile { uuid: "b".into(), file_name: "b.psb".into(), bytes: b"8BPS\0\x02rest".to_vec() };
+        let c = LinkedFile { uuid: "c".into(), file_name: "c".into(), bytes: vec![7; 3] };
+        let mut data = encode_linked_file(&a);
+        data.extend(encode_linked_file(&b));
+        assert_eq!(block_uuids(&data), vec!["a", "b"]);
+        assert_eq!(rebuild_block(&data, &|_| true, &[]), None);
+        let out = rebuild_block(&data, &|u| u != "a", std::slice::from_ref(&c)).unwrap();
+        assert_eq!(parse_linked_files(&out), vec![b.clone(), c.clone()]);
+        photosuite_psd::TaggedBlock::new(*b"lnk2", out).check_structure().unwrap();
+        assert_eq!(file_type(&b.bytes), *b"8BPB");
+        assert_eq!(file_type(&a.bytes), *b"PNGf");
+        // A malformed tail is kept as is.
+        let mut bad = encode_linked_file(&a);
+        bad.extend([0, 0, 0, 0, 0, 0, 1, 0, 9]);
+        let out = rebuild_block(&bad, &|_| true, std::slice::from_ref(&c)).unwrap();
+        assert!(out.starts_with(&bad));
     }
 
     #[test]

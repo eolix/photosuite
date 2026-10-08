@@ -1152,6 +1152,25 @@ fn levels_work_on_whole_levels() {
     }
 }
 
+// The oracle corpus' rgb32 levels.psd: input 15..230, gamma 1.3, output 10..245. In a
+// 32-bit document neither range clips and the gamma is a plain power curve mirrored below black:
+// 0.0497 → 3 (the clipped curve gives 10), 0.9473 → 255 (245). Integer documents still clip.
+#[test]
+fn levels_dont_clip_in_32_bit() {
+    let ch = LevelsChannel { in_black: 15.0 / 255.0, in_white: 230.0 / 255.0, gamma: 1.3, out_black: 10.0 / 255.0, out_white: 245.0 / 255.0 };
+    let adj = Adjustment::Levels { master: ch, per_channel: Default::default(), space: Default::default(), black: LevelsChannel::default() };
+    let level = |depth, v| {
+        let mut b = Buffer::filled(Rect::new(0, 0, 1, 1), [v, v, v, 1.0]);
+        adjust::apply_depth(&adj, &mut b, adjust::Transfer::Srgb, Some(depth));
+        (b.px[0][0] * 255.0).round()
+    };
+    for (v, want) in [(0.0, 0.0), (0.0497, 3.0), (0.0976, 32.0), (0.4508, 140.0), (0.9473, 255.0), (1.0, 255.0)] {
+        assert_eq!(level(SampleType::F32, v), want, "{v}");
+    }
+    assert_eq!(level(SampleType::U8, 0.0), 10.0);
+    assert_eq!(level(SampleType::U8, 1.0), 245.0);
+}
+
 // Exposure linearises RGB documents through a 2.2 power, not the sRGB curve: Photoshop lifts 76
 // to 134 with an offset of 0.1738 (psd-tools adjustment_nested_composition_4).
 #[test]
@@ -1160,6 +1179,24 @@ fn exposure_offset_uses_gamma_2_2_in_rgb() {
     adjust::apply_with(&Adjustment::Exposure { exposure: 0.0, offset: 0.1738, gamma: 1.0 }, &mut b, adjust::Transfer::Srgb);
     assert_eq!((b.px[0][0] * 255.0).round(), 134.0);
     assert_eq!(adjust::Transfer::Gamma(1.732).for_exposure(), adjust::Transfer::Gamma(1.732));
+}
+
+// 32-bit samples are linear light: +1 stop doubles them as stored, where an 8-bit document goes
+// through its tone curve first (photoshop corpus rgb32 and gray32 exposure.psd).
+#[test]
+fn exposure_scales_32_bit_samples_as_stored() {
+    let plus_one_stop = Adjustment::Exposure { exposure: 1.0, offset: 0.0, gamma: 1.0 };
+    for (depth, fmt, want) in [(SampleType::F32, PixelFormat::RGBA32F, 0.4), (SampleType::U8, PixelFormat::RGBA8, 0.2744)] {
+        let mut d = Document::new("e", Size::new(1, 1), ColorMode::Rgb, depth);
+        let mut l = Layer::raster("px", fmt);
+        l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 1, 1), &[0.2, 0.2, 0.2, 1.0]);
+        d.layers = vec![l, Layer::new("exp", LayerContent::Adjustment(plus_one_stop.clone()))];
+        let got = px(&d, 0, 0)[0];
+        assert!((got - want).abs() < 2e-3, "{depth:?}: {got}");
+    }
+    for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
+        assert_eq!(adjust::Transfer::for_document(mode, SampleType::F32), adjust::Transfer::Gamma(1.0));
+    }
 }
 
 // A 30° Reflected gradient fill on a 4 × 4 canvas renders as Photoshop's (its end point snaps to

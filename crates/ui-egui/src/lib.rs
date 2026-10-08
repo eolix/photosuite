@@ -32,6 +32,7 @@ pub mod camera_raw_ui;
 pub mod lens_ui;
 pub mod magnetic_ui;
 pub mod canvas;
+pub mod canvas_tool_menu;
 pub mod recent;
 pub mod channel_view;
 pub mod channels_panel;
@@ -66,7 +67,10 @@ pub mod i18n;
 pub const APP_NAME: &str = "PhotoSuite";
 mod icon_data;
 pub mod icons;
+pub mod jobs_ui;
+pub mod lasso_ui;
 pub mod layer_menu_ui;
+pub mod layer_pick_ui;
 pub mod layer_props_ui;
 mod layer_reveal;
 pub mod layer_row_ui;
@@ -78,15 +82,18 @@ pub mod mask_thumbs_ui;
 pub mod menu_catalog;
 pub mod menu_nav;
 pub mod menus;
+pub mod monitor_status;
 pub mod move_mods;
 pub mod move_ui;
 pub mod new_doc_ui;
 pub mod notices;
+mod opacity_keys;
 pub mod outline;
 pub mod paint_mouse;
 pub mod palette;
 pub mod panels;
 pub mod parity;
+pub mod patch_preview;
 pub mod perspective_ui;
 pub mod plugin_ui;
 pub mod prefs_ui;
@@ -95,9 +102,11 @@ pub mod preset_panels;
 pub mod props_layout;
 pub mod proxy;
 pub mod puppet_ui;
+pub mod quick_pick;
 pub mod rasterize_prompt;
 pub mod retouch_ui;
 pub mod rulers;
+pub mod scrollbars;
 pub mod shortcut_dispatch;
 pub mod shortcuts;
 mod sizing;
@@ -110,6 +119,7 @@ pub mod stroke_trail;
 pub mod stylus;
 mod tab_strip;
 pub mod theme;
+pub mod tiff_options_ui;
 mod timeline_ui;
 pub mod tone;
 pub mod tool_feedback;
@@ -120,6 +130,7 @@ pub mod type_tool;
 mod variables_ui;
 pub mod vector_ui;
 pub mod view_cmds;
+pub mod wheel_nav;
 pub mod wide_angle_ui;
 pub mod widgets;
 pub mod workspace_ui;
@@ -139,17 +150,29 @@ pub use state::{Tool, UiState};
 /// Decode a file: (document, warnings about anything approximated or dropped).
 pub type ImportFn = Box<dyn Fn(&str, &[u8]) -> Result<(Document, Vec<String>), String>>;
 /// Encoder settings chosen in Export As (the file format comes from the name's extension).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExportSettings {
     /// JPEG quality 1–100 (None = codec default).
     pub jpeg_quality: Option<u8>,
     /// WebP: Some(quality 0–100) = lossy; None = lossless.
     pub webp_quality: Option<u8>,
+    /// TIFF: keep the layers (Photoshop layer data); `false` is "Discard Layers and Save a Copy".
+    pub tiff_layers: bool,
+}
+
+impl Default for ExportSettings {
+    fn default() -> Self {
+        ExportSettings { jpeg_quality: None, webp_quality: None, tiff_layers: true }
+    }
 }
 
 /// Encode a document: (file bytes, warnings about anything approximated or dropped).
 pub type ExportFn = Box<dyn Fn(&Document, &str, &ExportSettings) -> Result<(Vec<u8>, Vec<String>), String>>;
-pub type PickOpenFn = Box<dyn FnMut() -> Option<(String, Vec<u8>)>>;
+/// The picked file's name and its bytes, or why it could not be read (shown like any other open
+/// failure); `None` when the dialog was cancelled.
+pub type PickOpenFn = Box<dyn FnMut() -> Option<(String, Result<Vec<u8>, String>)>>;
+/// File › Open's multi-file picker: the selected paths, `None` when cancelled.
+pub type PickOpenPathsFn = Box<dyn FnMut() -> Option<Vec<String>>>;
 pub type PickSaveFn = Box<dyn FnMut(&str) -> Option<String>>;
 /// Pick one existing file: (filter name, extensions without dots) → its path. For loading
 /// resources such as 3D LUTs, brushes or presets, rather than documents.
@@ -178,12 +201,27 @@ pub type SaveTextFn = Box<dyn FnMut(&str) -> Result<(), String>>;
 pub type AutosaveFn = Box<dyn FnMut(&std::sync::Arc<Document>, u64, Option<&str>) -> Result<(), String>>;
 /// Drop the recovery data of a document (by `DocId` value) once it is saved or closed.
 pub type DiscardAutosaveFn = Box<dyn FnMut(u64)>;
-/// Load recoverable documents left by a previous session: (original path, document).
-pub type RecoverFn = Box<dyn FnMut() -> Vec<(Option<String>, Document)>>;
+/// Load recoverable documents left by a previous session. Their recovery data stays until the
+/// documents are saved or closed.
+pub type RecoverFn = Box<dyn FnMut() -> Vec<Recovered>>;
+/// A recovered document (by `DocId` value, once open) takes over its recovery entry (by key):
+/// its autosaves replace the entry, and saving or closing it drops the entry.
+pub type AdoptAutosaveFn = Box<dyn FnMut(u64, &str)>;
+
+/// A document [`RecoverFn`] found.
+pub struct Recovered {
+    /// The recovery entry it was loaded from (see [`AdoptAutosaveFn`]).
+    pub key: String,
+    /// Where the user last saved it, if anywhere.
+    pub path: Option<String>,
+    pub doc: Document,
+}
 /// Append text to a file (History Log).
 pub type AppendTextFn = Box<dyn FnMut(&str, &str) -> Result<(), String>>;
 /// Requests from the operating system since the last call (see [`OsEvent`]).
 pub type OsEventsFn = Box<dyn FnMut() -> Vec<OsEvent>>;
+/// Where the OS pointer is now, in egui points within the window; `None` when unknown.
+pub type CursorPosFn = Box<dyn FnMut(&egui::Context) -> Option<egui::Pos2>>;
 
 /// Platform services injected by the app binary (file dialogs, codecs), keeping this crate free of
 /// I/O dependencies.
@@ -193,8 +231,10 @@ pub struct Services {
     pub import: Option<ImportFn>,
     /// Encode a document for a file name (format chosen by extension).
     pub export: Option<ExportFn>,
-    /// Show an "open file" dialog; returns (name, bytes).
+    /// Show a single-file picker for commands that import one file (Open As, presets, scripts).
     pub pick_open: Option<PickOpenFn>,
+    /// Show File › Open's multi-file picker; returns the selected paths.
+    pub pick_open_paths: Option<PickOpenPathsFn>,
     /// Show a "save file" dialog; returns a path/name to write.
     pub pick_save: Option<PickSaveFn>,
     pub pick_file: Option<PickFileFn>,
@@ -216,6 +256,10 @@ pub struct Services {
     pub automation_read: Option<AutomationReadFn>,
     pub automation_write: Option<AutomationWriteFn>,
     pub automation_command: Option<AutomationCommandFn>,
+    /// Same policy as [`Self::automation_command`], as a function pointer the engine calls for
+    /// each step of `actions.play`. Installed on the session only while a control request or
+    /// an automation-driven [`PhotosuiteApp::run`] runs, so a local play of a recorded `file.*` step still works.
+    pub automation_authorize: Option<fn(&str, &serde_json::Value) -> photosuite_engine::Result<()>>,
     /// Encode an RGBA8 image as PNG (used for screenshots and `ui.render`).
     pub encode_png: Option<EncodePngFn>,
     /// Open a URL in the system browser (native). Falls back to `ctx.open_url` (web) when unset.
@@ -233,21 +277,32 @@ pub struct Services {
     pub autosave: Option<AutosaveFn>,
     pub discard_autosave: Option<DiscardAutosaveFn>,
     pub recover: Option<RecoverFn>,
+    pub adopt_autosave: Option<AdoptAutosaveFn>,
     /// History Log text file output.
     pub append_text: Option<AppendTextFn>,
     /// OS requests (macOS open-documents / quit Apple events), polled every frame.
     pub os_events: Option<OsEventsFn>,
+    /// The pointer position read from the OS (desktop): winit 0.30's file drops carry none, and
+    /// the window gets no pointer events during an OS drag (see `file_open::DropTarget`).
+    pub cursor_pos: Option<CursorPosFn>,
     /// The persistent brush preset store, loading in the background (desktop; see
     /// `photosuite_engine::preset_store`). Attached to the session once it arrives; without
     /// one, brush presets are session-only (web, tests).
     pub preset_store: Option<std::sync::mpsc::Receiver<photosuite_engine::preset_store::Opened>>,
+    /// Reads the displays and their ICC profiles in the background (desktop macOS; see
+    /// `monitor_status`). Without one, the canvas uses the profile chosen in Color Settings, or sRGB.
+    pub read_displays: Option<monitor_status::ReadDisplaysFn>,
 }
 
 pub struct PhotosuiteApp {
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
-    canvases: HashMap<DocId, canvas::CanvasCache>,
+    /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
+    /// canvas state is shared (`canvas::GPU_OUTPUT`).
+    canvases: HashMap<(DocId, u32), canvas::CanvasCache>,
+    /// Display profile readings (#569).
+    monitors: monitor_status::State,
     checker: Option<egui::TextureHandle>,
     drag: Option<canvas::Drag>,
     /// Brush/Eraser stroke being drawn, rendered by the engine (see `canvas::LiveStroke`).
@@ -256,12 +311,27 @@ pub struct PhotosuiteApp {
     trail: Option<stroke_trail::Trail>,
     /// Move tool drag shown live (`move_ui`).
     pub(crate) move_preview: Option<move_ui::MovePreview>,
+    /// Patch Tool drag: the healed document at the pointer (`patch_preview`).
+    pub(crate) patch_preview: Option<patch_preview::PatchPreview>,
     /// The next tool `Down` is a right-button drag that erases (see `paint_mouse`).
     secondary_erase: bool,
+    /// While a batch of recovered pointer samples is replayed, defer the live-stroke update to one
+    /// call for the whole frame (see `canvas::canvas_view`).
+    defer_live_stroke: bool,
     /// End of the last painting stroke: ⇧-click draws a straight line from it (#178).
     last_stroke_end: Option<(DocId, [f64; 2])>,
     /// Control+Alt-drag brush resize in progress (`brush_resize`, #231).
     pub(crate) brush_resize: Option<brush_resize::Resize>,
+    /// A ⌘⌥⌃-click layer pick is in progress; its drag and release are swallowed (`quick_pick`).
+    pub(crate) quick_pick: bool,
+    /// The next tool `Down` is an Alt+right-drag that resizes the brush (#297). `tool_event`
+    /// takes it on every event, so a press another handler consumes can't leave it set.
+    pub(crate) brush_resize_armed: bool,
+    /// This press began with ⌥ (Alt) held on a painting tool, so it samples colours instead of
+    /// painting until it is released (`canvas::alt_eyedropper`, #417).
+    pub(crate) alt_sampling: bool,
+    /// The first digit of a two-digit opacity typed on the number keys (`opacity_keys`, #352).
+    pub(crate) opacity_keys: opacity_keys::Pending,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<(u64, Option<String>, Sender<ControlResponse>)>,
     /// Screenshots not yet requested from the viewport: (token, earliest time in ms, frames seen).
@@ -285,6 +355,15 @@ pub struct PhotosuiteApp {
     fonts_ready: bool,
     /// Screen rect of the main canvas last frame (for overlays and the navigator).
     pub last_canvas_rect: egui::Rect,
+    /// The document area showing the active document's canvas last frame (not the tabs, the
+    /// start screen or an opening file's card): files dropped here are placed as layers.
+    pub(crate) drop_canvas_rect: Option<egui::Rect>,
+    /// The document tab strip last frame: a drop there opens the file at the slot under it.
+    pub(crate) tab_strip: Option<canvas::TabStrip>,
+    /// Files dropped on the canvas still to place, one Free Transform at a time.
+    pub(crate) drop_places: std::collections::VecDeque<egui::DroppedFileHandle>,
+    /// The document each of `ui.views` belongs to, as of the last [`Self::sync_views`].
+    view_docs: Vec<DocId>,
     pub fps: f32,
     last_frame_time: f64,
     thumbs: HashMap<(photosuite_doc::LayerId, u8), (u64, egui::TextureHandle)>,
@@ -317,8 +396,8 @@ pub struct PhotosuiteApp {
     pub(crate) transform_preview: Option<transform_tool::TransformPreview>,
     /// Move-tool ⇧/⌥ drag state (move_mods).
     pub(crate) move_mods: move_mods::MoveDrag,
-    /// Live Layer Style dialog preview: (key over revision + style fields, document with the style applied).
-    pub(crate) style_preview: Option<(u64, Option<std::sync::Arc<Document>>)>,
+    /// Live Layer Style dialog preview: (key over revision + style fields, preview or validation error).
+    pub(crate) style_preview: Option<(u64, Result<std::sync::Arc<Document>, String>)>,
     /// The Filter Gallery's thumbnails, kept across openings (see `gallery_thumbs`).
     pub(crate) gallery_thumbs: Option<gallery_thumbs::ThumbSet>,
     /// Liquify dialog, Puppet Warp and Perspective Warp sessions (distort_ui).
@@ -372,10 +451,18 @@ pub struct PhotosuiteApp {
     pub(crate) prefs_rt: prefs_ui::Runtime,
     /// Close, Revert or Exit parked behind the unsaved-changes prompt (see `discard_ui`).
     pub(crate) discard: Option<discard_ui::Prompt>,
+    /// A Save As to a layered TIFF parked behind the TIFF Options prompt (see `tiff_options_ui`).
+    pub(crate) tiff_options: Option<tiff_options_ui::Prompt>,
     /// Set once the user has agreed to quit, so the resulting close request goes through.
     pub(crate) allow_close: bool,
     /// Pen pressure/tilt from the platform (see `stylus`).
     pub stylus: stylus::Stylus,
+    /// Run long commands and file opens as background jobs with progress and Cancel (#210; see
+    /// `jobs_ui`). The desktop app turns it on; off (the default), everything runs inline as
+    /// before, which tests and scripts rely on.
+    pub background_jobs: bool,
+    /// Background job bookkeeping: opening tabs, control replies waiting on a job.
+    pub jobs: jobs_ui::JobsUi,
     #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
     live_tokens: theme::live::LiveTokens,
 }
@@ -387,14 +474,21 @@ impl PhotosuiteApp {
             ui: UiState::default(),
             services,
             canvases: HashMap::new(),
+            monitors: Default::default(),
             checker: None,
             drag: None,
             live_stroke: None,
             trail: None,
             move_preview: None,
+            patch_preview: None,
             secondary_erase: false,
+            defer_live_stroke: false,
             last_stroke_end: None,
             brush_resize: None,
+            quick_pick: false,
+            brush_resize_armed: false,
+            alt_sampling: false,
+            opacity_keys: None,
             control_rx: None,
             pending_screenshots: Vec::new(),
             queued_screenshots: Vec::new(),
@@ -407,6 +501,10 @@ impl PhotosuiteApp {
             native_menu_bar: false,
             fonts_ready: false,
             last_canvas_rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0)),
+            drop_canvas_rect: None,
+            tab_strip: None,
+            drop_places: Default::default(),
+            view_docs: Vec::new(),
             fps: 0.0,
             last_frame_time: 0.0,
             thumbs: HashMap::new(),
@@ -449,8 +547,11 @@ impl PhotosuiteApp {
             perf: Default::default(),
             prefs_rt: Default::default(),
             discard: None,
+            tiff_options: None,
             allow_close: false,
             stylus: Default::default(),
+            background_jobs: false,
+            jobs: Default::default(),
             #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
             live_tokens: theme::live::LiveTokens::from_env(),
         };
@@ -466,8 +567,22 @@ impl PhotosuiteApp {
     pub fn set_wgpu(&mut self, rs: eframe::egui_wgpu::RenderState) {
         // Preferences › Performance › cache tile size (PHOTOSUITE_GPU_TILE still overrides).
         let tile = self.session.prefs().performance.cache_tile_size;
-        let gpu = gpu_canvas::GpuCanvas::with_tile(&rs, Some(tile));
-        self.perf.gpu_info.set_adapter(&gpu.adapter_info());
+        // Escaped driver/setup panics must leave the session and CPU canvas alive.
+        self.perf.gpu_info.set_adapter(&rs.adapter.get_info());
+        let gpu = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gpu_canvas::GpuCanvas::with_tile(&rs, Some(tile)))) {
+            Ok(gpu) => gpu,
+            Err(payload) => {
+                let detail = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+                    .unwrap_or_else(|| "GPU canvas initialization failed".into());
+                self.perf.gpu_info.canvas = "cpu".into();
+                self.perf.gpu_info.fallback = Some(detail.clone());
+                gpu_status::queue_fallback_notice(self, detail);
+                return;
+            }
+        };
         self.perf.gpu_info.canvas = "gpu".into();
         self.gpu = Some(gpu);
         self.prefs_rt.gpu_style = None;
@@ -504,11 +619,27 @@ impl PhotosuiteApp {
 
     /// Run an engine command, reporting errors in the status bar.
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        // Automation input also gates every step a command runs on its behalf (`actions.play`).
+        let gate = if self.automation_input && self.session.authorize.is_none() { self.services.automation_authorize } else { None };
+        if gate.is_some() {
+            self.session.authorize = gate;
+        }
+        let result = self.run_command(id, params);
+        if gate.is_some() {
+            self.session.authorize = None;
+        }
+        result
+    }
+
+    fn run_command(&mut self, id: &str, params: Value) -> Result<Value, String> {
         let clip_read = std::mem::take(&mut self.clip_read_for_paste);
         if self.automation_input
             && let Some(authorize) = self.services.automation_command.as_ref()
         {
             authorize(id, &params)?;
+        }
+        if let Some(r) = transform_tool::intercept(self, id) {
+            return r;
         }
         let suppress_events = self.automation_input && self.session.prefs().script_events.enabled;
         if suppress_events {
@@ -516,18 +647,19 @@ impl PhotosuiteApp {
         }
         let t0 = gpu_canvas::now_ms();
         // The OS clipboard is read only on an explicit paste, never in the background (privacy, CPU).
-        if matches!(id, "edit.paste" | "edit.pasteSpecial.pasteInPlace") {
+        if matches!(id, "edit.paste" | "edit.pasteSpecial.pasteInPlace" | "file.newFromClipboard") {
             if !clip_read {
                 self.import_os_clipboard();
             }
-            if self.session.clipboard.is_none() && self.session.active().is_some() && self.services.clipboard_get_image.is_some() {
+            if self.session.clipboard.is_none() && self.services.clipboard_get_image.is_some() {
                 // Enabled on the strength of the OS clipboard, which held no image: a quiet no-op.
                 self.ui.status = "Nothing to paste: the clipboard holds no image".into();
                 self.ui.status_error = false;
                 return Ok(serde_json::json!({"pasted": false}));
             }
         }
-        let r = self.session.execute(id, params).map_err(|e| e.to_string());
+        // Long commands become background jobs when enabled (`jobs_ui`); the rest run inline.
+        let r = jobs_ui::run(self, id, params);
         if r.is_ok() && matches!(id, "edit.copy" | "edit.cut" | "edit.copyMerged") {
             self.clip_external = false;
             self.export_os_clipboard();
@@ -553,11 +685,25 @@ impl PhotosuiteApp {
         r
     }
 
-    /// Keep one view per document.
+    /// Keep one view per document, in tab order: a view and its windows stay with their document
+    /// when tabs move (`document.move`) or close.
     pub fn sync_views(&mut self) {
-        let n = self.session.documents().len();
-        self.ui.views.resize_with(n, Default::default);
-        self.ui.windows.retain(|w| w.document < n);
+        crate::lasso_ui::cancel_stale(self);
+        let ids: Vec<DocId> = self.session.documents().iter().map(|d| d.doc.id).collect();
+        // Where the document of view `i` is now. Views not tracked yet keep their index.
+        let now = |i: usize| match self.view_docs.get(i) {
+            Some(id) => ids.iter().position(|d| d == id),
+            None => (i < ids.len()).then_some(i),
+        };
+        let mut views: Vec<Option<state::View>> = ids.iter().map(|_| None).collect();
+        for (i, v) in std::mem::take(&mut self.ui.views).into_iter().enumerate() {
+            if let Some(slot) = now(i).and_then(|to| views.get_mut(to)) {
+                *slot = Some(v);
+            }
+        }
+        self.ui.views = views.into_iter().map(Option::unwrap_or_default).collect();
+        self.ui.windows.retain_mut(|w| now(w.document).map(|d| w.document = d).is_some());
+        self.view_docs = ids;
         self.prune_thumbs();
         self.sync_mask_targets();
         // Channel-view textures outlive a hidden view (cheap re-show), not their document.
@@ -643,6 +789,13 @@ impl PhotosuiteApp {
         if let Some(r) = preset_files_ui::open(self, name, bytes) {
             return r.map(|()| Vec::new());
         }
+        let name = &self.open_name(name);
+        // Decoded on a worker: a tab with progress appears now, the document when it's ready
+        // (warnings are shown then).
+        if self.background_jobs {
+            jobs_ui::start_open(self, name, None, jobs_ui::bytes(bytes))?;
+            return Ok(Vec::new());
+        }
         let import = self.services.import.as_ref().ok_or("no importer configured")?;
         let (doc, warnings) = import(name, bytes)?;
         // Edit › Color Settings policies apply on open; mismatches can ask what to do.
@@ -690,7 +843,8 @@ impl PhotosuiteApp {
     fn import_automation_document(&mut self, name: &str, bytes: &[u8]) -> Result<Vec<String>, String> {
         let import = self.services.import.as_ref().ok_or("no importer configured")?;
         let (doc, warnings) = import(name, bytes)?;
-        self.session.add_document(doc, Some(name.to_string()));
+        // The caller records the path it read from.
+        self.session.add_document(doc, None);
         self.sync_views();
         self.ui.status = format!("Opened {name}");
         self.ui.status_error = false;
@@ -698,30 +852,26 @@ impl PhotosuiteApp {
         Ok(warnings)
     }
 
-    /// Run one engine command on behalf of automation while suppressing
-    /// user-configured script-event file reads. Interactive commands retain
-    /// their normal event behavior.
-    pub fn run_automation(&mut self, id: &str, params: Value) -> Result<Value, String> {
-        let events_enabled = self.session.prefs().script_events.enabled;
-        if events_enabled {
-            self.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
-        }
-        let result = self.run(id, params);
-        if events_enabled {
-            self.session.edit_prefs(|prefs| prefs.script_events.enabled = true);
-        }
-        result
-    }
-
-    /// File › Open: the platform dialog returns the chosen file's path (native; the web delivers
-    /// picks through the inbox instead).
+    /// File › Open: native platforms return all selected paths; the web delivers its pick through
+    /// the single-file service/inbox instead.
     pub fn open_dialog_file(&mut self) {
-        let picked = self.services.pick_open.as_mut().and_then(|f| f());
-        if let Some((path, bytes)) = picked
-            && let Err(e) = self.open_file(&path, &bytes)
-        {
+        if let Some(pick_paths) = self.services.pick_open_paths.as_mut() {
+            if let Some(paths) = pick_paths() {
+                self.open_paths(&paths);
+            }
+            return;
+        }
+        let Some((path, bytes)) = self.services.pick_open.as_mut().and_then(|f| f()) else { return };
+        if let Err(e) = bytes.and_then(|bytes| self.open_file(&path, &bytes)) {
             self.open_failed(&file_open::display_name(&path), &e);
         }
+    }
+
+    /// Show the open dialog for a file a command reads (a script, notes, a placed image, presets):
+    /// `None` when cancelled, else its name and bytes or the read error.
+    pub(crate) fn pick_file_bytes(&mut self) -> Option<Result<(String, Vec<u8>), String>> {
+        let (name, bytes) = self.services.pick_open.as_mut().and_then(|f| f())?;
+        Some(bytes.map(|b| (name.clone(), b)).map_err(|e| format!("{}: {e}", file_open::display_name(&name))))
     }
 
     /// Save the active document to `path` (or a path chosen in the save dialog); returns the path
@@ -739,10 +889,24 @@ impl PhotosuiteApp {
             Some(p) => p,
             None => self.services.pick_save.as_mut().and_then(|f| f(&suggested)).ok_or("cancelled")?,
         };
+        // A layered TIFF asks about its layers first (Preferences › File Handling); the save
+        // continues from the prompt.
+        if tiff_options_ui::wants_prompt(self, &path) {
+            tiff_options_ui::park(self, path.clone());
+            return Ok((path, Vec::new()));
+        }
         // The quality the document was opened or last saved with (File › Save keeps it).
-        let settings = ExportSettings { jpeg_quality: st.save_options.jpeg_quality, webp_quality: st.save_options.webp_quality };
+        let st = self.session.active().ok_or("no document")?;
+        let settings = ExportSettings { jpeg_quality: st.save_options.jpeg_quality, webp_quality: st.save_options.webp_quality, ..Default::default() };
+        self.write_document(path, &settings)
+    }
+
+    /// Encodes the active document with `settings` and writes it to `path`, which becomes the
+    /// document's path. Returns the path and the export warnings (also shown to the user).
+    pub(crate) fn write_document(&mut self, path: String, settings: &ExportSettings) -> Result<(String, Vec<String>), String> {
+        let st = self.session.active().ok_or("no document")?;
         let export = self.services.export.as_ref().ok_or("no exporter configured")?;
-        let (bytes, warnings) = export(&st.doc, &path, &settings)?;
+        let (bytes, warnings) = export(&st.doc, &path, settings)?;
         let write = self.services.write.as_mut().ok_or("no writer configured")?;
         write(&path, &bytes)?;
         if let Some(st) = self.session.active_mut() {
@@ -769,7 +933,10 @@ impl PhotosuiteApp {
     /// written and the export warnings (also shown to the user).
     pub fn save_automation(&mut self, path: Option<String>) -> Result<(String, Vec<String>), String> {
         let state = self.session.active().ok_or("no document")?;
-        let target = path.or_else(|| state.path.clone()).ok_or("document has no relative path; pass `path`")?;
+        // As File › Save: without `path` only a layered file is written back (#416).
+        let target = path
+            .or_else(|| state.path.clone().filter(|p| photosuite_engine::file_cmds::saves_in_place(p)))
+            .ok_or("pass `path`: a save without one writes back only to the document's own PSD, PSB or .pcraft file")?;
         let export = self.services.export.as_ref().ok_or("no exporter configured")?;
         let (bytes, warnings) = export(&state.doc, &target, &ExportSettings::default())?;
         let write = self.services.automation_write.as_mut().ok_or("automation write authority is not configured")?;
@@ -794,6 +961,7 @@ impl PhotosuiteApp {
                     let _ = reply.send(v);
                 }
                 control::Outcome::AfterInput => self.input_waiters.push(reply),
+                control::Outcome::AfterJob(job) => self.jobs.waiters.push((job, reply)),
                 control::Outcome::Screenshot { token, path } => {
                     // Wait out egui's fade animations (~83 ms) and a few rendered frames first.
                     let settle = ctx.global_style().animation_time as f64 * 2000.0 + 60.0;
@@ -868,22 +1036,21 @@ impl eframe::App for PhotosuiteApp {
             self.checker = None;
         }
         self.drain_control(ctx);
-        if self.ui.text_edit.is_some() && self.ui.tool != state::Tool::Type {
+        if self.ui.text_edit.is_some() && !self.ui.tool.is_type() {
             type_tool::commit(self);
         }
         if self.ui.pen.is_some() && self.ui.tool != state::Tool::Pen {
             vector_ui::pen_commit(self, false);
         }
-        // A transform whose layer or document went away (undo, close) ends silently.
-        if let Some(t) = &self.ui.transform
-            && self.session.active().and_then(|s| s.doc.layer(photosuite_doc::LayerId(t.layer))).is_none()
-        {
-            transform_tool::cancel(self);
-        }
+        transform_tool::end_if_left(self);
         self.collect_screenshots(ctx);
         self.issue_screenshots(ctx);
         prefs_ui::tick(self, ctx);
+        monitor_status::poll(self, ctx);
         discard_ui::guard_window_close(self, ctx);
+        // Background jobs: apply finished ones, keep frames coming, Esc cancels (before the
+        // shortcuts see Esc).
+        jobs_ui::tick(self, ctx);
         shortcuts::handle(self, ctx);
         let arrived: Vec<(String, Vec<u8>)> =
             self.services.inbox.as_ref().map(|q| std::mem::take(&mut *q.lock().unwrap_or_else(|e| e.into_inner()))).unwrap_or_default();
@@ -894,8 +1061,17 @@ impl eframe::App for PhotosuiteApp {
         }
         // Finder double-click / Open With / Dock drops (macOS open-documents events).
         self.drain_os_events(ctx);
-        // Files dropped onto the window open as documents (with their path, like File › Open).
-        self.open_dropped(ctx.input(|i| i.raw.dropped_files.clone()));
+        // While files are dragged over the window it gets no pointer events: keep frames coming so
+        // the tab strip can follow the pointer.
+        if ctx.input(|i| !i.raw.hovered_files.is_empty()) {
+            ctx.request_repaint();
+        }
+        let dropped = ctx.input(|i| i.raw.dropped_files.clone());
+        if !dropped.is_empty() {
+            let at = self.services.cursor_pos.as_mut().and_then(|f| f(ctx));
+            self.open_dropped(ctx, dropped, at);
+        }
+        self.place_next_dropped(ctx);
         // The control transport wakes the UI on arrival (ctx.request_repaint); only poll while a
         // screenshot is pending. (Polling every 50 ms here made idle apps render at 20 fps.)
         if !self.pending_screenshots.is_empty() {
@@ -956,13 +1132,16 @@ impl eframe::App for PhotosuiteApp {
         workspace_ui::windows(self, &ctx);
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);
+        jobs_ui::dialog(self, &ctx);
         discard_ui::show(self, &ctx);
+        tiff_options_ui::show(self, &ctx);
         distort_ui::show(self, &ctx);
         camera_raw_ui::show(self, &ctx);
         lens_ui::show(self, &ctx);
         wide_angle_ui::show(self, &ctx);
         canvas::extra_windows(self, &ctx);
         notices::show(self, &ctx);
+        gpu_status::show_fallback(self, &ctx);
         // A device lost while drawing this frame: switch to the CPU canvas before the next one.
         gpu_status::check(self, &ctx);
         self.automation_input = false;
@@ -1299,7 +1478,19 @@ mod input_tests;
 mod pencil_tests;
 
 #[cfg(test)]
+mod transform_undo_tests;
+
+#[cfg(test)]
+mod move_auto_select_tests;
+
+#[cfg(test)]
 mod marquee_tests;
+
+#[cfg(test)]
+mod stamp_tests;
+
+#[cfg(test)]
+mod polygon_lasso_tests;
 
 #[cfg(test)]
 mod clipboard_tests {
@@ -1368,6 +1559,40 @@ mod clipboard_tests {
         let mut plain = PhotosuiteApp::new(Session::new(), Services::default());
         plain.session.execute("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
         assert!(!crate::menus::is_enabled(&plain, "edit.paste"));
+    }
+
+    /// #368: an image copied in another app opens as a document of its own, from File › New
+    /// from Clipboard or from Paste with nothing open.
+    #[test]
+    fn os_clipboard_image_becomes_a_new_document() {
+        let (os, reads) = (OsClip::default(), Arc::new(std::sync::atomic::AtomicUsize::new(0)));
+        let (b, n) = (os.clone(), Arc::clone(&reads));
+        let get = move || {
+            n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            b.lock().unwrap().clone()
+        };
+        let mut app = PhotosuiteApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
+        let ctx = egui::Context::default();
+        // Listed right after File › New…, enabled without reading the clipboard.
+        let items = crate::menus::menu_items(&app);
+        let at = items.iter().position(|i| i.id == "file.new").unwrap();
+        assert_eq!(items[at + 1].id, "file.newFromClipboard");
+        assert!(items[at + 1].enabled && crate::menus::is_enabled(&app, "edit.paste"));
+        assert!(!crate::menus::is_enabled(&app, "edit.pasteSpecial.pasteInPlace"), "Paste in Place needs a document");
+        assert_eq!(reads.load(std::sync::atomic::Ordering::SeqCst), 0);
+        // An empty clipboard is a quiet no-op.
+        let r = crate::menus::invoke(&mut app, &ctx, "file.newFromClipboard", serde_json::json!({})).unwrap();
+        assert_eq!(r["pasted"], serde_json::json!(false));
+        assert!(app.session.documents().is_empty() && !app.ui.status_error);
+        // Paste with nothing open makes the document.
+        *os.lock().unwrap() = Some((5, 3, [0u8, 0, 255, 255].repeat(15)));
+        crate::menus::invoke(&mut app, &ctx, "edit.paste", serde_json::json!({})).unwrap();
+        let d = &app.session.active().unwrap().doc;
+        assert_eq!((d.size.width, d.size.height, d.layers.len()), (5, 3, 1));
+        assert_eq!(app.ui.views.len(), 1, "the new document has a view");
+        // New from Clipboard with a document open adds another.
+        crate::menus::invoke(&mut app, &ctx, "file.newFromClipboard", serde_json::json!({})).unwrap();
+        assert_eq!(app.session.documents().len(), 2);
     }
 
     #[test]

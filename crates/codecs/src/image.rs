@@ -4,7 +4,10 @@
 //! in **native endianness**. Integer samples are unsigned and normalized to
 //! `[0, max]`; float samples are nominally `[0, 1]` but may exceed it (HDR).
 
+use std::fmt;
+
 use crate::error::CodecError;
+use crate::format::Format;
 use half::f16;
 
 /// Channel layout of an [`Image`]. Alpha, when present, is always the last
@@ -118,11 +121,103 @@ pub struct Metadata {
     pub dpi: Option<(f32, f32)>,
     /// Free-form key/value text (PNG tEXt/iTXt, TIFF ASCII tags).
     pub text: Vec<(String, String)>,
+    /// Photoshop image resources (`8BIM` resource blocks): TIFF tag 34377. Kept opaque here;
+    /// `photosuite-io` reads and writes them through `photosuite-psd`.
+    pub photoshop_resources: Option<Vec<u8>>,
+    /// Photoshop layer data (TIFF tag 37724 `ImageSourceData`): a layered TIFF's layers. Kept
+    /// opaque here; `photosuite-io` reads and writes it through `photosuite-psd`.
+    pub photoshop_layers: Option<Vec<u8>>,
 }
 
 impl Metadata {
     pub fn is_empty(&self) -> bool {
-        self.exif.is_none() && self.xmp.is_none() && self.dpi.is_none() && self.text.is_empty()
+        self.exif.is_none()
+            && self.xmp.is_none()
+            && self.dpi.is_none()
+            && self.text.is_empty()
+            && self.photoshop_resources.is_none()
+            && self.photoshop_layers.is_none()
+    }
+}
+
+/// Something a decoder noticed about the file that the decoded pixels don't show: the file
+/// held more than was decoded, or less than it should.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecodeWarning {
+    /// Only the first frame of an animation was decoded; `total` counts every frame when known.
+    MoreFrames { total: Option<u32> },
+    /// Only the first page of a multi-page file was decoded; `total` counts every page when known.
+    MorePages { total: Option<u32> },
+    /// The image data ends early (truncated or damaged file); the decoder filled in the rest
+    /// (a baseline JPEG's missing rows come out grey).
+    Truncated { format: Format },
+    /// Deep image data (per-pixel sample lists) was composited into the flat image; the samples
+    /// themselves (Z and other deep channels) are not part of the flat result.
+    DeepFlattened { format: Format, max_samples_per_pixel: u32 },
+}
+
+impl fmt::Display for DecodeWarning {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DecodeWarning::MoreFrames { total: Some(n) } => write!(f, "only the first of {n} frames was imported"),
+            DecodeWarning::MoreFrames { total: None } => write!(f, "only the first frame of the animation was imported"),
+            DecodeWarning::MorePages { total: Some(n) } => write!(f, "only the first of {n} pages was imported"),
+            DecodeWarning::MorePages { total: None } => write!(f, "only the first page of the file was imported"),
+            DecodeWarning::Truncated { format } => {
+                write!(f, "{} data ends early (the file is truncated or damaged); part of the image is missing", format.name())
+            }
+            DecodeWarning::DeepFlattened { format, max_samples_per_pixel } => write!(
+                f,
+                "{format} deep data was composited into a flat image (up to {max_samples_per_pixel} samples per pixel); per-pixel depth is not kept",
+                format = format.name()
+            ),
+        }
+    }
+}
+
+/// One channel of a [`DeepImage`]: the samples of every pixel, one flat list in pixel order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeepChannel {
+    /// The channel name as in the file (e.g. `R`, `G`, `B`, `A`, `Z`).
+    pub name: String,
+    /// The sample type as stored in the file; `samples` always holds the numeric value as
+    /// f32 (half and 32-bit floats exactly; 32-bit unsigned integers exactly up to 2^24).
+    pub sample: SampleType,
+    /// Every sample of the channel, in pixel order; the samples of pixel `i` are
+    /// `counts[i]..counts[i+1]` (see [`DeepImage::counts`]).
+    pub samples: Vec<f32>,
+}
+
+/// Deep image data (OpenEXR `deepscanline`/`deeptile`): a variable-length list of samples
+/// per pixel, each with its own colour, alpha and depth. All channels share the same sample
+/// layout, so a sample is one index into every channel.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeepImage {
+    pub width: u32,
+    pub height: u32,
+    /// The sample channels in file order.
+    pub channels: Vec<DeepChannel>,
+    /// Cumulative sample counts, `len == width as usize * height as usize + 1`: pixel `i`
+    /// holds the samples `counts[i]..counts[i+1]` of every channel. Monotonically
+    /// non-decreasing, starting and ending at the total sample count.
+    pub counts: Vec<u64>,
+}
+
+impl DeepImage {
+    /// A channel by its exact name.
+    pub fn channel(&self, name: &str) -> Option<&DeepChannel> {
+        self.channels.iter().find(|c| c.name == name)
+    }
+
+    /// The samples of one pixel, as indices into every channel's `samples`.
+    pub fn sample_range(&self, pixel: usize) -> std::ops::Range<u64> {
+        let end = self.counts.get(pixel + 1).copied().unwrap_or(0);
+        self.counts.get(pixel).copied().unwrap_or(end)..end
+    }
+
+    /// The total number of samples over all pixels.
+    pub fn total_samples(&self) -> u64 {
+        self.counts.last().copied().unwrap_or(0)
     }
 }
 
@@ -137,6 +232,9 @@ pub struct Image {
     /// Embedded ICC profile (must describe `layout`'s colour model).
     pub icc: Option<Vec<u8>>,
     pub meta: Metadata,
+    /// What the decoder noticed about the file: empty for a complete, single image and for
+    /// images built in memory. Encoders ignore it.
+    pub warnings: Vec<DecodeWarning>,
 }
 
 fn byte_len(width: u32, height: u32, layout: ChannelLayout, sample: SampleType) -> Option<usize> {
@@ -147,7 +245,7 @@ impl Image {
     /// A zero-filled image, or an error if the byte size overflows `usize`.
     pub fn new(width: u32, height: u32, layout: ChannelLayout, sample: SampleType) -> Result<Self, CodecError> {
         let len = byte_len(width, height, layout, sample).ok_or_else(|| CodecError::InvalidImage("image size overflows usize".into()))?;
-        Ok(Image { width, height, layout, sample, data: vec![0; len], icc: None, meta: Metadata::default() })
+        Ok(Image { width, height, layout, sample, data: vec![0; len], icc: None, meta: Metadata::default(), warnings: Vec::new() })
     }
 
     /// Wrap raw interleaved, native-endian bytes.
@@ -156,7 +254,7 @@ impl Image {
         if data.len() != expected {
             return Err(CodecError::InvalidImage(format!("buffer has {} bytes, expected {expected} for {width}x{height} {layout:?} {sample:?}", data.len())));
         }
-        Ok(Image { width, height, layout, sample, data, icc: None, meta: Metadata::default() })
+        Ok(Image { width, height, layout, sample, data, icc: None, meta: Metadata::default(), warnings: Vec::new() })
     }
 
     pub fn from_u8(width: u32, height: u32, layout: ChannelLayout, data: Vec<u8>) -> Result<Self, CodecError> {
@@ -324,6 +422,7 @@ impl Image {
             data,
             icc: if layout.same_model(self.layout) { self.icc.clone() } else { None },
             meta: self.meta.clone(),
+            warnings: self.warnings.clone(),
         }
     }
 

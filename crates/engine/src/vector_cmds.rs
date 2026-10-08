@@ -19,8 +19,8 @@
 use photosuite_algo::selection::{self as sel, SelectionMode};
 use photosuite_color::{BlendMode, Color};
 use photosuite_doc::{
-    Document, Fill, FillRule, GradientStyle, Knot, Layer, LayerContent, LayerId, LineCap, LineJoin, LiveShape, NamedPath, Path, PathOp, ShapeLayer,
-    ShapeStroke, StrokeAlign, Subpath, VectorMask,
+    ClippingPath, Document, Fill, FillRule, GradientStyle, Knot, Layer, LayerContent, LayerId, LineCap, LineJoin, LiveShape, NamedPath, Path, PathOp,
+    ShapeLayer, ShapeStroke, StrokeAlign, Subpath, VectorMask,
 };
 use photosuite_geom::{Affine, Point, Rect};
 use photosuite_vector as vector;
@@ -47,6 +47,66 @@ fn has_layer(s: &Session) -> std::result::Result<(), String> {
 
 fn has_selection(s: &Session) -> std::result::Result<(), String> {
     s.active().filter(|d| d.doc.selection.is_some()).map(|_| ()).ok_or_else(|| "no selection".into())
+}
+
+fn active_shape(s: &Session) -> std::result::Result<&ShapeLayer, String> {
+    let d = s.active().ok_or("no document open")?;
+    let id = d.active_layer.ok_or("no active layer")?;
+    let layer = d.doc.layer(id).ok_or("no active layer")?;
+    match &layer.content {
+        LayerContent::Shape(shape) => Ok(shape),
+        _ => Err("active layer is not a shape layer".into()),
+    }
+}
+
+fn has_shape_fill(s: &Session) -> std::result::Result<(), String> {
+    active_shape(s)?.fill.as_ref().map(|_| ()).ok_or_else(|| "shape has no fill".into())
+}
+
+fn has_shape_stroke(s: &Session) -> std::result::Result<(), String> {
+    active_shape(s)?.stroke.as_ref().map(|_| ()).ok_or_else(|| "shape has no stroke".into())
+}
+
+fn can_paste_shape_fill(s: &Session) -> std::result::Result<(), String> {
+    active_shape(s)?;
+    s.path_fill_clipboard.as_ref().map(|_| ()).ok_or_else(|| "no shape fill copied".into())
+}
+
+fn can_paste_shape_stroke(s: &Session) -> std::result::Result<(), String> {
+    active_shape(s)?;
+    s.path_stroke_clipboard.as_ref().map(|_| ()).ok_or_else(|| "no shape stroke copied".into())
+}
+
+fn copy_shape_fill(s: &mut Session, _p: &Value) -> Result<Value> {
+    let fill = active_shape(s).map_err(EngineError::Other)?.fill.clone().ok_or_else(|| EngineError::Other("shape has no fill".into()))?;
+    s.path_fill_clipboard = Some(fill);
+    Ok(Value::Null)
+}
+
+fn copy_shape_stroke(s: &mut Session, _p: &Value) -> Result<Value> {
+    let stroke = active_shape(s).map_err(EngineError::Other)?.stroke.clone().ok_or_else(|| EngineError::Other("shape has no stroke".into()))?;
+    s.path_stroke_clipboard = Some(stroke);
+    Ok(Value::Null)
+}
+
+fn paste_shape_fill(s: &mut Session, p: &Value) -> Result<Value> {
+    let fill = s.path_fill_clipboard.clone().ok_or_else(|| EngineError::Other("no shape fill copied".into()))?;
+    let id = layer_id(s, p)?;
+    with_shape(s, id, "Paste Fill", |shape, _| {
+        shape.fill = Some(fill);
+        Ok(())
+    })?;
+    shape_info(s, id)
+}
+
+fn paste_shape_stroke(s: &mut Session, p: &Value) -> Result<Value> {
+    let stroke = s.path_stroke_clipboard.clone().ok_or_else(|| EngineError::Other("no shape stroke copied".into()))?;
+    let id = layer_id(s, p)?;
+    with_shape(s, id, "Paste Complete Stroke", |shape, _| {
+        shape.stroke = Some(stroke);
+        Ok(())
+    })?;
+    shape_info(s, id)
 }
 
 fn layer_id(s: &Session, p: &Value) -> Result<LayerId> {
@@ -712,6 +772,100 @@ fn path_delete(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(Value::Null)
 }
 
+fn clipping_path_set(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "path.clippingPath.set";
+    let name = p.get("name").and_then(Value::as_str).filter(|name| !name.is_empty()).ok_or_else(|| bad(CMD, "missing saved path `name`"))?.to_owned();
+    let flatness = match p.get("flatness") {
+        Some(value) => {
+            value.as_f64().filter(|value| value.is_finite() && (0.0..=100.0).contains(value)).ok_or_else(|| bad(CMD, "`flatness` must be between 0 and 100"))?
+                as f32
+        }
+        None => 0.0,
+    };
+    s.edit("Clipping Path", |doc, _| {
+        if !doc.paths.iter().any(|path| path.name == name) {
+            return Err(EngineError::Other(format!("no saved path named \"{name}\"")));
+        }
+        doc.clipping_path = Some(ClippingPath { name: name.clone(), flatness });
+        Ok(())
+    })?;
+    Ok(json!({ "name": name, "flatness": flatness }))
+}
+
+fn clipping_path_clear(s: &mut Session, _p: &Value) -> Result<Value> {
+    s.edit("Clear Clipping Path", |doc, _| {
+        doc.clipping_path.take().ok_or_else(|| EngineError::Other("no clipping path".into()))?;
+        Ok(())
+    })?;
+    Ok(Value::Null)
+}
+
+fn path_transform(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "path.transform";
+    let name = p.get("name").and_then(Value::as_str).unwrap_or("work").to_owned();
+    let layer_id = if name == "layer" { Some(layer_id(s, p)?) } else { None };
+    let transform = if let Some(values) = p.get("matrix") {
+        let values = values.as_array().filter(|values| values.len() == 6).ok_or_else(|| bad(CMD, "`matrix` must contain six numbers"))?;
+        let mut m = [0.0; 6];
+        for (slot, value) in m.iter_mut().zip(values) {
+            *slot = value
+                .as_f64()
+                .filter(|number| number.is_finite() && number.abs() <= 1_000_000.0)
+                .ok_or_else(|| bad(CMD, "matrix entries must be finite numbers with magnitude at most 1000000"))?;
+        }
+        Affine { m }
+    } else {
+        let number = |key: &str, default: f64| -> Result<f64> {
+            match p.get(key) {
+                Some(value) => value
+                    .as_f64()
+                    .filter(|n| n.is_finite() && n.abs() <= 1_000_000.0)
+                    .ok_or_else(|| bad(CMD, format!("`{key}` must be a finite number with magnitude at most 1000000"))),
+                None => Ok(default),
+            }
+        };
+        if !["translateX", "translateY", "scaleX", "scaleY", "angle"].iter().any(|key| p.get(*key).is_some()) {
+            return Err(bad(CMD, "pass `matrix` or translate/scale/angle parameters"));
+        }
+        let (tx, ty) = (number("translateX", 0.0)?, number("translateY", 0.0)?);
+        let (sx, sy) = (number("scaleX", 1.0)?, number("scaleY", 1.0)?);
+        let angle = number("angle", 0.0)?;
+        let path = resolve_path(s, Some(&name))?;
+        let (x0, y0, x1, y1) = path.control_bounds().ok_or_else(|| bad(CMD, "path has no points to transform"))?;
+        let (cx, cy) = ((x0 + x1) * 0.5, (y0 + y1) * 0.5);
+        Affine::translate(-cx, -cy)
+            .then(&Affine { m: [sx, 0.0, 0.0, sy, 0.0, 0.0] })
+            .then(&Affine::rotate(angle.to_radians()))
+            .then(&Affine::translate(cx + tx, cy + ty))
+    };
+    let m = transform.m;
+    if let Some(id) = layer_id
+        && s.active().and_then(|d| d.doc.layer(id)).is_some_and(|layer| matches!(layer.content, LayerContent::Shape(_)))
+    {
+        with_shape(s, id, "Transform Path", |shape, _| {
+            transform_shape(shape, &transform);
+            shape.psd_raw = None;
+            Ok(())
+        })?;
+        return Ok(json!({ "name": name, "matrix": m }));
+    }
+    s.edit("Transform Path", |doc, _| {
+        if let Some(id) = layer_id {
+            let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+            let vm = l.vector_mask.as_mut().ok_or_else(|| EngineError::Other("active layer has no shape path or vector mask".into()))?;
+            vm.path = vm.path.transform(&transform);
+        } else if is_work(Some(&name)) {
+            let path = doc.work_path.as_mut().ok_or_else(|| EngineError::Other("no work path".into()))?;
+            *path = path.transform(&transform);
+        } else {
+            let path = doc.paths.iter_mut().find(|path| path.name == name).ok_or_else(|| EngineError::Other(format!("no path named \"{name}\"")))?;
+            path.path = path.path.transform(&transform);
+        }
+        Ok(())
+    })?;
+    Ok(json!({ "name": name, "matrix": m }))
+}
+
 fn path_rename(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "path.rename";
     let name = p.get("name").and_then(Value::as_str).map(str::to_string);
@@ -794,7 +948,8 @@ fn path_fill(s: &mut Session, p: &Value) -> Result<Value> {
     s.edit("Fill Path", |doc, _| {
         let area = doc.bounds();
         let r = vector::fill_rasterizer(&path, vector::DEFAULT_TOLERANCE);
-        let area = r.pixel_bounds().map_or(area, |b| b.inflate(feather.ceil() as i32 * 2).intersect(&area));
+        let feather_pad = (feather.ceil() as i32).saturating_mul(2);
+        let area = r.pixel_bounds().map_or(area, |b| b.inflate(feather_pad).intersect(&area));
         if area.is_empty() {
             return Ok(());
         }
@@ -857,6 +1012,7 @@ fn path_stroke(s: &mut Session, p: &Value) -> Result<Value> {
         "brush" | "eraser" => {}
         o => return Err(bad("path.stroke", format!("unknown tool `{o}` (brush|pencil|eraser)"))),
     }
+    crate::brush_cmds::validate_brush_size(&brush, "path.stroke")?;
     let lines = vector::flatten_path(&path, 0.1);
     let id = layer_id(s, p)?;
     let bg = s.tools.background;
@@ -1154,15 +1310,53 @@ pub fn specs() -> Vec<CommandSpec> {
             path_set
         ),
         spec!("path.delete", "Delete Path", [], r##"{"name":str|"work"="work"}"##, has_doc, path_delete),
-        spec!("path.rename", "Rename Path", [], r##"{"name":str|"work"="work","to":str} (renaming the work path saves it)"##, has_doc, path_rename),
         spec!(
-            "path.toSelection",
-            "Make Selection from Path",
+            "path.transform",
+            "Free Transform Path",
             [],
-            r##"{"name":str|"work"|"layer"="work","feather":px=0,"antiAlias":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
+            r##"{"name":str|"work"|"layer"="work","layer":id? (with layer target),"matrix":[a,b,c,d,e,f] | "translateX":px?,"translateY":px?,"scaleX":factor?,"scaleY":factor?,"angle":degrees?} (numeric transforms pivot on path bounds center)"##,
             has_doc,
-            path_to_selection
+            path_transform
         ),
+        spec!(
+            "path.clippingPath.set",
+            "Clipping Path",
+            [],
+            r##"{"name":savedPathName,"flatness":0..100=0} (PSD export clipping path)"##,
+            has_doc,
+            clipping_path_set
+        ),
+        spec!("path.clippingPath.clear", "Clear Clipping Path", [], r##"{}"##, has_doc, clipping_path_clear),
+        spec!("path.style.copyFill", "Copy Fill", [], r##"{} (copies active shape layer fill)"##, has_shape_fill, copy_shape_fill),
+        spec!("path.style.copyStroke", "Copy Complete Stroke", [], r##"{} (copies active shape layer stroke)"##, has_shape_stroke, copy_shape_stroke),
+        spec!(
+            "path.style.pasteFill",
+            "Paste Fill",
+            [],
+            r##"{"layer":id?} (pastes copied fill onto active shape layer)"##,
+            can_paste_shape_fill,
+            paste_shape_fill
+        ),
+        spec!(
+            "path.style.pasteStroke",
+            "Paste Complete Stroke",
+            [],
+            r##"{"layer":id?} (pastes copied stroke onto active shape layer)"##,
+            can_paste_shape_stroke,
+            paste_shape_stroke
+        ),
+        spec!("path.rename", "Rename Path", [], r##"{"name":str|"work"="work","to":str} (renaming the work path saves it)"##, has_doc, path_rename),
+        // ⌘↩ / Ctrl+Enter, as in Photoshop (the UI loads the path selected in the Paths panel, #306).
+        CommandSpec {
+            id: "path.toSelection",
+            label: "Make Selection from Path",
+            menu: &[],
+            shortcut: Some("Cmd+Enter"),
+            params: r##"{"name":str|"work"|"layer"="work","feather":px=0,"antiAlias":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
+            enabled: has_doc,
+            run: path_to_selection,
+            journal: true,
+        },
         spec!("select.toWorkPath", "Make Work Path", [], r##"{"tolerance":0.5..10 px=2} → {subpaths,knots}"##, has_selection, select_to_work_path),
         spec!(
             "path.fill",
@@ -1176,7 +1370,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "path.stroke",
             "Stroke Path",
             [],
-            r##"{"name":str|"work"|"layer"="work","layer":id? (pixel layer),"tool":"brush|pencil|eraser"="brush","size":px?,"hardness":0..1?,"opacity":0..100?,"color":"#rrggbb"=foreground} (current brush settings otherwise)"##,
+            r##"{"name":str|"work"|"layer"="work","layer":id? (pixel layer),"tool":"brush|pencil|eraser"="brush","size":0.5..5000 px?,"hardness":0..1?,"opacity":0..100?,"color":"#rrggbb"=foreground} (current brush settings otherwise)"##,
             has_layer,
             path_stroke
         ),

@@ -253,7 +253,8 @@ impl TaggedBlock {
             b"SoLd" | b"SoLE" => {
                 expect_kind(&mut r, b"soLD")?;
                 let _version = r.u32()?;
-                crate::descriptor::VersionedDescriptor::read(&mut r)?;
+                let d = crate::descriptor::VersionedDescriptor::read(&mut r)?;
+                check_placed_descriptor(&d.descriptor).map_err(|e| PsdError::invalid(format!("{}: {e}", self.key_str())))?;
             }
             b"lfx2" => {
                 let _effects_version = r.u32()?;
@@ -266,10 +267,17 @@ impl TaggedBlock {
                     if !matches!(item.get(..4), Some(b"liFD" | b"liFE" | b"liFA")) {
                         return Err(PsdError::invalid(format!("{}: linked item of unknown type", self.key_str())));
                     }
+                    if item.get(..4) == Some(b"liFD") {
+                        check_embedded_item(item).map_err(|e| PsdError::invalid(format!("{}: embedded file: {e}", self.key_str())))?;
+                    }
                     // Items are padded to a multiple of 4.
                     let pad = ((4 - len % 4) % 4).min(r.remaining() as u64);
                     r.skip(pad as usize)?;
                 }
+            }
+            b"FEid" | b"FXid" => {
+                crate::filter_effects::FilterEffects::parse(d).map_err(|e| PsdError::invalid(format!("{}: {e}", self.key_str())))?;
+                return Ok(());
             }
             _ => return Ok(()),
         }
@@ -298,6 +306,56 @@ impl TaggedBlock {
         let p = self.padding.as_ref().map_or(Self::default_padding(self.data.len()), Vec::len);
         8 + l + self.data.len() + p
     }
+}
+
+/// Strict check of a `soLD` descriptor: the unique id and transform Photoshop needs to place the
+/// layer, and a well-formed smart filter stack (`filterFX`: a `filterFXList` of `filterFX`
+/// objects, each with a name, blend options, an enabled flag and a filter id).
+fn check_placed_descriptor(d: &crate::descriptor::Descriptor) -> Result<()> {
+    use crate::descriptor::Value;
+    if !matches!(d.get("Idnt"), Some(Value::Text(_))) {
+        return Err(PsdError::invalid("no Idnt (unique id)"));
+    }
+    match d.get("Trnf") {
+        Some(Value::List(l)) if l.len() == 8 && l.iter().all(|v| matches!(v, Value::Double(_))) => {}
+        _ => return Err(PsdError::invalid("Trnf is not eight doubles")),
+    }
+    let Some(fx) = d.get("filterFX") else { return Ok(()) };
+    let Value::Descriptor(fx) = fx else { return Err(PsdError::invalid("filterFX is not an object")) };
+    let Some(Value::List(list)) = fx.get("filterFXList") else { return Err(PsdError::invalid("filterFX has no filterFXList")) };
+    for (i, item) in list.iter().enumerate() {
+        let Value::Descriptor(f) = item else { return Err(PsdError::invalid(format!("filter {i} is not an object"))) };
+        let ok = matches!(f.get("Nm  "), Some(Value::Text(_)))
+            && matches!(f.get("blendOptions"), Some(Value::Descriptor(_)))
+            && matches!(f.get("enab"), Some(Value::Boolean(_)))
+            && matches!(f.get("filterID"), Some(Value::Integer(_)))
+            && f.get("Fltr").is_none_or(|v| matches!(v, Value::Descriptor(_)));
+        if !ok {
+            return Err(PsdError::invalid(format!("filter {i} lacks Nm/blendOptions/enab/filterID")));
+        }
+    }
+    Ok(())
+}
+
+/// Strict check of one embedded (`liFD`) linked-layer item: type, version, unique id, file name,
+/// file type and creator, data length, optional open descriptor, then the file data, which must
+/// fit in the item (version 5+ fields follow it).
+fn check_embedded_item(item: &[u8]) -> Result<()> {
+    let mut r = Reader::new(item);
+    r.skip(4)?;
+    let version = r.u32()?;
+    if !(1..=16).contains(&version) {
+        return Err(PsdError::invalid(format!("version {version}")));
+    }
+    crate::io::read_pascal(&mut r, 1)?;
+    crate::io::read_unicode_units(&mut r)?;
+    r.skip(8)?; // file type, creator
+    let len = r.u64()?;
+    if r.u8()? != 0 {
+        crate::descriptor::VersionedDescriptor::read(&mut r)?;
+    }
+    r.bytes_u64(len)?;
+    Ok(())
 }
 
 fn expect_kind(r: &mut Reader<'_>, kind: &'static [u8; 4]) -> Result<()> {

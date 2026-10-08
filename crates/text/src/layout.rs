@@ -272,8 +272,94 @@ impl TextLayout {
     }
 }
 
+/// Byte offset of character `index` (the text length when `index` is past the end).
+pub fn byte_index(text: &str, index: usize) -> usize {
+    text.char_indices().nth(index).map_or(text.len(), |(b, _)| b)
+}
+
+/// Character index of byte `byte`, floored to a char boundary so a bad offset never panics.
+pub fn char_index(text: &str, byte: usize) -> usize {
+    let mut byte = byte.min(text.len());
+    while byte > 0 && !text.is_char_boundary(byte) {
+        byte -= 1;
+    }
+    text[..byte].chars().count()
+}
+
+/// Line containing a byte offset (the last line when the offset sits past every line).
+pub fn line_index(layout: &TextLayout, byte: usize) -> usize {
+    layout.lines.iter().position(|ln| byte >= ln.range.start && byte <= ln.range.end).unwrap_or_else(|| layout.lines.len().saturating_sub(1))
+}
+
+/// Nearest caret to a text-space point: character index and the line it sits on.
+pub fn hit_char(layout: &TextLayout, text: &str, x: f32, y: f32) -> (usize, usize) {
+    let byte = layout.hit_test(x, y);
+    (char_index(text, byte), line_index(layout, byte))
+}
+
+/// Text-space point inside the laid-out line boxes, expanded by `slop` px on every side.
+pub fn text_point_inside(layout: &TextLayout, x: f32, y: f32, slop: f32) -> bool {
+    let slop = if slop.is_finite() { slop.max(0.0) } else { 0.0 };
+    layout.bounds().is_some_and(|b| x >= b[0] - slop && x <= b[2] + slop && y >= b[1] - slop && y <= b[3] + slop)
+}
+
+/// Character index of the word boundary before (`forward` is false) or after `idx`.
+///
+/// A word is a run of alphanumeric characters, the rule the Type tool has always used.
+pub fn word_boundary(text: &str, idx: usize, forward: bool) -> usize {
+    let chars: Vec<char> = text.chars().collect();
+    let mut i = idx.min(chars.len());
+    if forward {
+        while i < chars.len() && !chars[i].is_alphanumeric() {
+            i += 1;
+        }
+        while i < chars.len() && chars[i].is_alphanumeric() {
+            i += 1;
+        }
+    } else {
+        while i > 0 && !chars[i - 1].is_alphanumeric() {
+            i -= 1;
+        }
+        while i > 0 && chars[i - 1].is_alphanumeric() {
+            i -= 1;
+        }
+    }
+    i
+}
+
+/// Caret on the neighbouring line (`dir` < 0 previous, otherwise next), keeping `x`
+/// (line space: the position along the line). Past the first or last line the caret
+/// goes to the start or end of the text. Line space is the same for both orientations,
+/// so a column of vertical type steps the same way a line of horizontal type does.
+pub fn line_step(layout: &TextLayout, text: &str, idx: usize, x: f32, dir: i32) -> usize {
+    let n = text.chars().count();
+    let idx = idx.min(n);
+    let (_, top, bottom) = layout.caret(byte_index(text, idx));
+    let h = (bottom - top).max(1.0);
+    let y = if dir < 0 { top - h * 0.5 } else { bottom + h * 0.5 };
+    let Some(bounds) = layout.line_bounds() else { return idx };
+    if y < bounds[1] {
+        return 0;
+    }
+    if y > bounds[3] {
+        return n;
+    }
+    char_index(text, layout.hit_test_line(x, y))
+}
+
+/// Line start (`end` false) or end for the line containing `idx`, as a character index.
+pub fn line_edge(layout: &TextLayout, text: &str, idx: usize, end: bool) -> usize {
+    let n = text.chars().count();
+    let idx = idx.min(n);
+    let byte = byte_index(text, idx);
+    let line = layout.lines.iter().find(|ln| byte >= ln.range.start && byte <= ln.range.end).or(layout.lines.last());
+    line.map_or(idx, |ln| char_index(text, if end { ln.range.end } else { ln.range.start }))
+}
+
 const LRM: &str = "\u{200E}";
 const RLM: &str = "\u{200F}";
+/// A line break inside a paragraph (Shift+Return), stored as U+0003 in PSD type.
+pub(crate) const FORCED_LINE_BREAK: char = '\u{3}';
 
 pub(crate) struct Layouter {
     lcx: LayoutContext<RunBrush>,
@@ -364,6 +450,12 @@ impl Layouter {
             let mut ptext = String::with_capacity(prefix.len() + content.len());
             ptext.push_str(prefix);
             for (i, ch) in content.char_indices() {
+                // A forced line break ends the line but not the paragraph. The line breaker knows
+                // it as a newline, which has the same length, so text offsets don't move.
+                if ch == FORCED_LINE_BREAK {
+                    ptext.push('\n');
+                    continue;
+                }
                 let caps = out.styles[style_at(prange.start + i)].caps;
                 if caps == Caps::AllCaps {
                     let up: String = ch.to_uppercase().collect();

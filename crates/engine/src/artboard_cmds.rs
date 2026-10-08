@@ -13,8 +13,8 @@ use photosuite_geom::Rect;
 use photosuite_raster::Surface;
 use serde_json::{Value, json};
 
-use crate::commands::{CommandSpec, color_param, int};
-use crate::file_cmds::{encode, f64_param, join, native_doc, sanitize, save_doc, stem, str_param, write_file};
+use crate::commands::{CommandSpec, color_param, int, int_i32};
+use crate::file_cmds::{SaveOpts, encode, f64_param, join, native_doc, sanitize, save_doc, stem, str_param, write_file};
 use crate::{EngineError, Result, Session};
 
 /// Artboard size presets (name, width, height) in pixels, Photoshop's common devices and pages.
@@ -109,18 +109,21 @@ fn background_param(p: &Value, cmd: &str) -> Result<Option<ArtboardBackground>> 
 /// `rect` as `[x, y, w, h]` or `x`/`y`/`width`/`height` keys over `base`.
 fn rect_param(p: &Value, base: Rect, cmd: &str) -> Result<Rect> {
     if let Some(Value::Array(a)) = p.get("rect") {
-        let v: Vec<i32> = a.iter().filter_map(|x| x.as_f64().map(|f| f.round() as i32)).collect();
+        let v: Vec<i32> = a.iter().filter_map(|x| x.as_f64().filter(|f| f.is_finite()).map(|f| f.round() as i32)).collect();
         if v.len() != 4 || v[2] <= 0 || v[3] <= 0 {
             return Err(bad(cmd, "\"rect\" must be [x, y, width, height] with a positive size"));
         }
         return Ok(Rect::from_xywh(v[0], v[1], v[2] as u32, v[3] as u32));
     }
-    let x = int(p, "x").map_or(base.x0, |v| v as i32);
-    let y = int(p, "y").map_or(base.y0, |v| v as i32);
+    let x = int_i32(cmd, p, "x")?.unwrap_or(base.x0);
+    let y = int_i32(cmd, p, "y")?.unwrap_or(base.y0);
     let w = int(p, "width").unwrap_or(i64::from(base.width()));
     let h = int(p, "height").unwrap_or(i64::from(base.height()));
     if w <= 0 || h <= 0 {
         return Err(bad(cmd, "the artboard size must be positive"));
+    }
+    if w > i32::MAX as i64 || h > i32::MAX as i64 {
+        return Err(bad(cmd, "the artboard size is too large for a 32-bit canvas"));
     }
     Ok(Rect::from_xywh(x, y, w as u32, h as u32))
 }
@@ -223,6 +226,7 @@ fn artboard_from_layers(s: &mut Session, p: &Value) -> Result<Value> {
         let mut g = Layer::group(name.unwrap_or_else(|| next_artboard_name(doc)), children);
         set_artboard(&mut g, Artboard { rect, background, preset: String::new() });
         let gid = doc.insert_above(None, g);
+        crate::layer_multi_cmds::check_group_depth(doc, "Artboard from Layers")?;
         fit_canvas(doc);
         *active = Some(gid);
         Ok((gid, rect))
@@ -347,7 +351,7 @@ fn artboards_to_files(s: &mut Session, p: &Value) -> Result<Value> {
         let Some(one) = artboard_document(&doc, id) else { continue };
         let name = if prefix.is_empty() { sanitize(&one.name) } else { format!("{}_{}", sanitize(&prefix), sanitize(&one.name)) };
         let path = join(&dir, &format!("{name}.{format}"));
-        save_doc(&one, &path, f64_param(p, "quality"))?;
+        save_doc(&one, &path, SaveOpts::from_params(p))?;
         files.push(path);
     }
     if files.is_empty() {

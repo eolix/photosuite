@@ -13,6 +13,9 @@ use serde::{Deserialize, Serialize};
 use crate::mixer::MixerSettings;
 use crate::tile::GrayTile;
 
+/// Largest brush diameter accepted by the rasterizer and brush controls.
+pub const MAX_BRUSH_SIZE: f32 = 5000.0;
+
 /// What drives a dynamic parameter (Photoshop's "Control" pop-ups).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -458,6 +461,20 @@ impl Default for BrushSettings {
 }
 
 impl BrushSettings {
+    /// Copy the settings with the primary and dual diameters constrained for rasterization.
+    ///
+    /// Engine commands reject out-of-range values; this is a final guard for direct users of the
+    /// infallible paint API, which must not turn malformed brush dimensions into giant allocations.
+    pub fn bounded_for_render(&self) -> Self {
+        let safe_size = |size: f32| {
+            if size.is_finite() { size.clamp(0.5, MAX_BRUSH_SIZE) } else { 0.5 }
+        };
+        let mut brush = self.clone();
+        brush.size = safe_size(brush.size);
+        brush.dual_brush.size = safe_size(brush.dual_brush.size);
+        brush
+    }
+
     /// This brush (a preset) picked while `current` is the tool's brush: Smoothing is a tool
     /// option, so it stays the tool's (Photoshop), a protected texture stays too, and so does every
     /// section `current` has locked (the locks themselves are tool state and carry over).

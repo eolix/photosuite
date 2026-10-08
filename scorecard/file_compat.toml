@@ -1,6 +1,6 @@
 # Scorecard checklist: file compatibility (#215 formats, #216 measurement).
 # Corpus numbers come from crates/io/tests/corpus.rs, not from here.
-# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05.
+# Statuses must be true on main. Verified against 4b53f62 on 2026-10-05 (smart objects: #215 PR).
 area = "file"
 title = "File compatibility"
 order = 2
@@ -8,16 +8,16 @@ order = 2
 [[item]]
 id = "FILE-215-1"
 target = "Smart Objects export as embedded Smart Objects (SoLd + lnk2), not flat pixels"
-status = "missing"
+status = "done"
 issue = 215
-note = "smart_cmds.rs:415 detach_psd drops SoLd; psd_export.rs:276 re-emits imported raw only"
+note = "psd_export.rs smart_blocks: PlLd + SoLd, source in lnk2 (.pcraft -> PSB); engine tests/smart_psd.rs; Photoshop 2026 opens 8/16-bit exports as live smart objects. Linked files are embedded"
 
 [[item]]
 id = "FILE-215-2"
 target = "Smart Filters survive PSD save and re-open (filterFX descriptor read and written)"
-status = "missing"
+status = "partial"
 issue = 215
-note = "psd_import.rs:259 smart_filters: Vec::new(); no filterFX in crates"
+note = "smart_map.rs: 14 filters plus a verified Camera Raw subset mapped both ways, others kept verbatim, mask in FEid; io tests/smart_corpus.rs. PhotoSuite-only filters (Twirl, Liquify…) and unmapped Camera Raw settings are left out of filterFX with a warning"
 
 [[item]]
 id = "FILE-215-3"
@@ -29,9 +29,9 @@ note = "smart_cmds.rs:382 mask only from the selection"
 [[item]]
 id = "FILE-215-4"
 target = "Adjustments (Hue/Sat + Colorize, Curves, Levels, Shadows/Highlights) apply as Smart Filters"
-status = "missing"
+status = "partial"
 issue = 215
-note = "add_smart_filter callers: filters, lens, distort, plug-ins only"
+note = "PSD Levels/Curves/Shadows-Highlights smart filters render (adjust_cmds.rs adjust_as_filter); Image › Adjustments on a smart object doesn't add one yet"
 
 [[item]]
 id = "FILE-215-5"
@@ -50,9 +50,9 @@ note = "doc lib.rs:312 SmartObject.transform is an Affine"
 [[item]]
 id = "FILE-215-7"
 target = "Layered TIFF read and write (tag 37724), honouring the ask-before-saving pref"
-status = "missing"
+status = "done"
 issue = 215
-note = "No 37724 / ImageSourceData in crates"
+note = "psd tiff.rs (ImageSourceData, both byte orders), io tiff_layers.rs, ui tiff_options_ui.rs (Discard Layers and Save a Copy); extra alpha channels are not written (one transparency sample)"
 
 [[item]]
 id = "FILE-215-8"
@@ -87,7 +87,7 @@ id = "FILE-215-12"
 target = "Camera Raw dialog shows a histogram; settings persist as a PSD Smart Filter"
 status = "partial"
 issue = 215
-note = "No histogram; lens_cmds.rs:268 stores an in-app Smart Filter, PSD drops it"
+note = "Histogram in the Camera Raw dialog (camera_raw_ui). PSD: WB/Light/Presence, curves, HSL, grading, detail, grain and vignette map to a live Smart Filter (io camera_raw_map.rs) with descriptor preservation; HDR, remaining settings and Photoshop acceptance still open"
 
 [[item]]
 id = "FILE-215-13"
@@ -162,9 +162,9 @@ note = "No corpus step in ci.yml; in progress in #190"
 [[item]]
 id = "FILE-216-2"
 target = "Large-file fixtures: 20 MP, 150-layer, generated 2 GB PSD and 4-5 GB PSB stress tests"
-status = "missing"
+status = "partial"
 issue = 216
-note = "Only banded.rs covers a >8 MP synthetic export"
+note = "4-5 GB PSB fixtures: psd example big_psb writes them (raw and RLE, planes past 2 GiB), io example big_psb_check opens and checks them; opt-in io tests/large_psb.rs (2.5 GB merged image). No 2 GB PSD, 150-layer or 20 MP fixture, nothing in CI"
 
 [[item]]
 id = "FILE-216-3"

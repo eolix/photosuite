@@ -3962,6 +3962,9 @@ dependencies = [
  "fmv-macos-events",
  "log",
  "muda",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
  "open",
  "photosuite-automation",
  "photosuite-codecs",
@@ -3979,6 +3982,8 @@ dependencies = [
  "serde_json",
  "winit",
  "winresource",
+ "winsafe",
+ "x11rb",
 ]
 
 [[package]]
@@ -4049,6 +4054,7 @@ dependencies = [
  "jpeg-encoder",
  "png 0.18.1",
  "proptest",
+ "rayon",
  "thiserror 2.0.21",
  "tiff",
  "webp-rust",
@@ -4166,6 +4172,7 @@ dependencies = [
 name = "photosuite-io"
 version = "0.9.18"
 dependencies = [
+ "blake3",
  "hayro",
  "photosuite-algo",
  "photosuite-cms",
@@ -4182,6 +4189,7 @@ dependencies = [
  "photosuite-text",
  "photosuite-vector",
  "proptest",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 
@@ -4306,6 +4314,7 @@ dependencies = [
  "photosuite-gpu",
  "photosuite-io",
  "photosuite-plugins",
+ "photosuite-psd",
  "photosuite-raster",
  "photosuite-testkit",
  "photosuite-text",
@@ -7020,6 +7029,12 @@ dependencies = [
  "toml 1.1.6+spec-1.1.0",
  "version_check",
 ]
+
+[[package]]
+name = "winsafe"
+version = "0.0.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6"
 
 [[package]]
 name = "winx"

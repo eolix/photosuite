@@ -85,7 +85,7 @@ pub fn parse_spec(spec: &str) -> Vec<Param> {
             Kind::Text
         } else if v == "doc" {
             Kind::Document
-        } else if v == "json" || v.starts_with('[') || v.starts_with('{') {
+        } else if v == "json" || v.starts_with("layer id") || v.starts_with('[') || v.starts_with('{') {
             Kind::Json
         } else if let Some(n) = v.strip_prefix("int[").and_then(|r| r.strip_suffix(']')).and_then(|n| n.parse().ok()) {
             Kind::Grid(n)
@@ -199,6 +199,9 @@ pub fn open(app: &mut PhotosuiteApp, command: &str) -> Option<u64> {
     if command == "filter.lensCorrection" {
         lens_choices(app, &mut fields);
     }
+    if command == "image.rotation.arbitrary" {
+        straighten_defaults(app, &mut fields);
+    }
     if parse_spec(spec.params).iter().any(|p| p.kind == Kind::Document) {
         // The document picker lists every open document (params refer to them by index).
         let names: Vec<String> = app.session.documents().iter().map(|d| d.doc.name.clone()).collect();
@@ -223,6 +226,18 @@ fn lens_choices(app: &PhotosuiteApp, fields: &mut Map<String, Value>) {
         fields.insert("profile".into(), json!("measured"));
     }
     fields.insert("__choices".into(), json!({"lens": names}));
+}
+
+/// Arbitrary rotation starts at the angle that straightens the ruler line, when there is one.
+fn straighten_defaults(app: &PhotosuiteApp, fields: &mut Map<String, Value>) {
+    let Some(r) = app.session.active().and_then(|d| d.doc.measurement.ruler) else { return };
+    let rot = photosuite_engine::analysis_cmds::straighten_angle(&r);
+    // A ruler read from a damaged file could hold non-finite ends: keep the 0° default then.
+    if !rot.is_finite() {
+        return;
+    }
+    fields.insert("angle".into(), json!(rot.abs()));
+    fields.insert("direction".into(), json!(if rot < 0.0 { "ccw" } else { "cw" }));
 }
 
 /// A filter dialog with live preview for `command` whose parameters follow `spec` (registry
@@ -409,6 +424,11 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
             }
         }
     }
+    // Read-only context the dialog opener supplies (e.g. the monitor profile in use).
+    if let Some(note) = f.get("__note").and_then(Value::as_str) {
+        ui.add_space(4.0);
+        ui.add(egui::Label::new(egui::RichText::new(note).color(t.text_dim)).wrap());
+    }
     if let Some(mut preview) = f.get("__preview").and_then(Value::as_bool) {
         ui.add_space(4.0);
         crate::widgets::checkbox(ui, &mut preview, tl!("Preview"));
@@ -491,6 +511,16 @@ mod tests {
         );
     }
 
+    /// A layer-id param has no number field: drawing the Auto-Align dialog used to write
+    /// `reference: 0` back, which the engine rejects as not a selected layer (#674).
+    #[test]
+    fn layer_id_params_stay_out_of_the_dialog() {
+        let mut f = Map::new();
+        f.insert("__command".into(), json!("edit.autoAlignLayers"));
+        egui::Context::default().run_ui(Default::default(), |ui| body(ui, &mut f)).textures_delta.clear();
+        assert!(!params_of(&f).as_object().unwrap().contains_key("reference"), "{f:?}");
+    }
+
     #[test]
     fn wide_positive_ranges_use_the_logarithmic_slider_path() {
         assert!(uses_logarithmic_slider(0.1, 1000.0), "Gaussian Blur radius");
@@ -509,6 +539,7 @@ mod tests {
             "filter.distort.displace",
             "filter.pixelate.mezzotint",
             "filter.render.lightingEffects",
+            "filter.render.relight",
         ] {
             assert!(has_dialog(id), "{id}");
         }

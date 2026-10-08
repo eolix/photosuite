@@ -11,7 +11,7 @@ use photosuite_doc::{CompLayerState, Document, LayerComp, LayerId};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
-use crate::file_cmds::{f64_param, join, native_doc, sanitize, save_doc, stem, str_param};
+use crate::file_cmds::{SaveOpts, join, native_doc, sanitize, save_doc, stem, str_param};
 use crate::{EngineError, Result, Session};
 
 fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
@@ -361,7 +361,7 @@ fn comps_to_files(s: &mut Session, p: &Value) -> Result<Value> {
         apply_comp(&mut one, c, false);
         one.last_applied_comp = Some(c.id);
         let path = join(&dir, &format!("{}_{:04}_{}.{format}", sanitize(&prefix), i, sanitize(&c.name)));
-        save_doc(&one, &path, f64_param(p, "quality"))?;
+        save_doc(&one, &path, SaveOpts::from_params(p))?;
         files.push(path);
     }
     if files.is_empty() {

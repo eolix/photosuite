@@ -29,6 +29,29 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Most points a Camera Raw point curve accepts from commands and the control channel.
+pub const MAX_CURVE_POINTS: usize = 16;
+
+/// Checks a point curve from untrusted input: empty (linear) or 2..=16 finite points in 0..=255
+/// with inputs increasing by at least one level. Deserialization stays lenient on purpose:
+/// earlier editors saved curves this rejects, and [`curve_lut`] already sorts and de-duplicates
+/// them, so stored Smart Filters keep rendering.
+pub fn validate_curve(points: &[[f32; 2]]) -> Result<(), String> {
+    if points.len() == 1 {
+        return Err("a nonempty curve needs at least two points".into());
+    }
+    if points.len() > MAX_CURVE_POINTS {
+        return Err(format!("at most {MAX_CURVE_POINTS} curve points"));
+    }
+    if !points.iter().flatten().all(|v| v.is_finite() && (0.0..=255.0).contains(v)) {
+        return Err("curve coordinates must be finite and in 0..=255".into());
+    }
+    if points.windows(2).any(|w| w[1][0] - w[0][0] < 1.0) {
+        return Err("curve inputs must increase by at least one level".into());
+    }
+    Ok(())
+}
+
 use crate::photo_util::{hash01, linear_to_srgb, par_rows, srgb_to_linear};
 
 /// One colour grading wheel.
@@ -468,6 +491,18 @@ pub fn band_weights(h: f32) -> [f32; 8] {
 }
 
 impl CameraRaw {
+    /// The point curves checked with [`validate_curve`], each named as the commands name it.
+    pub fn validate(&self) -> Result<(), String> {
+        for (name, curve) in [
+            ("pointCurve", &self.point_curve),
+            ("pointCurveRed", &self.point_curve_red),
+            ("pointCurveGreen", &self.point_curve_green),
+            ("pointCurveBlue", &self.point_curve_blue),
+        ] {
+            validate_curve(curve).map_err(|e| format!("{name}: {e}"))?;
+        }
+        Ok(())
+    }
     fn wb_neutral(&self) -> bool {
         self.temperature == 0.0 && self.tint == 0.0 && self.exposure == 0.0
     }

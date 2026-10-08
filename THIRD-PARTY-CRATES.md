@@ -5,7 +5,7 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 `packaging/notices/generate.sh` (cargo-about); don't edit it by hand. Other bundled material
 (fonts, icons, lens data, presets) is listed in `THIRD-PARTY-NOTICES.md`.
 
-## Crates (501)
+## Crates (502)
 
 | Crate | Version | Licence |
 |:---|:---|:---|
@@ -476,6 +476,7 @@ full licence texts follow, grouped by text. This file is generated from `Cargo.l
 | [winit](https://crates.io/crates/winit) | 0.30.13 | Apache-2.0 |
 | [winnow](https://crates.io/crates/winnow) | 0.5.40 | MIT |
 | [winnow](https://crates.io/crates/winnow) | 1.0.4 | MIT |
+| [winsafe](https://crates.io/crates/winsafe) | 0.0.29 | MIT |
 | [winx](https://crates.io/crates/winx) | 0.36.4 | Apache-2.0 WITH LLVM-exception |
 | [wl-clipboard-rs](https://crates.io/crates/wl-clipboard-rs) | 0.9.4 | MIT OR Apache-2.0 |
 | [writeable](https://crates.io/crates/writeable) | 0.6.4 | Unicode-3.0 |
@@ -9035,6 +9036,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+### MIT License
+
+Used by: winsafe 0.0.29
+
+```text
+Copyright (c) 2019-present, Rodrigo Cesar de Freitas Dias
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### MIT License

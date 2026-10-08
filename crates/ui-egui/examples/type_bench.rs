@@ -32,7 +32,7 @@ fn typing(app: &mut PhotosuiteApp, steps: usize) {
         app.run(&format!("type.orientation.{orient}"), json!({"layer": id})).expect("orientation");
         app.sync_views();
         let ctx = egui::Context::default();
-        let _ = photosuite_ui_egui::canvas::ensure_texture(app, &ctx, 0);
+        let _ = photosuite_ui_egui::canvas::ensure_texture(app, &ctx, 0, None);
         let (mut cmd, mut lay, mut canvas, mut total) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
         for i in 0..steps {
             let c = text.get(i % text.len()).copied().unwrap_or('あ');
@@ -42,7 +42,7 @@ fn typing(app: &mut PhotosuiteApp, steps: usize) {
             let t1 = Instant::now();
             let _ = photosuite_ui_egui::type_tool::layout(app, photosuite_doc::LayerId(id));
             let t2 = Instant::now();
-            let _ = photosuite_ui_egui::canvas::ensure_texture(app, &ctx, 0);
+            let _ = photosuite_ui_egui::canvas::ensure_texture(app, &ctx, 0, None);
             let t3 = Instant::now();
             cmd.push((t1 - t0).as_secs_f64() * 1e3);
             lay.push((t2 - t1).as_secs_f64() * 1e3);
@@ -92,7 +92,7 @@ fn main() {
     app.sync_views();
     let ctx = egui::Context::default();
     let t0 = Instant::now();
-    let _ = photosuite_ui_egui::canvas::ensure_texture(&mut app, &ctx, 0);
+    let _ = photosuite_ui_egui::canvas::ensure_texture(&mut app, &ctx, 0, None);
     eprintln!("first canvas composite: {:.0} ms", t0.elapsed().as_secs_f64() * 1e3);
 
     let id = ids.get(n / 2).copied().unwrap_or(0);
@@ -108,7 +108,7 @@ fn main() {
         })
         .expect("type.setStyle");
         let t1 = Instant::now();
-        let _ = photosuite_ui_egui::canvas::ensure_texture(&mut app, &ctx, 0);
+        let _ = photosuite_ui_egui::canvas::ensure_texture(&mut app, &ctx, 0, None);
         let t2 = Instant::now();
         cmd.push((t1 - t0).as_secs_f64() * 1e3);
         canvas.push((t2 - t1).as_secs_f64() * 1e3);

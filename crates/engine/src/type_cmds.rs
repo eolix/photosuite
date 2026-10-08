@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use photosuite_color::Color;
 use photosuite_doc::text::{
-    AntiAlias, Caps, CharStyle, FontFeature, FontVariation, Kerning, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape,
+    AntiAlias, Caps, CharStyle, FontFeature, FontVariation, Kerning, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape,
 };
 use photosuite_doc::{Affine, Document, Layer, LayerContent, LayerId, TextLayer};
 use serde_json::{Value, json};
@@ -85,6 +85,10 @@ fn range_param(text: &str, p: &Value) -> (usize, usize) {
 /// Photoshop's manual kerning range (1/1000 em).
 pub const KERN_MIN: f64 = -1000.0;
 pub const KERN_MAX: f64 = 10_000.0;
+pub const TYPE_SIZE_MIN_PT: f64 = 0.1;
+pub const TYPE_SIZE_MAX_PT: f64 = 1296.0;
+pub const TRACKING_MIN: f64 = -1000.0;
+pub const TRACKING_MAX: f64 = 10_000.0;
 
 /// Validates the `kerning` key of character params: a number in [`KERN_MIN`]..=[`KERN_MAX`] or
 /// `"metrics"`, `"optical"`, `"off"` (`"none"`, `"0"`).
@@ -98,6 +102,23 @@ pub fn check_kerning(p: &Value) -> std::result::Result<(), String> {
         Some(Value::String(v)) if matches!(v.to_ascii_lowercase().as_str(), "metrics" | "optical" | "off" | "none" | "0") => Ok(()),
         Some(_) => Err("kerning must be a number (1/1000 em) or \"metrics\", \"optical\" or \"off\"".into()),
     }
+}
+
+/// Validates text metrics that can otherwise exceed the rasterizer's supported range.
+pub fn check_size_tracking(p: &Value) -> std::result::Result<(), String> {
+    if let Some(v) = p.get("size") {
+        match v.as_f64() {
+            Some(size) if size.is_finite() && (TYPE_SIZE_MIN_PT..=TYPE_SIZE_MAX_PT).contains(&size) => {}
+            _ => return Err(format!("size must be between {TYPE_SIZE_MIN_PT} and {TYPE_SIZE_MAX_PT} pt")),
+        }
+    }
+    if let Some(v) = p.get("tracking") {
+        match v.as_f64() {
+            Some(tracking) if tracking.is_finite() && (TRACKING_MIN..=TRACKING_MAX).contains(&tracking) => {}
+            _ => return Err(format!("tracking must be between {TRACKING_MIN} and {TRACKING_MAX} (1/1000 em)")),
+        }
+    }
+    Ok(())
 }
 
 /// Applies character-style keys from JSON. Returns true if any key was present.
@@ -282,6 +303,8 @@ fn push_merge<S: PartialEq>(out: &mut Vec<(usize, S)>, len: usize, st: S) {
 
 /// Applies `f` to the character style of bytes `a..b` (splitting runs at the edges).
 pub fn style_range(t: &mut TextLayer, a: usize, b: usize, f: &dyn Fn(&mut CharStyle)) {
+    // A reversed range styles nothing; `b < a` would underflow the styled run's length (#714).
+    let b = b.max(a);
     let runs = t.char_runs();
     if t.text.is_empty() {
         let mut st = runs.into_iter().next().map(|r| r.style).unwrap_or_default();
@@ -404,20 +427,28 @@ pub fn refresh_geometry(doc: &Document, t: &mut TextLayer) {
     refresh(doc, t);
 }
 
-fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&mut TextLayer, &Document) -> Result<R>) -> Result<R> {
+/// Runs `f` on a type layer as one undo step. `f` may set an explicit layer name (`type.edit`'s
+/// `name`), which is applied in the same step; otherwise an auto-named layer follows its text.
+fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&mut TextLayer, &Document, &mut Option<String>) -> Result<R>) -> Result<R> {
     let id = layer_id(s, p)?;
     let (r, damage) = s.edit(label, |doc, _| {
         let snapshot = doc.clone();
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+        let auto_named = is_auto_named(l);
         let LayerContent::Text(t) = &mut l.content else {
             return Err(EngineError::Other(format!("layer {} is a {} layer, not a type layer", id.0, l.content.kind_name())));
         };
         let before = t.cache.as_ref().map(|c| c.tile_bounds());
-        let r = f(t, &snapshot)?;
+        let mut rename = None;
+        let r = f(t, &snapshot, &mut rename)?;
         refresh(&snapshot, t);
         // Only this layer's pixels changed: the canvas recomposites their old and new area
         // instead of the whole document (#124). Unknown old pixels mean a full refresh.
         let damage = before.zip(t.cache.as_ref().map(|c| c.tile_bounds())).map(|(a, b)| a.union(&b));
+        let name = rename.or_else(|| auto_named.then(|| layer_name(&t.text)));
+        if let Some(n) = name {
+            l.name = n;
+        }
         Ok((r, damage))
     })?;
     if let Some(st) = s.active_mut() {
@@ -426,8 +457,16 @@ fn with_text_layer<R>(s: &mut Session, p: &Value, label: &str, f: impl FnOnce(&m
     Ok(r)
 }
 
-fn layer_name(text: &str) -> String {
-    let first = text.lines().next().unwrap_or("").trim();
+/// Whether a type layer still has the name it got from its text, so the name follows edits to
+/// the text. A layer renamed to anything else keeps its name (#483).
+pub(crate) fn is_auto_named(l: &Layer) -> bool {
+    matches!(&l.content, LayerContent::Text(t) if l.name == layer_name(&t.text))
+}
+
+/// The name a type layer gets from its text: its first non-empty line, at most 40 characters.
+/// The Type tool names new layers with this too, so `is_auto_named` recognises them.
+pub fn layer_name(text: &str) -> String {
+    let first = text.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
     let name: String = first.chars().take(40).collect();
     if name.is_empty() { "Type Layer".into() } else { name }
 }
@@ -483,7 +522,7 @@ fn info(s: &Session, p: &Value) -> Result<Value> {
     }))
 }
 
-const CHAR_PARAMS: &str = r##""font":str,"fontStyle":str,"weight":100..900,"italic":bool,"size":pt,"color":"#rrggbb"|[r,g,b,a],"tracking":1/1000em,"leading":pt|"auto","baselineShift":pt,"horizontalScale":%,"verticalScale":%,"underline":bool,"strikethrough":bool,"fauxBold":bool,"fauxItalic":bool,"kerning":1/1000em (manual, after each character)|"metrics"|"optical"|"off","caps":"normal|small|all","ligatures":bool,"discretionaryLigatures":bool,"features":{"ss01":1},"variations":{"wght":650},"language":str"##;
+const CHAR_PARAMS: &str = r##""font":str,"fontStyle":str,"weight":100..900,"italic":bool,"size":0.1..=1296 pt,"color":"#rrggbb"|[r,g,b,a],"tracking":-1000..=10000 (1/1000 em),"leading":pt|"auto","baselineShift":pt,"horizontalScale":%,"verticalScale":%,"underline":bool,"strikethrough":bool,"fauxBold":bool,"fauxItalic":bool,"kerning":1/1000em (manual, after each character)|"metrics"|"optical"|"off","caps":"normal|small|all","ligatures":bool,"discretionaryLigatures":bool,"features":{"ss01":1},"variations":{"wght":650},"language":str"##;
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
@@ -492,10 +531,17 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "New Type Layer",
             menu: &["Layer", "New"],
             shortcut: None,
-            params: r##"{"x":px,"y":px (baseline anchor of point text),"text":str,"box":[x,y,w,h]? (paragraph text),"name":str?,"align":"left|center|right|justify…"?, …character keys: "font","size":pt=12,"color",…}"##,
+            params: r##"{"x":px,"y":px (baseline anchor of point text),"text":str,"box":[x,y,w,h]? (paragraph text),"name":str?,"align":"left|center|right|justify…"?,"orientation":"horizontal|vertical"="horizontal", …character keys: "font","size":pt=12,"color",…}"##,
             enabled: has_doc,
             journal: true,
             run: |s, p| {
+                let orientation = match p.get("orientation") {
+                    None => Orientation::Horizontal,
+                    Some(Value::String(value)) if value == "horizontal" => Orientation::Horizontal,
+                    Some(Value::String(value)) if value == "vertical" => Orientation::Vertical,
+                    _ => return Err(bad("type.create", "orientation must be horizontal or vertical")),
+                };
+                check_size_tracking(p).map_err(|m| bad("type.create", m))?;
                 let text = norm_text(p.get("text").and_then(Value::as_str).unwrap_or(""));
                 // Type › Save Default Type Styles sets the starting styles; the colour is always
                 // the foreground colour, as in Photoshop.
@@ -520,6 +566,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     text,
                     shape,
                     transform,
+                    orientation,
                     ..Default::default()
                 };
                 t.sync_summary();
@@ -546,9 +593,18 @@ pub fn specs() -> Vec<CommandSpec> {
                 let id = layer_id(s, p)?;
                 let name = p.get("name").and_then(Value::as_str).map(str::to_string);
                 check_kerning(p).map_err(|m| bad("type.edit", m))?;
+                check_size_tracking(p).map_err(|m| bad("type.edit", m))?;
                 if let Some(Value::Array(runs)) = p.get("runs") {
-                    for r in runs {
+                    for (i, r) in runs.iter().enumerate() {
                         check_kerning(r).map_err(|m| bad("type.edit", m))?;
+                        // Checked before anything changes, so a bad run leaves the layer untouched (#714).
+                        let start = r.get("start").and_then(Value::as_u64).unwrap_or(0);
+                        if let Some(end) = r.get("end").and_then(Value::as_u64)
+                            && end < start
+                        {
+                            return Err(bad("type.edit", format!("runs[{i}]: `end` ({end}) is before `start` ({start})")));
+                        }
+                        check_size_tracking(r).map_err(|m| bad("type.edit", m))?;
                     }
                 }
                 let kern_pair = match p.get("kernPair") {
@@ -564,7 +620,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     }
                 };
                 let label = if kern_pair.is_some() { "Kerning" } else { "Edit Type" };
-                with_text_layer(s, p, label, |t, doc| {
+                with_text_layer(s, p, label, |t, doc, rename| {
                     if let Some((at, by)) = kern_pair {
                         // Photoshop's Alt+←/→: the pair before the caret becomes manually kerned,
                         // starting from what it shows now (its metrics/optical or manual value).
@@ -638,14 +694,10 @@ pub fn specs() -> Vec<CommandSpec> {
                             _ => AntiAlias::Smooth,
                         };
                     }
+                    // The rename lands in the same undo step as the edit (#497).
+                    *rename = name.clone();
                     Ok(())
                 })?;
-                if let Some(n) = name {
-                    s.edit("Rename Layer", |doc, _| {
-                        doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.name = n;
-                        Ok(())
-                    })?;
-                }
                 info(s, &json!({ "layer": id.0 }))
             },
         },
@@ -663,7 +715,8 @@ pub fn specs() -> Vec<CommandSpec> {
             run: |s, p| {
                 let id = layer_id(s, p)?;
                 check_kerning(p).map_err(|m| bad("type.setStyle", m))?;
-                with_text_layer(s, p, "Set Type Style", |t, _| {
+                check_size_tracking(p).map_err(|m| bad("type.setStyle", m))?;
+                with_text_layer(s, p, "Set Type Style", |t, _, _| {
                     let (a, b) = range_param(&t.text, p);
                     let mut probe = CharStyle::default();
                     if apply_char_props(&mut probe, p) {
@@ -806,6 +859,30 @@ mod tests {
     }
 
     #[test]
+    fn absurd_type_size_and_tracking_are_rejected_as_bad_params() {
+        let mut s = session();
+        assert!(matches!(
+            s.execute("type.create", json!({"text": "abc", "size": 1e30})),
+            Err(EngineError::BadParams { cmd, .. }) if cmd == "type.create"
+        ));
+
+        let id = s.execute("type.create", json!({"text": "abc", "size": 12})).unwrap()["layer"].as_u64().unwrap();
+        let before = text_layer(&s, id);
+        for params in [json!({"layer": id, "tracking": 1e30}), json!({"layer": id, "runs": [{"start": 0, "end": 3, "tracking": 1e30}]})] {
+            assert!(matches!(
+                s.execute("type.edit", params),
+                Err(EngineError::BadParams { cmd, .. }) if cmd == "type.edit"
+            ));
+            assert_eq!(text_layer(&s, id).runs, before.runs);
+        }
+        assert!(matches!(
+            s.execute("type.setStyle", json!({"layer": id, "tracking": 1e30})),
+            Err(EngineError::BadParams { cmd, .. }) if cmd == "type.setStyle"
+        ));
+        assert_eq!(text_layer(&s, id).runs, before.runs);
+    }
+
+    #[test]
     fn create_renders_and_is_undoable() {
         let mut s = session();
         let r = s.execute("type.create", json!({"x": 10, "y": 50, "text": "Hello", "size": 24, "color": "#ff0000"})).unwrap();
@@ -835,6 +912,79 @@ mod tests {
         assert_eq!(back.char_runs()[0].style.postscript_name.as_deref(), Some("Inter-Regular"));
         assert!(s.undo());
         assert!(s.active().unwrap().doc.layer(LayerId(id)).is_none());
+    }
+
+    fn layer_name_of(s: &Session, id: u64) -> String {
+        s.active().unwrap().doc.layer(LayerId(id)).unwrap().name.clone()
+    }
+
+    #[test]
+    fn auto_name_follows_the_text() {
+        // The Type tool's flow (#483): a placeholder, selected, then replaced by typing.
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Lorem Ipsum", "coalesce": "k"})).unwrap()["layer"].as_u64().unwrap();
+        assert_eq!(layer_name_of(&s, id), "Lorem Ipsum");
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "H"}, "coalesce": "k"})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 1, "end": 1, "text": "eading\nsecond line"}, "coalesce": "k"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Heading");
+        // Emptied, the name is the default one and keeps following.
+        s.execute("type.edit", json!({"layer": id, "text": ""})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Type Layer");
+        s.execute("type.edit", json!({"layer": id, "text": "Title"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Title");
+        assert!(s.undo());
+        assert_eq!(layer_name_of(&s, id), "Type Layer");
+    }
+
+    #[test]
+    fn auto_name_skips_leading_blank_lines() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "\n  \nHello\nworld"})).unwrap()["layer"].as_u64().unwrap();
+        assert_eq!(layer_name_of(&s, id), "Hello");
+        s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 0, "text": "\n"}})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "\n\nGoodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Goodbye");
+    }
+
+    #[test]
+    fn custom_name_survives_text_edits() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Hello", "name": "Logo"})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "Goodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Logo");
+        // Renamed after creation: kept too.
+        let id = s.execute("type.create", json!({"x": 0, "y": 80, "text": "Hello"})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.renameLayer", json!({"layer": id, "name": "Caption"})).unwrap();
+        s.execute("type.edit", json!({"layer": id, "text": "Goodbye"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Caption");
+        // A name given with the edit wins over the text.
+        s.execute("type.edit", json!({"layer": id, "text": "Again", "name": "Footer"})).unwrap();
+        assert_eq!(layer_name_of(&s, id), "Footer");
+    }
+
+    #[test]
+    fn edit_with_name_is_one_undo_step_for_text_name_and_bounds() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 10, "y": 50, "text": "Before", "size": 20, "name": "Original"})).unwrap()["layer"].as_u64().unwrap();
+        let layer = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        let before_bounds = text_layer(&s, id).cache.unwrap().content_bounds();
+        assert_eq!(layer.name, "Original");
+        let steps = s.active().unwrap().history.entries().len();
+
+        s.execute("type.edit", json!({"layer": id, "text": "A much longer edited title that wraps", "box": [10, 10, 50, 60], "name": "Renamed"})).unwrap();
+
+        let edited = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        let edited_bounds = text_layer(&s, id).cache.unwrap().content_bounds();
+        assert_eq!(edited.name, "Renamed");
+        assert_eq!(text_layer(&s, id).text, "A much longer edited title that wraps");
+        assert_ne!(edited_bounds, before_bounds);
+        assert_eq!(s.active().unwrap().history.entries().len(), steps + 1);
+
+        assert!(s.undo());
+        let restored = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
+        assert_eq!(restored.name, "Original");
+        assert_eq!(text_layer(&s, id).text, "Before");
+        assert_eq!(text_layer(&s, id).cache.unwrap().content_bounds(), before_bounds);
     }
 
     #[test]
@@ -921,6 +1071,39 @@ mod tests {
         assert_eq!(s.active().unwrap().history.entries().len(), steps + 1);
         assert!(s.undo());
         assert_eq!(text_layer(&s, id).runs[0].style.size_pt, 20.0);
+    }
+
+    #[test]
+    fn edit_rejects_a_reversed_runs_range() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 0, "y": 40, "text": "Hello world", "size": 20})).unwrap()["layer"].as_u64().unwrap();
+        let before = text_layer(&s, id).char_runs();
+        let steps = s.active().unwrap().history.entries().len();
+        for runs in [
+            json!([{"start": 5, "end": 2, "fauxBold": true}]),
+            json!([{"start": 0, "end": 3, "fauxBold": true}, {"start": 8, "end": 7}]),
+            json!([{"end": 0, "start": 1}]),
+        ] {
+            let e = s.execute("type.edit", json!({"layer": id, "runs": runs})).unwrap_err();
+            assert!(matches!(e, EngineError::BadParams { .. }) && e.to_string().contains("is before `start`"), "{e}");
+        }
+        // Nothing changed and nothing was recorded, not even the valid run before the bad one.
+        assert_eq!(text_layer(&s, id).char_runs(), before);
+        assert_eq!(s.active().unwrap().history.entries().len(), steps);
+        // The same range the right way round still styles it.
+        s.execute("type.edit", json!({"layer": id, "runs": [{"start": 2, "end": 5, "fauxBold": true}]})).unwrap();
+        let runs = text_layer(&s, id).char_runs();
+        assert_eq!(runs.iter().map(|r| (r.len, r.style.faux_bold)).collect::<Vec<_>>(), [(2, false), (3, true), (6, false)]);
+    }
+
+    #[test]
+    fn style_range_reversed_is_a_no_op() {
+        let mut t = TextLayer::default();
+        replace_text(&mut t, 0, 0, "Hello world");
+        let before = t.char_runs();
+        style_range(&mut t, 5, 2, &|s| s.size_pt = 40.0);
+        assert_eq!(t.char_runs(), before);
+        assert_eq!(t.runs.iter().map(|r| r.len).sum::<usize>(), t.text.len());
     }
 
     #[test]
@@ -1057,5 +1240,26 @@ mod tests {
         assert_eq!(kerning_of(&s, id)[0].1, metric.round() + 120.0);
         assert!(s.undo() && s.undo());
         assert_eq!(kerning_of(&s, id)[0], (Kerning::Metrics, 0.0));
+    }
+    #[test]
+    fn create_vertical_type_is_atomic_and_invalid_orientation_is_rejected() {
+        for boxed in [false, true] {
+            let mut s = session();
+            let before = s.active().unwrap().history.entries().len();
+            for orientation in [json!("diagonal"), json!(null), json!(true)] {
+                assert!(s.execute("type.create", json!({"text": "test", "orientation": orientation})).is_err());
+                assert_eq!(s.active().unwrap().history.entries().len(), before);
+            }
+            let mut p = json!({"text": "test", "orientation": "vertical", "x": 20, "y": 20});
+            if boxed {
+                p["box"] = json!([20, 20, 80, 60]);
+            }
+            let id = s.execute("type.create", p).unwrap()["layer"].as_u64().unwrap();
+            let t = text_layer(&s, id);
+            assert_eq!(t.orientation, Orientation::Vertical);
+            assert_eq!(matches!(t.shape, TextShape::Box { .. }), boxed);
+            s.execute("edit.undo", json!({})).unwrap();
+            assert!(s.active().unwrap().doc.layer(LayerId(id)).is_none());
+        }
     }
 }

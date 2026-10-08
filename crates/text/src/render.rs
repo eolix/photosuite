@@ -148,14 +148,27 @@ pub fn ink_rect(layout: &TextLayout, transform: &Affine) -> Rect {
     ink_rect_warped(layout, transform, None)
 }
 
+fn rect_from_bounds([x0, y0, x1, y1]: [f64; 4]) -> Rect {
+    if ![x0, y0, x1, y1].into_iter().all(f64::is_finite) {
+        return Rect::EMPTY;
+    }
+
+    let min = f64::from(i32::MIN);
+    let max = f64::from(i32::MAX);
+    let (x0, y0, x1, y1) =
+        ((x0.floor() - 1.0).clamp(min, max), (y0.floor() - 1.0).clamp(min, max), (x1.ceil() + 1.0).clamp(min, max), (y1.ceil() + 1.0).clamp(min, max));
+    if x1 <= x0 || y1 <= y0 || x1 - x0 > MAX_PIXELS as f64 || y1 - y0 > MAX_PIXELS as f64 {
+        return Rect::EMPTY;
+    }
+
+    Rect::new(x0 as i32, y0 as i32, x1 as i32, y1 as i32)
+}
+
 /// [`ink_rect`] of warped text.
 pub fn ink_rect_warped(layout: &TextLayout, transform: &Affine, warp: Option<&Warp>) -> Rect {
     let mut b = Bounds::default();
     draw(layout, &Xform(transform.m), &mut b, None, warp);
-    match b.rect {
-        Some([x0, y0, x1, y1]) => Rect::new(x0.floor() as i32 - 1, y0.floor() as i32 - 1, x1.ceil() as i32 + 1, y1.ceil() as i32 + 1),
-        None => Rect::new(0, 0, 0, 0),
-    }
+    b.rect.map(rect_from_bounds).unwrap_or(Rect::EMPTY)
 }
 
 /// Rasterizes `layout` through `transform` (text space → document pixels). The result always
@@ -294,4 +307,29 @@ pub fn outlines(layout: &TextLayout, transform: &Affine, warp: Option<&Warp>) ->
         }
     }
     glyphs
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_PIXELS, rect_from_bounds};
+    use photosuite_geom::Rect;
+
+    #[test]
+    fn bounds_are_clipped_without_overflow_and_oversized_rectangles_rejected() {
+        let min = f64::from(i32::MIN);
+        let max = f64::from(i32::MAX);
+        let cases = [
+            ([min, 0.0, min + 8.0, 8.0], Rect::new(i32::MIN, -1, i32::MIN + 9, 9)),
+            ([max - 8.0, 0.0, max, 8.0], Rect::new(i32::MAX - 9, -1, i32::MAX, 9)),
+            ([-f64::MAX, 0.0, f64::MAX, 8.0], Rect::EMPTY),
+            ([0.0, 0.0, MAX_PIXELS as f64, 8.0], Rect::EMPTY),
+            ([0.25, -3.25, 10.1, 8.8], Rect::new(-1, -5, 12, 10)),
+        ];
+
+        for (bounds, expected) in cases {
+            let first = rect_from_bounds(bounds);
+            assert_eq!(first, expected, "bounds: {bounds:?}");
+            assert_eq!(rect_from_bounds(bounds), first, "bounds: {bounds:?}");
+        }
+    }
 }

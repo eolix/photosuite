@@ -14,8 +14,8 @@ type Inbox = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
 /// Everything File › Open reads: PhotoSuite and Photoshop documents, flat images, and Photoshop
 /// brushes (.abr) and gradients (.grd), which go to the preset libraries.
 const OPEN_EXTS: &[&str] = &[
-    "pcraft", "psd", "psb", "png", "jpg", "jpeg", "tif", "tiff", "webp", "gif", "bmp", "tga", "ico", "qoi", "exr", "hdr", "pbm", "pgm", "ppm", "pam", "pfm",
-    "heic", "heif", "hif", "dng", "cr2", "cr3", "nef", "nrw", "arw", "pef", "orf", "rw2", "raf", "abr", "grd",
+    "pcraft", "psd", "psb", "psdt", "png", "jpg", "jpeg", "tif", "tiff", "webp", "gif", "bmp", "tga", "ico", "qoi", "exr", "hdr", "pbm", "pgm", "ppm", "pam",
+    "pfm", "heic", "heif", "hif", "dng", "cr2", "cr3", "nef", "nrw", "arw", "pef", "orf", "rw2", "raf", "abr", "grd",
 ];
 const CANVAS_ID: &str = "photosuite_canvas";
 
@@ -45,11 +45,11 @@ pub fn start() {
                 canvas,
                 options,
                 Box::new(move |cc| {
-                    PhotosuiteApp::setup_context(&cc.egui_ctx, ThemeKind::Pro);
+                    PhotosuiteApp::setup_context(&cc.egui_ctx, ThemeKind::Midnight);
                     let inbox: Inbox = Arc::default();
                     let mut app = PhotosuiteApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
                     listen_pen(&pen_target, app.stylus.feed.clone());
-                    app.set_theme(&cc.egui_ctx, ThemeKind::Pro);
+                    app.set_theme(&cc.egui_ctx, ThemeKind::Midnight);
                     if let Some(rs) = cc.wgpu_render_state.clone()
                         && !force_cpu
                     {
@@ -148,6 +148,7 @@ fn services(inbox: Inbox, ctx: egui::Context) -> Services {
                 opts.encode.webp_lossless = false;
                 opts.encode.webp_quality = q;
             }
+            opts.tiff_layers = settings.tiff_layers;
             photosuite_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
         })),
         pick_open: Some(Box::new(move || {

@@ -47,7 +47,9 @@ pub mod compression;
 pub mod descriptor;
 pub mod error;
 pub mod file;
+pub mod filter_effects;
 pub mod grd;
+pub mod hdr;
 pub mod header;
 pub mod image_data;
 mod io;
@@ -63,6 +65,7 @@ pub mod tagged;
 // Test-data generator (tests and fuzz seeds only): failing loudly is the point.
 #[allow(clippy::expect_used)]
 pub mod testgen;
+pub mod tiff;
 pub mod tree;
 
 pub use blend::BlendMode;

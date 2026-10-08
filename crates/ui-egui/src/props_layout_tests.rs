@@ -64,12 +64,14 @@ fn quick_actions_fit_the_layer_kind() {
         let all = ids(&l.content);
         assert!(!all.is_empty(), "{kind}");
         match kind {
-            "pixel" => assert!(all.contains(&"select.subject")),
+            "pixel" => {
+                assert!(all.contains(&"select.subject"));
+                assert!(all.contains(&"layer.removeBackground"));
+            }
             _ => assert!(!all.contains(&"select.subject"), "{kind}: Select Subject is for pixel layers"),
         }
-        // Every listed command exists, except ones not implemented yet (filtered when shown).
         for id in &all {
-            assert!(crate::menus::is_live(id) || *id == "layer.removeBackground", "{kind}: {id} is not a command");
+            assert!(crate::menus::is_live(id), "{kind}: {id} is not a command");
         }
     }
     let ty = app.session.active().unwrap().doc.layers.iter().find(|l| matches!(l.content, LayerContent::Text(_))).unwrap().content.clone();
@@ -101,6 +103,19 @@ fn type_layer_sections_share_one_header_style_and_actions_fit() {
         assert!(h.query_by_label(label).is_some(), "{label} button");
     }
     assert!(h.query_by_label("Select Subject").is_none());
+}
+
+#[test]
+fn pixel_layer_shows_remove_background_quick_action() {
+    let (s, layers) = kinds();
+    let pixel = layers.iter().find(|(k, _)| *k == "pixel").unwrap().1;
+    let mut h = harness(s, 1.0, 320.0);
+    select(&mut h, pixel);
+    let app = h.state();
+    let shown: Vec<&str> = visible_quick_actions(app, &layer_of(app, pixel).content).iter().map(|(_, id)| *id).collect();
+    assert!(shown.contains(&"layer.removeBackground"), "{shown:?}");
+    assert!(crate::menus::is_live("layer.removeBackground"));
+    assert!(h.query_by_label("Remove Background").is_some());
 }
 
 #[test]

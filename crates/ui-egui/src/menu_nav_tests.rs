@@ -342,3 +342,78 @@ fn a_short_window_still_scrolls_the_file_menu_to_its_last_row() {
     }
     assert!(visible(&h, 0, last), "the wheel reaches File's last row");
 }
+
+/// Every popup on screen (menus and submenus).
+fn popups(h: &Harness<'static, PhotosuiteApp>) -> Vec<egui::Rect> {
+    h.ctx
+        .memory(|m| m.areas().visible_layer_ids())
+        .into_iter()
+        .filter(|l| l.order == egui::Order::Foreground)
+        .filter_map(|layer| h.ctx.memory(|m| m.area_rect(layer.id)))
+        .collect()
+}
+
+/// No popup covers the menu bar or runs off the window, and every menu title stays visible.
+fn check_bar_clear(h: &Harness<'static, PhotosuiteApp>, what: &str) {
+    let bar = Nav::current(&h.ctx).bar_bottom.expect("the menu bar's bottom");
+    let screen = h.ctx.content_rect();
+    for r in popups(h) {
+        assert!(r.top() >= bar - 0.5, "{what}: popup {r:?} covers the menu bar (bottom {bar})");
+        assert!(r.bottom() <= screen.bottom() + 0.5, "{what}: popup {r:?} runs off the window {screen:?}");
+    }
+    // The bar PhotoSuite draws: menus whose items are all hidden (Type) have no title.
+    for title in crate::menus::visible_top_menus(h.state()) {
+        // The title is the topmost node of that name (a submenu row can share it).
+        let t = h.query_all_by_label(title).map(|n| n.rect()).min_by(|a, b| a.top().total_cmp(&b.top())).expect("menu title");
+        assert!(popups(h).iter().all(|r| !r.intersects(t.shrink(1.0))), "{what}: {title} is covered");
+    }
+}
+
+#[test]
+fn no_menu_or_submenu_covers_the_menu_bar() {
+    // #319: on a 1280 × 720 display (the reporter's, at 1× and 2×, less the title bar) tall menus,
+    // then tall submenus (Image › Adjustments), slid up over the menu bar and hid its titles.
+    let displays = [(1280.0, 703.0, 1.0), (2560.0, 1406.0, 2.0), (1366.0, 768.0, 1.0)];
+    let mut checked = 0;
+    for display in displays {
+        for top in LONGEST {
+            let mut h = harness(display);
+            open(&mut h, top);
+            check_bar_clear(&h, &format!("{display:?} {top}"));
+            // Hover each submenu row in view, top to bottom: rows low in the menu open their
+            // submenus upward.
+            let view = Nav::current(&h.ctx).views.first().copied().unwrap_or(egui::Rect::NOTHING);
+            let subs: Vec<egui::Rect> = rows(&h, 0).iter().filter(|r| r.enabled && r.command.is_none() && view.contains_rect(r.rect)).map(|r| r.rect).collect();
+            for (i, row) in subs.iter().enumerate() {
+                h.hover_at(row.center() + egui::vec2(-20.0, 0.0));
+                h.run_steps(6);
+                if Nav::current(&h.ctx).rows.get(1).is_none_or(Vec::is_empty) {
+                    continue;
+                }
+                checked += 1;
+                check_bar_clear(&h, &format!("{display:?} {top} submenu {i}"));
+            }
+        }
+    }
+    assert!(checked > 30, "checked {checked} submenus");
+}
+
+#[test]
+fn level_room_keeps_every_level_below_the_bar() {
+    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1280.0, 703.0));
+    let (bar, frame) = (Some(30.0), 14.0);
+    let below = 703.0 - EDGE - (30.0 + EDGE) - frame;
+    assert_eq!(level_room(screen, bar, 1, None, frame), below);
+    // A submenu from a row near the top opens downward with the room under it…
+    let row = egui::Rect::from_min_size(egui::pos2(100.0, 80.0), egui::vec2(200.0, 30.0));
+    assert_eq!(level_room(screen, bar, 2, Some(row), frame), 703.0 - EDGE - 80.0 - frame);
+    // …and from a row near the bottom, upward to the bar.
+    let low = egui::Rect::from_min_size(egui::pos2(100.0, 600.0), egui::vec2(200.0, 30.0));
+    assert_eq!(level_room(screen, bar, 2, Some(low), frame), 630.0 - (30.0 + EDGE) - frame);
+    // Never more than the space under the bar, never less than the scroll arrows need.
+    let odd = egui::Rect::from_min_size(egui::pos2(100.0, -50.0), egui::vec2(200.0, 30.0));
+    assert!(level_room(screen, bar, 2, Some(odd), frame) <= below);
+    assert_eq!(level_room(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(100.0, 40.0)), bar, 1, None, frame), 4.0 * ARROW);
+    assert_eq!(level_room(screen, Some(f32::NAN), 1, None, frame), level_room(screen, None, 1, None, frame));
+    assert_eq!(level_room(egui::Rect::NOTHING, bar, 2, Some(row), frame), 4.0 * ARROW);
+}

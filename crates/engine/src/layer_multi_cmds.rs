@@ -10,7 +10,7 @@ use photosuite_doc::{Document, Layer, LayerContent, LayerId};
 use photosuite_geom::Rect;
 use serde_json::{Value, json};
 
-use crate::commands::{CommandSpec, int};
+use crate::commands::{CommandSpec, int_i32};
 use crate::{DocState, EngineError, Result, Session};
 
 // ---------- selection state ----------
@@ -58,7 +58,8 @@ pub fn set_selection(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>
     Ok(())
 }
 
-/// After a structural edit, make `ids` the selection (dropping any that no longer exist).
+/// After a structural edit, make `ids` the selection (dropping any that no longer exist), which
+/// is also what the edit's history state targets.
 fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
     if let Some(st) = s.active_mut() {
         st.selected_layers = ids;
@@ -67,6 +68,8 @@ fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
             st.layer_anchor = Some(a);
         }
         crate::fix_selection(st);
+        let layers = st.layer_target();
+        st.history.set_current_layers(layers);
     }
 }
 
@@ -145,7 +148,7 @@ fn select_linked(s: &mut Session) -> Result<Value> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let groups = link_groups(&d.doc, &d.selected_layers());
     let ids: Vec<LayerId> = d.doc.walk().into_iter().filter(|(_, _, l)| l.link_group.is_some_and(|g| groups.contains(&g))).map(|(_, _, l)| l.id).collect();
-    let active = d.active_layer;
+    let active = d.active_layer.filter(|a| ids.contains(a)).or(ids.last().copied());
     let n = ids.len();
     set_selection(s, ids, active, active)?;
     Ok(json!({"selected": n}))
@@ -234,8 +237,8 @@ pub(crate) fn move_layers(doc: &mut Document, moves: &[(LayerId, i32, i32)]) -> 
 
 /// `layer.translate`: the explicit layer, or every selected layer, plus their linked layers.
 pub fn translate(s: &mut Session, p: &Value) -> Result<Value> {
-    let dx = int(p, "dx").unwrap_or(0) as i32;
-    let dy = int(p, "dy").unwrap_or(0) as i32;
+    let dx = int_i32("layer.translate", p, "dx")?.unwrap_or(0);
+    let dy = int_i32("layer.translate", p, "dy")?.unwrap_or(0);
     if dx == 0 && dy == 0 {
         return Ok(Value::Null);
     }
@@ -609,6 +612,16 @@ fn reverse(s: &mut Session) -> Result<Value> {
     Ok(Value::Null)
 }
 
+/// Refuses an edit that left `doc` nested deeper than [`photosuite_doc::MAX_GROUP_DEPTH`]
+/// groups. Called at the end of a `Session::edit` closure, so an `Err` leaves the document and
+/// history untouched.
+pub(crate) fn check_group_depth(doc: &Document, what: &str) -> Result<()> {
+    if doc.max_group_depth() > photosuite_doc::MAX_GROUP_DEPTH {
+        return Err(EngineError::Other(format!("{what} would nest layers deeper than {} groups", photosuite_doc::MAX_GROUP_DEPTH)));
+    }
+    Ok(())
+}
+
 /// Group Layers (⌘G) / Group from Layers: the explicit layer, or every selected layer, moves
 /// into a new group placed where the top-most of them was. Bottom-to-top order is preserved.
 pub fn group_layers(s: &mut Session, p: &Value) -> Result<Value> {
@@ -630,6 +643,7 @@ pub fn group_layers(s: &mut Session, p: &Value) -> Result<Value> {
             children.push(doc.remove(*id).ok_or(EngineError::NoLayer(*id))?);
         }
         *doc.layer_mut(gid).and_then(Layer::children_mut).ok_or(EngineError::NoLayer(gid))? = children;
+        check_group_depth(doc, "Group Layers")?;
         *active = Some(gid);
         Ok(gid)
     })?;
@@ -1023,18 +1037,22 @@ mod tests {
             let b = rect_layer(&mut s, Rect::new(12, 0, 32, 10)); // 20 wide
             let c = rect_layer(&mut s, Rect::new(70, 0, 100, 10)); // 30 wide
             select_all(&mut s, &[a, b, c]);
+            // Undo targets the layers its state had when it was created (#495): reselect.
             assert!(s.is_enabled("layer.distribute.leftEdges"));
             s.execute("layer.distribute.leftEdges", json!({})).unwrap();
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10), "left edges 0, 35, 70");
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.horizontalCenters", json!({})).unwrap();
             // centres 5 and 85 → middle centre 45
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10));
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.rightEdges", json!({})).unwrap();
             // right edges 10 and 100 → 55
             assert_eq!(bounds(&s, b), Rect::new(35, 0, 55, 10));
             s.undo();
+            select_all(&mut s, &[a, b, c]);
             s.execute("layer.distribute.horizontally", json!({})).unwrap();
             // span 100, widths 60 → gaps of 20: b at 30..50
             assert_eq!(bounds(&s, b), Rect::new(30, 0, 50, 10));
@@ -1053,12 +1071,15 @@ mod tests {
         // span 80, heights 34 → gaps 23: b at 33..37
         assert_eq!(bounds(&s, b), Rect::new(0, 33, 10, 37));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.topEdges", json!({})).unwrap();
         assert_eq!(bounds(&s, b), Rect::new(0, 30, 10, 34));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.bottomEdges", json!({})).unwrap();
         assert_eq!(bounds(&s, b), Rect::new(0, 41, 10, 45));
         s.undo();
+        select_all(&mut s, &[a, b, c]);
         s.execute("layer.distribute.verticalCenters", json!({})).unwrap();
         // centres 5 and 70 → 37.5, b is 4 tall → top 35.5 → rounds to 36 (35 for ties down)
         let y0 = bounds(&s, b).y0;
@@ -1120,6 +1141,111 @@ mod tests {
         select_all(&mut s, &[b, d]);
         s.execute("layer.groupLayers", json!({})).unwrap();
         assert_eq!(doc(&s).layers.len(), 4);
+    }
+
+    #[test]
+    fn grouping_is_capped_at_the_document_nesting_limit() {
+        let mut s = session(8);
+        let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
+        select_all(&mut s, &[a]);
+        for _ in 0..photosuite_doc::MAX_GROUP_DEPTH {
+            s.execute("layer.groupLayers", json!({})).unwrap();
+        }
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+        // One more wrapping group would pass the cap: rejected, document untouched.
+        let err = s.execute("layer.groupLayers", json!({})).unwrap_err();
+        assert!(err.to_string().contains("deeper than 100"), "{err}");
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH);
+        // The rejected call recorded no history step: undo still lands one grouping earlier.
+        s.undo();
+        assert_eq!(doc(&s).max_group_depth(), photosuite_doc::MAX_GROUP_DEPTH - 1);
+    }
+
+    #[test]
+    fn select_linked_layers_excludes_an_unlinked_active_layer() {
+        for depth in [8, 16, 32] {
+            let mut s = session(depth);
+            let a = rect_layer(&mut s, Rect::new(0, 0, 10, 10));
+            let b = rect_layer(&mut s, Rect::new(20, 20, 30, 30));
+            let other = rect_layer(&mut s, Rect::new(50, 50, 60, 60));
+            select_all(&mut s, &[a, b]);
+            s.execute("layer.linkLayers", json!({})).unwrap();
+            s.execute("layer.select", json!({"layer": a.0})).unwrap();
+            s.execute("layer.select", json!({"layer": other.0, "mode": "toggle"})).unwrap();
+            assert_eq!(sel(&s), vec![a, other]);
+            assert_eq!(s.active().unwrap().active_layer, Some(other));
+            let past = s.active().unwrap().history.past_len();
+            let dirty = s.active().unwrap().is_dirty();
+
+            let result = s.execute("layer.selectLinkedLayers", json!({})).unwrap();
+            assert_eq!(sel(&s), vec![a, b]);
+            assert_eq!(result["selected"], sel(&s).len());
+            assert_eq!(s.active().unwrap().active_layer, Some(b));
+            assert_eq!(s.active().unwrap().layer_anchor, Some(b));
+            assert_eq!(s.active().unwrap().history.past_len(), past);
+            assert_eq!(s.active().unwrap().is_dirty(), dirty);
+
+            // A following multi-layer delete must leave the unrelated layer intact.
+            s.execute("layer.delete", json!({})).unwrap();
+            assert!(doc(&s).layer(a).is_none() && doc(&s).layer(b).is_none());
+            assert!(doc(&s).layer(other).is_some());
+            s.undo();
+            assert!(doc(&s).layer(a).is_some() && doc(&s).layer(b).is_some());
+            assert!(doc(&s).layer(other).is_some());
+        }
+    }
+
+    #[test]
+    fn select_linked_layers_preserves_a_linked_active_layer() {
+        for depth in [8, 16, 32] {
+            let mut s = session(depth);
+            let a = rect_layer(&mut s, Rect::new(0, 0, 10, 10));
+            let b = rect_layer(&mut s, Rect::new(20, 20, 30, 30));
+            select_all(&mut s, &[a, b]);
+            s.execute("layer.linkLayers", json!({})).unwrap();
+            for active in [a, b] {
+                s.execute("layer.select", json!({"layer": active.0})).unwrap();
+                let st = s.active_mut().unwrap();
+                st.saved_revision = st.revision;
+                let past = st.history.past_len();
+                for _ in 0..2 {
+                    let result = s.execute("layer.selectLinkedLayers", json!({})).unwrap();
+                    assert_eq!(sel(&s), vec![a, b]);
+                    assert_eq!(result["selected"], sel(&s).len());
+                    assert_eq!(s.active().unwrap().active_layer, Some(active));
+                    assert_eq!(s.active().unwrap().layer_anchor, Some(active));
+                    assert_eq!(s.active().unwrap().history.past_len(), past);
+                    assert!(!s.active().unwrap().is_dirty());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn select_linked_layers_requires_a_linked_selection() {
+        let mut s = Session::new();
+        assert!(!s.is_enabled("layer.selectLinkedLayers"));
+        assert!(s.execute("layer.selectLinkedLayers", json!({})).is_err());
+        let mut s = session(8);
+        let before = sel(&s);
+        assert!(!s.is_enabled("layer.selectLinkedLayers"));
+        assert!(s.execute("layer.selectLinkedLayers", json!({})).is_err());
+        assert_eq!(sel(&s), before);
+    }
+
+    #[test]
+    fn translate_rejects_offsets_that_would_wrap() {
+        let mut s = session(8);
+        let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
+        select_all(&mut s, &[a]);
+        // 2^32 + 50 wrapped to `dx = 50` and 3e9 to a negative offset through `as i32`.
+        for dx in [4_294_967_346_i64, 3_000_000_000_i64] {
+            let err = s.execute("layer.translate", json!({"dx": dx, "dy": 0})).unwrap_err();
+            assert!(err.to_string().contains("32-bit"), "{err}");
+        }
+        assert_eq!(bounds(&s, a), Rect::new(0, 0, 5, 5), "the layer never moved");
+        // Large in-range offsets still work.
+        s.execute("layer.translate", json!({"dx": -200_000, "dy": 200_000})).unwrap();
     }
 
     #[test]
