@@ -463,6 +463,14 @@ mod tests {
         assert!(authorize_engine_command("prefs.set", &serde_json::json!({"path": "colorSettings.workingRgb", "value": "outside.icc"})).is_err());
         assert!(authorize_engine_step("file.open", &serde_json::json!({})).is_err());
         assert!(authorize_engine_step("actions.play", &serde_json::json!({})).is_ok());
+        // An allowed command can't reach a denied one by running it on its own behalf.
+        let mut session = photosuite_engine::Session::new();
+        session.execute("file.new", serde_json::json!({"width": 4, "height": 4})).unwrap();
+        session.authorize = Some(authorize_desktop_engine_step);
+        let params = serde_json::json!({"to": "grayscale"});
+        assert!(authorize_desktop_engine_command("file.automate.conditionalModeChange", &params).is_ok());
+        assert!(session.execute("file.automate.conditionalModeChange", params).is_err());
+        assert_eq!(session.active().unwrap().doc.mode, photosuite_engine::doc::ColorMode::Rgb);
         assert!(authorize_desktop_engine_step("file.saveACopy", &serde_json::json!({})).is_err());
     }
 

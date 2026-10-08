@@ -320,8 +320,9 @@ pub struct Session {
     pub preset_store: Option<preset_store::PresetStore>,
     /// Window › Actions. The list persists with the preset store when one is attached.
     pub actions: actions_cmds::ActionState,
-    /// Per-step gate for `actions.play`. Untrusted sessions (MCP, the control channel) install
-    /// the same check a top-level command sees. `None` runs every step, which is what a local
+    /// Gate for every command the session runs, including the ones a command runs on its own
+    /// behalf and `actions.play` steps. Untrusted sessions (MCP, the control channel) install
+    /// the same check a top-level request sees. `None` runs everything, which is what a local
     /// UI and `photosuite-cli run` do.
     pub authorize: Option<fn(&str, &serde_json::Value) -> Result<()>>,
     /// Background jobs (see [`jobs`]).
