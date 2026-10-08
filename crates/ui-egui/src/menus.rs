@@ -526,6 +526,8 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
             .and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id)))
             .is_some_and(|l| matches!(l.content, photosuite_doc::LayerContent::Text(_))),
         "select.transformSelection" => app.ui.transform.is_none() && app.session.is_enabled("select.transformSelection"),
+        // ⇧[ / ⇧] only step the hardness of a tool that paints with the brush tip, as in Photoshop.
+        "tools.decreaseBrushHardness" | "tools.increaseBrushHardness" => app.ui.tool.is_brushlike(),
         i if (i.starts_with("view.zoom") || i == "view.fitOnScreen" || i == "view.actualPixels") || i == "window.newWindowForDocument" => {
             app.session.active().is_some()
         }

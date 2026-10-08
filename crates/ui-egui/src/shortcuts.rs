@@ -294,8 +294,9 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
     if editing {
         return;
     }
-    // Single-key tools (no modifiers). D and X are commands (`tools.defaultColors` /
-    // `tools.swapColors`), dispatched above with any Keyboard Shortcuts override.
+    // Single-key tools (no modifiers). D and X (`tools.defaultColors` / `tools.swapColors`) and the
+    // brush keys [ ] ⇧[ ⇧] (`tools.decreaseBrushSize`…) are commands, dispatched above with any
+    // Keyboard Shortcuts override.
     let pressed = |k: Key| ctx.input_mut(|i| i.consume_key(Modifiers::NONE, k));
     // Enter / Escape commit or cancel in-progress tool state (polygonal lasso, crop).
     if crate::lasso_ui::active(app) {
@@ -354,35 +355,6 @@ pub fn handle(app: &mut PhotosuiteApp, ctx: &egui::Context) {
             };
             return;
         }
-    }
-    // ⇧[ and ⇧] step a painting tool's hardness by 25% (#352). First: egui's `consume_key`
-    // ignores ⇧, so the size keys below would take them.
-    if app.ui.tool.is_brushlike() {
-        let hardness = app.session.tools.brush.hardness;
-        let step = |sc: &str| parse(sc).is_some_and(|sc| consume(ctx, &sc));
-        let quarter = (hardness * 4.0).round();
-        let next = if step("Shift+[") {
-            (quarter - 1.0).max(0.0) / 4.0
-        } else if step("Shift+]") {
-            (quarter + 1.0).min(4.0) / 4.0
-        } else {
-            hardness
-        };
-        if next != hardness {
-            let _ = app.run("tools.setBrush", serde_json::json!({ "brush": { "hardness": next } }));
-        }
-    }
-    // [ and ] resize the brush through `tools.setBrush` (journaled, drivable).
-    let size = app.session.tools.brush.size;
-    let next = if pressed(Key::OpenBracket) {
-        (size / 1.25).max(1.0).round()
-    } else if pressed(Key::CloseBracket) {
-        (size * 1.25).min(2500.0).round().max(size + 1.0)
-    } else {
-        size
-    };
-    if next != size {
-        let _ = app.run("tools.setBrush", serde_json::json!({ "brush": { "size": next } }));
     }
     // 1–0 set opacity, ⇧1–0 flow or fill (`opacity_keys`).
     crate::opacity_keys::handle(app, ctx);
