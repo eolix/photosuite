@@ -29,7 +29,8 @@ pub fn wants_prompt(app: &PhotosuiteApp, path: &str) -> bool {
     if !is_tiff_path(path) || !app.session.prefs().file_handling.ask_before_saving_layered_tiff {
         return false;
     }
-    app.session.active().is_some_and(|st| photosuite_io::tiff_layers::would_write_layers(&st.doc))
+    // A document without layers has none to keep: it saves straight back, like any flat file.
+    app.session.active().is_some_and(|st| !st.doc.layers.is_empty() && photosuite_io::tiff_layers::would_write_layers(&st.doc))
 }
 
 /// Parks the save behind the prompt.
