@@ -181,6 +181,9 @@ fn warp_layer(doc_sel: Option<&Surface>, group: Locks, l: &mut Layer, w: &Warp, 
     Ok(())
 }
 
+/// Largest warp frame side: far above any real layer, far below what would exhaust memory.
+const MAX_WARP_SIDE: u32 = 100_000;
+
 fn target(s: &Session, cmd: &str, p: &Value) -> Result<(LayerId, Rect)> {
     let st = s.active().ok_or(EngineError::NoDocument)?;
     let id = match p.get("layer").and_then(Value::as_u64) {
@@ -197,6 +200,10 @@ fn target(s: &Session, cmd: &str, p: &Value) -> Result<(LayerId, Rect)> {
     };
     if rect.is_empty() {
         return Err(bad(cmd, "nothing to warp"));
+    }
+    let (w, h) = (rect.width(), rect.height());
+    if w > MAX_WARP_SIDE || h > MAX_WARP_SIDE {
+        return Err(bad(cmd, format!("rect too large for warp: {w} x {h} (max {MAX_WARP_SIDE} per side)")));
     }
     Ok((id, rect))
 }
@@ -636,6 +643,19 @@ mod tests {
             assert!(m.us.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.us);
             assert!(m.vs.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.vs);
         }
+    }
+
+    #[test]
+    fn extreme_rect_is_bad_params_not_a_giant_warp() {
+        let mut s = session(8);
+        for cmd in ["edit.transform.warp", "layer.smartObjects.warp"] {
+            if cmd == "layer.smartObjects.warp" {
+                s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+            }
+            let e = s.execute(cmd, json!({"style": "arc", "bend": 50, "rect": [-1e30, -1e30, 1e30, 1e30]})).unwrap_err();
+            assert!(matches!(&e, EngineError::BadParams { msg, .. } if msg.contains("rect too large")), "{cmd}: {e}");
+        }
+        s.execute("layer.smartObjects.warp", json!({"style": "arc", "bend": 50, "rect": [10, 10, 60, 40]})).unwrap();
     }
 
     #[test]
