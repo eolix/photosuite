@@ -62,7 +62,9 @@ fn shrink_layer(l: &mut Layer, k: u32) {
     }
 }
 
-/// A copy of `doc` scaled down by `k` (same layer ids, so adjustments can be swapped in).
+/// A copy of `doc` scaled down by `k` (same layer ids, so adjustments can be swapped in). The
+/// selection scales with it, so a filter previewed on the proxy stays inside the (feathered)
+/// selection exactly as the full-size result does.
 pub fn proxy_document(doc: &Document, k: u32) -> Document {
     let mut p = doc.clone();
     if k <= 1 {
@@ -76,7 +78,7 @@ pub fn proxy_document(doc: &Document, k: u32) -> Document {
     for c in &mut p.channels {
         c.surface = downsample(&c.surface, k);
     }
-    p.selection = None;
+    p.selection = p.selection.as_ref().map(|s| downsample(s, k));
     p
 }
 
@@ -119,5 +121,17 @@ mod tests {
         assert_eq!(p.layers[0].id, doc.layers[0].id);
         assert_eq!(p.layers[0].surface().unwrap().pixel(999, 749), vec![1.0; 4]);
         assert!(proxy_faithful(&doc));
+    }
+
+    #[test]
+    fn proxy_scales_the_selection() {
+        let mut doc = Document::with_background("d", Size::new(64, 64), ColorMode::Rgb, SampleType::U8, Color::WHITE);
+        let mut sel = Surface::new(PixelFormat::GRAY8);
+        sel.fill_rect(Rect::new(0, 0, 32, 64), &[1.0]);
+        doc.selection = Some(sel);
+        let p = proxy_document(&doc, 4);
+        let s = p.selection.as_ref().expect("selection kept");
+        assert_eq!((s.pixel(7, 15)[0], s.pixel(8, 0)[0]), (1.0, 0.0));
+        assert!(proxy_document(&Document::new("n", Size::new(8, 8), ColorMode::Rgb, SampleType::U8), 4).selection.is_none());
     }
 }
