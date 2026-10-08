@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	ใช้แรงกดแท็บเล็ต
 	Vulkan	วัลแคน
+	Edit Type	แก้ไขข้อความ
+	Free Transform a Copy	แปลงสำเนาแบบอิสระ
+	New from Clipboard	สร้างใหม่จากคลิปบอร์ด
+	Relight…	ปรับแสงใหม่…
+	Rendering mode	โหมดการเรนเดอร์
+	Show bounding box when dragging layer	แสดงกรอบขอบเขตขณะลากเลเยอร์
+	8 bit	8 บิต
+	16 bit	16 บิต
+	32 bit (float)	32 บิต (จุดลอยตัว)
+	Integer	จำนวนเต็ม
+	Floating point	จุดลอยตัว
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

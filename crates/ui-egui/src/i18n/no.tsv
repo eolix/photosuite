@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Bruk tabletttrykk
 	Vulkan	Vulkan
+	Edit Type	Rediger tekst
+	Free Transform a Copy	Fri transformering av en kopi
+	New from Clipboard	Ny fra utklippstavlen
+	Relight…	Ny belysning…
+	Rendering mode	Gjengivelsesmodus
+	Show bounding box when dragging layer	Vis avgrensningsboks når laget dras
+	8 bit	8 biter
+	16 bit	16 biter
+	32 bit (float)	32 biter (flyttall)
+	Integer	Heltall
+	Floating point	Flyttall
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %

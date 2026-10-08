@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Tablet basıncını kullan
 	Vulkan	Vulkan
+	Edit Type	Metni Düzenle
+	Free Transform a Copy	Kopyayı Serbest Dönüştür
+	New from Clipboard	Panodan Yeni
+	Relight…	Yeniden Aydınlat…
+	Rendering mode	İşleme modu
+	Show bounding box when dragging layer	Katman sürüklenirken sınırlayıcı kutuyu göster
+	8 bit	8 bitlik
+	16 bit	16 bitlik
+	32 bit (float)	32 bitlik (kayan nokta)
+	Integer	Tam sayı
+	Floating point	Kayan nokta
+	75%	%75
+	125%	%125
+	150%	%150
+	175%	%175
+	250%	%250
+	300%	%300

@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Sử dụng áp lực máy tính bảng
 	Vulkan	Vulkan
+	Edit Type	Chỉnh sửa văn bản
+	Free Transform a Copy	Thay đổi hình dạng tự do một bản sao
+	New from Clipboard	Mới từ bảng nhớ tạm
+	Relight…	Chiếu sáng lại…
+	Rendering mode	Chế độ kết xuất
+	Show bounding box when dragging layer	Hiển thị khung giới hạn khi kéo lớp
+	8 bit	8 bit/kênh
+	16 bit	16 bit/kênh
+	32 bit (float)	32 bit/kênh (dấu phẩy động)
+	Integer	Số nguyên
+	Floating point	Dấu phẩy động
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

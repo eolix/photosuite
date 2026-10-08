@@ -1949,3 +1949,20 @@
 	OpenGL	برنامج OpenGL
 	Use tablet pressure	استخدم الضغط اللوحي
 	Vulkan	فولكان
+	Edit Type	تحرير النص
+	Free Transform a Copy	تحويل حر لنسخة
+	New from Clipboard	جديد من الحافظة
+	Relight…	إعادة الإضاءة…
+	Rendering mode	وضع العرض
+	Show bounding box when dragging layer	إظهار مربع الإحاطة عند سحب الطبقة
+	8 bit	8 بت
+	16 bit	16 بت
+	32 bit (float)	32 بت (فاصلة عائمة)
+	Integer	عدد صحيح
+	Floating point	فاصلة عائمة
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

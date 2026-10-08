@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Използвайте налягането на таблетката
 	Vulkan	Вулкан
+	Edit Type	Редактиране на текста
+	Free Transform a Copy	Свободна трансформация на копие
+	New from Clipboard	Нов от клипборда
+	Relight…	Ново осветяване…
+	Rendering mode	Режим на изобразяване
+	Show bounding box when dragging layer	Показване на ограничаващата рамка при плъзгане на слой
+	8 bit	8 бита
+	16 bit	16 бита
+	32 bit (float)	32 бита (плаваща запетая)
+	Integer	Цяло число
+	Floating point	Плаваща запетая
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

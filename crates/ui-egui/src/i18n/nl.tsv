@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Gebruik tabletdruk
 	Vulkan	Vulkaan
+	Edit Type	Tekst bewerken
+	Free Transform a Copy	Kopie vrij transformeren
+	New from Clipboard	Nieuw van klembord
+	Relight…	Opnieuw belichten…
+	Rendering mode	Weergavemodus
+	Show bounding box when dragging layer	Selectiekader tonen bij het slepen van een laag
+	8 bit	8 bits
+	16 bit	16 bits
+	32 bit (float)	32 bits (drijvende komma)
+	Integer	Geheel getal
+	Floating point	Drijvende komma
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

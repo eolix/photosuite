@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Użyj nacisku tabletu
 	Vulkan	Wulkan
+	Edit Type	Edytuj tekst
+	Free Transform a Copy	Przekształć swobodnie kopię
+	New from Clipboard	Nowy ze schowka
+	Relight…	Zmień oświetlenie…
+	Rendering mode	Tryb renderowania
+	Show bounding box when dragging layer	Pokazuj ramkę ograniczającą podczas przeciągania warstwy
+	8 bit	8 bitów
+	16 bit	16 bitów
+	32 bit (float)	32 bity (zmiennoprzecinkowe)
+	Integer	Liczba całkowita
+	Floating point	Zmiennoprzecinkowe
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

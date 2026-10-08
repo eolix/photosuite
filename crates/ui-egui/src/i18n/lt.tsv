@@ -1940,3 +1940,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Naudokite tabletės spaudimą
 	Vulkan	Vulkanas
+	Edit Type	Redaguoti tekstą
+	Free Transform a Copy	Laisvai transformuoti kopiją
+	New from Clipboard	Naujas iš iškarpinės
+	Relight…	Pakartotinis apšvietimas…
+	Rendering mode	Atvaizdavimo režimas
+	Show bounding box when dragging layer	Velkant sluoksnį rodyti ribojantį langelį
+	8 bit	8 bitai
+	16 bit	16 bitų
+	32 bit (float)	32 bitai (slankusis kablelis)
+	Integer	Sveikasis skaičius
+	Floating point	Slankusis kablelis
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %

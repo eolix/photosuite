@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	மாத்திரை அழுத்தம் பயன்படுத்தவும்
 	Vulkan	வல்கன்
+	Edit Type	உரையைத் தொகு
+	Free Transform a Copy	நகலை விடுவித்த உருமாற்று
+	New from Clipboard	கிளிப்போர்டிலிருந்து புதிது
+	Relight…	மீண்டும் ஒளியூட்டு…
+	Rendering mode	காட்சியாக்க முறை
+	Show bounding box when dragging layer	அடுக்கை இழுக்கும்போது எல்லைப் பெட்டியைக் காட்டு
+	8 bit	8 பிட்
+	16 bit	16 பிட்
+	32 bit (float)	32 பிட் (மிதவைப் புள்ளி)
+	Integer	முழு எண்
+	Floating point	மிதவைப் புள்ளி
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

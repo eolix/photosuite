@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Koristite pritisak tablete
 	Vulkan	Vulkan
+	Edit Type	Uredi tekst
+	Free Transform a Copy	Slobodna transformacija kopije
+	New from Clipboard	Novo iz međuspremnika
+	Relight…	Ponovno osvjetljenje…
+	Rendering mode	Način iscrtavanja
+	Show bounding box when dragging layer	Prikaži granični okvir pri povlačenju sloja
+	8 bit	8 bita
+	16 bit	16 bita
+	32 bit (float)	32 bita (pomični zarez)
+	Integer	Cijeli broj
+	Floating point	Pomični zarez
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

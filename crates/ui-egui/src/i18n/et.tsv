@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Kasutage tableti survet
 	Vulkan	Vulkan
+	Edit Type	Muuda teksti
+	Free Transform a Copy	Koopia vaba transformatsioon
+	New from Clipboard	Uus lõikelaualt
+	Relight…	Ümbervalgustus…
+	Rendering mode	Renderdusrežiim
+	Show bounding box when dragging layer	Kuva kihi lohistamisel piirdekast
+	8 bit	8 bitti
+	16 bit	16 bitti
+	32 bit (float)	32 bitti (ujukoma)
+	Integer	Täisarv
+	Floating point	Ujukoma
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

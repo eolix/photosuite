@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	སྨན་ཁབ་ཀྱི་གནོན་ཤུགས་སྤྱོད་པ།
 	Vulkan	ཝུལ་ཁན།
+	Edit Type	ཡི་གེ་བཟོ་སྒྲིག
+	Free Transform a Copy	འདྲ་བཤུས་ལ་རང་མོས་གཟུགས་འགྱུར།
+	New from Clipboard	བཤུད་པང་ནས་གསར་པ།
+	Relight…	འོད་བསྐྱར་སྒྲིག…
+	Rendering mode	འཁོར་སྐྱོད་རྣམ་པ།
+	Show bounding box when dragging layer	ངོས་འཐེན་སྐབས་མཐའ་སྒྲོམ་སྟོན།
+	8 bit	8 བིཊ།
+	16 bit	16 བིཊ།
+	32 bit (float)	32 བིཊ། (ཚེག་གཡོ་བ།)
+	Integer	ཧྲིལ་གྲངས།
+	Floating point	ཚེག་གཡོ་བ།
+	75%	75%།
+	125%	125%།
+	150%	150%།
+	175%	175%།
+	250%	250%།
+	300%	300%།

@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Použijte tlak tabletu
 	Vulkan	Vulkan
+	Edit Type	Upravit text
+	Free Transform a Copy	Volná transformace kopie
+	New from Clipboard	Nový ze schránky
+	Relight…	Přesvětlení…
+	Rendering mode	Režim vykreslování
+	Show bounding box when dragging layer	Při přetahování vrstvy zobrazit ohraničující rámeček
+	8 bit	8 bitů
+	16 bit	16 bitů
+	32 bit (float)	32 bitů (plovoucí čárka)
+	Integer	Celé číslo
+	Floating point	Plovoucí desetinná čárka
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %

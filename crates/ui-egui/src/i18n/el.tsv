@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Χρησιμοποιήστε πίεση δισκίου
 	Vulkan	Vulkan
+	Edit Type	Επεξεργασία κειμένου
+	Free Transform a Copy	Ελεύθερος μετασχηματισμός αντιγράφου
+	New from Clipboard	Νέο από το πρόχειρο
+	Relight…	Αναφωτισμός…
+	Rendering mode	Λειτουργία απόδοσης
+	Show bounding box when dragging layer	Εμφάνιση πλαισίου οριοθέτησης κατά τη μεταφορά επιπέδου
+	8 bit	8 μπιτ
+	16 bit	16 μπιτ
+	32 bit (float)	32 μπιτ (κινητή υποδιαστολή)
+	Integer	Ακέραιος
+	Floating point	Κινητή υποδιαστολή
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

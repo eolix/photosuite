@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Gunakan tekanan tablet
 	Vulkan	Vulkan
+	Edit Type	Ubah Teks
+	Free Transform a Copy	Transformasi Bebas Salinan
+	New from Clipboard	Baru dari Papan Klip
+	Relight…	Pencahayaan Ulang…
+	Rendering mode	Mode Render
+	Show bounding box when dragging layer	Tampilkan kotak pembatas saat menyeret lapisan
+	8 bit	8 bit/saluran
+	16 bit	16 bit/saluran
+	32 bit (float)	32 bit/saluran (titik mengambang)
+	Integer	Bilangan bulat
+	Floating point	Titik mengambang
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Utiliser la pression du comprimé
 	Vulkan	Vulcan
+	Edit Type	Modifier le texte
+	Free Transform a Copy	Transformation libre d'une copie
+	New from Clipboard	Nouveau à partir du presse-papiers
+	Relight…	Rééclairage…
+	Rendering mode	Mode de rendu
+	Show bounding box when dragging layer	Afficher le cadre de sélection lors du déplacement du calque
+	8 bit	8 bits
+	16 bit	16 bits
+	32 bit (float)	32 bits (virgule flottante)
+	Integer	Entier
+	Floating point	Virgule flottante
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

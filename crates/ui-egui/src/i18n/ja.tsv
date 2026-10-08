@@ -1965,3 +1965,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	タブレットの筆圧を使用
 	Vulkan	Vulkan
+	Edit Type	テキストを編集
+	Free Transform a Copy	コピーを自由変形
+	New from Clipboard	クリップボードから新規作成
+	Relight…	照明を変更…
+	Rendering mode	レンダリングモード
+	Show bounding box when dragging layer	レイヤーのドラッグ中にバウンディングボックスを表示
+	8 bit	8 ビット
+	16 bit	16 ビット
+	32 bit (float)	32 ビット (浮動小数点)
+	Integer	整数
+	Floating point	浮動小数点
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

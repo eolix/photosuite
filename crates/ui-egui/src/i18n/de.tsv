@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Verwenden Sie Tablettendruck
 	Vulkan	Vulkan
+	Edit Type	Text bearbeiten
+	Free Transform a Copy	Kopie frei transformieren
+	New from Clipboard	Neu aus Zwischenablage
+	Relight…	Neu beleuchten…
+	Rendering mode	Darstellungsmodus
+	Show bounding box when dragging layer	Begrenzungsrahmen beim Ziehen einer Ebene anzeigen
+	8 bit	8 Bit
+	16 bit	16 Bit
+	32 bit (float)	32 Bit (Gleitkomma)
+	Integer	Ganzzahl
+	Floating point	Gleitkomma
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %

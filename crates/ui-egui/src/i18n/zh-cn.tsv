@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	使用压片压力
 	Vulkan	伏尔甘
+	Edit Type	编辑文字
+	Free Transform a Copy	自由变换副本
+	New from Clipboard	从剪贴板新建
+	Relight…	重新打光…
+	Rendering mode	渲染模式
+	Show bounding box when dragging layer	拖动图层时显示定界框
+	8 bit	8 位
+	16 bit	16 位
+	32 bit (float)	32 位 (浮点)
+	Integer	整数
+	Floating point	浮点
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

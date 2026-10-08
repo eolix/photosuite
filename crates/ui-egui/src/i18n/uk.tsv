@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Використовуйте тиск таблетки
 	Vulkan	Вулкан
+	Edit Type	Редагувати текст
+	Free Transform a Copy	Вільна трансформація копії
+	New from Clipboard	Створити з буфера обміну
+	Relight…	Змінити освітлення…
+	Rendering mode	Режим відображення
+	Show bounding box when dragging layer	Показувати обмежувальну рамку під час перетягування шару
+	8 bit	8 біт
+	16 bit	16 біт
+	32 bit (float)	32 біти (рухома кома)
+	Integer	Ціле число
+	Floating point	Рухома кома
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

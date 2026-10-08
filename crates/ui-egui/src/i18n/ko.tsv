@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	태블릿 압력 사용
 	Vulkan	불칸
+	Edit Type	텍스트 편집
+	Free Transform a Copy	사본 자유 변형
+	New from Clipboard	클립보드에서 새로 만들기
+	Relight…	조명 다시 설정…
+	Rendering mode	렌더링 모드
+	Show bounding box when dragging layer	레이어를 드래그할 때 경계 상자 표시
+	8 bit	8비트
+	16 bit	16비트
+	32 bit (float)	32비트(부동 소수점)
+	Integer	정수
+	Floating point	부동 소수점
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

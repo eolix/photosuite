@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Use a pressão do tablet
 	Vulkan	Vulcano
+	Edit Type	Editar texto
+	Free Transform a Copy	Transformação livre de uma cópia
+	New from Clipboard	Novo da área de transferência
+	Relight…	Reiluminar…
+	Rendering mode	Modo de renderização
+	Show bounding box when dragging layer	Mostrar caixa delimitadora ao arrastar a camada
+	8 bit	8 bits
+	16 bit	16 bits
+	32 bit (float)	32 bits (ponto flutuante)
+	Integer	Inteiro
+	Floating point	Ponto flutuante
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

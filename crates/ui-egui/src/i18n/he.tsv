@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	השתמש בלחץ בטאבלט
 	Vulkan	וולקן
+	Edit Type	עריכת טקסט
+	Free Transform a Copy	שינוי חופשי של עותק
+	New from Clipboard	חדש מלוח הכתיבה
+	Relight…	תאורה מחדש…
+	Rendering mode	מצב עיבוד
+	Show bounding box when dragging layer	הצג תיבה תוחמת בעת גרירת שכבה
+	8 bit	8 ביטים
+	16 bit	16 ביטים
+	32 bit (float)	32 ביטים (נקודה צפה)
+	Integer	מספר שלם
+	Floating point	נקודה צפה
+	75%	75%
+	125%	125%
+	150%	150%
+	175%	175%
+	250%	250%
+	300%	300%

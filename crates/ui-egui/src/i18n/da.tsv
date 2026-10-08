@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Brug tablettryk
 	Vulkan	Vulkan
+	Edit Type	Rediger tekst
+	Free Transform a Copy	Fri transformering af en kopi
+	New from Clipboard	Ny fra udklipsholder
+	Relight…	Genbelys…
+	Rendering mode	Gengivelsestilstand
+	Show bounding box when dragging layer	Vis afgrænsningsramme, når laget trækkes
+	8 bit	8 bits
+	16 bit	16 bits
+	32 bit (float)	32 bits (flydende komma)
+	Integer	Heltal
+	Floating point	Flydende komma
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %

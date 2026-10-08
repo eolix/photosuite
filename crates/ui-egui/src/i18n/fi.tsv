@@ -1949,3 +1949,20 @@
 	OpenGL	OpenGL
 	Use tablet pressure	Käytä tabletin painetta
 	Vulkan	Vulkan
+	Edit Type	Muokkaa tekstiä
+	Free Transform a Copy	Kopion vapaa muunto
+	New from Clipboard	Uusi leikepöydältä
+	Relight…	Uudelleenvalaisu…
+	Rendering mode	Hahmonnustila
+	Show bounding box when dragging layer	Näytä rajauskehys tasoa vedettäessä
+	8 bit	8 bittiä
+	16 bit	16 bittiä
+	32 bit (float)	32 bittiä (liukuluku)
+	Integer	Kokonaisluku
+	Floating point	Liukuluku
+	75%	75 %
+	125%	125 %
+	150%	150 %
+	175%	175 %
+	250%	250 %
+	300%	300 %
