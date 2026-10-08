@@ -119,3 +119,8 @@ Never applied automatically (listed after the port for a person to look at):
 | `a20c63521d` | skip | UI change (new search palette) — Help › Search: find any menu command by name (#815) |
 | `c161eaec73` | skip | fonts (no UI changes from upstream) — Fonts: use craft-fonts as an optional build input; move the Japanese fonts out (#353) (#353) |
 | `b07a2e5b43` | skip | already done here (persist_window in apps/photosuite main.rs) — Remember desktop window and panel sizes across restarts (#587) |
+| `52ccb8a800` | skip | already done here (73b748d canvas close button based on OS) — Document tab close button after the title on Windows and Linux, as in Photoshop (#619) (#832) |
+| `244a99c39f` | skip | UI change: PhotoSuite's own title bar (b932800) — Windows and Linux: one title bar with the app icon (no stacked OS bar); long context menus scroll (#986) |
+| `735bb09a98` | skip | already done differently here (lossy WebP via webp-rust, quality kept per document) — Lossy WebP: a pure-Rust VP8 encoder with quality and lossless controls (#648) (#880) |
+| `3f605afc81` | skip | UI change (menu row sizes) — Menu rows touch, as in native menus: long menus are a fifth shorter (#402) (#844) |
+| `44303db546` | skip | UI change: About dialog (PhotoSuite's own) — About: contributor and model credits compiled in (grab bag + table, self-submitted names) (#898) |
