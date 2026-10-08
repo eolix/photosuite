@@ -27,8 +27,10 @@ attribution ("PhotoCraft contributors", ArtCraft), links to `storytold/photocraf
 
 Never applied automatically (listed after the port for a person to look at):
 
-- brand material (`docs/brand/`, `docs/images/`, `assets/app-icon/`): PhotoCraft's trademark
-  terms; PhotoSuite has its own;
+- everything under `docs/`: PhotoSuite writes its own documentation (upstream's roadmap,
+  scorecard and the rest are not taken), and upstream's `docs/brand/` and `docs/images/` are
+  PhotoCraft's trademark material;
+- `assets/app-icon/`: PhotoCraft's brand; PhotoSuite has its own;
 - `NOTICE`, the licences, `README.md`, `AGENTS.md`, `THIRD-PARTY-*`: PhotoSuite's own records;
 - the translation catalogues (`crates/ui-egui/src/i18n/*.tsv`): PhotoSuite's translations are
   maintained separately; ask before taking upstream's rows;
