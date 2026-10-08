@@ -45,11 +45,11 @@ pub fn start() {
                 canvas,
                 options,
                 Box::new(move |cc| {
-                    PhotosuiteApp::setup_context(&cc.egui_ctx, ThemeKind::Pro);
+                    PhotosuiteApp::setup_context(&cc.egui_ctx, ThemeKind::Midnight);
                     let inbox: Inbox = Arc::default();
                     let mut app = PhotosuiteApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
                     listen_pen(&pen_target, app.stylus.feed.clone());
-                    app.set_theme(&cc.egui_ctx, ThemeKind::Pro);
+                    app.set_theme(&cc.egui_ctx, ThemeKind::Midnight);
                     if let Some(rs) = cc.wgpu_render_state.clone()
                         && !force_cpu
                     {

@@ -96,7 +96,7 @@ fn layout_gives_the_name_what_the_indicators_leave() {
 fn long_names_never_run_under_the_indicators() {
     for ppp in [1.0, 1.5, 2.0] {
         for width in [250.0, 290.0, 520.0] {
-            let h = harness(busy(), ppp, "promedium", width);
+            let h = harness(busy(), ppp, "slate", width);
             check(&recorded(&h.ctx), &format!("@{ppp}x {width}pt"));
         }
     }
@@ -117,7 +117,7 @@ fn click(h: &mut Harness<'_, PhotosuiteApp>, at: Pos2) {
 
 #[test]
 fn the_fx_triangle_hides_and_shows_the_effects_rows() {
-    let mut h = harness(busy(), 1.0, "promedium", 290.0);
+    let mut h = harness(busy(), 1.0, "slate", 290.0);
     let top = h.state().session.active().unwrap().doc.layers.last().unwrap().clone();
     let rows = |h: &Harness<'_, PhotosuiteApp>| recorded(&h.ctx).iter().map(|r| r.row.top()).collect::<Vec<_>>();
     let before = rows(&h);
@@ -141,7 +141,7 @@ fn groups_open(s: &photosuite_engine::Session) -> Vec<bool> {
 
 #[test]
 fn collapse_all_groups_from_the_panel_menu_and_it_is_saved() {
-    let mut h = harness(busy(), 1.0, "promedium", 290.0);
+    let mut h = harness(busy(), 1.0, "slate", 290.0);
     assert!(groups_open(&h.state().session).iter().all(|o| *o));
     let menu = crate::dock::last_rects(&h.ctx).into_iter().find(|(g, _)| *g == crate::dock::Group::Layers).expect("layers group").1;
     // The hamburger sits at the right end of the group's tab strip.
