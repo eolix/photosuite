@@ -3954,7 +3954,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "arboard",
  "eframe",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-algo"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-geom",
@@ -4000,7 +4000,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-automation"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "base64",
  "cap-std",
@@ -4022,7 +4022,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-cli"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-automation",
  "photosuite-codecs",
@@ -4035,7 +4035,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-cms"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "moxcms",
  "rayon",
@@ -4043,7 +4043,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-codecs"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "exr",
  "flate2",
@@ -4064,7 +4064,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-color"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-cms",
  "serde",
@@ -4072,7 +4072,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-compose"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "criterion",
  "photosuite-color",
@@ -4087,7 +4087,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-doc"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-geom",
@@ -4098,7 +4098,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-engine"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "blake3",
  "flate2",
@@ -4128,7 +4128,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-format"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "blake3",
  "flate2",
@@ -4146,14 +4146,14 @@ dependencies = [
 
 [[package]]
 name = "photosuite-geom"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "photosuite-gpu"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "half",
  "log",
@@ -4170,7 +4170,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-io"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "blake3",
  "hayro",
@@ -4195,14 +4195,14 @@ dependencies = [
 
 [[package]]
 name = "photosuite-ops"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-doc",
 ]
 
 [[package]]
 name = "photosuite-paint"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-geom",
@@ -4213,7 +4213,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-plugins"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-geom",
@@ -4228,7 +4228,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-psd"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "flate2",
  "photosuite-psd",
@@ -4239,7 +4239,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-raster"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-geom",
@@ -4249,7 +4249,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-raw"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-raw",
  "png 0.18.1",
@@ -4258,7 +4258,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-tablet"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "block2 0.6.2",
  "objc2 0.6.4",
@@ -4270,7 +4270,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-testkit"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "memory-stats",
  "photosuite-color",
@@ -4281,7 +4281,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-text"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "flate2",
  "parley",
@@ -4295,7 +4295,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-ui-egui"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "base64",
  "eframe",
@@ -4326,7 +4326,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-vector"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "photosuite-color",
  "photosuite-doc",
@@ -4337,7 +4337,7 @@ dependencies = [
 
 [[package]]
 name = "photosuite-web"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "eframe",
  "egui",
@@ -7147,7 +7147,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.9.18"
+version = "0.9.19"
 dependencies = [
  "serde",
  "serde_json",
