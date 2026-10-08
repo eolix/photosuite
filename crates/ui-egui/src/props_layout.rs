@@ -131,7 +131,11 @@ pub fn quick_actions(content: &LayerContent) -> &'static [(&'static str, &'stati
             ("Rasterize Type", "type.rasterizeTypeLayer"),
         ],
         LayerContent::Shape(_) => &[("Rasterize Shape", "layer.rasterize.shape"), ("Convert to Smart Object", "layer.smartObjects.convertToSmartObject")],
-        LayerContent::Smart(_) => &[("Edit Contents", "layer.smartObjects.editContents"), ("Rasterize Smart Object", "layer.rasterize.smartObject")],
+        LayerContent::Smart(_) => &[
+            ("Edit Contents", "layer.smartObjects.editContents"),
+            ("Convert to Layers", "layer.smartObjects.convertToLayers"),
+            ("Rasterize Smart Object", "layer.rasterize.smartObject"),
+        ],
         LayerContent::Group(_) => &[("Ungroup Layers", "layer.ungroupLayers"), ("Convert to Smart Object", "layer.smartObjects.convertToSmartObject")],
         LayerContent::Fill(_) => &[("Rasterize Fill Content", "layer.rasterize.fillContent")],
         LayerContent::Adjustment(_) => &[],
