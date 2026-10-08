@@ -92,3 +92,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `7080e6c56a` | skip | translations maintained separately — Korean labels for Relight's Ambient and Warmth options (#811) |
 | `25f211500b` | skip | translations maintained separately — i18n(ko): drop the duplicate Ambient and Warmth rows (main red since #811 + #824) (#834) |
 | `7a9b591189` | skip | new UI language; translations maintained separately — Italian UI translation (it) (#853) |
+| `abd6f6e591` | skip | translations maintained separately — Localise the UI into Russian: a complete catalog and the missed tl! call sites (#298) (#298) |
