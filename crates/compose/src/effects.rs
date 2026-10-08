@@ -684,6 +684,28 @@ fn paint_fx(
     }
 }
 
+/// The opacity gain of a gradient glow: it is opaque from strength `range²` on (see [`paint_glow`]).
+pub fn glow_gradient_gain(range: f32) -> f32 {
+    let r = if range.is_finite() { range.clamp(0.01, 1.0) } else { 1.0 };
+    1.0 / (r * r)
+}
+
+/// A glow's paint over its map `m`. A gradient runs along the glow rather than across the
+/// canvas: Photoshop colours the glow where its (ranged, contoured) strength is `v` with the
+/// gradient at `1 - v`, so the first stop hugs the edge, and the glow is opaque from `v = range²`
+/// on (photoshop corpus outer-glow-gradient.psd: 1.4/255 mean, against bands across the canvas;
+/// psd-tools layer_params.psd). Glows have no gradient angle, style or Reverse.
+#[allow(clippy::too_many_arguments)]
+fn paint_glow(dst: &mut Buffer, m: &Map, g: &Glow, shape_bounds: Rect, anchor: (f64, f64), big: Rect, patterns: &PreparedPatterns<'_>) {
+    let FxPaint::Gradient(gradient) = &g.paint else {
+        return paint_fx(dst, m, &g.paint, shape_bounds, anchor, big, g.common.blend, g.common.opacity, patterns);
+    };
+    let prepared = PreparedGradient::new(gradient);
+    let gain = glow_gradient_gain(g.range);
+    let strength = Map { w: m.w, h: m.h, v: m.v.iter().map(|v| (v * gain).min(1.0)).collect() };
+    paint(dst, &strength, |i| prepared.sample(1.0 - m.v.get(i).copied().unwrap_or(0.0).clamp(0.0, 1.0)), g.common.blend, g.common.opacity);
+}
+
 /// Normalised weights of a centred box of (fractional) width `w`: tap `i` gets the overlap of
 /// `[i - 0.5, i + 0.5]` with `[-w/2, w/2]`.
 fn box_weights(w: f32) -> Vec<f32> {
@@ -1228,8 +1250,7 @@ pub(crate) fn composite_with_effects_prepared(
     }
     for (i, e) in rev() {
         if let Effect::OuterGlow(g) = e {
-            let m = fx(i, 0);
-            paint_fx(&mut work, &m, &g.paint, sb, anchor, big, g.common.blend, g.common.opacity, patterns);
+            paint_glow(&mut work, &fx(i, 0), g, sb, anchor, big, patterns);
         }
     }
 
@@ -1279,8 +1300,7 @@ pub(crate) fn composite_with_effects_prepared(
     }
     for (i, e) in rev() {
         if let Effect::InnerGlow(g) = e {
-            let m = rel(fx(i, 0));
-            paint_fx(&mut lay, &m, &g.paint, sb, anchor, big, g.common.blend, g.common.opacity, patterns);
+            paint_glow(&mut lay, &rel(fx(i, 0)), g, sb, anchor, big, patterns);
         }
     }
     for (i, e) in rev() {

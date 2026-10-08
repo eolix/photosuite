@@ -547,6 +547,27 @@ fn outer_and_inner_glow_regions() {
     assert!(close4(px(&d, 5, 20), [1.0; 4]));
 }
 
+// A glow gradient runs along the glow, not across the canvas: the first stop hugs the shape on
+// every side and later stops lie further out, opaque until the glow fades (#443).
+#[test]
+fn glow_gradient_follows_the_shape() {
+    let red_to_blue = Gradient { stops: vec![(0.0, Color::rgb(1.0, 0.0, 0.0)), (1.0, Color::rgb(0.0, 0.0, 1.0))], ..Gradient::default() };
+    let g = Glow { paint: FxPaint::Gradient(red_to_blue), technique: GlowTechnique::Softer, size: 8.0, ..glow(GlowTechnique::Softer, GlowSource::Edge) };
+    let d = fx_doc(vec![Effect::OuterGlow(g.clone())]);
+    let near = px(&d, 9, 20);
+    for p in [px(&d, 30, 20), px(&d, 20, 9), px(&d, 20, 30)] {
+        assert!((0..4).all(|c| (p[c] - near[c]).abs() < 1.0 / 255.0), "{p:?} vs {near:?}");
+    }
+    assert!(near[0] > 0.8 && near[2] < 0.2 && near[1] < 0.1, "red at the edge: {near:?}");
+    let out = px(&d, 5, 20);
+    assert!(out[2] > out[0] && out[1] < 0.9, "bluer and fading further out: {out:?}");
+    // An inner glow's gradient also starts at the edge.
+    let d = fx_doc(vec![Effect::InnerGlow(g)]);
+    let (edge, top) = (px(&d, 10, 20), px(&d, 20, 10));
+    assert!((0..4).all(|c| (edge[c] - top[c]).abs() < 1.0 / 255.0), "{edge:?} vs {top:?}");
+    assert!(edge[0] > 0.8 && edge[2] < 0.2, "{edge:?}");
+}
+
 #[test]
 fn gradient_overlay_follows_angle_and_reverse() {
     let g = Gradient { stops: vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], angle: 0.0, ..Gradient::default() };
@@ -1427,5 +1448,42 @@ fn effect_maps_with_nested_rayon_work_do_not_deadlock() {
         Ok(()) => {}
         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => panic!("effect-map rendering deadlocked (#276)"),
         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => panic!("render thread panicked"),
+    }
+}
+
+// Photo Filter multiplies D50 XYZ (relative to white) by the filter colour's, then restores the
+// encoded luminosity like the Luminosity blend mode; 32-bit documents keep luminance Y instead.
+// Samples from the photoshop corpus photo-filter.psd (Warming Filter (85), density 40 %, Preserve
+// Luminosity): pure blue gains red, and white stays white (#442).
+#[test]
+fn photo_filter_matches_photoshop() {
+    let filter = |color: [f32; 3], depth, v: [f32; 3]| {
+        let adj = Adjustment::PhotoFilter { color, density: 0.4, preserve_luminosity: true };
+        let mut b = Buffer::filled(Rect::new(0, 0, 1, 1), [v[0], v[1], v[2], 1.0]);
+        adjust::apply_depth(&adj, &mut b, adjust::Transfer::for_document(ColorMode::Rgb, depth), Some(depth));
+        [b.px[0][0], b.px[0][1], b.px[0][2]].map(|c| c * 255.0)
+    };
+    let warming = [236.0 / 255.0, 138.0 / 255.0, 0.0];
+    for depth in [SampleType::U8, SampleType::U16] {
+        for (v, ps) in [
+            ([1.0, 0.0, 0.0], [239.0, 7.0, 7.0]),
+            ([0.0, 1.0, 0.0], [69.0, 220.0, 0.0]),
+            ([0.0, 0.0, 1.0], [46.0, 0.0, 130.0]),
+            ([1.0, 1.0, 0.0], [255.0, 240.0, 80.0]),
+            ([0.5019, 0.5019, 0.5019], [140.0, 124.0, 116.0]),
+            ([0.949, 0.949, 0.949], [255.0, 238.0, 229.0]),
+            ([1.0, 1.0, 1.0], [255.0, 255.0, 255.0]),
+            ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),
+        ] {
+            let got = filter(warming, depth, v);
+            assert!(got.iter().zip(ps).all(|(g, p)| (g - p).abs() <= 1.0), "{depth:?} {v:?}: got {got:?} want {ps:?}");
+        }
+    }
+    // The 32-bit file picks the same numbers as linear values (Lab 81.5, 9.41, 82.19). Its fit is
+    // looser (mean 0.9/255 over the file, 6.9/255 with a plain RGB multiply).
+    let warming32 = [0.966_445_6, 0.761_806_3, 0.0];
+    for (v, ps) in [([0.2159, 0.2159, 0.2159], [66.0, 53.0, 40.0]), ([1.0, 1.0, 0.0], [255.0, 251.0, 0.0]), ([1.0, 0.0, 0.0], [255.0, 0.0, 0.0])] {
+        let got = filter(warming32, SampleType::F32, v);
+        assert!(got.iter().zip(ps).all(|(g, p)| (g - p).abs() <= 2.5), "F32 {v:?}: got {got:?} want {ps:?}");
     }
 }
