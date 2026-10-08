@@ -43,6 +43,10 @@ Never applied automatically (listed after the port for a person to look at):
   sizes, layout, fonts, colours, themes, icons). Behaviour and fixes in UI code are taken; the
   visual parts of a port are reverted, or the commit is skipped when it is mostly visual.
 - **Nothing under `docs/`** is taken (see above).
+- **Themes are PhotoSuite's**: upstream's theme names are mapped onto PhotoSuite's by role
+  (Pro → Midnight, ProMedium → Slate, Studio and Classic → Anthracite, StudioLight → Pearl);
+  `upstream port` does it in Rust sources, the rest by hand. Upstream palette changes are never
+  taken.
 - **No translations**: upstream's catalogues, languages and i18n code are never taken; PhotoSuite
   manages its own. Translation commits are skipped.
 

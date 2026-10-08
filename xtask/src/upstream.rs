@@ -57,8 +57,26 @@ fn upstream_dir(root: &Path) -> PathBuf {
 /// must survive [`map_text`] unchanged.
 const KEEP: &[&str] = &["storytold/photocraft", "photocraft-corpus", "PhotoCraft contributors", "PhotoCraft (https://", "PhotoCraft](https://"];
 
-/// PhotoCraft's names → PhotoSuite's: the app id (the macOS bundle uses `app.photosuite`), then
-/// every casing of the name.
+/// PhotoCraft's themes → PhotoSuite's, by role: Pro (darkest) → Midnight, ProMedium (the
+/// default) → Slate (the default), Studio and Classic → Anthracite, StudioLight → Pearl. Longer
+/// names first, so `ProMedium` is not read as `Pro`. Only the unmistakable spellings: a bare
+/// `"pro"` or `"studio"` string is mapped by hand.
+const THEMES: &[(&str, &str)] = &[
+    ("ThemeKind::ProMedium", "ThemeKind::Slate"),
+    ("ThemeKind::StudioLight", "ThemeKind::Pearl"),
+    ("ThemeKind::Studio", "ThemeKind::Anthracite"),
+    ("ThemeKind::Classic", "ThemeKind::Anthracite"),
+    ("ThemeKind::Pro", "ThemeKind::Midnight"),
+    ("\"proMedium\"", "\"slate\""),
+    ("\"promedium\"", "\"slate\""),
+    ("\"studioLight\"", "\"pearl\""),
+    ("\"studiolight\"", "\"pearl\""),
+    ("window.theme.proMedium", "window.theme.slate"),
+    ("window.theme.studioLight", "window.theme.pearl"),
+];
+
+/// PhotoCraft's names → PhotoSuite's: the app id (the macOS bundle uses `app.photosuite`), every
+/// casing of the name, and in Rust sources the theme names ([`THEMES`]).
 fn map_text(text: &str, path: &str) -> String {
     let mut s = text.to_string();
     let mut guards = Vec::new();
@@ -73,6 +91,11 @@ fn map_text(text: &str, path: &str) -> String {
     s = s.replace("ai.storyteller.photocraft", app_id);
     for (from, to) in [("PHOTOCRAFT", "PHOTOSUITE"), ("PhotoCraft", "PhotoSuite"), ("Photocraft", "Photosuite"), ("photocraft", "photosuite")] {
         s = s.replace(from, to);
+    }
+    if path.ends_with(".rs") {
+        for (from, to) in THEMES {
+            s = s.replace(from, to);
+        }
     }
     for (g, k) in guards {
         s = s.replace(&g, k);
@@ -450,6 +473,16 @@ mod tests {
         for p in ["crates/engine/src/lib.rs", "crates/io/README.md"] {
             assert!(!held_back(p), "{p}");
         }
+    }
+
+    #[test]
+    fn themes_are_mapped_in_rust_sources() {
+        let src = r#"set(ThemeKind::ProMedium); set(ThemeKind::Pro); set(ThemeKind::StudioLight); set(ThemeKind::Studio); ui.set({"theme": "studioLight"})"#;
+        assert_eq!(
+            map_text(src, "crates/ui-egui/src/x.rs"),
+            r#"set(ThemeKind::Slate); set(ThemeKind::Midnight); set(ThemeKind::Pearl); set(ThemeKind::Anthracite); ui.set({"theme": "pearl"})"#
+        );
+        assert_eq!(map_text("ThemeKind::Pro", "docs/ui.md"), "ThemeKind::Pro");
     }
 
     #[test]
