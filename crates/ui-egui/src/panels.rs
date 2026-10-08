@@ -36,7 +36,7 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     &[
         &[Tool::Pen],
         &[Tool::Type, Tool::VerticalType],
-        &[Tool::PathSelection],
+        &[Tool::PathSelection, Tool::DirectSelection],
         &[Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line, Tool::CustomShape],
     ],
     &[&[Tool::Hand], &[Tool::Zoom]],

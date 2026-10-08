@@ -4,6 +4,7 @@
 //! shape layers (fill + stroke), vector masks, and the inverse direction (tracing a coverage
 //! mask back into a path for "Make Work Path").
 //!
+//! * [`edit`]: point-level path editing (Direct Selection, Convert Point) and hit testing.
 //! * [`flatten`]: cubic Bézier flattening with a distance tolerance.
 //! * [`raster`]: exact area-coverage scanline rasterizer (non-zero / even-odd per component,
 //!   boolean combination of components, inversion).
@@ -17,6 +18,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod edit;
 pub mod flatten;
 pub mod raster;
 pub mod shapes;

@@ -32,11 +32,11 @@ use crate::{EngineError, Result, Session};
 /// Keys PSD uses for a shape layer's vector data; dropped when a shape is rasterized.
 const SHAPE_BLOCKS: [&[u8; 4]; 8] = [b"vmsk", b"vsms", b"vogk", b"vstk", b"vscg", b"SoCo", b"GdFl", b"PtFl"];
 
-fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
+pub(crate) fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
     EngineError::BadParams { cmd: cmd.into(), msg: msg.into() }
 }
 
-fn has_doc(s: &Session) -> std::result::Result<(), String> {
+pub(crate) fn has_doc(s: &Session) -> std::result::Result<(), String> {
     s.active().map(|_| ()).ok_or_else(|| "no document open".into())
 }
 
@@ -109,7 +109,7 @@ fn paste_shape_stroke(s: &mut Session, p: &Value) -> Result<Value> {
     shape_info(s, id)
 }
 
-fn layer_id(s: &Session, p: &Value) -> Result<LayerId> {
+pub(crate) fn layer_id(s: &Session, p: &Value) -> Result<LayerId> {
     match p.get("layer").and_then(Value::as_u64) {
         Some(id) => Ok(LayerId(id)),
         None => s.active().and_then(|d| d.active_layer).ok_or(EngineError::Other("no active layer".into())),
@@ -120,7 +120,7 @@ fn f64p(p: &Value, k: &str) -> Option<f64> {
     p.get(k).and_then(Value::as_f64)
 }
 
-fn pt(v: &Value) -> Option<Point> {
+pub(crate) fn pt(v: &Value) -> Option<Point> {
     match v {
         Value::Array(a) if a.len() >= 2 => Some(Point::new(a[0].as_f64()?, a[1].as_f64()?)),
         Value::Object(_) => Some(Point::new(v.get("x")?.as_f64()?, v.get("y")?.as_f64()?)),
@@ -128,7 +128,7 @@ fn pt(v: &Value) -> Option<Point> {
     }
 }
 
-fn nums<const N: usize>(p: &Value, k: &str) -> Option<[f64; N]> {
+pub(crate) fn nums<const N: usize>(p: &Value, k: &str) -> Option<[f64; N]> {
     let a = p.get(k)?.as_array()?;
     if a.len() < N {
         return None;
@@ -518,7 +518,7 @@ fn shape_info(s: &Session, id: LayerId) -> Result<Value> {
     }))
 }
 
-fn with_shape<R>(s: &mut Session, id: LayerId, label: &str, f: impl FnOnce(&mut ShapeLayer, &mut Layer) -> Result<R>) -> Result<R> {
+pub(crate) fn with_shape<R>(s: &mut Session, id: LayerId, label: &str, f: impl FnOnce(&mut ShapeLayer, &mut Layer) -> Result<R>) -> Result<R> {
     s.edit(label, |doc, _| {
         let snapshot = doc.clone();
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
@@ -700,6 +700,19 @@ fn resolve_path(s: &Session, name: Option<&str>) -> Result<Path> {
     d.doc.paths.iter().find(|p| p.name == n).map(|p| p.path.clone()).ok_or_else(|| EngineError::Other(format!("no path named \"{n}\"")))
 }
 
+/// The path an edit targets, except a shape layer's (edit those with [`with_shape`], which
+/// re-renders them): `layer`'s vector mask when given, else the work path or a saved path.
+pub(crate) fn path_mut<'a>(doc: &'a mut Document, name: &str, layer: Option<LayerId>) -> Result<&'a mut Path> {
+    if let Some(id) = layer {
+        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+        return l.vector_mask.as_mut().map(|vm| &mut vm.path).ok_or_else(|| EngineError::Other("active layer has no shape path or vector mask".into()));
+    }
+    if is_work(Some(name)) {
+        return doc.work_path.as_mut().ok_or_else(|| EngineError::Other("no work path".into()));
+    }
+    doc.paths.iter_mut().find(|q| q.name == name).map(|q| &mut q.path).ok_or_else(|| EngineError::Other(format!("no path named \"{name}\"")))
+}
+
 fn paths_list(s: &Session) -> Result<Value> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let doc = &d.doc;
@@ -850,17 +863,8 @@ fn path_transform(s: &mut Session, p: &Value) -> Result<Value> {
         return Ok(json!({ "name": name, "matrix": m }));
     }
     s.edit("Transform Path", |doc, _| {
-        if let Some(id) = layer_id {
-            let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-            let vm = l.vector_mask.as_mut().ok_or_else(|| EngineError::Other("active layer has no shape path or vector mask".into()))?;
-            vm.path = vm.path.transform(&transform);
-        } else if is_work(Some(&name)) {
-            let path = doc.work_path.as_mut().ok_or_else(|| EngineError::Other("no work path".into()))?;
-            *path = path.transform(&transform);
-        } else {
-            let path = doc.paths.iter_mut().find(|path| path.name == name).ok_or_else(|| EngineError::Other(format!("no path named \"{name}\"")))?;
-            path.path = path.path.transform(&transform);
-        }
+        let path = path_mut(doc, &name, layer_id)?;
+        *path = path.transform(&transform);
         Ok(())
     })?;
     Ok(json!({ "name": name, "matrix": m }))
@@ -1226,7 +1230,7 @@ fn selection_to_shape(s: &mut Session, p: &Value) -> Result<Value> {
 // Specs
 // ---------------------------------------------------------------------------
 
-const PATH_FORM: &str = r##"path: {"subpaths":[{"closed":bool=true,"op":"combine|subtract|intersect|exclude","knots":[[x,y] | {"anchor":[x,y],"in":[x,y],"out":[x,y],"smooth":bool}]}],"fillRule":"nonzero|evenodd","inverted":bool}"##;
+pub(crate) const PATH_FORM: &str = r##"path: {"subpaths":[{"closed":bool=true,"op":"combine|subtract|intersect|exclude","knots":[[x,y] | {"anchor":[x,y],"in":[x,y],"out":[x,y],"smooth":bool}]}],"fillRule":"nonzero|evenodd","inverted":bool}"##;
 
 macro_rules! spec {
     ($id:literal, $label:literal, [$($m:literal),*], $params:expr, $en:expr, $run:expr) => {
@@ -1234,7 +1238,7 @@ macro_rules! spec {
     };
 }
 
-fn leak(s: String) -> &'static str {
+pub(crate) fn leak(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 
