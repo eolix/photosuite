@@ -361,7 +361,8 @@ fn check_bar_clear(h: &Harness<'static, PhotosuiteApp>, what: &str) {
         assert!(r.top() >= bar - 0.5, "{what}: popup {r:?} covers the menu bar (bottom {bar})");
         assert!(r.bottom() <= screen.bottom() + 0.5, "{what}: popup {r:?} runs off the window {screen:?}");
     }
-    for title in crate::menus::TOP_MENUS {
+    // The bar PhotoSuite draws: menus whose items are all hidden (Type) have no title.
+    for title in crate::menus::visible_top_menus(h.state()) {
         // The title is the topmost node of that name (a submenu row can share it).
         let t = h.query_all_by_label(title).map(|n| n.rect()).min_by(|a, b| a.top().total_cmp(&b.top())).expect("menu title");
         assert!(popups(h).iter().all(|r| !r.intersects(t.shrink(1.0))), "{what}: {title} is covered");
