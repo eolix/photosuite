@@ -218,6 +218,29 @@ fn kind(subject: &str) -> &'static str {
     }
 }
 
+/// PhotoSuite's commit subjects start with one of these types, and nothing else.
+const TYPES: &[&str] = &["feat", "fix", "chore", "docs", "nit"];
+
+/// The message with its subject as `<type>: <description>`. The description is upstream's subject
+/// without its own `word:` / `word(scope):` prefix; the type is that prefix when it is one of
+/// [`TYPES`], and otherwise the one [`kind`] guesses (`feature` → `feat`). The body is kept.
+fn standard_subject(message: &str) -> String {
+    let (subject, rest) = message.split_once('\n').unwrap_or((message, ""));
+    let subject = subject.trim();
+    let guessed = match kind(subject) {
+        "feature" => "feat",
+        k => k,
+    };
+    let (ty, description) = match subject.split_once(':') {
+        Some((head, tail)) if !head.is_empty() && head.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "()-_/".contains(c)) => {
+            let word = head.split('(').next().unwrap_or(head);
+            (TYPES.iter().find(|t| **t == word).copied().unwrap_or(guessed), tail.trim())
+        }
+        _ => (guessed, subject),
+    };
+    if rest.is_empty() { format!("{ty}: {description}") } else { format!("{ty}: {description}\n{rest}") }
+}
+
 /// How many of the commit's files PhotoSuite no longer has as upstream had them before it
 /// (changed here, or gone), out of the files it touches that existed.
 fn divergence(root: &Path, up: &Path, sha: &str) -> Result<(usize, usize), String> {
@@ -369,7 +392,7 @@ fn port(root: &Path, up: &Path, sha: &str) -> Result<(), String> {
     let meta = git(up, &["log", "-1", "--format=%an%x00%ae%x00%aD%x00%B", &full])?;
     let mut parts = meta.splitn(4, '\0');
     let (name, email, date, body) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""), parts.next().unwrap_or(""), parts.next().unwrap_or(""));
-    let message = format!("{}\n\n{TRAILER}{full}\n", qualify_issue_refs(body.trim_end()));
+    let message = format!("{}\n\n{TRAILER}{full}\n", standard_subject(&qualify_issue_refs(body.trim_end())));
     let env = [("GIT_AUTHOR_NAME", name), ("GIT_AUTHOR_EMAIL", email), ("GIT_AUTHOR_DATE", date)];
     let base_tree = side_tree(root, up, &format!("{full}^"), &paths)?;
     let new_tree = side_tree(root, up, &full, &paths)?;
@@ -426,6 +449,23 @@ mod tests {
         for p in ["crates/ui-egui/src/i18n/catalog.rs", "crates/ui-egui/src/i18n/mod.rs", "crates/engine/src/lib.rs", "crates/io/README.md"] {
             assert!(!held_back(p), "{p}");
         }
+    }
+
+    #[test]
+    fn subjects_take_photosuite_types() {
+        for (from, to) in [
+            ("fix(automation): downscale bridge screenshots (#753)", "fix: downscale bridge screenshots (#753)"),
+            ("feat(ui): add bounded Liquify redo history (#435)", "feat: add bounded Liquify redo history (#435)"),
+            ("docs: add star history chart to README (#469)", "docs: add star history chart to README (#469)"),
+            ("i18n: add Czech (cs) UI translation (#328)", "chore: add Czech (cs) UI translation (#328)"),
+            ("algo: fix flaky cancel/progress test (#609)", "fix: fix flaky cancel/progress test (#609)"),
+            ("rustfmt crates/ui-egui/src/canvas.rs (#819)", "chore: rustfmt crates/ui-egui/src/canvas.rs (#819)"),
+            ("Marquee: stop the selection at the canvas edge (#263)", "feat: Marquee: stop the selection at the canvas edge (#263)"),
+            ("Fix vector pixel bounds overflow (#747)", "fix: Fix vector pixel bounds overflow (#747)"),
+        ] {
+            assert_eq!(standard_subject(from), to);
+        }
+        assert_eq!(standard_subject("fix(x): a\n\nbody\nmore"), "fix: a\n\nbody\nmore");
     }
 
     #[test]

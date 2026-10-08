@@ -36,6 +36,15 @@ Never applied automatically (listed after the port for a person to look at):
   maintained separately; ask before taking upstream's rows;
 - `.github/`: PhotoSuite's CI is set up differently.
 
+## Rules for every port
+
+- **Commit subjects** are `<type>: <description>`, the type one of `feat`, `fix`, `chore`,
+  `docs`, `nit`. `upstream port` writes them that way.
+- **No UI changes**: nothing from upstream changes how PhotoSuite looks (modals and dialogs,
+  sizes, layout, fonts, colours, themes, icons). Behaviour and fixes in UI code are taken; the
+  visual parts of a port are reverted, or the commit is skipped when it is mostly visual.
+- **Nothing under `docs/`** is taken (see above).
+
 ## Procedure (for the session doing the sync)
 
 1. `git -C ../photocraft fetch` (or `cargo xtask upstream status --fetch`), then
