@@ -173,6 +173,8 @@ pub fn authorize_engine_command(id: &str, params: &Value) -> Result<(), Automati
             id,
             "pattern.import"
                 | "pattern.export"
+                // PhotoSuite's shape library import reads a .csh file by path only.
+                | "shape.presets.importCsh"
                 | "edit.presets.migratePresets"
                 | "measurementLog.export"
                 | "layer.videoLayers.newVideoLayerFromFile"
@@ -440,6 +442,7 @@ mod tests {
             "file.saveACopy",
             "file.export.saveForWebLegacy",
             "pattern.import",
+            "shape.presets.importCsh",
             "layer.smartObjects.exportContents",
             "measurementLog.export",
             "layer.videoLayers.reloadFrame",
