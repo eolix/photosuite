@@ -207,7 +207,15 @@ pub fn raw_params(cmd: &str, p: &Value) -> Result<CameraRaw> {
     if let Value::Object(m) = &mut q {
         m.remove("layer");
     }
-    serde_json::from_value(q).map_err(|e| bad(cmd, format!("bad params: {e}")))
+    let mut cr: CameraRaw = serde_json::from_value(q).map_err(|e| bad(cmd, format!("bad params: {e}")))?;
+    // The noise stages turn these straight into a guided-filter radius and a
+    // blur sigma, so an out-of-range value means unbounded work. Clamp to the
+    // documented 0..100 (part of #707).
+    cr.noise_luminance = cr.noise_luminance.clamp(0.0, 100.0);
+    cr.noise_luminance_detail = cr.noise_luminance_detail.clamp(0.0, 100.0);
+    cr.noise_color = cr.noise_color.clamp(0.0, 100.0);
+    cr.noise_color_detail = cr.noise_color_detail.clamp(0.0, 100.0);
+    Ok(cr)
 }
 
 // ---------- pixels ----------
