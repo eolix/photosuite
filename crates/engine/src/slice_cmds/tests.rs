@@ -1,4 +1,5 @@
 use super::*;
+use photosuite_doc::LayerId;
 use photosuite_doc::effects::Effect;
 
 fn session(depth: u32) -> Session {
@@ -195,4 +196,50 @@ fn exhausted_slice_ids_fail_without_mutating_document_or_history() {
         assert_eq!(s.active().unwrap().history.past_len(), past, "{command}");
         assert_eq!(s.active().unwrap().revision, revision, "{command}");
     }
+}
+
+#[test]
+fn rejected_slice_options_change_nothing() {
+    // #910: an invalid option on an auto slice used to promote it before failing.
+    let mut s = session(8);
+    let past = s.active().unwrap().history.past_len();
+    assert!(s.execute("slice.set", json!({"number": 1, "kind": "bogus"})).is_err());
+    assert!(doc(&s).slices.is_empty());
+    assert_eq!(s.active().unwrap().history.past_len(), past);
+    // A user slice moved off the canvas is rejected without committing the move.
+    let id = s.execute("slice.new", json!({"rect": [0, 0, 10, 10]})).unwrap()["slice"].as_u64().unwrap() as u32;
+    let past = s.active().unwrap().history.past_len();
+    assert!(s.execute("slice.set", json!({"slice": id, "rect": [500, 500, 10, 10]})).is_err());
+    assert_eq!(doc(&s).slices.get(id).unwrap().rect, Rect::new(0, 0, 10, 10));
+    assert_eq!(s.active().unwrap().history.past_len(), past);
+}
+
+#[test]
+fn dividing_an_auto_slice_is_one_step() {
+    // #911: one undo restores the original auto slice.
+    let mut s = session(8);
+    let past = s.active().unwrap().history.past_len();
+    let r = s.execute("slice.divide", json!({"number": 1, "vertical": 2})).unwrap();
+    assert_eq!(r["count"], 2);
+    assert_eq!(doc(&s).slices.list.len(), 2);
+    assert_eq!(s.active().unwrap().history.past_len(), past + 1);
+    assert!(s.undo());
+    assert!(doc(&s).slices.is_empty());
+    // A rejected division doesn't promote either.
+    assert!(s.execute("slice.divide", json!({"number": 1, "vertical": 1000})).is_err());
+    assert!(doc(&s).slices.is_empty());
+    assert_eq!(s.active().unwrap().history.past_len(), past);
+}
+
+#[test]
+fn slice_options_after_an_explicit_promote_is_its_own_step() {
+    // #912: Slice Options used to fold into an earlier, separate Promote.
+    let mut s = session(8);
+    s.execute("slice.promote", json!({"number": 1})).unwrap();
+    s.execute("slice.set", json!({"number": 1, "name": "renamed"})).unwrap();
+    assert!(s.undo());
+    assert_eq!(doc(&s).slices.list.len(), 1, "the promotion survives undoing the rename");
+    assert_eq!(doc(&s).slices.list[0].name, "");
+    assert!(s.undo());
+    assert!(doc(&s).slices.is_empty());
 }
