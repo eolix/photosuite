@@ -124,3 +124,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `735bb09a98` | skip | already done differently here (lossy WebP via webp-rust, quality kept per document) — Lossy WebP: a pure-Rust VP8 encoder with quality and lossless controls (#648) (#880) |
 | `3f605afc81` | skip | UI change (menu row sizes) — Menu rows touch, as in native menus: long menus are a fifth shorter (#402) (#844) |
 | `44303db546` | skip | UI change: About dialog (PhotoSuite's own) — About: contributor and model credits compiled in (grab bag + table, self-submitted names) (#898) |
+| `0f16bce0c5` | skip | already done differently here (PhotoSuite's own Magnetic Lasso, magnetic_ui.rs) — Add the Magnetic Lasso tool (#864) |
