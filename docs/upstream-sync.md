@@ -127,3 +127,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `0f16bce0c5` | skip | already done differently here (PhotoSuite's own Magnetic Lasso, magnetic_ui.rs) — Add the Magnetic Lasso tool (#864) |
 | `07174271d5` | skip | only held-back files (translations / CI / brand / records) — CI: never cancel main's runs; trim per-PR runner time (#800) |
 | `00c406f589` | skip | tests behaviour from skipped 9aef02cac3 (menus open on press) — Test: one press-drag-release gesture crosses menu titles and enters submenus (#775) (#837) |
+| `1d8a32ed83` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on the org macos-release runner |
