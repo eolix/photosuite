@@ -231,7 +231,7 @@ mod tests {
         let mut gray = doc();
         gray.mode = photosuite_doc::ColorMode::Grayscale;
         gray.icc_profile = Some(photosuite_engine::color_cmds::working_profile(gray.mode).to_bytes());
-        assert_eq!(profile_name(&gray), "sGray (sRGB tone curve, Photosuite)");
+        assert_eq!(profile_name(&gray), "sGray (sRGB tone curve, PhotoSuite)");
 
         let mut custom = (*photosuite_engine::color_cmds::working_profile(photosuite_doc::ColorMode::Cmyk)).clone();
         custom.description = "PhotoSuite Studio CMYK".into();
