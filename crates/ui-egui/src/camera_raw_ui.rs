@@ -637,10 +637,7 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &egui::Context) {
         let ok = if d.opened_file.is_some() { tl!("Open") } else { tl!("OK") };
         if let Some(role) = widgets::dialog_buttons(
             &mut fu,
-            &[
-                widgets::DialogButton::new(widgets::ButtonRole::Default, ok, 90.0),
-                widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 90.0),
-            ],
+            &[widgets::DialogButton::new(widgets::ButtonRole::Default, ok, 90.0), widgets::DialogButton::new(widgets::ButtonRole::Cancel, tl!("Cancel"), 90.0)],
         ) {
             action = Some(if role == widgets::ButtonRole::Default { "ok" } else { "cancel" });
         }

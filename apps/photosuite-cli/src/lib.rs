@@ -171,8 +171,7 @@ fn export_opts(a: &Args) -> Result<ExportOptions, String> {
     // TIFF output is flat unless asked: scripted conversions keep predictable sizes.
     let mut o = ExportOptions { tiff_layers: a.has("--tiff-layers"), ..Default::default() };
     if let Some(q) = a.get("--quality") {
-        let q: u8 =
-            q.parse().ok().filter(|q| (1..=100).contains(q)).ok_or_else(|| format!("bad --quality `{q}`: expected a whole number from 1 to 100"))?;
+        let q: u8 = q.parse().ok().filter(|q| (1..=100).contains(q)).ok_or_else(|| format!("bad --quality `{q}`: expected a whole number from 1 to 100"))?;
         o.encode.jpeg_quality = q;
         // WebP with a quality is lossy WebP.
         o.encode.webp_lossless = false;

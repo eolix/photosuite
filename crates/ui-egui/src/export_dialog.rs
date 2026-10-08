@@ -11,8 +11,7 @@ use crate::state::DialogKind;
 use crate::theme::Tokens;
 use crate::{ExportSettings, PhotosuiteApp};
 
-const FORMATS: [(&str, &str); 6] =
-    [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP"), ("webpLossless", "WebP (lossless)"), ("tif", "TIFF"), ("tga", "TGA")];
+const FORMATS: [(&str, &str); 6] = [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP"), ("webpLossless", "WebP (lossless)"), ("tif", "TIFF"), ("tga", "TGA")];
 
 /// The file extension a format choice writes.
 fn file_ext(fmt: &str) -> &str {
