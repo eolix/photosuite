@@ -120,7 +120,8 @@ fn can_float(s: &Session) -> std::result::Result<(), String> {
     if !matches!(l.content, LayerContent::Raster(_)) {
         return Err("the active layer has no pixels to move".into());
     }
-    if l.locks.all || l.locks.position {
+    let locks = st.doc.effective_locks(l.id);
+    if locks.all || locks.position {
         return Err(format!("layer \"{}\" is locked", l.name));
     }
     Ok(())

@@ -16,7 +16,7 @@ use photosuite_algo::puppet::{PuppetDensity, PuppetMode, PuppetPin, PuppetWarp, 
 use photosuite_algo::transform::Interp;
 use photosuite_algo::warp::{warp_mesh_gray, warp_mesh_surface};
 use photosuite_color::PixelFormat;
-use photosuite_doc::{Document, Layer, LayerContent, LayerId, SmartFilter};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, Locks, SmartFilter};
 use photosuite_geom::Rect;
 use photosuite_raster::Surface;
 use serde_json::{Value, json};
@@ -220,8 +220,9 @@ fn float_background(l: &mut Layer) {
     }
 }
 
-fn check_locks(l: &Layer, position: bool) -> Result<()> {
-    if l.locks.all || l.locks.pixels || (position && l.locks.position) {
+fn check_locks(l: &Layer, group: Locks, position: bool) -> Result<()> {
+    let locks = l.locks.union(group);
+    if locks.all || locks.pixels || (position && locks.position) {
         return Err(EngineError::Other(format!("layer \"{}\" is locked", l.name)));
     }
     Ok(())
@@ -248,6 +249,7 @@ fn run_on_layer(
     s.edit(label, |doc: &mut Document, _| {
         let canvas = doc.bounds();
         let selection = doc.selection.clone();
+        let group = crate::transform_cmds::group_locks(doc, id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
         if let LayerContent::Smart(_) = l.content {
             let sf = SmartFilter { command: cmd.to_string(), params: params.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
@@ -256,7 +258,7 @@ fn run_on_layer(
         if moves {
             float_background(l);
         }
-        check_locks(l, moves)?;
+        check_locks(l, group, moves)?;
         let LayerContent::Raster(surf) = &mut l.content else {
             return Err(EngineError::Other(format!("{label} needs a pixel layer (rasterize it first)")));
         };

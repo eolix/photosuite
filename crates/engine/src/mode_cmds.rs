@@ -102,7 +102,7 @@ fn rotate_arbitrary(s: &mut Session, p: &Value) -> Result<Value> {
                 let locks = l.locks;
                 l.locks.position = false;
                 l.locks.all = false;
-                crate::transform_cmds::transform_layer(None, l, &h, Some(a), interp)?;
+                crate::transform_cmds::transform_layer(None, photosuite_doc::Locks::default(), l, &h, Some(a), interp)?;
                 l.locks = locks;
             }
             // What Free Transform leaves alone: unlinked vector masks, gradient angles, artboards…

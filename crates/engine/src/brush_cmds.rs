@@ -486,9 +486,8 @@ fn color_replacement(s: &mut Session, p: &Value) -> Result<Value> {
     let stroke = Stroke { brush, points: pts };
     let dmg = s.edit("Color Replacement", |doc, _| {
         let sel = doc.selection.clone();
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let lock = l.locks.transparency;
-        let surf = paint_surface(l, &json!({}))?;
+        let lock = doc.effective_locks(id).transparency;
+        let surf = paint_surface(doc, id, &json!({}))?;
         Ok(apply_color_replacement(surf, &stroke, &rs, sel.as_ref(), lock))
     })?;
     Ok(damage_json(s, dmg))

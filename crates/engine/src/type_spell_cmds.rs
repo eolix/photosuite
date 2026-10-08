@@ -33,7 +33,7 @@ fn char_at(text: &str, bi: usize) -> usize {
 
 /// Type layers top to bottom (Layers panel order), skipping fully locked ones.
 fn type_layers(doc: &Document) -> Vec<LayerId> {
-    doc.walk().into_iter().rev().filter(|(_, _, l)| matches!(l.content, LayerContent::Text(_)) && !l.locks.all).map(|(_, _, l)| l.id).collect()
+    doc.walk().into_iter().rev().filter(|(p, _, l)| matches!(l.content, LayerContent::Text(_)) && !doc.locks_at(p).all).map(|(_, _, l)| l.id).collect()
 }
 
 fn has_type(s: &Session) -> std::result::Result<(), String> {

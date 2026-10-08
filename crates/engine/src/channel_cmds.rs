@@ -514,9 +514,8 @@ pub(crate) fn target_surface<'a>(doc: &'a mut Document, layer: Option<LayerId>, 
         Target::QuickMask => doc.quick_mask.as_mut().map(|c| (&mut c.surface, false)).ok_or_else(|| EngineError::Other("not in Quick Mask mode".into())),
         t => {
             let id = layer.ok_or_else(|| EngineError::Other("no active layer".into()))?;
-            let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-            let lock = l.locks.transparency && t == Target::Pixels;
-            Ok((crate::commands::paint_surface(l, p)?, lock))
+            let lock = doc.effective_locks(id).transparency && t == Target::Pixels;
+            Ok((crate::commands::paint_surface(doc, id, p)?, lock))
         }
     }
 }
@@ -1361,8 +1360,7 @@ fn apply_image(s: &mut Session, p: &Value) -> Result<Value> {
         }
         let id = layer.ok_or_else(|| EngineError::Other("no active layer".into()))?;
         let fmt = doc.pixel_format();
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let sf = surf.format();
         if sf != fmt {
             return Err(EngineError::Other("the target layer's format doesn't match the document".into()));

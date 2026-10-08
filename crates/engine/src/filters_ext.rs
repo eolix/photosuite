@@ -490,7 +490,8 @@ fn relight_enabled(s: &Session) -> std::result::Result<(), String> {
         return Ok(());
     }
     let l = crate::active_layer_of(s)?;
-    if l.locks.pixels || l.locks.all { Err(format!("the layer \"{}\" is locked", l.name)) } else { Ok(()) }
+    let locks = s.active().ok_or("no document open")?.doc.effective_locks(l.id);
+    if locks.pixels || locks.all { Err(format!("the layer \"{}\" is locked", l.name)) } else { Ok(()) }
 }
 
 fn run_relight(s: &mut Session, p: &Value) -> Result<Value> {

@@ -120,13 +120,14 @@ pub fn entry_enabled(app: &PhotosuiteApp, menu: &CanvasToolMenu, command: &str) 
     }
     let Some(st) = app.session.active() else { return false };
     let layer = st.active_layer.and_then(|id| st.doc.layer(id));
-    let can_paint = layer.is_some_and(|l| matches!(l.content, LayerContent::Raster(_)) && !l.locks.all);
+    let locked = layer.is_some_and(|l| st.doc.effective_locks(l.id).all);
+    let can_paint = layer.is_some_and(|l| matches!(l.content, LayerContent::Raster(_))) && !locked;
     let shape_layer = layer.and_then(|l| match &l.content {
         LayerContent::Shape(sh) => Some(sh),
         _ => None,
     });
     let shape = shape_layer.is_some();
-    let can_mask = layer.is_some_and(|l| !matches!(l.content, LayerContent::Shape(_)) && !l.locks.all);
+    let can_mask = layer.is_some_and(|l| !matches!(l.content, LayerContent::Shape(_))) && !locked;
     let saved = menu.path_name.as_deref().is_some_and(|n| n != "work" && n != "layer");
     let has_path = menu.has_path;
     let pending = app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2);

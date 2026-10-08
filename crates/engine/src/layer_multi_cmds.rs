@@ -225,8 +225,9 @@ pub(crate) fn move_layers(doc: &mut Document, moves: &[(LayerId, i32, i32)]) -> 
         if dx == 0 && dy == 0 {
             continue;
         }
+        let locks = doc.effective_locks(id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        if l.locks.position || l.locks.all {
+        if locks.position || locks.all {
             return Err(EngineError::Other(format!("layer \"{}\" is position-locked", l.name)));
         }
         crate::commands::translate_layer(&snapshot, l, dx, dy);
@@ -276,8 +277,9 @@ pub fn move_targets(doc: &Document, roots: &[LayerId]) -> Vec<LayerId> {
 pub fn moved(doc: &Document, ids: &[LayerId], dx: i32, dy: i32) -> Result<Document> {
     let mut out = doc.clone();
     for &id in ids {
+        let locks = doc.effective_locks(id);
         let l = out.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        if l.locks.position || l.locks.all {
+        if locks.position || locks.all {
             return Err(EngineError::Other(format!("layer \"{}\" is position-locked", l.name)));
         }
         shift_shown(doc, l, dx, dy);
@@ -1116,6 +1118,46 @@ mod tests {
             // One layer selected: Merge Down.
             s.execute("layer.mergeLayers", json!({})).unwrap();
             assert_eq!(doc(&s).layer_count(), before - 1);
+        }
+    }
+
+    #[test]
+    fn a_locked_group_locks_its_contents() {
+        let mut s = session(8);
+        let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
+        let g = s.execute("layer.new.groupFromLayers", json!({})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.setProps", json!({"layer": g, "locked": true})).unwrap();
+        s.execute("layer.select", json!({"layer": a.0})).unwrap();
+        for (cmd, p) in [
+            ("layer.translate", json!({"dx": 1})),
+            ("paint.stroke", json!({"points": [[2, 2], [4, 4]]})),
+            ("edit.fill", json!({"color": "#00ff00"})),
+            ("edit.transform.flipHorizontal", json!({})),
+        ] {
+            assert!(s.execute(cmd, p).is_err(), "{cmd} edited a layer in a locked group");
+        }
+        // Unlocking the group releases its contents.
+        s.execute("layer.setProps", json!({"layer": g, "locked": false})).unwrap();
+        s.execute("layer.translate", json!({"dx": 1})).unwrap();
+        assert_eq!(bounds(&s, a), Rect::new(1, 0, 6, 5));
+    }
+
+    #[test]
+    fn a_locked_group_keeps_a_grouped_background_locked() {
+        let mut s = session(8);
+        let bg = doc(&s).layers[0].id;
+        s.execute("layer.select", json!({"layer": bg.0})).unwrap();
+        let g = s.execute("layer.new.groupFromLayers", json!({})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.setProps", json!({"layer": g, "locked": true})).unwrap();
+        s.execute("layer.select", json!({"layer": bg.0})).unwrap();
+        for (cmd, p) in [
+            ("edit.transform.flipHorizontal", json!({})),
+            ("edit.transform.warp", json!({"style": "flag", "bend": 50})),
+            ("edit.puppetWarp", json!({"pins": [{"src": [30, 25], "dst": [36, 29]}]})),
+        ] {
+            let e = s.execute(cmd, p).unwrap_err().to_string();
+            assert!(e.contains("locked"), "{cmd}: {e}");
+            assert_eq!(doc(&s).layer(bg).unwrap().name, "Background", "{cmd}");
         }
     }
 

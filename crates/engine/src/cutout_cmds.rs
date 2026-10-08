@@ -5,7 +5,7 @@
 
 use photosuite_algo::matting::{self, RefineParams};
 use photosuite_algo::segment::subject;
-use photosuite_doc::{Layer, LayerContent, LayerMask};
+use photosuite_doc::{Document, Layer, LayerContent, LayerMask};
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
@@ -19,24 +19,26 @@ const CMD: &str = "layer.removeBackground";
 const REFINE: RefineParams = RefineParams { radius: 2.0, smart_radius: true, smooth: 10.0, feather: 0.5, contrast: 10.0, shift_edge: 0.0 };
 
 /// Remove Background needs an unlocked pixel layer.
-fn check(l: &Layer) -> std::result::Result<(), String> {
+fn check(doc: &Document, l: &Layer) -> std::result::Result<(), String> {
     if !matches!(l.content, LayerContent::Raster(_)) {
         return Err(format!("the layer is a {} layer, not a pixel layer", l.content.kind_name()));
     }
-    if l.locks.pixels || l.locks.all {
+    let locks = doc.effective_locks(l.id);
+    if locks.pixels || locks.all {
         return Err(format!("Could not complete your request because the layer \"{}\" is locked", l.name));
     }
     Ok(())
 }
 
 fn enabled(s: &Session) -> std::result::Result<(), String> {
-    check(crate::active_layer_of(s)?)
+    let d = s.active().ok_or("no document open")?;
+    check(&d.doc, crate::active_layer_of(s)?)
 }
 
 fn run(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_param(s, p)?;
     let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
-    check(doc.layer(id).ok_or(EngineError::NoLayer(id))?).map_err(EngineError::Other)?;
+    check(doc, doc.layer(id).ok_or(EngineError::NoLayer(id))?).map_err(EngineError::Other)?;
     let sample_all = p.get("sampleAllLayers").and_then(Value::as_bool).unwrap_or(false);
     let refine = p.get("refine").and_then(Value::as_bool).unwrap_or(true);
     crate::jobs::edit_job(
