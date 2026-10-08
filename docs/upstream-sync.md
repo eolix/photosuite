@@ -103,21 +103,14 @@ Never applied automatically (listed after the port for a person to look at):
 | `a0d49de047` | skip | UI change (no UI changes from upstream) — Menus stay above the taskbar; oversized windows open maximized (#315) (#343) (#343) |
 | `778e8e187d` | skip | UI change (no UI changes from upstream) — Image Size shows the one-pixel minimum it applies (#441) (#468) |
 | `4fdb71dfc3` | skip | UI change: PhotoSuite's own dialog frame (bb936e1) — Dialogs keep their top-left when their content resizes (#487) |
-| `2c02d41eaf` | skip | UI change (no UI changes from upstream) — Show active ICC profile in the status bar (#321) (#432) |
-| `50d52a0848` | skip | UI change (no UI changes from upstream) — Clarify integer and float bit-depth labels (#324) (#428) |
 | `047aeb747a` | skip | UI change (no UI changes from upstream) — Wayland: explain native file drag-and-drop limitation (#386) (#430) |
 | `bf545e0e81` | skip | UI change (no UI changes from upstream) — Hide unconfigured layer effects from panel (#559) |
 | `9f0c049b53` | skip | UI change: PhotoSuite's own dialogs — Unsaved-changes prompt: (D)on't Save / (C)ancel / (S)ave keys, Tab order (#533) |
 | `da9adf82bc` | skip | rustfmt for skipped 9f0c049b53 — rustfmt discard_ui.rs (CI Format step red since #533) (#597) |
-| `b41442c466` | skip | UI change (no UI changes from upstream) — Color Picker: sample colours from the image with a pipette (#508) |
-| `e77325bd4a` | skip | UI change (no UI changes from upstream) — Add fixed UI scale steps from 75% to 300% (#611) |
-| `b07a2e5b43` | skip | UI change (no UI changes from upstream) — Remember desktop window and panel sizes across restarts (#587) |
 | `3f637410cb` | skip | UI change (no UI changes from upstream) — Apply the Interface UI Font Size preference (#616) |
 | `9aef02cac3` | skip | UI change: PhotoSuite's own title bar (b932800) — macOS: menus open on press; only the title bar's free gap drags the window (#669) |
-| `03ffca0d54` | skip | UI change: PhotoSuite's own dialogs — Dialog buttons follow the OS order; Windows/Linux unsaved prompt asks Yes / No / Cancel (#627, #776) (#826) |
 | `6ee3e4f752` | skip | UI change: Export As dialog — Flat exports embed no document XMP by default; Export As gains a Metadata choice (#647) (#733) |
 | `e1cf321183` | skip | rustfmt for skipped 6ee3e4f752 — rustfmt crates/ui-egui/src/export_dialog.rs (Format red on main since #672 + #733) (#822) |
-| `b436950ae3` | skip | UI change: PhotoSuite's own blending options (6e4f86a) — Layer Style: complete multi-instance effects and dialog parity (#157) (#786) |
 | `f9479063be` | skip | UI change: PhotoSuite's own Camera Raw — Rework Camera Raw filter preview and navigation (#781) |
 | `a20c63521d` | skip | UI change (new search palette) — Help › Search: find any menu command by name (#815) |
 | `c161eaec73` | skip | fonts (no UI changes from upstream) — Fonts: use craft-fonts as an optional build input; move the Japanese fonts out (#353) (#353) |
