@@ -67,6 +67,12 @@ const THEMES: &[(&str, &str)] = &[
     ("ThemeKind::Studio", "ThemeKind::Anthracite"),
     ("ThemeKind::Classic", "ThemeKind::Anthracite"),
     ("ThemeKind::Pro", "ThemeKind::Midnight"),
+    // The engine's `interface.theme` preference (`prefs::Theme`) carries the same names.
+    ("Theme::ProMedium", "Theme::Slate"),
+    ("Theme::StudioLight", "Theme::Pearl"),
+    ("Theme::Studio", "Theme::Anthracite"),
+    ("Theme::Classic", "Theme::Anthracite"),
+    ("Theme::Pro", "Theme::Midnight"),
     ("\"proMedium\"", "\"slate\""),
     ("\"promedium\"", "\"slate\""),
     ("\"studioLight\"", "\"pearl\""),
@@ -483,6 +489,7 @@ mod tests {
             r#"set(ThemeKind::Slate); set(ThemeKind::Midnight); set(ThemeKind::Pearl); set(ThemeKind::Anthracite); ui.set({"theme": "pearl"})"#
         );
         assert_eq!(map_text("ThemeKind::Pro", "docs/ui.md"), "ThemeKind::Pro");
+        assert_eq!(map_text("prefs::Theme::Studio, Theme::ProMedium", "a.rs"), "prefs::Theme::Anthracite, Theme::Slate");
     }
 
     #[test]
