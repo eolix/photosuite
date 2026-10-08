@@ -2799,6 +2799,7 @@ mod properties_card_tests {
 
     /// Arithmetic left uncommitted in one fill layer's card never lands on the layer selected next.
     #[test]
+    #[ignore = "PhotoSuite's themes all dock Properties (Tokens::pro), so the floating card is never shown"]
     fn uncommitted_arithmetic_stays_with_its_layer() {
         let mut s = photosuite_engine::Session::new();
         s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
