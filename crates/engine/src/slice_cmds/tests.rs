@@ -243,3 +243,18 @@ fn slice_options_after_an_explicit_promote_is_its_own_step() {
     assert!(s.undo());
     assert!(doc(&s).slices.is_empty());
 }
+
+#[test]
+fn out_of_range_slice_ids_are_rejected_not_wrapped() {
+    // #914: 2^32 + 1 used to wrap to slice 1 and delete it.
+    let mut s = session(8);
+    let id = s.execute("slice.new", json!({"rect": [0, 0, 10, 10]})).unwrap()["slice"].as_u64().unwrap();
+    assert_eq!(id, 1);
+    let wrapped = (1u64 << 32) + 1;
+    assert!(s.execute("slice.delete", json!({"slice": wrapped})).is_err());
+    assert!(s.execute("slice.delete", json!({"slices": [wrapped]})).is_err());
+    assert!(s.execute("slice.set", json!({"slice": wrapped, "name": "x"})).is_err());
+    assert!(s.execute("slice.delete", json!({"slice": -1})).is_err());
+    assert_eq!(doc(&s).slices.list.len(), 1);
+    assert_eq!(doc(&s).slices.list[0].name, "");
+}

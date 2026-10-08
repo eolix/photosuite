@@ -204,8 +204,8 @@ enum Target {
 
 fn find(s: &Session, p: &Value, cmd: &str) -> Result<Target> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
-    if let Some(id) = crate::commands::int(p, "slice").filter(|v| *v >= 0).map(|v| v as u64) {
-        return d.doc.slices.get(id as u32).map(|sl| Target::Stored(sl.id)).ok_or_else(|| bad(cmd, format!("no slice with id {id}")));
+    if let Some(id) = crate::commands::u32_id_param(cmd, p, "slice")? {
+        return d.doc.slices.get(id).map(|sl| Target::Stored(sl.id)).ok_or_else(|| bad(cmd, format!("no slice with id {id}")));
     }
     let n = crate::commands::int(p, "number").filter(|v| *v > 0).ok_or_else(|| bad(cmd, "give \"slice\" (id) or \"number\""))? as usize;
     let r = slices::resolve(&d.doc).into_iter().find(|r| r.number == n).ok_or_else(|| bad(cmd, format!("no slice number {n}")))?;
@@ -358,7 +358,8 @@ fn promote(s: &mut Session, p: &Value) -> Result<Value> {
 fn ids_param(s: &mut Session, p: &Value, cmd: &str) -> Result<Vec<u32>> {
     if let Some(a) = p.get("slices").and_then(Value::as_array) {
         let d = s.active().ok_or(EngineError::NoDocument)?;
-        let ids: Vec<u32> = a.iter().filter_map(Value::as_u64).map(|v| v as u32).filter(|id| d.doc.slices.get(*id).is_some()).collect();
+        let ids: Vec<u32> = a.iter().map(|v| crate::commands::u32_id(cmd, "slices", v)).collect::<Result<Vec<_>>>()?;
+        let ids: Vec<u32> = ids.into_iter().filter(|id| d.doc.slices.get(*id).is_some()).collect();
         if ids.is_empty() {
             return Err(bad(cmd, "none of the slices exist"));
         }

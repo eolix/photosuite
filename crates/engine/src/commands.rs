@@ -134,6 +134,17 @@ pub(crate) fn int_i32(cmd: &str, p: &Value, key: &str) -> Result<Option<i32>> {
     }
 }
 
+/// An id (layer comp, slice, style…) from a JSON value: a bad-params error unless it is a whole
+/// number in `u32` range. `as u32` would wrap `2^32 + 1` to `1` and target a real item.
+pub(crate) fn u32_id(cmd: &str, key: &str, v: &Value) -> Result<u32> {
+    v.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or_else(|| bad(cmd, format!("`{key}` = {v} is not a valid id (0..={})", u32::MAX)))
+}
+
+/// [`u32_id`] of `p[key]`: `None` when absent.
+pub(crate) fn u32_id_param(cmd: &str, p: &Value, key: &str) -> Result<Option<u32>> {
+    p.get(key).map(|v| u32_id(cmd, key, v)).transpose()
+}
+
 fn f32_or(p: &Value, key: &str, default: f32) -> f32 {
     p.get(key).and_then(Value::as_f64).map(|v| v as f32).unwrap_or(default)
 }

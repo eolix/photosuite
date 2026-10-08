@@ -207,3 +207,21 @@ fn export_comps_to_files_naming() {
     assert_eq!(r["files"].as_array().unwrap().len(), 1);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn out_of_range_comp_ids_are_rejected_not_wrapped() {
+    // #914: 2^32 + id used to wrap to a real comp.
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
+    let c = s.execute("layerComp.new", json!({"name": "Start"})).unwrap()["comp"].as_u64().unwrap();
+    let wrapped = (1u64 << 32) + c;
+    assert!(s.execute("layerComp.delete", json!({"comp": wrapped})).is_err());
+    assert!(s.execute("layerComp.setOptions", json!({"comp": wrapped, "name": "renamed"})).is_err());
+    let doc = &s.active().unwrap().doc;
+    assert_eq!(doc.layer_comps.len(), 1);
+    assert_eq!(doc.layer_comps[0].name, "Start");
+    let dir = std::env::temp_dir().join(format!("photosuite-comps-wrap-{}", std::process::id()));
+    let r = s.execute("file.export.layerCompsToFiles", json!({"dir": dir.to_string_lossy(), "comps": [wrapped]}));
+    assert!(r.is_err());
+    let _ = std::fs::remove_dir_all(dir);
+}
