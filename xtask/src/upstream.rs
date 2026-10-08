@@ -82,12 +82,12 @@ fn map_text(text: &str, path: &str) -> String {
 
 /// Upstream paths never applied automatically: everything under `docs/` (PhotoSuite writes its
 /// own; upstream's also carries brand material under trademark terms), the app icon, licence and
-/// attribution files, translations (PhotoSuite's own), and CI (a different setup). They are
+/// attribution files, all of the translation machinery (PhotoSuite's own), and CI (a different setup). They are
 /// listed after a port for a person to look at.
 fn held_back(path: &str) -> bool {
     const PREFIXES: &[&str] = &["docs/", "assets/app-icon/", "book/", ".github/", "crates/ui-egui/src/i18n/"];
-    const FILES: &[&str] = &["NOTICE", "LICENSE-MIT", "LICENSE-APACHE", "README.md", "AGENTS.md", "THIRD-PARTY-NOTICES.md", "THIRD-PARTY-CRATES.md", "SECURITY.md"];
-    (PREFIXES.iter().any(|p| path.starts_with(p)) && !path.ends_with("/catalog.rs") && !path.ends_with("/mod.rs")) || FILES.contains(&path)
+    const FILES: &[&str] = &["NOTICE", "ATTRIBUTION.md", "LICENSE-MIT", "LICENSE-APACHE", "README.md", "AGENTS.md", "THIRD-PARTY-NOTICES.md", "THIRD-PARTY-CRATES.md", "SECURITY.md"];
+    PREFIXES.iter().any(|p| path.starts_with(p)) || FILES.contains(&path)
 }
 
 /// Upstream issue references (`#784`) point at PhotoCraft's tracker, not ours.
@@ -446,7 +446,8 @@ mod tests {
         for p in ["docs/brand/artcraft-logo.svg", "docs/architecture.md", "docs/roadmap.md", "docs/scorecard.md", "assets/app-icon/hicolor/16x16/apps/x.png", "NOTICE", "README.md", ".github/workflows/ci.yml", "crates/ui-egui/src/i18n/ja.tsv"] {
             assert!(held_back(p), "{p}");
         }
-        for p in ["crates/ui-egui/src/i18n/catalog.rs", "crates/ui-egui/src/i18n/mod.rs", "crates/engine/src/lib.rs", "crates/io/README.md"] {
+        assert!(held_back("crates/ui-egui/src/i18n/mod.rs") && held_back("ATTRIBUTION.md"));
+        for p in ["crates/engine/src/lib.rs", "crates/io/README.md"] {
             assert!(!held_back(p), "{p}");
         }
     }

@@ -32,8 +32,7 @@ Never applied automatically (listed after the port for a person to look at):
   PhotoCraft's trademark material;
 - `assets/app-icon/`: PhotoCraft's brand; PhotoSuite has its own;
 - `NOTICE`, the licences, `README.md`, `AGENTS.md`, `THIRD-PARTY-*`: PhotoSuite's own records;
-- the translation catalogues (`crates/ui-egui/src/i18n/*.tsv`): PhotoSuite's translations are
-  maintained separately; ask before taking upstream's rows;
+- everything under `crates/ui-egui/src/i18n/`: PhotoSuite manages its own translations;
 - `.github/`: PhotoSuite's CI is set up differently.
 
 ## Rules for every port
@@ -44,6 +43,8 @@ Never applied automatically (listed after the port for a person to look at):
   sizes, layout, fonts, colours, themes, icons). Behaviour and fixes in UI code are taken; the
   visual parts of a port are reverted, or the commit is skipped when it is mostly visual.
 - **Nothing under `docs/`** is taken (see above).
+- **No translations**: upstream's catalogues, languages and i18n code are never taken; PhotoSuite
+  manages its own. Translation commits are skipped.
 
 ## Procedure (for the session doing the sync)
 
@@ -93,3 +94,31 @@ Never applied automatically (listed after the port for a person to look at):
 | `25f211500b` | skip | translations maintained separately — i18n(ko): drop the duplicate Ambient and Warmth rows (main red since #811 + #824) (#834) |
 | `7a9b591189` | skip | new UI language; translations maintained separately — Italian UI translation (it) (#853) |
 | `abd6f6e591` | skip | translations maintained separately — Localise the UI into Russian: a complete catalog and the missed tl! call sites (#298) (#298) |
+| `90df9cfc15` | skip | translations maintained separately — Report per-language UI translation coverage (#220) (#427) |
+| `d4086ba11a` | skip | translations maintained separately — feat(i18n): add Korean and live language switching (#582) |
+| `06ec4044ea` | skip | translations maintained separately — Improve Korean terminology and dynamic UI translation coverage (#604) |
+| `6103da5278` | skip | translations maintained separately — rustfmt xtask/src/i18n_coverage.rs (Format red on main since #663 + #700) (#798) |
+| `2cbb13a79d` | skip | translations maintained separately — fix(i18n): follow native UI languages on first launch (#661) |
+| `fbcd0c238e` | skip | UI change (no UI changes from upstream) — Canvas scrollbars, and Preferences > Tools > Overscroll works (#300) (#367) (#367) |
+| `58bfb4ee8c` | skip | UI change (no UI changes from upstream) — The main window opens centred on the screen (#419) (#462) |
+| `a0d49de047` | skip | UI change (no UI changes from upstream) — Menus stay above the taskbar; oversized windows open maximized (#315) (#343) (#343) |
+| `778e8e187d` | skip | UI change (no UI changes from upstream) — Image Size shows the one-pixel minimum it applies (#441) (#468) |
+| `4fdb71dfc3` | skip | UI change: PhotoSuite's own dialog frame (bb936e1) — Dialogs keep their top-left when their content resizes (#487) |
+| `2c02d41eaf` | skip | UI change (no UI changes from upstream) — Show active ICC profile in the status bar (#321) (#432) |
+| `50d52a0848` | skip | UI change (no UI changes from upstream) — Clarify integer and float bit-depth labels (#324) (#428) |
+| `047aeb747a` | skip | UI change (no UI changes from upstream) — Wayland: explain native file drag-and-drop limitation (#386) (#430) |
+| `bf545e0e81` | skip | UI change (no UI changes from upstream) — Hide unconfigured layer effects from panel (#559) |
+| `9f0c049b53` | skip | UI change: PhotoSuite's own dialogs — Unsaved-changes prompt: (D)on't Save / (C)ancel / (S)ave keys, Tab order (#533) |
+| `da9adf82bc` | skip | rustfmt for skipped 9f0c049b53 — rustfmt discard_ui.rs (CI Format step red since #533) (#597) |
+| `b41442c466` | skip | UI change (no UI changes from upstream) — Color Picker: sample colours from the image with a pipette (#508) |
+| `e77325bd4a` | skip | UI change (no UI changes from upstream) — Add fixed UI scale steps from 75% to 300% (#611) |
+| `b07a2e5b43` | skip | UI change (no UI changes from upstream) — Remember desktop window and panel sizes across restarts (#587) |
+| `3f637410cb` | skip | UI change (no UI changes from upstream) — Apply the Interface UI Font Size preference (#616) |
+| `9aef02cac3` | skip | UI change: PhotoSuite's own title bar (b932800) — macOS: menus open on press; only the title bar's free gap drags the window (#669) |
+| `03ffca0d54` | skip | UI change: PhotoSuite's own dialogs — Dialog buttons follow the OS order; Windows/Linux unsaved prompt asks Yes / No / Cancel (#627, #776) (#826) |
+| `6ee3e4f752` | skip | UI change: Export As dialog — Flat exports embed no document XMP by default; Export As gains a Metadata choice (#647) (#733) |
+| `e1cf321183` | skip | rustfmt for skipped 6ee3e4f752 — rustfmt crates/ui-egui/src/export_dialog.rs (Format red on main since #672 + #733) (#822) |
+| `b436950ae3` | skip | UI change: PhotoSuite's own blending options (6e4f86a) — Layer Style: complete multi-instance effects and dialog parity (#157) (#786) |
+| `f9479063be` | skip | UI change: PhotoSuite's own Camera Raw — Rework Camera Raw filter preview and navigation (#781) |
+| `a20c63521d` | skip | UI change (new search palette) — Help › Search: find any menu command by name (#815) |
+| `c161eaec73` | skip | fonts (no UI changes from upstream) — Fonts: use craft-fonts as an optional build input; move the Japanese fonts out (#353) (#353) |
