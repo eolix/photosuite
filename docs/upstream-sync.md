@@ -99,7 +99,6 @@ Never applied automatically (listed after the port for a person to look at):
 | `06ec4044ea` | skip | translations maintained separately — Improve Korean terminology and dynamic UI translation coverage (#604) |
 | `6103da5278` | skip | translations maintained separately — rustfmt xtask/src/i18n_coverage.rs (Format red on main since #663 + #700) (#798) |
 | `2cbb13a79d` | skip | translations maintained separately — fix(i18n): follow native UI languages on first launch (#661) |
-| `fbcd0c238e` | skip | UI change (no UI changes from upstream) — Canvas scrollbars, and Preferences > Tools > Overscroll works (#300) (#367) (#367) |
 | `58bfb4ee8c` | skip | UI change (no UI changes from upstream) — The main window opens centred on the screen (#419) (#462) |
 | `a0d49de047` | skip | UI change (no UI changes from upstream) — Menus stay above the taskbar; oversized windows open maximized (#315) (#343) (#343) |
 | `778e8e187d` | skip | UI change (no UI changes from upstream) — Image Size shows the one-pixel minimum it applies (#441) (#468) |
