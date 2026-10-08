@@ -589,3 +589,143 @@ fn warp_on_a_distorted_smart_object_follows_the_corners() {
     assert!(after.warp.is_some());
     assert_eq!(after.perspective, before);
 }
+
+fn convert_to_layers(s: &mut Session) -> Value {
+    s.execute("layer.smartObjects.convertToLayers", json!({})).unwrap()
+}
+
+fn active_layer(s: &Session) -> Layer {
+    let d = s.active().unwrap();
+    d.doc.layer(d.active_layer.unwrap()).unwrap().clone()
+}
+
+#[test]
+fn convert_to_layers_round_trips_a_layer_at_every_depth() {
+    for depth in DEPTHS {
+        let mut s = session(depth);
+        paint(&mut s);
+        let id = s.active().unwrap().active_layer.unwrap();
+        s.edit("props", |doc, _| {
+            let l = doc.layer_mut(id).unwrap();
+            l.name = "Sky".into();
+            l.opacity = 0.6;
+            l.blend = BlendMode::Multiply;
+            Ok(())
+        })
+        .unwrap();
+        let before = flat(&s);
+        convert(&mut s);
+        let smart = flat(&s);
+        let r = convert_to_layers(&mut s);
+        assert_eq!(r["group"], false, "one layer replaces the smart object");
+        let l = active_layer(&s);
+        assert_eq!(l.id.0, r["layer"].as_u64().unwrap());
+        assert!(matches!(&l.content, LayerContent::Raster(px) if px.format() == s.active().unwrap().doc.pixel_format()), "depth {depth}");
+        assert_eq!((l.name.as_str(), l.blend), ("Sky", BlendMode::Multiply));
+        assert!((l.opacity - 0.6).abs() < 1e-6);
+        assert_eq!(max_diff(&flat(&s), &before), 0.0, "depth {depth}: whole-pixel placement is exact");
+        s.undo();
+        assert!(matches!(active_layer(&s).content, LayerContent::Smart(_)), "one undoable step");
+        assert_eq!(flat(&s), smart);
+    }
+}
+
+#[test]
+fn convert_to_layers_unpacks_several_layers_into_a_group_with_the_smart_layers_properties() {
+    let mut s = session(8);
+    paint(&mut s);
+    let id = convert(&mut s);
+    s.execute("layer.setProps", json!({"layer": id, "name": "Placed", "opacity": 0.5})).unwrap();
+    // A second layer inside the contents (Edit Contents, then save).
+    let child = s.execute("layer.smartObjects.editContents", json!({})).unwrap()["document"].as_u64().unwrap() as usize;
+    s.execute("layer.new.layer", json!({"name": "Top"})).unwrap();
+    s.edit("paint", |doc, active| {
+        doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(Rect::new(2, 2, 8, 8), &[0.0, 0.0, 1.0, 1.0]);
+        Ok(())
+    })
+    .unwrap();
+    s.execute("layer.smartObjects.saveContents", json!({})).unwrap();
+    s.execute("file.close", json!({})).unwrap();
+    assert_ne!(s.active_index(), Some(child));
+    s.execute("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap();
+    s.execute("filter.blur.gaussianBlur", json!({"radius": 1})).unwrap();
+    // Without the filters, the smart object looks exactly like the unpacked group.
+    s.execute("layer.smartFilter.disableSmartFilters", json!({})).unwrap();
+    let before = flat(&s);
+    let r = convert_to_layers(&mut s);
+    assert_eq!((r["group"].as_bool(), r["discardedSmartFilters"].as_u64()), (Some(true), Some(2)));
+    let g = active_layer(&s);
+    assert_eq!((g.name.as_str(), g.blend), ("Placed", BlendMode::Normal), "named after the smart object, isolated");
+    assert!((g.opacity - 0.5).abs() < 1e-6);
+    let names: Vec<_> = g.children().unwrap().iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names.last(), Some(&"Top"));
+    assert_eq!(names.len(), 2);
+    assert!(max_diff(&flat(&s), &before) <= 1.0 / 255.0 + 1e-6);
+    assert!(!s.is_enabled("layer.smartObjects.convertToLayers"), "a group isn't a smart object");
+}
+
+#[test]
+fn convert_to_layers_keeps_a_smart_layer_mask_on_a_group() {
+    let mut s = session(16);
+    paint(&mut s);
+    convert(&mut s);
+    s.execute("layer.layerMask.hideAll", json!({})).unwrap();
+    let before = flat(&s);
+    assert!(convert_to_layers(&mut s)["group"].as_bool().unwrap(), "the mask can't fold into the layer");
+    let g = active_layer(&s);
+    assert!(g.mask.is_some() && g.children().unwrap()[0].mask.is_none());
+    assert_eq!(max_diff(&flat(&s), &before), 0.0);
+}
+
+#[test]
+fn convert_to_layers_applies_the_placement() {
+    let mut s = session(8);
+    paint(&mut s);
+    let id = convert(&mut s);
+    s.execute("edit.transform", json!({"layer": id, "matrix": [0.5, 0, 0, 0.5, 10.25, 3]})).unwrap();
+    let before = flat(&s);
+    convert_to_layers(&mut s);
+    let l = active_layer(&s);
+    assert!(matches!(l.content, LayerContent::Raster(_)));
+    assert!(mean_diff(&flat(&s), &before) < 2e-3, "{}", mean_diff(&flat(&s), &before));
+    // Distort keeps the projective placement for pixels.
+    let mut s = session(8);
+    paint(&mut s);
+    let id = convert(&mut s);
+    s.execute("edit.transform", json!({"layer": id, "quad": [[0, 0], [30, 0], [36, 30], [-4, 30]]})).unwrap();
+    let before = flat(&s);
+    convert_to_layers(&mut s);
+    assert!(mean_diff(&flat(&s), &before) < 2e-3);
+}
+
+#[test]
+fn convert_to_layers_rejects_what_it_cannot_unpack() {
+    let mut s = session(8);
+    assert!(!s.is_enabled("layer.smartObjects.convertToLayers"));
+    assert!(s.execute("layer.smartObjects.convertToLayers", json!({})).is_err());
+    paint(&mut s);
+    let raster = s.active().unwrap().active_layer.unwrap().0;
+    let id = convert(&mut s);
+    // Bad targets fail without panicking: a pixel layer, a missing layer.
+    for p in [json!({"layer": raster}), json!({"layer": u64::MAX})] {
+        assert!(s.execute("layer.smartObjects.convertToLayers", p).is_err());
+    }
+    // A warp can't be applied to the unpacked layers: an error, and the document is unchanged.
+    s.execute("edit.transform.warp", json!({"layer": id, "style": "arc", "bend": 30})).unwrap();
+    let steps = s.active().unwrap().history.entries().len();
+    assert!(s.execute("layer.smartObjects.convertToLayers", json!({})).is_err());
+    assert_eq!(s.active().unwrap().history.entries().len(), steps);
+}
+
+#[test]
+fn convert_to_layers_conforms_the_contents_to_the_document_mode_and_depth() {
+    let mut s = session(8);
+    paint(&mut s);
+    convert(&mut s);
+    // The contents stay 8-bit RGB while the document becomes 16-bit grayscale.
+    s.execute("image.mode.bits16", json!({})).unwrap();
+    s.execute("image.mode.grayscale", json!({})).unwrap();
+    convert_to_layers(&mut s);
+    let fmt = s.active().unwrap().doc.pixel_format();
+    assert!(matches!(&active_layer(&s).content, LayerContent::Raster(px) if px.format().mode == fmt.mode && px.format().sample == fmt.sample));
+}

@@ -4,7 +4,7 @@
 //! milestone M7 against Photoshop-rendered PSD composites (the oracle in `testkit`).
 
 use photosuite_color::SampleType;
-use photosuite_color::convert::rgb_to_gray;
+use photosuite_color::convert::{D50, SRGB_TO_XYZ_D50, XYZ_D50_TO_SRGB, mat3_mul, rgb_to_gray, srgb_to_linear};
 use photosuite_doc::Adjustment;
 use photosuite_doc::adjust::{CurvePoint, HueRange, LevelsChannel, ToneSpace};
 
@@ -154,15 +154,16 @@ pub fn apply_depth(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, depth
             let mix = |row: &[f32; 4]| (row[0] * c[0] + row[1] * c[1] + row[2] * c[2] + row[3]).clamp(0.0, 1.0);
             if *monochrome { [mix(&matrix[0]); 3] } else { [mix(&matrix[0]), mix(&matrix[1]), mix(&matrix[2])] }
         }),
-        Adjustment::PhotoFilter { color, density, preserve_luminosity } => map_rgb(buf, |c| {
-            let filtered: [f32; 3] = std::array::from_fn(|i| c[i] * (1.0 - density) + c[i] * color[i] * density);
-            if *preserve_luminosity {
-                let (l0, l1) = (rgb_to_gray(c), rgb_to_gray(filtered).max(1e-6));
-                filtered.map(|v| (v * l0 / l1).clamp(0.0, 1.0))
-            } else {
-                filtered
-            }
-        }),
+        Adjustment::PhotoFilter { color, density, preserve_luminosity } => {
+            let linear_doc = depth == Some(SampleType::F32);
+            let m = photo_filter_matrix(*color, *density, *preserve_luminosity && linear_doc);
+            let set_lum = *preserve_luminosity && !linear_doc;
+            map_rgb(buf, |c| {
+                let f = mat3_mul(&m, c.map(|v| transfer.decode(v))).map(|v| transfer.encode(v));
+                let f = if set_lum { photosuite_color::blend::set_lum(f, photosuite_color::blend::lum(c)) } else { f };
+                f.map(|v| v.clamp(0.0, 1.0))
+            })
+        }
         Adjustment::BlackWhite { weights, tint } => map_rgb(buf, |c| {
             let g = black_white_gray(c, weights);
             match tint {
@@ -459,6 +460,23 @@ fn lut(table: &[f32], v: f32) -> f32 {
     let j = (i + 1).min(table.len() - 1);
     let f = x - i as f32;
     table[i] * (1.0 - f) + table[j] * f
+}
+
+/// Photo Filter's linear-light RGB matrix. Photoshop multiplies the pixel's D50 XYZ, relative to
+/// white, by the filter colour's (mixed in by `density`): a fixed linear map, so it is folded into
+/// one matrix. With `normalize_y` the map keeps luminance Y (32-bit Preserve Luminosity; 8/16-bit
+/// documents instead restore the encoded luminosity like the Luminosity blend mode). Fitted on the
+/// photoshop corpus `photo-filter.psd`: rgb16 within 0.6/255 everywhere.
+pub fn photo_filter_matrix(color: [f32; 3], density: f32, normalize_y: bool) -> [[f32; 3]; 3] {
+    let d = if density.is_finite() { density.clamp(0.0, 1.0) } else { 0.0 };
+    let xyz = mat3_mul(&SRGB_TO_XYZ_D50, color.map(|v| srgb_to_linear(v.clamp(0.0, 1.0))));
+    let mut s: [f32; 3] = std::array::from_fn(|i| 1.0 - d + d * xyz[i] / D50[i]);
+    if normalize_y && s[1] > 1e-6 {
+        let y = s[1];
+        s = s.map(|v| v / y);
+    }
+    // XYZ_D50_TO_SRGB · diag(s) · SRGB_TO_XYZ_D50
+    std::array::from_fn(|r| std::array::from_fn(|c| (0..3).map(|k| XYZ_D50_TO_SRGB[r][k] * s[k] * SRGB_TO_XYZ_D50[k][c]).sum()))
 }
 
 /// Photoshop posterize: `n` equal input bins over 0..=255, output levels

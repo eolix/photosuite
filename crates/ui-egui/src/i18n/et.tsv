@@ -15,7 +15,7 @@
 	Edit	Muuda
 	Image	Pilt
 	Layer	Kiht
-	Type	Tüüp
+	Type	Tekst
 	Select	Märgista
 	Filter	Filter
 	View	Vaade
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Täpsemad
+	Alt-click to define a source point to clone from	Alt-klõps, et määrata lähtepunkt, millest kloonida
+	Automatic (recommended)	Automaatne (soovitatav)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automaatne kasutab võimalusel GPU-kiirendust ja lülitub vigade korral CPU-renderdusele.
+	CPU / Compatibility	CPU / Ühilduvus
+	Cancel Background Job	Tühista taustatöö
+	Cancel opening	Tühista avamine
+	Cancelled opening {name}	{name} avamine tühistati
+	Cancelled {label}	{label} tühistati
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klõps: vali ankurpunkt · Lohistamine: liiguta ankurpunkti, pidet või lõiku · {shift}-klõps: lisa · {alt}-klõps: kogu alamjoon
+	Content-Aware Move	Sisutundlik liigutamine
+	Convert to Layers	Teisenda kihtideks
+	Copy Layers to Document	Kopeeri kihid dokumenti
+	Couldn't place {name}: {error}	{name} paigutamine ebaõnnestus: {error}
+	Delete Action	Kustuta tegevus
+	Details	Üksikasjad
+	Disable Symmetry Path	Keela sümmeetriajoon
+	Discard Layers and Save a Copy	Loobu kihtidest ja salvesta koopia
+	Don't show again	Ära enam näita
+	Drop Floating Selection	Kinnita hõljuv märgistus
+	Edit Layer Style	Muuda kihi stiili
+	Esc to cancel	Esc tühistab
+	Extend	Laienda
+	Float Selection	Muuda märgistus hõljuvaks
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Külmutuslasso: lohista ala külmutamiseks, Alt-lohista selle sulatamiseks (L)
+	GPU Backend	GPU taustaprogramm
+	GPU acceleration could not continue. Your documents are unchanged.	GPU-kiirendust ei saanud jätkata. Teie dokumendid on muutmata.
+	Get Action	Hangi tegevus
+	Grid:	Võrk:
+	Hit-Test Type	Teksti tabamustest
+	Including layers will increase file size.	Kihtide kaasamine suurendab faili mahtu.
+	Invalid {mode} profile	Vigane {mode}-profiil
+	Keep Using CPU	Jätka CPU kasutamist
+	Lasso around an area, then drag the selection	Ümbritse ala lassoga ja lohista seejärel märgistust
+	Layer Style Default	Kihi stiili vaikeväärtus
+	List Actions	Loetle tegevused
+	List Background Jobs	Loetle taustatööd
+	Make Layer Style Default	Määra kihi stiili vaikeväärtuseks
+	Make Selection from Path	Loo märgistus joonest
+	Make Symmetry Path	Loo sümmeetriajoon
+	Move	Liiguta
+	Move Document	Liiguta dokumenti
+	Navigate Type	Liigu tekstis
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Pole joont, millest märgistust luua: joonista see pliiatsi tööriistaga või vali see vektorjoonte paneelil.
+	Opening {name}	{name} avamine
+	Opening {name}…	{name} avamine…
+	Opening…	Avamine…
+	Patch	Paikamine
+	Patch:	Paikamine:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite kasutab CPU-pildikompositorit. Aken võib endiselt kasutada teie graafikaadapterit.
+	Play Action	Esita tegevus
+	Reading…	Lugemine…
+	Record Action	Lindista tegevus
+	Rendering Mode	Renderdusrežiim
+	Retry GPU	Proovi GPU-d uuesti
+	Retry GPU requires a restart. Save your work first.	GPU uuesti proovimine nõuab taaskäivitamist. Salvestage esmalt oma töö.
+	Save cancelled	Salvestamine tühistati
+	Save failed: {error}	Salvestamine ebaõnnestus: {error}
+	Stamp Down	Tembelda alla
+	Stamp Visible	Tembelda nähtavad
+	Stop Recording	Lõpeta lindistamine
+	Structure:	Struktuur:
+	Switched to CPU rendering	Lülitati CPU-renderdusele
+	TIFF Options	TIFF-i valikud
+	Type Caret	Teksti kursor
+	Unnamed {mode} profile	Nimetu {mode}-profiil
+	Warp Grid	Venitusvõrk
+	Working…	Töötlemine…

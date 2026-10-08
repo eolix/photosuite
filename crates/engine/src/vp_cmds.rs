@@ -138,8 +138,9 @@ fn vanishing_point(s: &mut Session, p: &Value) -> Result<Value> {
         };
         // A new layer clones from the visible image; otherwise from the layer itself.
         let base: Option<Surface> = new_layer.then(|| crate::file_cmds::flattened(doc, doc.pixel_format()));
+        let locks = doc.effective_locks(id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        if l.locks.all || l.locks.pixels {
+        if locks.all || locks.pixels {
             return Err(EngineError::Other(format!("layer \"{}\" is locked", l.name)));
         }
         let surf = l.surface_mut().ok_or_else(|| EngineError::Other("Vanishing Point needs a pixel layer".into()))?;

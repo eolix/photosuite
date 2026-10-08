@@ -10,7 +10,7 @@
 
 use photosuite_algo::transform::{Homography, Interp};
 use photosuite_algo::warp::{warp_mesh_gray, warp_mesh_surface};
-use photosuite_doc::{Document, Layer, LayerContent, LayerId, Rect};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, Locks, Rect};
 use photosuite_geom::warp::{BezierMesh, Warp, WarpStyle};
 use photosuite_raster::Surface;
 use serde_json::{Value, json};
@@ -110,20 +110,21 @@ pub fn warp_from_params(cmd: &str, p: &Value, rect: [f64; 4]) -> Result<Warp> {
     Ok(w)
 }
 
-fn warp_layer(doc_sel: Option<&Surface>, l: &mut Layer, w: &Warp, rect: Rect, interp: Interp) -> Result<()> {
+fn warp_layer(doc_sel: Option<&Surface>, group: Locks, l: &mut Layer, w: &Warp, rect: Rect, interp: Interp) -> Result<()> {
     if l.locks.position && l.name == "Background" {
         l.locks.position = false;
         l.locks.transparency = false;
         l.name = "Layer 0".into();
     }
-    if l.locks.position || l.locks.all {
+    let locks = l.locks.union(group);
+    if locks.position || locks.all {
         return Err(EngineError::Other(format!("layer \"{}\" is locked", l.name)));
     }
     let map = |x: f64, y: f64| w.map(x, y);
     match &mut l.content {
         LayerContent::Group(g) => {
             for c in g.children.iter_mut() {
-                warp_layer(None, c, w, rect, interp)?;
+                warp_layer(None, locks, c, w, rect, interp)?;
             }
         }
         LayerContent::Text(_) => return Err(EngineError::Other("Warp needs rasterized type (or use Type › Warp Text)".into())),
@@ -180,6 +181,9 @@ fn warp_layer(doc_sel: Option<&Surface>, l: &mut Layer, w: &Warp, rect: Rect, in
     Ok(())
 }
 
+/// Largest warp frame side: far above any real layer, far below what would exhaust memory.
+const MAX_WARP_SIDE: u32 = 100_000;
+
 fn target(s: &Session, cmd: &str, p: &Value) -> Result<(LayerId, Rect)> {
     let st = s.active().ok_or(EngineError::NoDocument)?;
     let id = match p.get("layer").and_then(Value::as_u64) {
@@ -197,6 +201,10 @@ fn target(s: &Session, cmd: &str, p: &Value) -> Result<(LayerId, Rect)> {
     if rect.is_empty() {
         return Err(bad(cmd, "nothing to warp"));
     }
+    let (w, h) = (rect.width(), rect.height());
+    if w > MAX_WARP_SIDE || h > MAX_WARP_SIDE {
+        return Err(bad(cmd, format!("rect too large for warp: {w} x {h} (max {MAX_WARP_SIDE} per side)")));
+    }
     Ok((id, rect))
 }
 
@@ -211,8 +219,9 @@ fn apply(s: &mut Session, p: &Value, cmd: &str) -> Result<Value> {
     s.edit("Warp", |doc, _| {
         let sel = doc.selection.clone();
         let is_group = doc.layer(id).is_some_and(Layer::is_group);
+        let group = crate::transform_cmds::group_locks(doc, id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        warp_layer(if is_group { None } else { sel.as_ref() }, l, &w, rect, interp)?;
+        warp_layer(if is_group { None } else { sel.as_ref() }, group, l, &w, rect, interp)?;
         let snapshot = doc.clone();
         if let Some(l) = doc.layer_mut(id) {
             crate::transform_cmds::refresh_text(&snapshot, l);
@@ -634,6 +643,19 @@ mod tests {
             assert!(m.us.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.us);
             assert!(m.vs.iter().any(|k| (k - u).abs() < 1e-6), "{:?}", m.vs);
         }
+    }
+
+    #[test]
+    fn extreme_rect_is_bad_params_not_a_giant_warp() {
+        let mut s = session(8);
+        for cmd in ["edit.transform.warp", "layer.smartObjects.warp"] {
+            if cmd == "layer.smartObjects.warp" {
+                s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
+            }
+            let e = s.execute(cmd, json!({"style": "arc", "bend": 50, "rect": [-1e30, -1e30, 1e30, 1e30]})).unwrap_err();
+            assert!(matches!(&e, EngineError::BadParams { msg, .. } if msg.contains("rect too large")), "{cmd}: {e}");
+        }
+        s.execute("layer.smartObjects.warp", json!({"style": "arc", "bend": 50, "rect": [10, 10, 60, 40]})).unwrap();
     }
 
     #[test]

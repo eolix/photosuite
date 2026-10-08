@@ -92,7 +92,7 @@ fn corpus_round_trips_through_layered_tiff() {
         let res = catch_unwind(AssertUnwindSafe(|| -> Result<(), String> {
             let psd = export(&doc, "x.psd", &ExportOptions::default()).map_err(|e| format!("psd export: {e}"))?;
             let oracle = import("x.psd", &psd.bytes).map_err(|e| format!("psd re-import: {e}"))?.document;
-            let out = export(&doc, "x.tif", &ExportOptions::default()).map_err(|e| format!("export: {e}"))?;
+            let out = export(&doc, "x.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).map_err(|e| format!("export: {e}"))?;
             for w in &out.warnings {
                 if let Some(rest) = w.strip_prefix("layer data: ")
                     && let Some((key, _)) = rest.split_once(" block (")

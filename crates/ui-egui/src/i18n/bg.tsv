@@ -15,7 +15,7 @@
 	Edit	Редакция
 	Image	Изображение
 	Layer	Слой
-	Type	Тип
+	Type	Текст
 	Select	Изберете
 	Filter	Филтър
 	View	Изглед
@@ -644,7 +644,7 @@
 	Pearl	Перла
 	Aubergine	патладжан
 	Ocean	океан
-	Actions	Операция
+	Actions	Операции
 	Brush Settings	Настройки на четката
 	Brushes	Четки
 	Channels	Канали
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Разширени
+	Alt-click to define a source point to clone from	Щракнете с Alt, за да зададете изходна точка за клониране
+	Automatic (recommended)	Автоматично (препоръчително)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Автоматичният режим използва GPU ускорение, когато е налично, а при грешки преминава към изобразяване чрез CPU.
+	CPU / Compatibility	CPU / Съвместимост
+	Cancel Background Job	Отмени фоновата задача
+	Cancel opening	Отмени отварянето
+	Cancelled opening {name}	Отварянето на {name} е отменено
+	Cancelled {label}	Отменено: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Щракване: избор на опорна точка · Плъзгане: преместване на опорна точка, манипулатор или сегмент · {shift}-щракване: добавяне · {alt}-щракване: целия подпът
+	Content-Aware Move	Съобразено със съдържанието преместване
+	Convert to Layers	Преобразувай в слоеве
+	Copy Layers to Document	Копирай слоевете в документ
+	Couldn't place {name}: {error}	{name} не може да бъде поставен: {error}
+	Delete Action	Изтрий действието
+	Details	Подробности
+	Disable Symmetry Path	Изключи пътеката на симетрия
+	Discard Layers and Save a Copy	Отхвърли слоевете и запиши копие
+	Don't show again	Не показвай отново
+	Drop Floating Selection	Закотви плаващата селекция
+	Edit Layer Style	Редактирай стила на слоя
+	Esc to cancel	Esc за отказ
+	Extend	Разширяване
+	Float Selection	Направи селекцията плаваща
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Ласо за замразяване: плъзнете, за да замразите област, плъзнете с Alt, за да я размразите (L)
+	GPU Backend	GPU бекенд
+	GPU acceleration could not continue. Your documents are unchanged.	GPU ускорението не можа да продължи. Документите ви не са променени.
+	Get Action	Вземи действие
+	Grid:	Мрежа:
+	Hit-Test Type	Проверка за попадение в текст
+	Including layers will increase file size.	Включването на слоеве ще увеличи размера на файла.
+	Invalid {mode} profile	Невалиден профил {mode}
+	Keep Using CPU	Продължи с CPU
+	Lasso around an area, then drag the selection	Оградете област с ласото, след това плъзнете селекцията
+	Layer Style Default	Стил на слоя по подразбиране
+	List Actions	Списък с действия
+	List Background Jobs	Списък с фонови задачи
+	Make Layer Style Default	Задай стила на слоя по подразбиране
+	Make Selection from Path	Създай селекция от пътека
+	Make Symmetry Path	Създай пътека на симетрия
+	Move	Преместване
+	Move Document	Премести документа
+	Navigate Type	Навигация в текста
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Няма пътека, от която да се създаде селекция: начертайте я с инструмента Писалка или я изберете в панела Пътища.
+	Opening {name}	Отваряне на {name}
+	Opening {name}…	Отваряне на {name}…
+	Opening…	Отваряне…
+	Patch	Кръпка
+	Patch:	Кръпка:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite композира изображението чрез CPU. Прозорецът все още може да използва графичния адаптер.
+	Play Action	Изпълни действието
+	Reading…	Четене…
+	Record Action	Запиши действие
+	Rendering Mode	Режим на изобразяване
+	Retry GPU	Опитай отново с GPU
+	Retry GPU requires a restart. Save your work first.	Повторният опит с GPU изисква рестартиране. Първо запазете работата си.
+	Save cancelled	Записът е отменен
+	Save failed: {error}	Записът не бе успешен: {error}
+	Stamp Down	Отпечатай надолу
+	Stamp Visible	Отпечатай видимите
+	Stop Recording	Спри записа
+	Structure:	Структура:
+	Switched to CPU rendering	Превключено към изобразяване чрез CPU
+	TIFF Options	Опции за TIFF
+	Type Caret	Текстов курсор
+	Unnamed {mode} profile	Неименуван профил {mode}
+	Warp Grid	Мрежа за деформиране
+	Working…	Обработка…

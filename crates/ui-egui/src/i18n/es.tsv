@@ -15,7 +15,7 @@
 	Edit	Editar
 	Image	Imagen
 	Layer	Capa
-	Type	Tipo
+	Type	Texto
 	Select	Seleccionar
 	Filter	Filtro
 	View	Visualizar
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avanzado
+	Alt-click to define a source point to clone from	Alt-clic para definir el punto de origen de la clonación
+	Automatic (recommended)	Automático (recomendado)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	El modo automático usa la aceleración por GPU cuando está disponible y recurre al renderizado por CPU si hay errores.
+	CPU / Compatibility	CPU / Compatibilidad
+	Cancel Background Job	Cancelar tarea en segundo plano
+	Cancel opening	Cancelar apertura
+	Cancelled opening {name}	Apertura de {name} cancelada
+	Cancelled {label}	Cancelado: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clic: seleccionar ancla · Arrastrar: mover ancla, manejador o segmento · {shift}-clic: añadir · {alt}-clic: subtrazado completo
+	Content-Aware Move	Movimiento según el contenido
+	Convert to Layers	Convertir en capas
+	Copy Layers to Document	Copiar capas en documento
+	Couldn't place {name}: {error}	No se pudo colocar {name}: {error}
+	Delete Action	Eliminar acción
+	Details	Detalles
+	Disable Symmetry Path	Desactivar trazado de simetría
+	Discard Layers and Save a Copy	Descartar capas y guardar una copia
+	Don't show again	No volver a mostrar
+	Drop Floating Selection	Soltar selección flotante
+	Edit Layer Style	Editar estilo de capa
+	Esc to cancel	Esc para cancelar
+	Extend	Extender
+	Float Selection	Convertir selección en flotante
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lazo de congelación: arrastre para congelar un área, Alt-arrastrar para descongelarla (L)
+	GPU Backend	Backend de GPU
+	GPU acceleration could not continue. Your documents are unchanged.	La aceleración por GPU no pudo continuar. Sus documentos no han cambiado.
+	Get Action	Obtener acción
+	Grid:	Cuadrícula:
+	Hit-Test Type	Prueba de posición en el texto
+	Including layers will increase file size.	Incluir las capas aumentará el tamaño del archivo.
+	Invalid {mode} profile	Perfil {mode} no válido
+	Keep Using CPU	Seguir usando la CPU
+	Lasso around an area, then drag the selection	Rodee un área con el lazo y luego arrastre la selección
+	Layer Style Default	Estilo de capa predeterminado
+	List Actions	Listar acciones
+	List Background Jobs	Listar tareas en segundo plano
+	Make Layer Style Default	Convertir en estilo de capa predeterminado
+	Make Selection from Path	Hacer selección a partir del trazado
+	Make Symmetry Path	Crear trazado de simetría
+	Move	Mover
+	Move Document	Mover documento
+	Navigate Type	Navegar por el texto
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	No hay ningún trazado a partir del cual crear una selección: dibuje uno con la herramienta Pluma o seleccione uno en el panel Trazados.
+	Opening {name}	Abriendo {name}
+	Opening {name}…	Abriendo {name}…
+	Opening…	Abriendo…
+	Patch	Parche
+	Patch:	Parche:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite está usando el compositor de imágenes por CPU. La ventana puede seguir usando su adaptador gráfico.
+	Play Action	Reproducir acción
+	Reading…	Leyendo…
+	Record Action	Grabar acción
+	Rendering Mode	Modo de renderizado
+	Retry GPU	Reintentar GPU
+	Retry GPU requires a restart. Save your work first.	Reintentar GPU requiere reiniciar. Guarde antes su trabajo.
+	Save cancelled	Guardado cancelado
+	Save failed: {error}	Error al guardar: {error}
+	Stamp Down	Combinar una copia hacia abajo
+	Stamp Visible	Combinar una copia de lo visible
+	Stop Recording	Detener grabación
+	Structure:	Estructura:
+	Switched to CPU rendering	Se cambió al renderizado por CPU
+	TIFF Options	Opciones de TIFF
+	Type Caret	Cursor de texto
+	Unnamed {mode} profile	Perfil {mode} sin nombre
+	Warp Grid	Cuadrícula de deformación
+	Working…	Procesando…

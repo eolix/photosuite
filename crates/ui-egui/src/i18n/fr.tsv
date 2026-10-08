@@ -15,7 +15,7 @@
 	Edit	Édition
 	Image	Image
 	Layer	Calque
-	Type	Type
+	Type	Texte
 	Select	Sélection
 	Filter	Filtre
 	View	Affichage
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avancé
+	Alt-click to define a source point to clone from	Alt-clic pour définir le point source du clonage
+	Automatic (recommended)	Automatique (recommandé)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Le mode automatique utilise l'accélération GPU lorsqu'elle est disponible et bascule vers le rendu CPU en cas d'erreur.
+	CPU / Compatibility	CPU / Compatibilité
+	Cancel Background Job	Annuler la tâche d'arrière-plan
+	Cancel opening	Annuler l'ouverture
+	Cancelled opening {name}	Ouverture de {name} annulée
+	Cancelled {label}	Annulé : {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clic : sélectionner un point d'ancrage · Glisser : déplacer un point d'ancrage, une poignée ou un segment · {shift}-clic : ajouter · {alt}-clic : tout le sous-tracé
+	Content-Aware Move	Déplacement basé sur le contenu
+	Convert to Layers	Convertir en calques
+	Copy Layers to Document	Copier les calques dans le document
+	Couldn't place {name}: {error}	Impossible d'importer {name} : {error}
+	Delete Action	Supprimer l'action
+	Details	Détails
+	Disable Symmetry Path	Désactiver le tracé de symétrie
+	Discard Layers and Save a Copy	Ignorer les calques et enregistrer une copie
+	Don't show again	Ne plus afficher
+	Drop Floating Selection	Déposer la sélection flottante
+	Edit Layer Style	Modifier le style de calque
+	Esc to cancel	Esc pour annuler
+	Extend	Étendre
+	Float Selection	Rendre la sélection flottante
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lasso de gel : faites glisser pour figer une zone, Alt-glisser pour la libérer (L)
+	GPU Backend	Back-end GPU
+	GPU acceleration could not continue. Your documents are unchanged.	L'accélération GPU n'a pas pu continuer. Vos documents n'ont pas été modifiés.
+	Get Action	Obtenir l'action
+	Grid:	Grille :
+	Hit-Test Type	Test de position sur le texte
+	Including layers will increase file size.	L'inclusion des calques augmentera la taille du fichier.
+	Invalid {mode} profile	Profil {mode} non valide
+	Keep Using CPU	Continuer avec le CPU
+	Lasso around an area, then drag the selection	Entourez une zone au lasso, puis faites glisser la sélection
+	Layer Style Default	Style de calque par défaut
+	List Actions	Lister les actions
+	List Background Jobs	Lister les tâches d'arrière-plan
+	Make Layer Style Default	Définir comme style de calque par défaut
+	Make Selection from Path	Créer une sélection à partir du tracé
+	Make Symmetry Path	Créer un tracé de symétrie
+	Move	Déplacer
+	Move Document	Déplacer le document
+	Navigate Type	Naviguer dans le texte
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Aucun tracé à partir duquel créer une sélection : dessinez-en un avec l'outil Plume ou sélectionnez-en un dans le panneau Tracés.
+	Opening {name}	Ouverture de {name}
+	Opening {name}…	Ouverture de {name}…
+	Opening…	Ouverture…
+	Patch	Pièce
+	Patch:	Pièce :
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite utilise le compositeur d'images CPU. La fenêtre peut toujours utiliser votre carte graphique.
+	Play Action	Exécuter l'action
+	Reading…	Lecture…
+	Record Action	Enregistrer l'action
+	Rendering Mode	Mode de rendu
+	Retry GPU	Réessayer le GPU
+	Retry GPU requires a restart. Save your work first.	Réessayer le GPU nécessite un redémarrage. Enregistrez d'abord votre travail.
+	Save cancelled	Enregistrement annulé
+	Save failed: {error}	Échec de l'enregistrement : {error}
+	Stamp Down	Fusionner une copie vers le bas
+	Stamp Visible	Fusionner une copie des calques visibles
+	Stop Recording	Arrêter l'enregistrement
+	Structure:	Structure :
+	Switched to CPU rendering	Passage au rendu CPU
+	TIFF Options	Options TIFF
+	Type Caret	Point d'insertion du texte
+	Unnamed {mode} profile	Profil {mode} sans nom
+	Warp Grid	Grille de déformation
+	Working…	Traitement…

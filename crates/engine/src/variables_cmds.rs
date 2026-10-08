@@ -234,6 +234,14 @@ fn replace_pixels(doc: &mut Document, layer: LayerId, path: &str, method: PixelM
 fn apply_data_set(s: &mut Session, p: &Value) -> Result<Value> {
     let (set, idx) = resolve_set(s, p, "image.applyDataSet")?;
     let vars = s.active().ok_or(EngineError::NoDocument)?.doc.variables.clone();
+    // Pixel Replacement reads image files, so an untrusted session's gate judges each path.
+    if let Some(auth) = s.authorize {
+        for dv in &set.values {
+            if let VarValue::Pixels(path) = &dv.value {
+                auth("image.applyDataSet", &json!({"path": path}))?;
+            }
+        }
+    }
     s.edit(&format!("Apply Data Set \"{}\"", set.name), |doc, _| apply_to_doc(doc, &vars, &set))?;
     set_vars(s, |v| v.active = Some(idx))?;
     Ok(json!({"applied": set.name, "index": idx}))

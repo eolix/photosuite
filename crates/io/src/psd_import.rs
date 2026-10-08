@@ -606,18 +606,28 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
     let (w, hh) = (h.width as usize, h.height as usize);
     let n = w * hh;
     let canvas = Rect::new(0, 0, h.width as i32, h.height as i32);
-    let merged = file.decode_merged();
-    if ctl.cancelled() {
-        return None;
-    }
-    ctl.progress(0.1);
-    if let Err(e) = &merged {
-        cx.warn(format!("merged image could not be decoded: {e}"));
-    }
+    // The merged composite is decoded only when something consumes it: a flattened or
+    // multichannel file (it *is* the image), or extra alpha/spot channels behind the colour
+    // ones. A normal layered Photoshop save carries a merged composite nobody reads - roughly
+    // half the file's bytes, decoded and thrown away on every open before this.
+    let extra = usize::from(h.channels) > cc + usize::from(file.merged_has_alpha());
+    let merged = if !layered || file.layers().is_empty() || extra {
+        let m = file.decode_merged();
+        if ctl.cancelled() {
+            return None;
+        }
+        ctl.progress(0.1);
+        if let Err(e) = &m {
+            cx.warn(format!("merged image could not be decoded: {e}"));
+        }
+        Some(m)
+    } else {
+        None
+    };
 
     if multichannel {
         // Ink channels only (no layers); see `multichannel_map`.
-        if let Ok(all) = &merged {
+        if let Some(Ok(all)) = &merged {
             let names = file.resource(1045).map(|r| unicode_names(&r.data)).unwrap_or_default();
             crate::multichannel_map::import(file, all, &mut doc, &names, &mut cx.warnings);
         }
@@ -634,7 +644,7 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
             apply_link_groups(&tree, &mut doc.layers, &groups);
         }
         if doc.layers.is_empty()
-            && let Ok(all) = &merged
+            && let Some(Ok(all)) = &merged
         {
             // Flattened file: the merged image becomes the background layer.
             let plane = h.row_bytes() * hh;
@@ -698,7 +708,7 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
         }
         let rgba = file.composite_rgba8().or_else(|_| {
             // Multichannel: show the first channels as RGB.
-            let all = merged.clone()?;
+            let all = merged.clone().ok_or_else(|| photosuite_psd::PsdError::Invalid("no merged image".into()))??;
             let plane = h.row_bytes() * hh;
             let mut data = vec![255u8; n * 4];
             for c in 0..3.min(usize::from(h.channels)) {
@@ -728,7 +738,7 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photosuite_raster::Interrupt) 
     }
 
     // Extra (alpha / spot) channels of the merged image.
-    if layered && let Ok(all) = &merged {
+    if layered && let Some(Ok(all)) = &merged {
         let first = cc + usize::from(file.merged_has_alpha());
         let plane = h.row_bytes() * hh;
         let names = file.resource(1045).map(|r| unicode_names(&r.data)).unwrap_or_default();

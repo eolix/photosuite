@@ -4,7 +4,7 @@ PhotoSuite is a modified version of [PhotoCraft](https://github.com/storytold/ph
 `NOTICE`). This file is the record of which upstream commits have been brought over and which
 were decided against, and the procedure for doing it. `cargo xtask upstream` reads and writes it.
 
-Synced through: `7a9b5911893c958c5ac10efb148aa2d325c6a7f2`
+Synced through: `11f6f00ccc888cb12caa95ab70dcadc231fda90f`
 
 Every upstream commit up to and including that one is in PhotoSuite or was decided against.
 (`a96a621` is the revision PhotoSuite was created from.)
@@ -49,6 +49,11 @@ Never applied automatically (listed after the port for a person to look at):
   taken.
 - **No translations**: upstream's catalogues, languages and i18n code are never taken; PhotoSuite
   manages its own. Translation commits are skipped.
+- **New UI strings are translated here**: when ported code adds UI text (`tl!` literals, menu
+  labels and paths, command labels), the session doing the sync translates every new line into
+  every supported language (all `LANGUAGES` but English) from the English meaning, without looking
+  at upstream's catalogues, and appends the rows to each `crates/ui-egui/src/i18n/*.tsv` in the
+  same batch. `{name}` placeholders, the trailing "…" and product names stay as they are.
 
 ## Procedure (for the session doing the sync)
 
@@ -119,3 +124,15 @@ Never applied automatically (listed after the port for a person to look at):
 | `a20c63521d` | skip | UI change (new search palette) — Help › Search: find any menu command by name (#815) |
 | `c161eaec73` | skip | fonts (no UI changes from upstream) — Fonts: use craft-fonts as an optional build input; move the Japanese fonts out (#353) (#353) |
 | `b07a2e5b43` | skip | already done here (persist_window in apps/photosuite main.rs) — Remember desktop window and panel sizes across restarts (#587) |
+| `52ccb8a800` | skip | already done here (73b748d canvas close button based on OS) — Document tab close button after the title on Windows and Linux, as in Photoshop (#619) (#832) |
+| `244a99c39f` | skip | UI change: PhotoSuite's own title bar (b932800) — Windows and Linux: one title bar with the app icon (no stacked OS bar); long context menus scroll (#986) |
+| `735bb09a98` | skip | already done differently here (lossy WebP via webp-rust, quality kept per document) — Lossy WebP: a pure-Rust VP8 encoder with quality and lossless controls (#648) (#880) |
+| `3f605afc81` | skip | UI change (menu row sizes) — Menu rows touch, as in native menus: long menus are a fifth shorter (#402) (#844) |
+| `44303db546` | skip | UI change: About dialog (PhotoSuite's own) — About: contributor and model credits compiled in (grab bag + table, self-submitted names) (#898) |
+| `0f16bce0c5` | skip | already done differently here (PhotoSuite's own Magnetic Lasso, magnetic_ui.rs) — Add the Magnetic Lasso tool (#864) |
+| `07174271d5` | skip | only held-back files (translations / CI / brand / records) — CI: never cancel main's runs; trim per-PR runner time (#800) |
+| `00c406f589` | skip | tests behaviour from skipped 9aef02cac3 (menus open on press) — Test: one press-drag-release gesture crosses menu titles and enters submenus (#775) (#837) |
+| `1d8a32ed83` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on the org macos-release runner |
+| `34a87cedea` | skip | only held-back files (translations / CI / brand / records) — actionlint: declare the org macos-release runner label (#927) |
+| `e040376e15` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on macos-15-xlarge |
+| `fee08b07b6` | skip | only held-back files (translations / CI / brand / records) — CI: craft-fonts run uses the Test step's exact build again (Linux runner out of disk since #800) (#955) |

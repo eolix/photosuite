@@ -6,7 +6,7 @@
 	Edit	Redaguoti
 	Image	Vaizdas
 	Layer	Sluoksniai
-	Type	Tipas
+	Type	Tekstas
 	Select	Žymėjimas
 	Filter	Filtrai
 	View	Rodymas
@@ -1957,3 +1957,74 @@
 	175%	175 %
 	250%	250 %
 	300%	300 %
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Išplėstinės
+	Alt-click to define a source point to clone from	Spustelėkite laikydami Alt, kad nustatytumėte šaltinio tašką klonavimui
+	Automatic (recommended)	Automatinis (rekomenduojama)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatinis režimas naudoja GPU spartinimą, kai jis pasiekiamas, o įvykus klaidoms grįžta prie atvaizdavimo CPU.
+	CPU / Compatibility	CPU / Suderinamumas
+	Cancel Background Job	Atšaukti foninę užduotį
+	Cancel opening	Atšaukti atidarymą
+	Cancelled opening {name}	Atšauktas {name} atidarymas
+	Cancelled {label}	Atšaukta: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Spustelėjimas: pažymėti inkaro tašką · Vilkimas: perkelti inkaro tašką, rankenėlę arba atkarpą · {shift}-spustelėjimas: pridėti · {alt}-spustelėjimas: visas pokontūris
+	Content-Aware Move	Perkėlimas suvokiant turinį
+	Convert to Layers	Konvertuoti į sluoksnius
+	Copy Layers to Document	Kopijuoti sluoksnius į dokumentą
+	Couldn't place {name}: {error}	Nepavyko įdėti {name}: {error}
+	Delete Action	Pašalinti operaciją
+	Details	Išsami informacija
+	Disable Symmetry Path	Išjungti simetrijos kontūrą
+	Discard Layers and Save a Copy	Atmesti sluoksnius ir įrašyti kopiją
+	Don't show again	Daugiau nerodyti
+	Drop Floating Selection	Įtvirtinti slankųjį žymėjimą
+	Edit Layer Style	Redaguoti sluoksnio stilių
+	Esc to cancel	Esc – atšaukti
+	Extend	Išplėsti
+	Float Selection	Padaryti žymėjimą slankiuoju
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Užšaldymo lasso: vilkite, kad užšaldytumėte sritį, vilkite laikydami Alt, kad ją atšildytumėte (L)
+	GPU Backend	GPU backend
+	GPU acceleration could not continue. Your documents are unchanged.	GPU spartinimo nepavyko tęsti. Jūsų dokumentai nepakeisti.
+	Get Action	Gauti operaciją
+	Grid:	Tinklelis:
+	Hit-Test Type	Teksto pataikymo tikrinimas
+	Including layers will increase file size.	Įtraukus sluoksnius, failas padidės.
+	Invalid {mode} profile	Netinkamas {mode} profilis
+	Keep Using CPU	Toliau naudoti CPU
+	Lasso around an area, then drag the selection	Apveskite sritį lasso, tada vilkite žymėjimą
+	Layer Style Default	Numatytasis sluoksnio stilius
+	List Actions	Operacijų sąrašas
+	List Background Jobs	Foninių užduočių sąrašas
+	Make Layer Style Default	Nustatyti kaip numatytąjį sluoksnio stilių
+	Make Selection from Path	Sukurti žymėjimą iš kontūro
+	Make Symmetry Path	Sukurti simetrijos kontūrą
+	Move	Perkėlimas
+	Move Document	Perkelti dokumentą
+	Navigate Type	Naršyti tekstą
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nėra kontūro, iš kurio būtų galima sukurti žymėjimą: nubrėžkite jį rašiklio įrankiu arba pasirinkite skydelyje „Kontūrai“.
+	Opening {name}	Atidaroma {name}
+	Opening {name}…	Atidaroma {name}…
+	Opening…	Atidaroma…
+	Patch	Lopas
+	Patch:	Lopas:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite naudoja CPU vaizdų komponavimo variklį. Langas vis tiek gali naudoti jūsų grafikos adapterį.
+	Play Action	Leisti operaciją
+	Reading…	Skaitoma…
+	Record Action	Įrašyti operaciją
+	Rendering Mode	Atvaizdavimo režimas
+	Retry GPU	Bandyti GPU dar kartą
+	Retry GPU requires a restart. Save your work first.	Norint dar kartą bandyti GPU, reikia paleisti iš naujo. Pirmiausia įrašykite savo darbą.
+	Save cancelled	Įrašymas atšauktas
+	Save failed: {error}	Įrašyti nepavyko: {error}
+	Stamp Down	Įspausti žemyn
+	Stamp Visible	Įspausti matomus
+	Stop Recording	Stabdyti įrašymą
+	Structure:	Struktūra:
+	Switched to CPU rendering	Perjungta į atvaizdavimą CPU
+	TIFF Options	TIFF parinktys
+	Type Caret	Teksto žymeklis
+	Unnamed {mode} profile	Bevardis {mode} profilis
+	Warp Grid	Deformavimo tinklelis
+	Working…	Vykdoma…

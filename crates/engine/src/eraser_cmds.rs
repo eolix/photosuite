@@ -8,7 +8,7 @@
 //! work in the layer's own colour model and depth, and are one undo step per click / stroke.
 
 use photosuite_algo::selection as sel;
-use photosuite_doc::{Layer, LayerContent, LayerId};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId};
 use photosuite_geom::Rect;
 use photosuite_paint::Stroke;
 use photosuite_paint::bg_erase::{BgEraseSettings, apply_background_eraser};
@@ -68,8 +68,9 @@ fn unlock_background(l: &mut Layer) {
     }
 }
 
-fn pixels_locked(l: &Layer) -> Option<EngineError> {
-    (l.locks.pixels || l.locks.all).then(|| EngineError::Other(format!("Could not complete your request because the layer \"{}\" is locked", l.name)))
+fn pixels_locked(doc: &Document, l: &Layer) -> Option<EngineError> {
+    let locks = doc.effective_locks(l.id);
+    (locks.pixels || locks.all).then(|| EngineError::Other(format!("Could not complete your request because the layer \"{}\" is locked", l.name)))
 }
 
 fn damage(s: &mut Session, dmg: Rect, erased: bool) -> Value {
@@ -94,7 +95,7 @@ fn magic_eraser(s: &mut Session, p: &Value) -> Result<Value> {
     let id = active_pixel_layer(s, CMD)?;
     {
         let d = s.active().ok_or(EngineError::NoDocument)?;
-        if let Some(e) = d.doc.layer(id).and_then(pixels_locked) {
+        if let Some(e) = d.doc.layer(id).and_then(|l| pixels_locked(&d.doc, l)) {
             return Err(e);
         }
         // Clicking off the canvas erases nothing (and records no history step).
@@ -109,9 +110,9 @@ fn magic_eraser(s: &mut Session, p: &Value) -> Result<Value> {
     let bg = s.tools.background;
     let dmg = s.edit("Magic Eraser", |doc, _| {
         let selection = doc.selection.clone();
+        unlock_background(doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?);
+        let lock = doc.effective_locks(id).transparency;
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        unlock_background(l);
-        let lock = l.locks.transparency;
         let surf = l.surface_mut().ok_or_else(|| bad(CMD, "not a pixel layer"))?;
         let fmt = surf.format();
         // Locked transparency: paint the background colour instead (Photoshop).
@@ -141,10 +142,10 @@ fn background_eraser(s: &mut Session, p: &Value) -> Result<Value> {
     {
         let d = s.active().ok_or(EngineError::NoDocument)?;
         let l = d.doc.layer(id).ok_or(EngineError::NoLayer(id))?;
-        if let Some(e) = pixels_locked(l) {
+        if let Some(e) = pixels_locked(&d.doc, l) {
             return Err(e);
         }
-        if l.locks.transparency && !is_background(l) {
+        if d.doc.effective_locks(id).transparency && !is_background(l) {
             return Err(EngineError::Other(format!("Could not use the Background Eraser because the transparency of layer \"{}\" is locked", l.name)));
         }
     }

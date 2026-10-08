@@ -140,6 +140,7 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::Type => "tools-htype",
         Tool::VerticalType => "tools-vtype",
         Tool::PathSelection => "tools-pselect",
+        Tool::DirectSelection => "tools-dselect",
         Tool::Rectangle => "tools-rect",
         Tool::EllipseShape => "tools-ellipse",
         Tool::Line => "tools-line",

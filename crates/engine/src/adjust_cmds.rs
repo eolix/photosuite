@@ -167,23 +167,23 @@ fn process_surface(surf: &mut Surface, selection: Option<&Surface>, f: &mut dyn 
     surf.write_region(r, &out);
 }
 
-/// One history step running `f` on the active pixel layer (or targeted channel).
+/// One history step running `f` on the active pixel layer (or targeted channel or layer mask).
 fn rgba_edit(s: &mut Session, label: &str, p: &Value, mut f: impl FnMut(&mut Vec<[f32; 4]>, Rect)) -> Result<Value> {
-    if crate::channel_cmds::is_channel_target(p) {
+    let id = crate::commands::layer_param(s, &Value::Null).ok();
+    if crate::channel_cmds::target_of(p) != crate::channel_cmds::Target::Pixels {
         return s.edit(label, |doc, _| {
             let sel = doc.selection.clone();
-            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, p)? {
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, id, p)? {
                 process_surface(surf, sel.as_ref(), &mut f);
                 surf.prune();
             }
             Ok(Value::Null)
         });
     }
-    let id = crate::commands::layer_param(s, &Value::Null)?;
+    let id = id.ok_or_else(|| EngineError::Other("no active layer".into()))?;
     s.edit(label, |doc, _| {
         let sel = doc.selection.clone();
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         process_surface(surf, sel.as_ref(), &mut f);
         Ok(Value::Null)
     })

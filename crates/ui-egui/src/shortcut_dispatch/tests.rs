@@ -313,6 +313,37 @@ fn alt_brackets_walk_the_layers_panel() {
     assert_eq!(h.state().session.active().unwrap().selected_layers().len(), 2, "⇧⌥[ adds to the selection");
 }
 
+/// #626: [ ] ⇧[ ⇧] are commands listed under Tools in Edit › Keyboard Shortcuts, so they rebind.
+#[test]
+fn brush_keys_can_be_rebound() {
+    let mut h = harness();
+    put_focus(&mut h, Place::Canvas);
+    let items = crate::prefs_ui::shortcut_items(h.state());
+    let listed = |id: &str| items.iter().find(|i| i.0 == id).map(|i| (i.1.clone(), i.2.clone(), i.3.clone()));
+    assert_eq!(listed("tools.decreaseBrushSize"), Some(("Decrease Brush Size".into(), vec!["Tools".into()], Some("[".into()))));
+    assert_eq!(listed("tools.increaseBrushHardness").and_then(|i| i.2), Some("Shift+]".into()));
+    let app = h.state_mut();
+    app.ui.tool = Tool::Brush;
+    app.run("tools.setBrush", json!({"brush": {"size": 40, "hardness": 0.5}})).unwrap();
+    app.run("edit.keyboardShortcuts", json!({"set": {"tools.increaseBrushSize": "Alt+W", "tools.increaseBrushHardness": "Alt+Shift+W"}})).unwrap();
+    let brush = |h: &Harness<'_, PhotosuiteApp>| (h.state().session.tools.brush.size, h.state().session.tools.brush.hardness);
+    press(&mut h, "]");
+    press(&mut h, "Shift+]");
+    assert_eq!(brush(&h), (40.0, 0.5), "the old keys are free");
+    press(&mut h, "Alt+W");
+    press(&mut h, "Alt+Shift+W");
+    assert_eq!(brush(&h), (50.0, 0.75), "the new keys step size and hardness");
+    press(&mut h, "[");
+    press(&mut h, "Shift+[");
+    assert_eq!(brush(&h), (40.0, 0.5), "the others keep their defaults");
+    // Hardness only steps for a tool with a brush tip; the press says why it did nothing.
+    h.state_mut().ui.tool = Tool::Move;
+    take_log(&h.ctx);
+    press(&mut h, "Alt+Shift+W");
+    assert_eq!(brush(&h), (40.0, 0.5));
+    assert!(matches!(take_log(&h.ctx).as_slice(), [(id, Outcome::Disabled(_))] if id == "tools.increaseBrushHardness"));
+}
+
 /// Bytes the app saved, newest last.
 type Saved = std::rc::Rc<std::cell::RefCell<Vec<Vec<u8>>>>;
 

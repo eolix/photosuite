@@ -114,15 +114,17 @@ fn pixel_layer(s: &Session) -> std::result::Result<LayerId, String> {
     if !matches!(l.content, LayerContent::Raster(_)) {
         return Err(format!("active layer is a {} layer, not a pixel layer", l.content.kind_name()));
     }
-    if l.locks.all || l.locks.pixels {
+    let locks = d.doc.effective_locks(id);
+    if locks.all || locks.pixels {
         return Err(format!("the layer \"{}\" is locked", l.name));
     }
     Ok(id)
 }
 
 fn writable_surface(doc: &mut Document, id: LayerId) -> Result<&mut Surface> {
+    let locks = doc.effective_locks(id);
     let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-    if l.locks.all || l.locks.pixels {
+    if locks.all || locks.pixels {
         return Err(EngineError::Other(format!("Could not complete your request because the layer \"{}\" is locked", l.name)));
     }
     l.surface_mut().ok_or_else(|| EngineError::Other("not a pixel layer".into()))
@@ -657,7 +659,7 @@ pub fn find_matches(text: &str, find: &str, case: bool, whole: bool) -> Vec<(usi
 fn type_layers(doc: &Document, forward: bool) -> Vec<LayerId> {
     // Layers panel order: top first.
     let mut ids: Vec<LayerId> =
-        doc.walk().into_iter().rev().filter(|(_, _, l)| matches!(l.content, LayerContent::Text(_)) && !l.locks.all).map(|(_, _, l)| l.id).collect();
+        doc.walk().into_iter().rev().filter(|(p, _, l)| matches!(l.content, LayerContent::Text(_)) && !doc.locks_at(p).all).map(|(_, _, l)| l.id).collect();
     if !forward {
         ids.reverse();
     }

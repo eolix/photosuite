@@ -104,8 +104,7 @@ fn edit_rgba(s: &mut Session, label: &str, grow: i32, f: impl FnOnce(&mut Vec<[f
     let id = layer_param(s, &Value::Null)?;
     s.edit(label, |doc, _| {
         let bounds = doc.bounds();
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let r = surf.content_bounds().inflate(grow).intersect(&bounds.inflate(grow));
         if r.is_empty() {
             return Ok(Value::Null);
@@ -124,9 +123,8 @@ fn edit_rgba(s: &mut Session, label: &str, grow: i32, f: impl FnOnce(&mut Vec<[f
 fn apply_mask(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_param(s, p)?;
     s.edit("Apply Layer Mask", |doc, _| {
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let mask = l.mask.take().ok_or_else(|| other("the layer has no layer mask"))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let mask = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask.take().ok_or_else(|| other("the layer has no layer mask"))?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let r = surf.content_bounds();
         if !r.is_empty() {
             let mut px = read_rgba(surf, r);
@@ -147,8 +145,7 @@ fn mask_from_transparency(s: &mut Session, p: &Value) -> Result<Value> {
     let id = layer_param(s, p)?;
     s.edit("From Transparency", |doc, _| {
         let bounds = doc.bounds();
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let r = surf.content_bounds().intersect(&bounds);
         let mut mask = LayerMask::hide_all();
         if !r.is_empty() {
@@ -161,7 +158,7 @@ fn mask_from_transparency(s: &mut Session, p: &Value) -> Result<Value> {
             }
             write_rgba(surf, r, &px);
         }
-        l.mask = Some(mask);
+        doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = Some(mask);
         Ok(Value::Null)
     })
 }
@@ -294,8 +291,7 @@ fn color_decontaminate(s: &mut Session, p: &Value) -> Result<Value> {
     let radius = num(p, "radius", 4.0).clamp(1.0, 100.0);
     let id = layer_param(s, &Value::Null)?;
     s.edit("Color Decontaminate", |doc, _| {
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let r = surf.content_bounds();
         if r.is_empty() || !surf.format().alpha {
             return Ok(());

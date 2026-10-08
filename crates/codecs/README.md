@@ -76,10 +76,12 @@ the same.
   containers that can hold more frames. The decoded image then carries a
   `DecodeWarning::MoreFrames` / `MorePages` in `Image::warnings`, with the total when the file
   states it (frames and TIFF directories are counted without decoding them; reduced-resolution
-  TIFF directories and transparency masks are not pages).
+  TIFF directories and transparency masks are not pages). Any TIFF page can still be opened
+  with `decode_tiff_page` (and `photosuite_io::import_tiff_page`).
 * **EXIF in TIFF** is stored as a sub-IFD rather than a blob, so it is not preserved yet.
   `caps.exif = false` for TIFF, and a warning is raised.
-* **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the IFD0 tag in TIFF) is applied on
+* **Orientation** (EXIF tag 274 in JPEG, PNG `eXIf` and WebP; the decoded page's tag in TIFF and
+  BigTIFF) is applied on
   decode, like Photoshop: the pixels come back upright and the EXIF/XMP orientation is rewritten
   to 1 (`DecodeOptions::keep_orientation` opts out). Encoders always write Orientation = 1
   (`upright_exif`, `upright_xmp`, which change only the tag's value, kept in its own type), so upright pixels
@@ -100,10 +102,26 @@ the same.
   * EXIF and XMP must each fit in one 64 KiB APP1 segment, otherwise the encoder returns an error.
     Extended XMP is not written.
 * **TIFF decode**
-  * Supports 1, 2 and 4-bit gray (best effort, not yet covered by tests), 8/16/32-bit integers (32-bit is reduced to U16), F16, F32 and
-    F64 (converted to F32), and WhiteIsZero.
-  * Palette and YCbCr TIFFs, and compressions that the `tiff` crate lacks (CCITT, JPEG-in-TIFF),
-    return `Unsupported`.
+  * Classic TIFF and BigTIFF (version 43, 8-byte offsets), both byte orders, strips or tiles,
+    planar configuration 1 or 2.
+  * Supports 1, 2 and 4-bit gray, 8/16/32/64-bit integers (32 and 64-bit are reduced to U16),
+    F16, F32 and F64 (converted to F32), WhiteIsZero (#691: the tones are no longer inverted),
+    palette images (opened as RGB), associated alpha (made straight) and extra samples (dropped
+    unless the first is alpha).
+  * Every directory is reachable: `tiff_info` lists the main IFD chain and its SubIFDs (tag 330)
+    with each page's size, kind (page, reduced-resolution copy, mask) and storage, walked with a
+    seen-set, a depth limit and a 10 000-directory cap; `decode_tiff_page` opens any of them.
+    `decode` opens the first full-resolution page, like Photoshop (thumbnails are skipped).
+  * Banded decoding: the image is allocated once at its final size and each strip or row of
+    tiles is decoded straight into it, in parallel on native targets, with at most one
+    strip/tile-sized scratch buffer per worker (30 MP RGB8: Deflate 345 → 32 ms, LZW 428 → 43
+    ms in release). Image data cut off by the end of the file decodes with
+    `DecodeWarning::Truncated`; a file far too small for its declared size (more than any
+    compression could expand) is refused before allocating.
+  * YCbCr, CIE Lab, signed integers and compressions that the `tiff` crate lacks (CCITT,
+    JPEG-in-TIFF) return `Unsupported`.
+* **TIFF encode** writes classic TIFF, or BigTIFF when `EncodeOptions::tiff_bigtiff` is set or
+  the file could pass 4 GiB.
 * **EXR**
   * Reads the first valid layer at full resolution, from its data window.
   * Channel names are matched by suffix, so `layer.R` counts as `R`.

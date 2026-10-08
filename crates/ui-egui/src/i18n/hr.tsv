@@ -15,7 +15,7 @@
 	Edit	Uređivanje
 	Image	Slika
 	Layer	Sloj
-	Type	Vrsta
+	Type	Tekst
 	Select	Odabir
 	Filter	Filter
 	View	Prikaz
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Napredno
+	Alt-click to define a source point to clone from	Alt-klikom odredite izvornu točku za kloniranje
+	Automatic (recommended)	Automatski (preporučeno)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatski način koristi GPU ubrzanje kada je dostupno, a u slučaju pogrešaka prelazi na iscrtavanje pomoću CPU-a.
+	CPU / Compatibility	CPU / Kompatibilnost
+	Cancel Background Job	Otkaži pozadinski zadatak
+	Cancel opening	Otkaži otvaranje
+	Cancelled opening {name}	Otvaranje {name} otkazano
+	Cancelled {label}	Otkazano: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klik: odaberi sidrišnu točku · Povlačenje: pomakni sidrišnu točku, ručicu ili segment · {shift}-klik: dodaj · {alt}-klik: cijeli podput
+	Content-Aware Move	Pomicanje s obzirom na sadržaj
+	Convert to Layers	Pretvori u slojeve
+	Copy Layers to Document	Kopiraj slojeve u dokument
+	Couldn't place {name}: {error}	Nije moguće postaviti {name}: {error}
+	Delete Action	Izbriši radnju
+	Details	Pojedinosti
+	Disable Symmetry Path	Onemogući put simetrije
+	Discard Layers and Save a Copy	Odbaci slojeve i spremi kopiju
+	Don't show again	Ne prikazuj ponovno
+	Drop Floating Selection	Usidri plutajući odabir
+	Edit Layer Style	Uredi stil sloja
+	Esc to cancel	Esc za odustajanje
+	Extend	Proširi
+	Float Selection	Stvori plutajući odabir
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Laso za zamrzavanje: povucite za zamrzavanje područja, Alt-povlačenjem ga odmrzavate (L)
+	GPU Backend	GPU pozadinski sustav
+	GPU acceleration could not continue. Your documents are unchanged.	GPU ubrzanje nije moglo nastaviti. Vaši dokumenti nisu promijenjeni.
+	Get Action	Dohvati radnju
+	Grid:	Mreža:
+	Hit-Test Type	Test pogotka teksta
+	Including layers will increase file size.	Uključivanje slojeva povećat će veličinu datoteke.
+	Invalid {mode} profile	Nevažeći profil {mode}
+	Keep Using CPU	Nastavi koristiti CPU
+	Lasso around an area, then drag the selection	Lasom obuhvatite područje, a zatim povucite odabir
+	Layer Style Default	Zadani stil sloja
+	List Actions	Popis radnji
+	List Background Jobs	Popis pozadinskih zadataka
+	Make Layer Style Default	Postavi stil sloja kao zadani
+	Make Selection from Path	Stvori odabir iz puta
+	Make Symmetry Path	Stvori put simetrije
+	Move	Pomicanje
+	Move Document	Premjesti dokument
+	Navigate Type	Navigacija tekstom
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nema puta iz kojeg bi se stvorio odabir: nacrtajte ga alatom za olovku ili ga odaberite na ploči Putanje.
+	Opening {name}	Otvaranje {name}
+	Opening {name}…	Otvaranje {name}…
+	Opening…	Otvaranje…
+	Patch	Zakrpa
+	Patch:	Zakrpa:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite slaže sliku pomoću CPU-a. Prozor i dalje može koristiti grafički adapter.
+	Play Action	Reproduciraj radnju
+	Reading…	Čitanje…
+	Record Action	Snimi radnju
+	Rendering Mode	Način iscrtavanja
+	Retry GPU	Ponovno pokušaj GPU
+	Retry GPU requires a restart. Save your work first.	Ponovni pokušaj GPU-a zahtijeva ponovno pokretanje. Najprije spremite svoj rad.
+	Save cancelled	Spremanje otkazano
+	Save failed: {error}	Spremanje nije uspjelo: {error}
+	Stamp Down	Otisni prema dolje
+	Stamp Visible	Otisni vidljive
+	Stop Recording	Zaustavi snimanje
+	Structure:	Struktura:
+	Switched to CPU rendering	Prebačeno na iscrtavanje pomoću CPU-a
+	TIFF Options	Mogućnosti TIFF-a
+	Type Caret	Kursor teksta
+	Unnamed {mode} profile	Neimenovani profil {mode}
+	Warp Grid	Mreža iskrivljenja
+	Working…	Obrada…

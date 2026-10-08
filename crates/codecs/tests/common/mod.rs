@@ -2,6 +2,8 @@
 //! image generators, comparison metrics.
 #![allow(dead_code)]
 
+pub mod tiffgen;
+
 use photosuite_codecs::*;
 
 /// SplitMix64 — tiny deterministic PRNG.

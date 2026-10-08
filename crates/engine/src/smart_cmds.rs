@@ -902,6 +902,14 @@ pub fn specs() -> Vec<CommandSpec> {
             |s| s.active().map(|_| ()).ok_or_else(|| "no document open".into()),
             |s, _| update_all(s)
         ),
+        spec!(
+            "layer.smartObjects.convertToLayers",
+            "Convert to Layers",
+            SO,
+            r##"{"layer":id?} (contents unpacked at the placement: one layer, or a group named after the smart object; smart filters are discarded)"##,
+            has_smart,
+            unpack::convert_to_layers
+        ),
         spec!("layer.smartObjects.convertToEmbedded", "Convert to Embedded", SO, r##"{"layer":id?}"##, has_linked, |s, p| {
             set_source(s, p, "Convert to Embedded", true, |meta, src| {
                 let (file_name, bytes) = source_bytes(meta, src).ok_or_else(|| other("the linked file can't be read"))?;
@@ -993,6 +1001,8 @@ pub fn specs() -> Vec<CommandSpec> {
         spec!("layer.smartFilter.move", "Move Smart Filter", &[], r##"{"layer":id?,"index":u32?,"to":u32}"##, has_smart_filters, move_filter),
     ]
 }
+
+mod unpack;
 
 #[cfg(test)]
 mod tests;

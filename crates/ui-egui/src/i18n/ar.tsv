@@ -15,7 +15,7 @@
 	Edit	تحرير
 	Image	صورة
 	Layer	طبقة
-	Type	النوع
+	Type	النص
 	Select	تحديد
 	Filter	مرشح
 	View	عرض
@@ -644,7 +644,7 @@
 	Pearl	لؤلؤة
 	Aubergine	الباذنجان
 	Ocean	المحيط
-	Actions	العربيه
+	Actions	الإجراءات
 	Brush Settings	إعدادات الفرشاة
 	Brushes	فرش
 	Channels	قنوات
@@ -697,7 +697,7 @@
 	3D LUT File	ملف 3D LUT
 	Absolute	مطلق
 	Absolute Colorimetric	اللونية المطلقة
-	Action	العمل
+	Action	إجراء
 	Adaptive	التكيف
 	Adaptive Wide Angle isn't open	الزاوية العريضة التكيفية ليست مفتوحة
 	Add	أضف
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 × 3
+	4 x 4	4 × 4
+	5 x 5	5 × 5
+	Advanced	متقدم
+	Alt-click to define a source point to clone from	انقر مع الضغط على Alt لتحديد نقطة المصدر للاستنساخ منها
+	Automatic (recommended)	تلقائي (موصى به)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	يستخدم الوضع التلقائي تسريع GPU عند توفره، ويعود إلى العرض بواسطة CPU عند حدوث أخطاء.
+	CPU / Compatibility	CPU / التوافق
+	Cancel Background Job	إلغاء مهمة الخلفية
+	Cancel opening	إلغاء الفتح
+	Cancelled opening {name}	تم إلغاء فتح {name}
+	Cancelled {label}	تم إلغاء {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	نقر: تحديد نقطة الارتكاز · سحب: تحريك نقطة الارتكاز أو المقبض أو المقطع · {shift}-نقر: إضافة · {alt}-نقر: المسار الفرعي بالكامل
+	Content-Aware Move	النقل المدرك للمحتوى
+	Convert to Layers	تحويل إلى طبقات
+	Copy Layers to Document	نسخ الطبقات إلى وثيقة
+	Couldn't place {name}: {error}	تعذر وضع {name}: {error}
+	Delete Action	حذف الإجراء
+	Details	التفاصيل
+	Disable Symmetry Path	تعطيل مسار التماثل
+	Discard Layers and Save a Copy	تجاهل الطبقات وحفظ نسخة
+	Don't show again	عدم الإظهار مرة أخرى
+	Drop Floating Selection	إسقاط التحديد العائم
+	Edit Layer Style	تحرير نمط الطبقة
+	Esc to cancel	اضغط Esc للإلغاء
+	Extend	توسيع
+	Float Selection	تعويم التحديد
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	لاسو التجميد: اسحب لتجميد منطقة، واسحب مع Alt لإذابتها (L)
+	GPU Backend	واجهة GPU الخلفية
+	GPU acceleration could not continue. Your documents are unchanged.	تعذر متابعة تسريع GPU. لم تتغير وثائقك.
+	Get Action	الحصول على إجراء
+	Grid:	الشبكة:
+	Hit-Test Type	اختبار النقر على النص
+	Including layers will increase file size.	سيؤدي تضمين الطبقات إلى زيادة حجم الملف.
+	Invalid {mode} profile	ملف تعريف {mode} غير صالح
+	Keep Using CPU	متابعة استخدام CPU
+	Lasso around an area, then drag the selection	حدد منطقة باللاسو، ثم اسحب التحديد
+	Layer Style Default	نمط الطبقة الافتراضي
+	List Actions	سرد الإجراءات
+	List Background Jobs	سرد مهام الخلفية
+	Make Layer Style Default	جعل نمط الطبقة افتراضيًا
+	Make Selection from Path	إنشاء تحديد من المسار
+	Make Symmetry Path	إنشاء مسار تماثل
+	Move	نقل
+	Move Document	نقل الوثيقة
+	Navigate Type	التنقل في النص
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	لا يوجد مسار لإنشاء تحديد منه: ارسم مسارًا باستخدام أداة القلم أو حدد مسارًا في لوحة المسارات.
+	Opening {name}	جارٍ فتح {name}
+	Opening {name}…	جارٍ فتح {name}…
+	Opening…	جارٍ الفتح…
+	Patch	رقعة
+	Patch:	رقعة:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	يستخدم PhotoSuite مُركِّب الصور على CPU. قد تظل النافذة تستخدم محوّل الرسومات لديك.
+	Play Action	تشغيل الإجراء
+	Reading…	جارٍ القراءة…
+	Record Action	تسجيل إجراء
+	Rendering Mode	وضع العرض
+	Retry GPU	إعادة محاولة GPU
+	Retry GPU requires a restart. Save your work first.	تتطلب إعادة محاولة GPU إعادة التشغيل. احفظ عملك أولاً.
+	Save cancelled	تم إلغاء الحفظ
+	Save failed: {error}	فشل الحفظ: {error}
+	Stamp Down	ختم إلى الأسفل
+	Stamp Visible	ختم المرئي
+	Stop Recording	إيقاف التسجيل
+	Structure:	البنية:
+	Switched to CPU rendering	تم التبديل إلى العرض بواسطة CPU
+	TIFF Options	خيارات TIFF
+	Type Caret	مؤشر إدراج النص
+	Unnamed {mode} profile	ملف تعريف {mode} بلا اسم
+	Warp Grid	شبكة الالتواء
+	Working…	جارٍ العمل…

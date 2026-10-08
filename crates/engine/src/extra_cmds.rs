@@ -68,11 +68,12 @@ fn map_pixels(s: &mut Session, label: &str, f: impl FnOnce(Rect, &mut [[f32; 4]]
         let canvas = doc.bounds();
         let selection = doc.selection.clone();
         let area = selection.as_ref().map_or(canvas, |m| m.content_bounds().intersect(&canvas));
+        let locks = doc.effective_locks(id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        if l.locks.pixels || l.locks.all {
+        if locks.pixels || locks.all {
             return Err(EngineError::Other(format!("Could not complete your request because the layer \"{}\" is locked", l.name)));
         }
-        let lock_alpha = l.locks.transparency;
+        let lock_alpha = locks.transparency;
         let surf = l.surface_mut().ok_or_else(|| EngineError::Other("not a pixel layer".into()))?;
         if area.is_empty() {
             return Ok(());
@@ -139,9 +140,8 @@ fn stroke(s: &mut Session, p: &Value) -> Result<Value> {
         };
         let band: Vec<f32> = outer.iter().zip(&inner).map(|(o, i)| (o - i).clamp(0.0, 1.0)).collect();
         let band = sel::mask_to_surface(&band, canvas);
-        let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        let lock = l.locks.transparency;
-        let surf = crate::commands::paint_surface(l, &Value::Null)?;
+        let lock = doc.effective_locks(id).transparency;
+        let surf = crate::commands::paint_surface(doc, id, &Value::Null)?;
         let area = band.content_bounds().intersect(&canvas);
         if !area.is_empty() {
             crate::pixels::fill_surface(surf, area, color, Some(&band), lock);

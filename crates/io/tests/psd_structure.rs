@@ -291,6 +291,29 @@ fn group_nesting_at_the_cap_imports() {
 }
 
 #[test]
+fn layered_import_skips_the_unused_merged_composite() {
+    use photosuite_psd::{LayerSpec, PixelData, PsdBuilder};
+    // A layered file whose merged composite carries nothing behind the colour channels never
+    // decodes it - that composite is roughly half a Photoshop save's bytes. Here its data is
+    // garbage: the layered import does not touch it, while a file with an extra channel does
+    // decode (and warn), which is what makes the skip observable.
+    let mut b = PsdBuilder::new(4, 4);
+    b.push_layer(LayerSpec::new("a", 0, 0, 2, 2, PixelData::Rgba8(vec![7u8; 16])));
+    b.composite(PixelData::Rgba8(vec![128; 64]));
+    let mut f = photosuite_psd::PsdFile::from_bytes(&b.to_bytes().unwrap()).unwrap();
+    f.image_data.data.clear();
+    f.layer_info.as_mut().unwrap().merged_alpha = true;
+    let (d, warnings) = psd_to_document(&f);
+    assert_eq!(d.layers.len(), 1);
+    assert!(!warnings.iter().any(|w| w.contains("merged image")), "an unused composite is not decoded: {warnings:?}");
+    // A real extra channel behind the colour ones is part of the composite: it is decoded,
+    // and the garbage above surfaces as a warning.
+    f.layer_info.as_mut().unwrap().merged_alpha = false;
+    let (_, warnings) = psd_to_document(&f);
+    assert!(warnings.iter().any(|w| w.contains("merged image")), "{warnings:?}");
+}
+
+#[test]
 fn locks_and_labels_from_psd() {
     use photosuite_psd::TaggedBlock;
     let mut f = testgen::small(Version::Psd, Compression::Raw);

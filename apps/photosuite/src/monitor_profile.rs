@@ -213,12 +213,13 @@ mod tests {
         assert!(parse_reply("execution error: -1728").unwrap_err().contains("-1728"));
     }
 
-    // Drives /bin/sleep and /bin/sh; the helper itself only runs on macOS.
+    // Drives `sleep` (found on PATH: NixOS and the Nix build sandbox have no /bin/sleep) and
+    // /bin/sh; the helper itself only runs on macOS.
     #[cfg(unix)]
     #[test]
     fn a_hung_helper_is_stopped_and_big_replies_dont_block() {
         let t0 = std::time::Instant::now();
-        let e = run_helper(std::process::Command::new("/bin/sleep").arg("30"), std::time::Duration::from_millis(300)).unwrap_err();
+        let e = run_helper(std::process::Command::new("sleep").arg("30"), std::time::Duration::from_millis(300)).unwrap_err();
         assert!(e.contains("took longer than"), "{e}");
         assert!(t0.elapsed() < std::time::Duration::from_secs(5), "killed at the deadline");
         // 1 MB on stdout (far beyond a pipe buffer) arrives whole.

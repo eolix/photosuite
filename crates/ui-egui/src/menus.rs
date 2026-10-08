@@ -526,6 +526,8 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
             .and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id)))
             .is_some_and(|l| matches!(l.content, photosuite_doc::LayerContent::Text(_))),
         "select.transformSelection" => app.ui.transform.is_none() && app.session.is_enabled("select.transformSelection"),
+        // ⇧[ / ⇧] only step the hardness of a tool that paints with the brush tip, as in Photoshop.
+        "tools.decreaseBrushHardness" | "tools.increaseBrushHardness" => app.ui.tool.is_brushlike(),
         i if (i.starts_with("view.zoom") || i == "view.fitOnScreen" || i == "view.actualPixels") || i == "window.newWindowForDocument" => {
             app.session.active().is_some()
         }
@@ -539,7 +541,8 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
             Some(t) => t.warp.is_none(),
             None => app.session.active().and_then(|s| s.active_layer).is_some(),
         },
-        i => app.session.is_enabled(i),
+        // A targeted layer mask enables what edits it (Invert on an adjustment layer's mask).
+        i => app.session.is_enabled_with(i, &app.with_mask_target(i, Value::Null)),
     }
 }
 
@@ -1037,11 +1040,12 @@ mod tests {
         app.run("select.rect", json!({"x": 2, "y": 2, "width": 8, "height": 8})).unwrap();
         let items = menu_items(&app);
         let top: Vec<_> = items.iter().filter(|i| i.path.len() == 1 && i.path.first().is_some_and(|p| p == "Select")).collect();
-        // Context actions live somewhere under Select (Feather stays in Select > Modify, as in the
-        // reference menus).
+        // The context menus' Select actions live somewhere under Select (Feather stays in Select >
+        // Modify, as in the reference menus). Make Work Path is a Paths panel action.
         let select: Vec<_> = items.iter().filter(|i| i.path.first().is_some_and(|p| p == "Select")).collect();
-        for &(label, id) in crate::canvas_tool_menu::entries(true).iter().chain(crate::canvas_tool_menu::entries(false)) {
-            assert!(select.iter().any(|i| i.id == id && i.label == label), "Select menu missing {label} ({id})");
+        let rows = crate::canvas_tool_menu::SELECTION_MENU.iter().chain(crate::canvas_tool_menu::NO_SELECTION_MENU).flatten();
+        for &(label, id) in rows.filter(|(_, id)| id.starts_with("select.") && *id != "select.toWorkPath") {
+            assert!(select.iter().any(|i| i.id == id), "Select menu missing {label} ({id})");
         }
         assert!(top.iter().any(|i| i.id == "select.all"));
         assert!(top.iter().any(|i| i.id == "select.colorRange"));

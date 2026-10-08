@@ -86,6 +86,18 @@ pub struct Locks {
     pub all: bool,
 }
 
+impl Locks {
+    pub fn union(self, o: Locks) -> Locks {
+        Locks {
+            transparency: self.transparency || o.transparency,
+            pixels: self.pixels || o.pixels,
+            position: self.position || o.position,
+            artboard: self.artboard || o.artboard,
+            all: self.all || o.all,
+        }
+    }
+}
+
 /// Photoshop layer colour labels.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LabelColor {
@@ -797,6 +809,17 @@ impl Document {
         self.walk().into_iter().find(|(_, _, l)| l.id == id).map(|(p, _, _)| p)
     }
 
+    /// The locks in force on the layer at `path`: its own and those of every group around it,
+    /// since locking a group locks its contents.
+    pub fn locks_at(&self, path: &[usize]) -> Locks {
+        (1..=path.len()).filter_map(|n| self.layer_at(path.get(..n)?)).fold(Locks::default(), |a, l| a.union(l.locks))
+    }
+
+    /// [`Self::locks_at`] for the layer `id`.
+    pub fn effective_locks(&self, id: LayerId) -> Locks {
+        self.path_of(id).map_or_else(Locks::default, |p| self.locks_at(&p))
+    }
+
     pub fn layer(&self, id: LayerId) -> Option<&Layer> {
         let path = self.path_of(id)?;
         self.layer_at(&path)
@@ -980,6 +1003,21 @@ mod tests {
         let n = d.insert_above(Some(inner_id), Layer::raster("n", d.pixel_format()));
         assert_eq!(d.path_of(n), Some(vec![1, 1]));
         assert_eq!(d.layer_count(), 4);
+    }
+
+    #[test]
+    fn a_locked_group_locks_its_contents() {
+        let mut d = doc();
+        let inner = Layer::raster("inner", d.pixel_format());
+        let inner_id = inner.id;
+        let mut g = Layer::group("G", vec![Layer::group("H", vec![inner])]);
+        g.locks.position = true;
+        let gid = d.insert_above(None, g);
+        d.layer_mut(inner_id).unwrap().locks.pixels = true;
+        let k = d.effective_locks(inner_id);
+        assert!(k.position && k.pixels && !k.all);
+        assert!(!d.effective_locks(gid).pixels, "a child's lock doesn't lock its group");
+        assert_eq!(d.effective_locks(LayerId(u64::MAX)), Locks::default());
     }
 
     #[test]

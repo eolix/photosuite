@@ -15,7 +15,7 @@
 	Edit	Muokkaa
 	Image	Kuva
 	Layer	Taso
-	Type	Tyyppi
+	Type	Teksti
 	Select	Valitse
 	Filter	Suodatin
 	View	Näkymä
@@ -697,7 +697,7 @@
 	3D LUT File	3D LUT tiedosto
 	Absolute	Absoluuttinen
 	Absolute Colorimetric	Absoluuttinen kolorimetrinen
-	Action	Toiminta
+	Action	Toiminto
 	Adaptive	Mukautuva
 	Adaptive Wide Angle isn't open	Adaptive Wide Angle ei ole auki
 	Add	Lisää
@@ -1966,3 +1966,74 @@
 	175%	175 %
 	250%	250 %
 	300%	300 %
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Lisäasetukset
+	Alt-click to define a source point to clone from	Alt-napsauta määrittääksesi lähdepisteen, josta kloonataan
+	Automatic (recommended)	Automaattinen (suositus)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automaattinen käyttää GPU-kiihdytystä, kun se on käytettävissä, ja siirtyy virhetilanteissa CPU-hahmonnukseen.
+	CPU / Compatibility	CPU / Yhteensopivuus
+	Cancel Background Job	Peruuta taustatyö
+	Cancel opening	Peruuta avaaminen
+	Cancelled opening {name}	Kohteen {name} avaaminen peruutettiin
+	Cancelled {label}	{label} peruutettu
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Napsautus: valitse ankkuripiste · Vedä: siirrä ankkuripistettä, kahvaa tai segmenttiä · {shift}-napsautus: lisää · {alt}-napsautus: koko alireitti
+	Content-Aware Move	Sisältötietoinen siirto
+	Convert to Layers	Muunna tasoiksi
+	Copy Layers to Document	Kopioi tasot asiakirjaan
+	Couldn't place {name}: {error}	Kohdetta {name} ei voitu sijoittaa: {error}
+	Delete Action	Poista toiminto
+	Details	Lisätiedot
+	Disable Symmetry Path	Poista symmetriareitti käytöstä
+	Discard Layers and Save a Copy	Hylkää tasot ja tallenna kopio
+	Don't show again	Älä näytä uudelleen
+	Drop Floating Selection	Kiinnitä kelluva valinta
+	Edit Layer Style	Muokkaa tason tyyliä
+	Esc to cancel	Esc peruuttaa
+	Extend	Laajenna
+	Float Selection	Tee valinnasta kelluva
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Jäädytyslasso: vedä jäädyttääksesi alueen, Alt-vedä sulattaaksesi sen (L)
+	GPU Backend	GPU-tausta
+	GPU acceleration could not continue. Your documents are unchanged.	GPU-kiihdytystä ei voitu jatkaa. Asiakirjasi ovat ennallaan.
+	Get Action	Hae toiminto
+	Grid:	Ruudukko:
+	Hit-Test Type	Tekstin osumatesti
+	Including layers will increase file size.	Tasojen sisällyttäminen kasvattaa tiedostokokoa.
+	Invalid {mode} profile	Virheellinen {mode}-profiili
+	Keep Using CPU	Jatka CPU:n käyttöä
+	Lasso around an area, then drag the selection	Rajaa alue lassolla ja vedä sitten valintaa
+	Layer Style Default	Tason tyylin oletus
+	List Actions	Luettele toiminnot
+	List Background Jobs	Luettele taustatyöt
+	Make Layer Style Default	Aseta tason tyylin oletukseksi
+	Make Selection from Path	Tee valinta reitistä
+	Make Symmetry Path	Tee symmetriareitti
+	Move	Siirrä
+	Move Document	Siirrä asiakirja
+	Navigate Type	Liiku tekstissä
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Ei reittiä, josta tehdä valinta: piirrä reitti kynätyökalulla tai valitse reitti Reitit-paneelista.
+	Opening {name}	Avataan {name}
+	Opening {name}…	Avataan {name}…
+	Opening…	Avataan…
+	Patch	Paikkaus
+	Patch:	Paikkaus:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite käyttää CPU-kuvakompositoria. Ikkuna saattaa silti käyttää näytönohjaintasi.
+	Play Action	Toista toiminto
+	Reading…	Luetaan…
+	Record Action	Nauhoita toiminto
+	Rendering Mode	Hahmonnustila
+	Retry GPU	Yritä GPU:ta uudelleen
+	Retry GPU requires a restart. Save your work first.	GPU:n uudelleenyritys vaatii uudelleenkäynnistyksen. Tallenna työsi ensin.
+	Save cancelled	Tallennus peruutettu
+	Save failed: {error}	Tallennus epäonnistui: {error}
+	Stamp Down	Leimaa alas
+	Stamp Visible	Leimaa näkyvät
+	Stop Recording	Lopeta nauhoitus
+	Structure:	Rakenne:
+	Switched to CPU rendering	Vaihdettiin CPU-hahmonnukseen
+	TIFF Options	TIFF-asetukset
+	Type Caret	Tekstikohdistin
+	Unnamed {mode} profile	Nimetön {mode}-profiili
+	Warp Grid	Käyristysruudukko
+	Working…	Käsitellään…

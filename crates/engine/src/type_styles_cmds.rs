@@ -75,8 +75,8 @@ fn range_of(text: &str, p: &Value) -> (usize, usize) {
     }
 }
 
-fn id_param(p: &Value) -> Option<u32> {
-    p.get("id").and_then(Value::as_u64).map(|v| v as u32)
+fn id_param(cmd: &str, p: &Value) -> Result<Option<u32>> {
+    crate::commands::u32_id_param(cmd, p, "id")
 }
 
 // ---------- attribute parameters ----------
@@ -467,7 +467,7 @@ fn new_style(s: &mut Session, p: &Value, paragraph: bool) -> Result<Value> {
 }
 
 fn lookup_id(cmd: &str, st: &TextStyles, p: &Value, paragraph: bool, allow_default: bool) -> Result<u32> {
-    let id = id_param(p).ok_or_else(|| bad(cmd, "missing `id`"))?;
+    let id = id_param(cmd, p)?.ok_or_else(|| bad(cmd, "missing `id`"))?;
     let ok = if paragraph { st.para_style(id).is_some() } else { st.char_style(id).is_some() };
     if !(ok || (allow_default && id == 0)) {
         return Err(bad(cmd, format!("no style with id {id}")));
@@ -638,7 +638,7 @@ fn redefine(s: &mut Session, p: &Value, paragraph: bool) -> Result<Value> {
     let cmd = if paragraph { "type.paragraphStyle.redefine" } else { "type.characterStyle.redefine" };
     let mut st = styles(s)?;
     let (run, para, layer, span) = sample(s, p).ok_or_else(|| bad(cmd, "select type to redefine the style from"))?;
-    let id = match id_param(p) {
+    let id = match id_param(cmd, p)? {
         Some(_) => lookup_id(cmd, &st, p, paragraph, paragraph)?,
         None if paragraph => para.style_sheet.unwrap_or(0),
         None => run.style_sheet.ok_or_else(|| bad(cmd, "the selected text has no character style"))?,

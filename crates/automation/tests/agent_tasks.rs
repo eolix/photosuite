@@ -21,15 +21,27 @@ impl ClientHandler for Client {
 
 type Conn = RunningService<RoleClient, Client>;
 
-async fn connect(root: &std::path::Path) -> Conn {
+/// The server side of a test connection. It owns the headless session and its workspace,
+/// which holds open directory handles on the test folder.
+type Server = tokio::task::JoinHandle<()>;
+
+async fn connect(root: &std::path::Path) -> (Conn, Server) {
     let (s, c) = tokio::io::duplex(1 << 20);
     let workspace = AuthorizedWorkspace::new(Some(root), Some(root)).expect("test workspace");
-    tokio::spawn(async move {
+    let server = tokio::spawn(async move {
         if let Ok(running) = PhotosuiteMcp::headless_with_workspace(workspace).serve(s).await {
             let _ = running.waiting().await;
         }
     });
-    Client.serve(c).await.expect("client init")
+    (Client.serve(c).await.expect("client init"), server)
+}
+
+/// Closes the client and waits for the server task to end, so the session and its workspace
+/// (with their open directory handles) are dropped before the test removes its folder. Windows
+/// refuses to delete a directory that still has open handles (os error 32).
+async fn shutdown(c: Conn, server: Server) {
+    c.cancel().await.unwrap();
+    server.await.unwrap();
 }
 
 fn text(r: &CallToolResult) -> String {
@@ -96,7 +108,7 @@ fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
 async fn agent_completes_ten_scripted_tasks() {
     let dir = tmp("tasks");
     let png = gradient_png(&dir);
-    let c = connect(&dir).await;
+    let (c, server) = connect(&dir).await;
 
     // 1. Make a title card: type layer with a drop shadow, exported as PNG.
     tool(&c, "doc_new", json!({"width": 200, "height": 120, "background": "white"})).await;
@@ -211,7 +223,7 @@ async fn agent_completes_ten_scripted_tasks() {
     assert_eq!((doc["mode"].as_str(), doc["width"].as_u64()), (Some("Cmyk"), Some(45)), "task 10");
     assert_eq!(doc["layers"].as_array().unwrap().len(), 4, "task 10");
 
-    c.cancel().await.unwrap();
+    shutdown(c, server).await;
     std::fs::remove_dir_all(dir).unwrap();
 }
 
@@ -220,7 +232,7 @@ async fn agent_completes_ten_scripted_tasks() {
 #[tokio::test(flavor = "multi_thread")]
 async fn agent_edits_text_by_position() {
     let dir = tmp("type-caret");
-    let c = connect(&dir).await;
+    let (c, server) = connect(&dir).await;
     tool(&c, "doc_new", json!({"width": 480, "height": 200, "background": "white"})).await;
     let listed = tool(&c, "command_list", json!({"filter": "type."})).await;
     let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
@@ -262,25 +274,25 @@ async fn agent_edits_text_by_position() {
     assert_eq!(bold["end"].as_u64(), end["index"].as_u64(), "{bold}");
 
     tool(&c, "doc_close", json!({})).await;
-    c.cancel().await.unwrap();
+    shutdown(c, server).await;
     std::fs::remove_dir_all(dir).unwrap();
 }
 
-async fn connect_headless(headless: photosuite_automation::Headless) -> Conn {
+async fn connect_headless(headless: photosuite_automation::Headless) -> (Conn, Server) {
     let (s, c) = tokio::io::duplex(1 << 20);
-    tokio::spawn(async move {
+    let server = tokio::spawn(async move {
         let backend = photosuite_automation::Backend::Headless(std::sync::Arc::new(std::sync::Mutex::new(headless)));
         if let Ok(running) = PhotosuiteMcp::with_backend(backend).serve(s).await {
             let _ = running.waiting().await;
         }
     });
-    Client.serve(c).await.expect("client init")
+    (Client.serve(c).await.expect("client init"), server)
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn agent_records_and_replays_an_action() {
     let dir = tmp("actions");
-    let c = connect(&dir).await;
+    let (c, server) = connect(&dir).await;
     let listed = tool(&c, "command_list", json!({"filter": "actions."})).await;
     let ids: Vec<&str> = listed.as_array().unwrap().iter().filter_map(|item| item.get("id").and_then(Value::as_str)).collect();
     for id in ["actions.list", "actions.get", "actions.record", "actions.stop", "actions.play", "actions.delete"] {
@@ -306,7 +318,7 @@ async fn agent_records_and_replays_an_action() {
     let px = pixel(&c, 2, 2).await;
     assert!(close(&px, &[1.0, 0.0, 0.0, 1.0], 1e-4), "{px:?}");
 
-    c.cancel().await.unwrap();
+    shutdown(c, server).await;
     std::fs::remove_dir_all(dir).unwrap();
 }
 
@@ -319,7 +331,7 @@ async fn agent_play_refuses_a_recorded_file_open() {
         name: "Open".into(),
         steps: vec![("file.open".into(), json!({"path": "/etc/passwd"})), ("layer.new.layer".into(), json!({}))],
     });
-    let c = connect_headless(headless).await;
+    let (c, server) = connect_headless(headless).await;
     let played = run(&c, "actions.play", json!({"action": "Open"})).await;
     assert_eq!(played["ran"], 0, "{played}");
     assert_eq!(played["failed"]["step"], 0, "{played}");
@@ -327,6 +339,6 @@ async fn agent_play_refuses_a_recorded_file_open() {
     assert!(played["failed"]["error"].as_str().unwrap_or("").contains("disabled"), "{played}");
     let session = tool(&c, "session_list", json!({})).await;
     assert!(session["documents"].as_array().is_some_and(|d| d.is_empty()), "{session}");
-    c.cancel().await.unwrap();
+    shutdown(c, server).await;
     std::fs::remove_dir_all(dir).unwrap();
 }

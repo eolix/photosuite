@@ -207,7 +207,15 @@ pub fn raw_params(cmd: &str, p: &Value) -> Result<CameraRaw> {
     if let Value::Object(m) = &mut q {
         m.remove("layer");
     }
-    serde_json::from_value(q).map_err(|e| bad(cmd, format!("bad params: {e}")))
+    let mut cr: CameraRaw = serde_json::from_value(q).map_err(|e| bad(cmd, format!("bad params: {e}")))?;
+    // The noise stages turn these straight into a guided-filter radius and a
+    // blur sigma, so an out-of-range value means unbounded work. Clamp to the
+    // documented 0..100 (part of #707).
+    cr.noise_luminance = cr.noise_luminance.clamp(0.0, 100.0);
+    cr.noise_luminance_detail = cr.noise_luminance_detail.clamp(0.0, 100.0);
+    cr.noise_color = cr.noise_color.clamp(0.0, 100.0);
+    cr.noise_color_detail = cr.noise_color_detail.clamp(0.0, 100.0);
+    Ok(cr)
 }
 
 // ---------- pixels ----------
@@ -331,12 +339,13 @@ fn run_filter(s: &mut Session, cmd: &str, label: &str, stored: Value, float_bg: 
     s.edit(label, |doc: &mut Document, _| {
         let canvas = doc.bounds();
         let selection = doc.selection.clone();
+        let locks = doc.effective_locks(id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
         if let LayerContent::Smart(_) = l.content {
             let sf = SmartFilter { command: cmd.to_string(), params: stored.clone(), blend: photosuite_color::BlendMode::Normal, opacity: 1.0, visible: true };
             return crate::smart_cmds::add_smart_filter(doc, id, sf, selection.as_ref());
         }
-        if l.locks.all || l.locks.pixels {
+        if locks.all || locks.pixels {
             return Err(EngineError::Other(format!("layer \"{}\" is locked", l.name)));
         }
         // A Background layer gains transparency when the edge mode exposes it (as in Photoshop).

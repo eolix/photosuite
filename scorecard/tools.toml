@@ -169,9 +169,9 @@ note = "Ratio dropdown and fields only (panels.rs:551-579)"
 [[item]]
 id = "TOOL-214-10"
 target = "Pen: Alt breaks a handle, Shift 45 deg, Ctrl direct-selects, Backspace, close-drag handle"
-status = "missing"
+status = "partial"
 issue = 214
-note = "pen_down gets no modifiers (canvas.rs:1632)"
+note = "Ctrl/Cmd = Direct Selection and Alt = Convert Point on existing paths (direct_select.rs, #790); no Shift 45 deg, Backspace or Alt while drawing"
 
 [[item]]
 id = "TOOL-214-11"

@@ -264,22 +264,7 @@ fn parallel_idat(data: &[u8], w: usize, h: usize, bpp: usize, level: PngCompress
                             filter_row(row, prev, bpp, &mut scratch, &mut filtered);
                         }
                         let adler = adler32(1, &filtered);
-                        let mut c = flate2::Compress::new(lvl, false);
-                        let mut z = Vec::with_capacity(filtered.len() / 2 + 64);
-                        let last = y1 == h;
-                        let flush = if last { flate2::FlushCompress::Finish } else { flate2::FlushCompress::Sync };
-                        loop {
-                            let consumed = c.total_in() as usize;
-                            if z.capacity() - z.len() < 64 * 1024 {
-                                z.reserve(z.capacity().max(64 * 1024));
-                            }
-                            match c.compress_vec(&filtered[consumed..], &mut z, flush) {
-                                Ok(flate2::Status::StreamEnd) => break,
-                                Ok(_) if !last && c.total_in() as usize == filtered.len() && z.capacity() > z.len() => break,
-                                Ok(_) => {}
-                                Err(_) => return Vec::new(),
-                            }
-                        }
+                        let Some(z) = deflate_band(&filtered, lvl, y1 == h) else { return Vec::new() };
                         out.push((i, z, adler, filtered.len()));
                     }
                     out
@@ -306,6 +291,22 @@ fn parallel_idat(data: &[u8], w: usize, h: usize, bpp: usize, level: PngCompress
     }
     out.extend_from_slice(&adler.to_be_bytes());
     Some(out)
+}
+
+/// Raw deflate of one band: ends on a sync flush, or finishes the stream for the `last` band.
+/// The output buffer is sized past deflate's worst case so that one call takes the whole band
+/// and completes the flush: when a sync flush fills the buffer, miniz_oxide (flate2's Rust
+/// backend) can return before compressing the last lookahead bytes, and the next call only
+/// drains the pending output, so a resumed flush silently drops data. `None` (the caller then
+/// uses the serial encoder) if the single call did not finish.
+fn deflate_band(filtered: &[u8], lvl: flate2::Compression, last: bool) -> Option<Vec<u8>> {
+    let mut c = flate2::Compress::new(lvl, false);
+    // Stored blocks cost 5 bytes per 64 KiB, the flush an empty stored block: 1/8 is ample.
+    let mut z = Vec::with_capacity(filtered.len() + filtered.len() / 8 + 1024);
+    let flush = if last { flate2::FlushCompress::Finish } else { flate2::FlushCompress::Sync };
+    let status = c.compress_vec(filtered, &mut z, flush).ok()?;
+    let done = if last { status == flate2::Status::StreamEnd } else { c.total_in() as usize == filtered.len() && z.len() < z.capacity() };
+    done.then_some(z)
 }
 
 /// One scanline with the adaptive filter choice, appended to `out` (type byte + data).
@@ -442,6 +443,31 @@ mod parallel_tests {
         let b: Vec<u8> = (0..70_001u32).map(|i| (i * 31) as u8).collect();
         let whole: Vec<u8> = a.iter().chain(&b).copied().collect();
         assert_eq!(adler32_combine(adler32(1, &a), adler32(1, &b), b.len()), adler32(1, &whole));
+    }
+
+    #[test]
+    fn bands_that_end_just_past_a_block_keep_all_their_data() {
+        // Deflate output ~0.6 of the input, cut just past one of miniz_oxide's block
+        // boundaries: a sync flush that fills the output buffer there used to lose the
+        // last lookahead bytes, corrupting every band after it.
+        for (k, len) in [(20u32, 136_916usize), (20, 345_044), (24, 195_796), (28, 189_142)] {
+            let mut x = 0x9E37_79B9u32 ^ k;
+            let data: Vec<u8> = (0..len)
+                .map(|_| {
+                    x ^= x << 13;
+                    x ^= x >> 17;
+                    x ^= x << 5;
+                    ((x >> 8) % k) as u8
+                })
+                .collect();
+            for last in [false, true] {
+                let z = deflate_band(&data, flate2::Compression::default(), last).unwrap();
+                let mut d = flate2::Decompress::new(false);
+                let mut back = Vec::with_capacity(len + 1);
+                d.decompress_vec(&z, &mut back, flate2::FlushDecompress::Sync).unwrap();
+                assert!(back == data, "k {k} len {len} last {last}: {} of {len} bytes", back.len());
+            }
+        }
     }
 
     #[test]

@@ -179,7 +179,11 @@ impl PresetBackend for DirBackend {
     }
     fn read(&self, name: &str, max: u64) -> Result<Vec<u8>, String> {
         let path = self.path(name)?;
-        let f = std::fs::File::open(&path).map_err(|e| format!("{name}: {e}"))?;
+        // A missing file, or a store directory that doesn't exist yet (Windows reports that as
+        // "path not found", os error 3), reads as "not found", the wording `missing_file` and the
+        // in-memory backend share, so it is an empty file rather than a warning.
+        let f = std::fs::File::open(&path)
+            .map_err(|e| if e.kind() == std::io::ErrorKind::NotFound { format!("{name}: not found") } else { format!("{name}: {e}") })?;
         let mut out = Vec::new();
         f.take(max.saturating_add(1)).read_to_end(&mut out).map_err(|e| format!("{name}: {e}"))?;
         if out.len() as u64 > max {

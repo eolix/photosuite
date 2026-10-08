@@ -15,7 +15,7 @@
 	Edit	편집
 	Image	이미지
 	Layer	레이어
-	Type	유형
+	Type	텍스트
 	Select	선택
 	Filter	필터
 	View	보기
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	고급
+	Alt-click to define a source point to clone from	Alt 키를 누른 채 클릭하여 복제할 원본 지점 정의
+	Automatic (recommended)	자동(권장)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	자동은 가능한 경우 GPU 가속을 사용하고 오류가 발생하면 CPU 렌더링으로 전환합니다.
+	CPU / Compatibility	CPU / 호환성
+	Cancel Background Job	백그라운드 작업 취소
+	Cancel opening	열기 취소
+	Cancelled opening {name}	{name} 열기 취소됨
+	Cancelled {label}	{label} 취소됨
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	클릭: 앵커 선택 · 드래그: 앵커, 핸들 또는 세그먼트 이동 · {shift}-클릭: 추가 · {alt}-클릭: 하위 경로 전체
+	Content-Aware Move	내용 인식 이동
+	Convert to Layers	레이어로 변환
+	Copy Layers to Document	레이어를 문서로 복사
+	Couldn't place {name}: {error}	{name}을(를) 배치할 수 없음: {error}
+	Delete Action	액션 삭제
+	Details	세부 정보
+	Disable Symmetry Path	대칭 경로 비활성화
+	Discard Layers and Save a Copy	레이어를 버리고 사본 저장
+	Don't show again	다시 표시 안 함
+	Drop Floating Selection	부동 선택 영역 놓기
+	Edit Layer Style	레이어 스타일 편집
+	Esc to cancel	Esc 키를 눌러 취소
+	Extend	확장
+	Float Selection	선택 영역 부동
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	고정 올가미: 드래그하여 영역 고정, Alt-드래그하여 고정 해제 (L)
+	GPU Backend	GPU 백엔드
+	GPU acceleration could not continue. Your documents are unchanged.	GPU 가속을 계속할 수 없습니다. 문서는 변경되지 않았습니다.
+	Get Action	액션 가져오기
+	Grid:	격자:
+	Hit-Test Type	텍스트 적중 테스트
+	Including layers will increase file size.	레이어를 포함하면 파일 크기가 커집니다.
+	Invalid {mode} profile	잘못된 {mode} 프로필
+	Keep Using CPU	계속 CPU 사용
+	Lasso around an area, then drag the selection	올가미로 영역을 둘러싼 다음 선택 영역을 드래그하세요
+	Layer Style Default	레이어 스타일 기본값
+	List Actions	액션 목록
+	List Background Jobs	백그라운드 작업 목록
+	Make Layer Style Default	레이어 스타일 기본값으로 설정
+	Make Selection from Path	경로에서 선택 영역 만들기
+	Make Symmetry Path	대칭 경로 만들기
+	Move	이동
+	Move Document	문서 이동
+	Navigate Type	텍스트 탐색
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	선택 영역을 만들 경로가 없습니다: 펜 도구로 경로를 그리거나 경로 패널에서 경로를 선택하세요.
+	Opening {name}	{name} 여는 중
+	Opening {name}…	{name} 여는 중…
+	Opening…	여는 중…
+	Patch	패치
+	Patch:	패치:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite에서 CPU 이미지 합성기를 사용하고 있습니다. 창은 여전히 그래픽 어댑터를 사용할 수 있습니다.
+	Play Action	액션 재생
+	Reading…	읽는 중…
+	Record Action	액션 기록
+	Rendering Mode	렌더링 모드
+	Retry GPU	GPU 재시도
+	Retry GPU requires a restart. Save your work first.	GPU를 다시 시도하려면 다시 시작해야 합니다. 먼저 작업을 저장하세요.
+	Save cancelled	저장 취소됨
+	Save failed: {error}	저장 실패: {error}
+	Stamp Down	아래 레이어와 스탬프 병합
+	Stamp Visible	보이는 레이어 스탬프 병합
+	Stop Recording	기록 중지
+	Structure:	구조:
+	Switched to CPU rendering	CPU 렌더링으로 전환됨
+	TIFF Options	TIFF 옵션
+	Type Caret	텍스트 캐럿
+	Unnamed {mode} profile	이름 없는 {mode} 프로필
+	Warp Grid	뒤틀기 격자
+	Working…	처리 중…

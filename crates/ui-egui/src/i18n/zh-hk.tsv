@@ -15,7 +15,7 @@
 	Edit	編輯
 	Image	影像
 	Layer	圖層
-	Type	類型
+	Type	文字
 	Select	選取
 	Filter	濾鏡
 	View	檢視
@@ -697,7 +697,7 @@
 	3D LUT File	3D LUT 文件
 	Absolute	絕對
 	Absolute Colorimetric	絕對比色法
-	Action	行動
+	Action	動作
 	Adaptive	自適應
 	Adaptive Wide Angle isn't open	自適應廣角未開啟
 	Add	添加
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	進階
+	Alt-click to define a source point to clone from	按住 Alt 鍵並按一下以定義要仿製的來源點
+	Automatic (recommended)	自動（建議）
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	「自動」會在可用時使用 GPU 加速，出錯時改用 CPU 渲染。
+	CPU / Compatibility	CPU / 相容模式
+	Cancel Background Job	取消背景工作
+	Cancel opening	取消開啟
+	Cancelled opening {name}	已取消開啟 {name}
+	Cancelled {label}	已取消 {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	按一下：選取錨點 · 拖曳：移動錨點、控制點或線段 · {shift}-按一下：加入 · {alt}-按一下：整個子路徑
+	Content-Aware Move	內容感知移動
+	Convert to Layers	轉換為圖層
+	Copy Layers to Document	將圖層複製到文件
+	Couldn't place {name}: {error}	無法置入 {name}：{error}
+	Delete Action	刪除動作
+	Details	詳細資料
+	Disable Symmetry Path	停用對稱路徑
+	Discard Layers and Save a Copy	捨棄圖層並儲存副本
+	Don't show again	不再顯示
+	Drop Floating Selection	放下浮動選區
+	Edit Layer Style	編輯圖層樣式
+	Esc to cancel	按 Esc 取消
+	Extend	延伸
+	Float Selection	浮動選區
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	凍結套索：拖曳以凍結區域，按住 Alt 拖曳以解凍 (L)
+	GPU Backend	GPU 後端
+	GPU acceleration could not continue. Your documents are unchanged.	GPU 加速無法繼續。你的文件沒有改變。
+	Get Action	取得動作
+	Grid:	格線：
+	Hit-Test Type	文字點擊測試
+	Including layers will increase file size.	包含圖層會令檔案變大。
+	Invalid {mode} profile	無效的 {mode} 設定檔
+	Keep Using CPU	繼續使用 CPU
+	Lasso around an area, then drag the selection	用套索圈住區域，然後拖曳選區
+	Layer Style Default	圖層樣式預設值
+	List Actions	列出動作
+	List Background Jobs	列出背景工作
+	Make Layer Style Default	設為圖層樣式預設值
+	Make Selection from Path	從路徑建立選區
+	Make Symmetry Path	建立對稱路徑
+	Move	移動
+	Move Document	移動文件
+	Navigate Type	文字導覽
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	沒有可用來建立選區的路徑：請用鋼筆工具繪製路徑，或在「路徑」面板中選取路徑。
+	Opening {name}	正在開啟 {name}
+	Opening {name}…	正在開啟 {name}…
+	Opening…	正在開啟…
+	Patch	修補
+	Patch:	修補：
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite 正在使用 CPU 影像合成器。視窗可能仍會使用你的顯示卡。
+	Play Action	播放動作
+	Reading…	正在讀取…
+	Record Action	錄製動作
+	Rendering Mode	渲染模式
+	Retry GPU	重試 GPU
+	Retry GPU requires a restart. Save your work first.	重試 GPU 需要重新啟動。請先儲存你的工作。
+	Save cancelled	已取消儲存
+	Save failed: {error}	儲存失敗：{error}
+	Stamp Down	向下蓋印
+	Stamp Visible	蓋印可見圖層
+	Stop Recording	停止錄製
+	Structure:	結構：
+	Switched to CPU rendering	已切換至 CPU 渲染
+	TIFF Options	TIFF 選項
+	Type Caret	文字插入點
+	Unnamed {mode} profile	未命名的 {mode} 設定檔
+	Warp Grid	彎曲網格
+	Working…	正在處理…

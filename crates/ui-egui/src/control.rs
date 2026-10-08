@@ -153,12 +153,7 @@ fn dispatch(app: &mut PhotosuiteApp, ctx: &egui::Context, req: &ControlRequest) 
         "ui.context.choose" => {
             let Some(id) = s("id") else { return err("missing `id`") };
             let Some(menu) = app.ui.canvas_tool_menu.as_ref() else { return err("no canvas context menu is open") };
-            let listed = if menu.tool == crate::state::Tool::Pen {
-                crate::canvas_tool_menu::PEN_MENU.iter().flatten().any(|(_, command)| *command == id)
-            } else {
-                crate::canvas_tool_menu::menu_entries(menu).iter().any(|(_, command)| *command == id)
-            };
-            if !listed || !crate::canvas_tool_menu::entry_enabled(app, menu, id) {
+            if !crate::canvas_tool_menu::available(app, menu, id) {
                 return err("context action is unavailable");
             }
             if let Some(authorize) = app.services.automation_command.as_ref()
@@ -612,16 +607,10 @@ pub fn inspect(app: &PhotosuiteApp, ctx: &egui::Context) -> Value {
             json!({
                 "pos": menu.pos,
                 "tool": menu.tool,
-                "entries": if menu.tool == crate::state::Tool::Pen {
-                    crate::canvas_tool_menu::PEN_MENU.iter().map(|row| match row {
-                        Some((label, id)) => json!({"label": label, "id": id, "enabled": crate::canvas_tool_menu::entry_enabled(app, menu, id)}),
-                        None => json!({"separator": true}),
-                    }).collect::<Vec<_>>()
-                } else {
-                    crate::canvas_tool_menu::menu_entries(menu).iter().map(|&(label, id)| {
-                        json!({"label": label, "id": id, "enabled": crate::canvas_tool_menu::entry_enabled(app, menu, id)})
-                    }).collect::<Vec<_>>()
-                }
+                "entries": crate::canvas_tool_menu::rows(menu).iter().map(|row| match row {
+                    Some((label, id)) => json!({"label": label, "id": id, "enabled": crate::canvas_tool_menu::entry_enabled(app, menu, id)}),
+                    None => json!({"separator": true}),
+                }).collect::<Vec<_>>()
             })
         }),
         "panels": app.ui.panels,

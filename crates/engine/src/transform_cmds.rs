@@ -2,7 +2,7 @@
 
 use photosuite_algo::transform::{Homography, Interp, warp_surface};
 use photosuite_color::PixelFormat;
-use photosuite_doc::{Document, Layer, LayerContent, LayerId};
+use photosuite_doc::{Document, Layer, LayerContent, LayerId, Locks};
 use photosuite_geom::{Affine, Rect};
 use photosuite_raster::Surface;
 use serde_json::{Value, json};
@@ -160,14 +160,21 @@ pub fn target_bounds(doc: &Document, surf: &Surface) -> Rect {
     }
 }
 
-pub(crate) fn transform_layer(doc_sel: Option<&Surface>, l: &mut Layer, h: &Homography, affine: Option<Affine>, interp: Interp) -> Result<()> {
+/// The locks `id` inherits from the groups around it.
+pub(crate) fn group_locks(doc: &Document, id: LayerId) -> Locks {
+    doc.path_of(id).and_then(|p| Some(doc.locks_at(p.split_last()?.1))).unwrap_or_default()
+}
+
+/// `group` holds the locks `l` inherits from the groups around it ([`group_locks`]).
+pub(crate) fn transform_layer(doc_sel: Option<&Surface>, group: Locks, l: &mut Layer, h: &Homography, affine: Option<Affine>, interp: Interp) -> Result<()> {
     // Photoshop turns the Background into a normal layer before transforming it.
     if l.locks.position && l.name == "Background" {
         l.locks.position = false;
         l.locks.transparency = false;
         l.name = "Layer 0".into();
     }
-    if l.locks.position || l.locks.all {
+    let locks = l.locks.union(group);
+    if locks.position || locks.all {
         return Err(EngineError::Other(format!("layer \"{}\" is locked", l.name)));
     }
     // With a selection only the selected pixels move, and so only the same region of a linked
@@ -176,7 +183,7 @@ pub(crate) fn transform_layer(doc_sel: Option<&Surface>, l: &mut Layer, h: &Homo
     match &mut l.content {
         LayerContent::Group(g) => {
             for c in g.children.iter_mut() {
-                transform_layer(None, c, h, affine, interp)?;
+                transform_layer(None, locks, c, h, affine, interp)?;
             }
         }
         LayerContent::Text(t) => {
@@ -390,8 +397,9 @@ fn transform(s: &mut Session, p: &Value) -> Result<Value> {
         }
         let id = id.ok_or_else(|| EngineError::Other("no active layer".into()))?;
         let is_group = doc.layer(id).is_some_and(Layer::is_group);
+        let group = group_locks(doc, id);
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        transform_layer(if is_group { None } else { sel.as_ref() }, l, &h, affine, interp)?;
+        transform_layer(if is_group { None } else { sel.as_ref() }, group, l, &h, affine, interp)?;
         // Type layers re-render from their new transform.
         let snapshot = doc.clone();
         if let Some(l) = doc.layer_mut(id) {

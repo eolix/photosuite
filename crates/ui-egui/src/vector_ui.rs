@@ -1,4 +1,5 @@
 //! Vector tools: Shape tools (U), Pen (P), Path Selection (A), path overlays and the Paths panel.
+//! Direct Selection (A) lives in `direct_select`.
 //! All edits go through the engine's `shape.*` / `path.*` commands.
 
 use egui::{Color32, Pos2, Rect, Sense, Stroke, pos2, vec2};
@@ -225,11 +226,21 @@ enum PathTarget {
 }
 
 /// The targeted vector mask of the active layer, if the Layers panel targets it.
-fn targeted_vector_mask(app: &PhotosuiteApp) -> Option<(u64, Path)> {
+pub(crate) fn targeted_vector_mask(app: &PhotosuiteApp) -> Option<(u64, Path)> {
     let st = app.session.active()?;
     let l = st.active_layer.and_then(|id| st.doc.layer(id))?;
     (app.ui.vector_mask_target && !matches!(l.content, LayerContent::Shape(_))).then_some(())?;
     l.vector_mask.as_ref().map(|m| (l.id.0, m.path.clone()))
+}
+
+/// The active shape layer's path, if the active layer is a shape layer.
+pub(crate) fn active_shape_path(app: &PhotosuiteApp) -> Option<(u64, Path)> {
+    let st = app.session.active()?;
+    let l = st.active_layer.and_then(|id| st.doc.layer(id))?;
+    match &l.content {
+        LayerContent::Shape(sh) => Some((l.id.0, sh.path.clone())),
+        _ => None,
+    }
 }
 
 /// The path Path Selection edits: the targeted vector mask, the active shape layer's path, else
@@ -238,13 +249,10 @@ fn target_path(app: &PhotosuiteApp) -> Option<(PathTarget, Path)> {
     if let Some((id, p)) = targeted_vector_mask(app) {
         return Some((PathTarget::VectorMask(id), p));
     }
-    let st = app.session.active()?;
-    if let Some(l) = st.active_layer.and_then(|id| st.doc.layer(id))
-        && let LayerContent::Shape(sh) = &l.content
-    {
-        return Some((PathTarget::Shape(l.id.0), sh.path.clone()));
+    if let Some((id, p)) = active_shape_path(app) {
+        return Some((PathTarget::Shape(id), p));
     }
-    st.doc.work_path.clone().map(|p| (PathTarget::Work, p))
+    app.session.active()?.doc.work_path.clone().map(|p| (PathTarget::Work, p))
 }
 
 pub fn path_selection_finish(app: &mut PhotosuiteApp, start: [f64; 2], end: [f64; 2]) {
@@ -276,7 +284,7 @@ fn bezier(p0: [f64; 2], c0: [f64; 2], c1: [f64; 2], p1: [f64; 2], t: f64) -> [f6
 }
 
 /// Screen polylines for a path (one per subpath).
-fn path_lines(path: &Path, xf: &dyn Fn([f64; 2]) -> Pos2) -> Vec<(Vec<Pos2>, bool)> {
+pub(crate) fn path_lines(path: &Path, xf: &dyn Fn([f64; 2]) -> Pos2) -> Vec<(Vec<Pos2>, bool)> {
     path.subpaths
         .iter()
         .map(|s| {
@@ -301,6 +309,30 @@ fn path_lines(path: &Path, xf: &dyn Fn([f64; 2]) -> Pos2) -> Vec<(Vec<Pos2>, boo
         .collect()
 }
 
+/// A path's outline in the accent colour.
+pub(crate) fn draw_outline(painter: &egui::Painter, p: &Path, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32) {
+    for (pts, closed) in path_lines(p, to_scr) {
+        if closed {
+            painter.add(egui::Shape::closed_line(pts, Stroke::new(1.0, accent)));
+        } else {
+            painter.add(egui::Shape::line(pts, Stroke::new(1.0, accent)));
+        }
+    }
+}
+
+/// An anchor point's square: filled with the accent when selected, else hollow (white).
+pub(crate) fn draw_anchor(painter: &egui::Painter, c: Pos2, selected: bool, accent: Color32) {
+    let r = Rect::from_center_size(c, vec2(6.0, 6.0));
+    painter.rect_filled(r, 0.0, if selected { accent } else { Color32::WHITE });
+    painter.rect_stroke(r, 0.0, Stroke::new(1.0, accent), egui::StrokeKind::Inside);
+}
+
+/// A direction handle: the line from its anchor and the round handle end.
+pub(crate) fn draw_handle(painter: &egui::Painter, anchor: Pos2, handle: Pos2, accent: Color32) {
+    painter.line_segment([anchor, handle], Stroke::new(1.0, accent));
+    painter.circle_filled(handle, 3.0, accent);
+}
+
 /// Work path / active shape path outlines, anchors, and the pen path in progress.
 pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
     let tool = app.ui.tool;
@@ -308,37 +340,32 @@ pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform
     let accent = Tokens::get(painter.ctx()).accent;
     let to_scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);
     let draw_path = |p: &Path, anchors: bool| {
-        for (pts, closed) in path_lines(p, &to_scr) {
-            if closed {
-                painter.add(egui::Shape::closed_line(pts, Stroke::new(1.0, accent)));
-            } else {
-                painter.add(egui::Shape::line(pts, Stroke::new(1.0, accent)));
-            }
-        }
+        draw_outline(painter, p, &to_scr, accent);
         if anchors {
-            for s in &p.subpaths {
-                for k in &s.knots {
-                    let c = to_scr([k.anchor.x, k.anchor.y]);
-                    painter.rect_filled(Rect::from_center_size(c, vec2(6.0, 6.0)), 0.0, Color32::WHITE);
-                    painter.rect_stroke(Rect::from_center_size(c, vec2(6.0, 6.0)), 0.0, Stroke::new(1.0, accent), egui::StrokeKind::Inside);
-                }
+            for k in p.subpaths.iter().flat_map(|s| &s.knots) {
+                draw_anchor(painter, to_scr([k.anchor.x, k.anchor.y]), false, accent);
             }
         }
     };
-    if vector_tool {
-        if let Some(wp) = &doc.work_path {
-            draw_path(wp, tool == Tool::PathSelection);
+    if crate::direct_select::shows(app, painter.ctx().input(|i| i.modifiers)) {
+        // Direct Selection (or the Pen with ⌘/Ctrl held) draws the paths it edits (#790).
+        crate::direct_select::draw_overlay(app, painter, &to_scr, accent);
+    } else {
+        if vector_tool {
+            if let Some(wp) = &doc.work_path {
+                draw_path(wp, tool == Tool::PathSelection);
+            }
+            let st = app.session.active();
+            if let Some(l) = st.and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id)))
+                && let LayerContent::Shape(sh) = &l.content
+            {
+                draw_path(&sh.path, tool == Tool::PathSelection);
+            }
         }
-        let st = app.session.active();
-        if let Some(l) = st.and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id)))
-            && let LayerContent::Shape(sh) = &l.content
-        {
-            draw_path(&sh.path, tool == Tool::PathSelection);
+        // A targeted vector mask shows its path with any tool (#196).
+        if let Some((_, p)) = targeted_vector_mask(app) {
+            draw_path(&p, tool == Tool::PathSelection);
         }
-    }
-    // A targeted vector mask shows its path with any tool (#196).
-    if let Some((_, p)) = targeted_vector_mask(app) {
-        draw_path(&p, tool == Tool::PathSelection);
     }
     // Pen path in progress, with handles of the last knot and a rubber band to the pointer.
     if let Some(pen) = &app.ui.pen {
@@ -356,16 +383,13 @@ pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform
         }
         for (i, k) in pen.knots.iter().enumerate() {
             let c = to_scr(k[0]);
-            if i + 1 == pen.knots.len() && k[2] != k[0] {
+            let last = i + 1 == pen.knots.len();
+            if last && k[2] != k[0] {
                 for hnd in [k[1], k[2]] {
-                    let hp = to_scr(hnd);
-                    painter.line_segment([c, hp], Stroke::new(1.0, accent));
-                    painter.circle_filled(hp, 3.0, accent);
+                    draw_handle(painter, c, to_scr(hnd), accent);
                 }
             }
-            let r = Rect::from_center_size(c, vec2(6.0, 6.0));
-            painter.rect_filled(r, 0.0, if i + 1 == pen.knots.len() { accent } else { Color32::WHITE });
-            painter.rect_stroke(r, 0.0, Stroke::new(1.0, accent), egui::StrokeKind::Inside);
+            draw_anchor(painter, c, last, accent);
         }
     }
 }
@@ -375,7 +399,7 @@ pub fn draw_overlay(app: &PhotosuiteApp, painter: &egui::Painter, xf: &ViewXform
 
 /// Options bar for vector tools; false for other tools.
 pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, tool: Tool) -> bool {
-    if !(is_shape_tool(tool) || matches!(tool, Tool::Pen | Tool::PathSelection)) {
+    if !(is_shape_tool(tool) || matches!(tool, Tool::Pen | Tool::PathSelection | Tool::DirectSelection)) {
         return false;
     }
     let t = Tokens::get(ui.ctx());
@@ -385,6 +409,17 @@ pub fn options_bar(app: &mut PhotosuiteApp, ui: &mut egui::Ui, tool: Tool) -> bo
     let o = &mut app.ui.tool_options;
     if tool == Tool::PathSelection {
         lbl(ui, if app.ui.vector_mask_target { "Drag to move the targeted vector mask" } else { tl!("Drag to move the active shape's path or the Work Path") });
+        return true;
+    }
+    if tool == Tool::DirectSelection {
+        let (shift, alt) = (crate::shortcuts::pretty("Shift"), crate::shortcuts::pretty("Alt"));
+        lbl(
+            ui,
+            &crate::i18n::fmt(
+                tl!("Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath"),
+                &[("shift", &shift), ("alt", &alt)],
+            ),
+        );
         return true;
     }
     if tool == Tool::Pen {

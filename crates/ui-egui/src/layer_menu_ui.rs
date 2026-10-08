@@ -41,6 +41,7 @@ pub fn entries(l: &Layer, multi: bool, has_selection: bool) -> Vec<Entry> {
         LayerContent::Shape(_) => v.push(Some(("Rasterize Layer", "layer.rasterize.shape"))),
         LayerContent::Smart(_) => {
             v.push(Some((tl!("Edit Contents"), "layer.smartObjects.editContents")));
+            v.push(Some((tl!("Convert to Layers"), "layer.smartObjects.convertToLayers")));
             v.push(Some(("Rasterize Layer", "layer.rasterize.smartObject")));
         }
         LayerContent::Fill(_) => v.push(Some(("Rasterize Layer", "layer.rasterize.fillContent"))),
@@ -184,7 +185,7 @@ mod tests {
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
         let ids: Vec<_> = entries(&layer(&s), false, false).into_iter().flatten().map(|e| e.1).collect();
         let edit = ids.iter().position(|id| *id == "layer.smartObjects.editContents").expect("Edit Contents entry");
-        assert_eq!(ids[edit + 1], "layer.rasterize.smartObject");
+        assert_eq!(ids[edit + 1..edit + 3], ["layer.smartObjects.convertToLayers", "layer.rasterize.smartObject"]);
     }
 
     #[test]

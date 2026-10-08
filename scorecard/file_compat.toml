@@ -57,9 +57,9 @@ note = "psd tiff.rs (ImageSourceData, both byte orders), io tiff_layers.rs, ui t
 [[item]]
 id = "FILE-215-8"
 target = "Large and BigTIFF import with banded decode across all IFDs"
-status = "missing"
+status = "done"
 issue = 215
-note = "codecs tiff.rs:3 'Only the first IFD is read'"
+note = "codecs tiff_ifd.rs (bounds-checked IFD chain + SubIFD walk, classic and BigTIFF, cycle-safe; tiff_info / decode_tiff_page), tiff.rs banded parallel strip/tile decode, planar 1 and 2, BigTIFF write (tiff_bigtiff or > 4 GiB); io import_tiff_page; 30 MP RGB8 Deflate 345 -> 32 ms; no page picker in the UI yet"
 
 [[item]]
 id = "FILE-215-9"

@@ -4,7 +4,7 @@ members = ["crates/*", "apps/*", "xtask"]
 default-members = ["crates/*", "apps/photosuite", "apps/photosuite-cli", "xtask"]
 
 [workspace.package]
-version = "0.9.18"
+version = "0.9.19"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

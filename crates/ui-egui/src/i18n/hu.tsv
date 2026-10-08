@@ -15,7 +15,7 @@
 	Edit	Szerkesztés
 	Image	Kép
 	Layer	Réteg
-	Type	Típus
+	Type	Szöveg
 	Select	Kijelölés
 	Filter	Szűrő
 	View	Nézet
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Speciális
+	Alt-click to define a source point to clone from	Az Alt billentyű lenyomva tartása mellett kattintson a klónozás forráspontjának meghatározásához
+	Automatic (recommended)	Automatikus (ajánlott)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Az automatikus mód GPU-gyorsítást használ, ha elérhető, hiba esetén pedig CPU-s megjelenítésre vált.
+	CPU / Compatibility	CPU / Kompatibilitás
+	Cancel Background Job	Háttérfeladat megszakítása
+	Cancel opening	Megnyitás megszakítása
+	Cancelled opening {name}	{name} megnyitása megszakítva
+	Cancelled {label}	Megszakítva: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Kattintás: horgonypont kijelölése · Húzás: horgonypont, fogantyú vagy szakasz mozgatása · {shift}-kattintás: hozzáadás · {alt}-kattintás: teljes részgörbe
+	Content-Aware Move	Tartalom-tudatos mozgatás
+	Convert to Layers	Átalakítás rétegekké
+	Copy Layers to Document	Rétegek másolása dokumentumba
+	Couldn't place {name}: {error}	{name} nem helyezhető el: {error}
+	Delete Action	Művelet törlése
+	Details	Részletek
+	Disable Symmetry Path	Szimmetriagörbe kikapcsolása
+	Discard Layers and Save a Copy	Rétegek elvetése és másolat mentése
+	Don't show again	Ne jelenjen meg újra
+	Drop Floating Selection	Lebegő kijelölés lerakása
+	Edit Layer Style	Rétegstílus szerkesztése
+	Esc to cancel	Esc: megszakítás
+	Extend	Kiterjesztés
+	Float Selection	Kijelölés lebegtetése
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Fagyasztó lasszó: húzással lefagyaszthat egy területet, Alt-húzással feloldhatja (L)
+	GPU Backend	GPU-háttérrendszer
+	GPU acceleration could not continue. Your documents are unchanged.	A GPU-gyorsítás nem folytatható. A dokumentumai nem változtak.
+	Get Action	Művelet lekérése
+	Grid:	Rács:
+	Hit-Test Type	Szöveg találatvizsgálata
+	Including layers will increase file size.	A rétegek belefoglalása növeli a fájlméretet.
+	Invalid {mode} profile	Érvénytelen {mode} profil
+	Keep Using CPU	CPU további használata
+	Lasso around an area, then drag the selection	Jelöljön körbe egy területet lasszóval, majd húzza el a kijelölést
+	Layer Style Default	Alapértelmezett rétegstílus
+	List Actions	Műveletek listázása
+	List Background Jobs	Háttérfeladatok listázása
+	Make Layer Style Default	Beállítás alapértelmezett rétegstílusként
+	Make Selection from Path	Kijelölés készítése görbéből
+	Make Symmetry Path	Szimmetriagörbe létrehozása
+	Move	Mozgatás
+	Move Document	Dokumentum mozgatása
+	Navigate Type	Navigálás a szövegben
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nincs görbe, amelyből kijelölés készíthető: rajzoljon egyet a Toll eszközzel, vagy jelöljön ki egyet a Görbék panelen.
+	Opening {name}	{name} megnyitása
+	Opening {name}…	{name} megnyitása…
+	Opening…	Megnyitás…
+	Patch	Folt
+	Patch:	Folt:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	A PhotoSuite a CPU-s képkompozitort használja. Az ablak továbbra is használhatja a grafikus adaptert.
+	Play Action	Művelet lejátszása
+	Reading…	Olvasás…
+	Record Action	Művelet rögzítése
+	Rendering Mode	Megjelenítési mód
+	Retry GPU	GPU újrapróbálása
+	Retry GPU requires a restart. Save your work first.	A GPU újrapróbálásához újraindítás szükséges. Előbb mentse a munkáját.
+	Save cancelled	Mentés megszakítva
+	Save failed: {error}	A mentés sikertelen: {error}
+	Stamp Down	Lebélyegzés lefelé
+	Stamp Visible	Láthatók lebélyegzése
+	Stop Recording	Rögzítés leállítása
+	Structure:	Struktúra:
+	Switched to CPU rendering	Átváltva CPU-s megjelenítésre
+	TIFF Options	TIFF-beállítások
+	Type Caret	Szövegkurzor
+	Unnamed {mode} profile	Névtelen {mode} profil
+	Warp Grid	Csavarási rács
+	Working…	Folyamatban…

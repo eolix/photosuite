@@ -240,6 +240,21 @@ fn fit_image_and_conditional_mode_change() {
 }
 
 #[test]
+fn conditional_mode_change_cannot_run_a_mode_change_the_gate_denies() {
+    fn deny_mode(id: &str, _: &Value) -> Result<()> {
+        if id.starts_with("image.mode.") { Err(EngineError::Other(format!("automation command `{id}` is disabled"))) } else { Ok(()) }
+    }
+    let mut s = session(4, 4, 8);
+    s.authorize = Some(deny_mode);
+    let e = s.execute("file.automate.conditionalModeChange", json!({"to": "grayscale"})).unwrap_err();
+    assert!(e.to_string().contains("image.mode.grayscale"), "{e}");
+    assert_eq!(doc(&s).mode, ColorMode::Rgb, "the refused nested step leaves the document alone");
+    // Commands that compose only allowed steps still run.
+    s.execute("file.automate.fitImage", json!({"width": 2, "height": 2})).unwrap();
+    assert_eq!(doc(&s).size.width, 2);
+}
+
+#[test]
 fn flatten_all_layer_effects_and_masks() {
     for depth in [8, 16, 32] {
         let mut s = session(40, 40, depth);

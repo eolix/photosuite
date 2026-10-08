@@ -15,7 +15,7 @@
 	Edit	Redigera
 	Image	Bild
 	Layer	Lager
-	Type	Typ
+	Type	Text
 	Select	Markera
 	Filter	Filter
 	View	Vy
@@ -1966,3 +1966,74 @@
 	175%	175 %
 	250%	250 %
 	300%	300 %
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avancerat
+	Alt-click to define a source point to clone from	Alt-klicka för att ange en källpunkt att klona från
+	Automatic (recommended)	Automatiskt (rekommenderas)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatiskt använder GPU-acceleration när den finns och växlar till CPU-återgivning vid fel.
+	CPU / Compatibility	CPU / Kompatibilitet
+	Cancel Background Job	Avbryt bakgrundsjobb
+	Cancel opening	Avbryt öppning
+	Cancelled opening {name}	Öppningen av {name} avbröts
+	Cancelled {label}	{label} avbröts
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klicka: markera ankarpunkt · Dra: flytta ankarpunkt, handtag eller segment · {shift}-klicka: lägg till · {alt}-klicka: hel delbana
+	Content-Aware Move	Innehållsmedveten flytt
+	Convert to Layers	Konvertera till lager
+	Copy Layers to Document	Kopiera lager till dokument
+	Couldn't place {name}: {error}	Det gick inte att placera {name}: {error}
+	Delete Action	Ta bort åtgärd
+	Details	Detaljer
+	Disable Symmetry Path	Inaktivera symmetribana
+	Discard Layers and Save a Copy	Ta bort lager och spara en kopia
+	Don't show again	Visa inte igen
+	Drop Floating Selection	Släpp flytande markering
+	Edit Layer Style	Redigera lagerstil
+	Esc to cancel	Esc för att avbryta
+	Extend	Utöka
+	Float Selection	Gör markeringen flytande
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Fryslasso: dra för att frysa ett område, Alt-dra för att tina upp det (L)
+	GPU Backend	GPU-backend
+	GPU acceleration could not continue. Your documents are unchanged.	GPU-accelerationen kunde inte fortsätta. Dina dokument är oförändrade.
+	Get Action	Hämta åtgärd
+	Grid:	Rutnät:
+	Hit-Test Type	Träfftest för text
+	Including layers will increase file size.	Att inkludera lager ökar filstorleken.
+	Invalid {mode} profile	Ogiltig {mode}-profil
+	Keep Using CPU	Fortsätt använda CPU
+	Lasso around an area, then drag the selection	Rita ett lasso runt ett område och dra sedan markeringen
+	Layer Style Default	Standard för lagerstil
+	List Actions	Lista åtgärder
+	List Background Jobs	Lista bakgrundsjobb
+	Make Layer Style Default	Ange som standard för lagerstil
+	Make Selection from Path	Skapa markering från bana
+	Make Symmetry Path	Skapa symmetribana
+	Move	Flytta
+	Move Document	Flytta dokument
+	Navigate Type	Navigera i text
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Ingen bana att skapa en markering från: rita en med pennverktyget eller välj en i panelen Banor.
+	Opening {name}	Öppnar {name}
+	Opening {name}…	Öppnar {name}…
+	Opening…	Öppnar…
+	Patch	Lappa
+	Patch:	Lappa:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite använder CPU-bildkompositören. Fönstret kan fortfarande använda ditt grafikkort.
+	Play Action	Spela upp åtgärd
+	Reading…	Läser…
+	Record Action	Spela in åtgärd
+	Rendering Mode	Återgivningsläge
+	Retry GPU	Försök med GPU igen
+	Retry GPU requires a restart. Save your work first.	Försök med GPU igen kräver en omstart. Spara ditt arbete först.
+	Save cancelled	Sparandet avbröts
+	Save failed: {error}	Det gick inte att spara: {error}
+	Stamp Down	Stämpla nedåt
+	Stamp Visible	Stämpla synliga
+	Stop Recording	Stoppa inspelning
+	Structure:	Struktur:
+	Switched to CPU rendering	Bytte till CPU-återgivning
+	TIFF Options	TIFF-alternativ
+	Type Caret	Textmarkör
+	Unnamed {mode} profile	Namnlös {mode}-profil
+	Warp Grid	Tänjningsrutnät
+	Working…	Arbetar…

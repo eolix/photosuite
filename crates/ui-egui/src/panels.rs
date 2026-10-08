@@ -36,7 +36,7 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     &[
         &[Tool::Pen],
         &[Tool::Type, Tool::VerticalType],
-        &[Tool::PathSelection],
+        &[Tool::PathSelection, Tool::DirectSelection],
         &[Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line, Tool::CustomShape],
     ],
     &[&[Tool::Hand], &[Tool::Zoom]],
@@ -1682,6 +1682,9 @@ fn layer_row(
     let row_h = if t.pro { 32.0 } else { 46.0 };
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), row_h), Sense::click_and_drag());
     layer_drag_and_drop(ctx, ui, l, rect, &resp, actions);
+    if resp.drag_started() {
+        crate::layer_transfer::begin_from_panel(app, ctx, l.id);
+    }
     // Rows are painted: name them for screen readers and UI tests.
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &l.name));
     // A row scrolled out of view only keeps its place (#125): a layout's hundreds of rows would
@@ -2419,13 +2422,7 @@ fn layer_drag_and_drop(ctx: &egui::Context, ui: &egui::Ui, l: &Layer, rect: Rect
     if dragged == l.id.0 {
         // Ghost label following the pointer.
         if let Some(p) = pointer {
-            let layer = egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("layer-drag-ghost"));
-            let painter = ctx.layer_painter(layer);
-            let g = painter.layout_no_wrap(l.name.clone(), egui::FontId::proportional(12.0), t.text);
-            let r = Rect::from_min_size(p + vec2(12.0, -10.0), g.size() + vec2(16.0, 8.0));
-            painter.rect_filled(r, t.radius_sm, t.card.gamma_multiply(0.95));
-            painter.rect_stroke(r, t.radius_sm, Stroke::new(1.0, t.accent), StrokeKind::Inside);
-            painter.galley(r.min + vec2(8.0, 4.0), g, t.text);
+            crate::layer_transfer::ghost(ctx, p, &l.name);
         }
         return;
     }

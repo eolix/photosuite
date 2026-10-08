@@ -1982,3 +1982,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	詳細設定
+	Alt-click to define a source point to clone from	Alt+クリックでコピー元を指定
+	Automatic (recommended)	自動(推奨)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	「自動」では、利用可能な場合は GPU アクセラレーションを使用し、エラー時は CPU レンダリングに切り替えます。
+	CPU / Compatibility	CPU / 互換性
+	Cancel Background Job	バックグラウンドジョブをキャンセル
+	Cancel opening	開く処理をキャンセル
+	Cancelled opening {name}	{name} を開く処理をキャンセルしました
+	Cancelled {label}	{label} をキャンセルしました
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	クリック: アンカーを選択 · ドラッグ: アンカー、ハンドル、セグメントを移動 · {shift}+クリック: 追加 · {alt}+クリック: サブパス全体
+	Content-Aware Move	コンテンツに応じた移動
+	Convert to Layers	レイヤーに変換
+	Copy Layers to Document	レイヤーをドキュメントにコピー
+	Couldn't place {name}: {error}	{name} を配置できませんでした: {error}
+	Delete Action	アクションを削除
+	Details	詳細
+	Disable Symmetry Path	シンメトリーパスを無効にする
+	Discard Layers and Save a Copy	レイヤーを破棄してコピーを保存
+	Don't show again	今後表示しない
+	Drop Floating Selection	浮動選択範囲を確定
+	Edit Layer Style	レイヤースタイルを編集
+	Esc to cancel	Esc でキャンセル
+	Extend	拡張
+	Float Selection	選択範囲を浮動化
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	フリーズ投げ縄: ドラッグで領域をフリーズ、Alt+ドラッグで解凍 (L)
+	GPU Backend	GPU バックエンド
+	GPU acceleration could not continue. Your documents are unchanged.	GPU アクセラレーションを続行できませんでした。ドキュメントは変更されていません。
+	Get Action	アクションを取得
+	Grid:	グリッド:
+	Hit-Test Type	文字のヒットテスト
+	Including layers will increase file size.	レイヤーを含めるとファイルサイズが大きくなります。
+	Invalid {mode} profile	無効な {mode} プロファイル
+	Keep Using CPU	CPU を使い続ける
+	Lasso around an area, then drag the selection	領域を投げ縄で囲み、選択範囲をドラッグします
+	Layer Style Default	レイヤースタイルの既定値
+	List Actions	アクションを一覧表示
+	List Background Jobs	バックグラウンドジョブを一覧表示
+	Make Layer Style Default	レイヤースタイルの既定値に設定
+	Make Selection from Path	パスから選択範囲を作成
+	Make Symmetry Path	シンメトリーパスを作成
+	Move	移動
+	Move Document	ドキュメントを移動
+	Navigate Type	文字内のカーソル移動
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	選択範囲を作成するパスがありません: ペンツールでパスを描くか、パスパネルでパスを選択してください。
+	Opening {name}	{name} を開いています
+	Opening {name}…	{name} を開いています…
+	Opening…	開いています…
+	Patch	パッチ
+	Patch:	パッチ:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite は CPU 画像合成を使用しています。ウィンドウでは引き続きグラフィックアダプターが使用される場合があります。
+	Play Action	アクションを再生
+	Reading…	読み込み中…
+	Record Action	アクションを記録
+	Rendering Mode	レンダリングモード
+	Retry GPU	GPU を再試行
+	Retry GPU requires a restart. Save your work first.	GPU の再試行には再起動が必要です。先に作業内容を保存してください。
+	Save cancelled	保存をキャンセルしました
+	Save failed: {error}	保存に失敗しました: {error}
+	Stamp Down	下のレイヤーにスタンプ
+	Stamp Visible	表示レイヤーをスタンプ
+	Stop Recording	記録を停止
+	Structure:	構造:
+	Switched to CPU rendering	CPU レンダリングに切り替えました
+	TIFF Options	TIFF オプション
+	Type Caret	文字キャレット
+	Unnamed {mode} profile	名前のない {mode} プロファイル
+	Warp Grid	ワープグリッド
+	Working…	処理中…

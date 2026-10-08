@@ -15,7 +15,7 @@
 	Edit	แก้ไข
 	Image	รูปภาพ
 	Layer	เลเยอร์
-	Type	ประเภท
+	Type	ข้อความ
 	Select	เลือก
 	Filter	ตัวกรอง
 	View	มุมมอง
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	ขั้นสูง
+	Alt-click to define a source point to clone from	Alt-คลิกเพื่อกำหนดจุดต้นทางที่จะโคลน
+	Automatic (recommended)	อัตโนมัติ (แนะนำ)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	โหมดอัตโนมัติจะใช้การเร่งความเร็วด้วย GPU เมื่อใช้ได้ และจะเปลี่ยนไปเรนเดอร์ด้วย CPU เมื่อเกิดข้อผิดพลาด
+	CPU / Compatibility	CPU / ความเข้ากันได้
+	Cancel Background Job	ยกเลิกงานเบื้องหลัง
+	Cancel opening	ยกเลิกการเปิด
+	Cancelled opening {name}	ยกเลิกการเปิด {name} แล้ว
+	Cancelled {label}	ยกเลิก {label} แล้ว
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	คลิก: เลือกจุดยึด · ลาก: ย้ายจุดยึด แฮนเดิล หรือเซกเมนต์ · {shift}-คลิก: เพิ่ม · {alt}-คลิก: ทั้งพาธย่อย
+	Content-Aware Move	ย้ายแบบรับรู้เนื้อหา
+	Convert to Layers	แปลงเป็นเลเยอร์
+	Copy Layers to Document	คัดลอกเลเยอร์ไปยังเอกสาร
+	Couldn't place {name}: {error}	ไม่สามารถวาง {name}: {error}
+	Delete Action	ลบแมโคร
+	Details	รายละเอียด
+	Disable Symmetry Path	ปิดใช้งานพาธสมมาตร
+	Discard Layers and Save a Copy	ละทิ้งเลเยอร์และบันทึกสำเนา
+	Don't show again	ไม่ต้องแสดงอีก
+	Drop Floating Selection	ปล่อยการเลือกแบบลอย
+	Edit Layer Style	แก้ไขสไตล์เลเยอร์
+	Esc to cancel	กด Esc เพื่อยกเลิก
+	Extend	ขยาย
+	Float Selection	ทำให้การเลือกลอย
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	ลาสโซตรึง: ลากเพื่อตรึงพื้นที่ Alt-ลากเพื่อคลายการตรึง (L)
+	GPU Backend	แบ็กเอนด์ GPU
+	GPU acceleration could not continue. Your documents are unchanged.	การเร่งความเร็วด้วย GPU ไม่สามารถทำงานต่อได้ เอกสารของคุณไม่มีการเปลี่ยนแปลง
+	Get Action	ดึงข้อมูลแมโคร
+	Grid:	ตาราง:
+	Hit-Test Type	ทดสอบตำแหน่งในข้อความ
+	Including layers will increase file size.	การรวมเลเยอร์ไว้จะทำให้ไฟล์มีขนาดใหญ่ขึ้น
+	Invalid {mode} profile	โปรไฟล์ {mode} ไม่ถูกต้อง
+	Keep Using CPU	ใช้ CPU ต่อไป
+	Lasso around an area, then drag the selection	ใช้ลาสโซล้อมรอบพื้นที่ แล้วลากส่วนที่เลือก
+	Layer Style Default	ค่าเริ่มต้นสไตล์เลเยอร์
+	List Actions	แสดงรายการแมโคร
+	List Background Jobs	แสดงรายการงานเบื้องหลัง
+	Make Layer Style Default	ตั้งเป็นค่าเริ่มต้นสไตล์เลเยอร์
+	Make Selection from Path	สร้างการเลือกจากพาธ
+	Make Symmetry Path	สร้างพาธสมมาตร
+	Move	ย้าย
+	Move Document	ย้ายเอกสาร
+	Navigate Type	นำทางในข้อความ
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	ไม่มีพาธสำหรับสร้างการเลือก: วาดพาธด้วยเครื่องมือปากกา หรือเลือกพาธในแผงพาธ
+	Opening {name}	กำลังเปิด {name}
+	Opening {name}…	กำลังเปิด {name}…
+	Opening…	กำลังเปิด…
+	Patch	แพตช์
+	Patch:	แพตช์:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite กำลังใช้ตัวผสมภาพด้วย CPU หน้าต่างอาจยังคงใช้อะแดปเตอร์กราฟิกของคุณ
+	Play Action	เล่นแมโคร
+	Reading…	กำลังอ่าน…
+	Record Action	บันทึกแมโคร
+	Rendering Mode	โหมดการเรนเดอร์
+	Retry GPU	ลอง GPU อีกครั้ง
+	Retry GPU requires a restart. Save your work first.	การลอง GPU อีกครั้งต้องรีสตาร์ท โปรดบันทึกงานของคุณก่อน
+	Save cancelled	ยกเลิกการบันทึกแล้ว
+	Save failed: {error}	บันทึกไม่สำเร็จ: {error}
+	Stamp Down	ประทับลง
+	Stamp Visible	ประทับส่วนที่มองเห็น
+	Stop Recording	หยุดบันทึก
+	Structure:	โครงสร้าง:
+	Switched to CPU rendering	เปลี่ยนไปเรนเดอร์ด้วย CPU แล้ว
+	TIFF Options	ตัวเลือก TIFF
+	Type Caret	เคอร์เซอร์ข้อความ
+	Unnamed {mode} profile	โปรไฟล์ {mode} ที่ไม่มีชื่อ
+	Warp Grid	ตารางวาร์ป
+	Working…	กำลังทำงาน…

@@ -27,7 +27,7 @@ pub struct CommandSpec {
     pub journal: bool,
 }
 
-fn always(_: &Session) -> std::result::Result<(), String> {
+pub(crate) fn always(_: &Session) -> std::result::Result<(), String> {
     Ok(())
 }
 fn has_doc(s: &Session) -> std::result::Result<(), String> {
@@ -62,8 +62,10 @@ pub(crate) fn has_paintable(s: &Session) -> std::result::Result<(), String> {
 }
 
 /// Surface a paint command writes to: the layer's pixels, or its mask with `"target":"mask"`.
-pub(crate) fn paint_surface<'a>(l: &'a mut Layer, p: &Value) -> Result<&'a mut photosuite_raster::Surface> {
-    if !is_mask_target(p) && (l.locks.pixels || l.locks.all) {
+pub(crate) fn paint_surface<'a>(doc: &'a mut Document, id: LayerId, p: &Value) -> Result<&'a mut photosuite_raster::Surface> {
+    let locks = doc.effective_locks(id);
+    let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+    if !is_mask_target(p) && (locks.pixels || locks.all) {
         return Err(EngineError::Other(format!("Could not complete your request because the layer \"{}\" is locked", l.name)));
     }
     if is_mask_target(p) {
@@ -132,6 +134,17 @@ pub(crate) fn int_i32(cmd: &str, p: &Value, key: &str) -> Result<Option<i32>> {
     }
 }
 
+/// An id (layer comp, slice, style…) from a JSON value: a bad-params error unless it is a whole
+/// number in `u32` range. `as u32` would wrap `2^32 + 1` to `1` and target a real item.
+pub(crate) fn u32_id(cmd: &str, key: &str, v: &Value) -> Result<u32> {
+    v.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or_else(|| bad(cmd, format!("`{key}` = {v} is not a valid id (0..={})", u32::MAX)))
+}
+
+/// [`u32_id`] of `p[key]`: `None` when absent.
+pub(crate) fn u32_id_param(cmd: &str, p: &Value, key: &str) -> Result<Option<u32>> {
+    p.get(key).map(|v| u32_id(cmd, key, v)).transpose()
+}
+
 fn f32_or(p: &Value, key: &str, default: f32) -> f32 {
     p.get(key).and_then(Value::as_f64).map(|v| v as f32).unwrap_or(default)
 }
@@ -179,11 +192,22 @@ fn new_adjustment(s: &mut Session, adj: Adjustment) -> Result<Value> {
 }
 
 fn destructive_adjust(s: &mut Session, label: &str, adj: Adjustment, p: &Value) -> Result<Value> {
+    if is_mask_target(p) {
+        // The targeted layer mask (#780): ⌘I inverts it, as in Photoshop.
+        let id = layer_param(s, &Value::Null)?;
+        return s.edit(label, |doc, _| {
+            let sel = doc.selection.clone();
+            let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+            let mask = l.mask.as_mut().ok_or_else(|| EngineError::Other("layer has no mask".into()))?;
+            pixels::adjust_mask(&mut mask.surface, &adj, sel.as_ref());
+            Ok(Value::Null)
+        });
+    }
     if crate::channel_cmds::is_channel_target(p) {
         // Alpha channel / Quick Mask target: the adjustment runs on the grayscale channel.
         return s.edit(label, |doc, _| {
             let sel = doc.selection.clone();
-            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, p)? {
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, None, p)? {
                 pixels::adjust_surface(surf, &adj, sel.as_ref(), ColorMode::Grayscale);
                 surf.prune();
             }
@@ -979,6 +1003,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::transform_cmds::specs());
     v.extend(crate::float_cmds::specs());
     v.extend(crate::vector_cmds::specs());
+    v.extend(crate::path_edit_cmds::specs());
     v.extend(crate::smartselect_cmds::specs());
     v.extend(crate::cutout_cmds::specs());
     v.extend(crate::symmetry_cmds::specs());
@@ -1001,9 +1026,11 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
+    v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::edit_menu_cmds::specs());
     v.extend(crate::fill_key_cmds::specs());
+    v.extend(crate::brush_key_cmds::specs());
     v.extend(crate::stamp_cmds::specs());
     v.extend(crate::align_cmds::specs());
     v.extend(crate::photo_cmds::specs());

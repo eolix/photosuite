@@ -77,7 +77,8 @@ pub fn needed(app: &PhotosuiteApp) -> Option<(Kind, photosuite_doc::LayerId)> {
     let st = app.session.active()?;
     let id = st.active_layer?;
     let l = st.doc.layer(id)?;
-    if l.locks.all || l.locks.pixels {
+    let locks = st.doc.effective_locks(id);
+    if locks.all || locks.pixels {
         return None;
     }
     use photosuite_doc::LayerContent as C;

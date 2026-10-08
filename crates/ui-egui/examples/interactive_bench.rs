@@ -236,7 +236,7 @@ fn main() {
 
     // ---- filters / adjustments / layers ------------------------------------------------------
     select(&mut s, 0);
-    for radius in [4.0, 40.0] {
+    for radius in [4.0, 40.0, 250.0] {
         b.time(&format!("Gaussian Blur r {radius} (photo layer) + refresh"), |b| {
             let t = Instant::now();
             exec(&mut s, "filter.blur.gaussianBlur", json!({"radius": radius}));
@@ -244,6 +244,19 @@ fn main() {
             exec(&mut s, "edit.undo", json!({}));
             b.refresh(&s, false);
             v
+        });
+    }
+    // Filter dialog live preview, per radius change (#464): the command on the proxy plus its
+    // flatten for upload.
+    for radius in [40.0, 250.0] {
+        b.time(&format!("Gaussian Blur dialog preview r {radius}"), |_| {
+            let st = s.active().expect("doc");
+            let k = photosuite_ui_egui::proxy::factor(&st.doc);
+            let t = Instant::now();
+            let p = photosuite_ui_egui::filter_dialog::preview_document(&st.doc, st.active_layer, "filter.blur.gaussianBlur", &json!({"radius": radius}), k)
+                .expect("preview");
+            std::hint::black_box(photosuite_compose::flatten(&p));
+            ms(t)
         });
     }
     // Image › Adjustments dialog preview, per settings change (#77). Before: the command re-run

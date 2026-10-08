@@ -285,3 +285,48 @@ fn webp_lossy_and_lossless() {
     assert!(size("webpLossless", 50) > 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn slices_with_the_same_name_get_distinct_files() {
+    // #908: two slices named `tile` (and names that sanitize alike) used to overwrite each other.
+    let dir = tmp("dupes");
+    let mut s = session(8);
+    s.execute("slice.new", json!({"rect": [0, 0, 10, 10], "name": "tile"})).unwrap();
+    s.execute("slice.new", json!({"rect": [20, 0, 10, 10], "name": "tile"})).unwrap();
+    s.execute("slice.new", json!({"rect": [40, 0, 10, 10], "name": "a/b"})).unwrap();
+    s.execute("slice.new", json!({"rect": [0, 20, 10, 10], "name": "a?b"})).unwrap();
+    s.execute("slice.new", json!({"rect": [20, 20, 10, 10], "name": "spacer"})).unwrap();
+    let r = s.execute("file.export.saveForWebLegacy", json!({"format": "gif", "dir": dir, "slices": "user", "html": true})).unwrap();
+    let mut files: Vec<String> = r["files"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().rsplit('/').next().unwrap().to_string()).collect();
+    files.sort();
+    assert_eq!(files, ["a_b.gif", "a_b_2.gif", "spacer_2.gif", "tile.gif", "tile_2.gif"]);
+    let html = std::fs::read_to_string(r["html"].as_str().unwrap()).unwrap();
+    assert!(html.contains("images/tile.gif") && html.contains("images/tile_2.gif"));
+}
+
+#[test]
+fn overlapping_slices_keep_the_later_slice_in_html() {
+    // #909: the later slice is on top; the earlier one shows only where it isn't covered.
+    let dir = tmp("overlap");
+    let mut s = session(8);
+    s.execute("slice.new", json!({"rect": [0, 0, 40, 30], "name": "under", "url": "https://example.org/under"})).unwrap();
+    s.execute("slice.new", json!({"rect": [20, 15, 40, 30], "name": "over", "url": "https://example.org/over"})).unwrap();
+    let r = s.execute("file.export.saveForWebLegacy", json!({"format": "png24", "dir": dir, "html": true})).unwrap();
+    let html = std::fs::read_to_string(r["html"].as_str().unwrap()).unwrap();
+    assert!(html.contains("https://example.org/over"), "the later slice's cell is in the table");
+    assert!(html.contains("https://example.org/under"));
+    let files: Vec<String> = r["files"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+    let over = files.iter().find(|f| f.ends_with("images/over.png")).unwrap();
+    assert_eq!(decode(over).dimensions(), (40, 30));
+    // The visible pieces of every image tile the canvas exactly once.
+    let area: u64 = files
+        .iter()
+        .filter(|f| !f.ends_with("spacer.gif"))
+        .map(|f| {
+            let (w, h) = decode(f).dimensions();
+            u64::from(w) * u64::from(h)
+        })
+        .sum();
+    assert_eq!(area, 64 * 48);
+    assert!(files.iter().any(|f| f.ends_with("images/under_01.png")), "the covered slice is cut into pieces: {files:?}");
+}

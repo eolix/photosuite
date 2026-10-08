@@ -17,18 +17,7 @@ const BAND_BYTES: usize = 32 << 20;
 /// layered (see [`crate::tiff_layers`]).
 pub fn import_flat(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
     if codecs::detect(bytes) == Some(Format::Tiff) {
-        // The orientation is applied after the layer check: rotating the composite but not the
-        // layers would misalign them, so a layered TIFF keeps its stored orientation.
-        let orientation = codecs::exif_orientation(bytes);
-        let img = codecs::decode_with(bytes, &codecs::DecodeOptions { keep_orientation: true, ..Default::default() })?;
-        if let Some(layers) = img.meta.photoshop_layers.as_deref().filter(|l| !l.is_empty()) {
-            let mut r = crate::tiff_layers::import_layered(name, &img, layers)?;
-            if orientation != 1 {
-                r.warnings.push("the TIFF's orientation tag was ignored so the layers stay aligned with the image".to_string());
-            }
-            return Ok(r);
-        }
-        return image_to_document(name, &img.oriented(orientation)?);
+        return import_tiff_page(name, bytes, None);
     }
     let img = codecs::decode(bytes)?;
     let mut r = image_to_document(name, &img)?;
@@ -39,6 +28,27 @@ pub fn import_flat(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
         d.icc_profile = Some(photosuite_cms::Builtin::LinearSrgb.profile().to_bytes());
     }
     Ok(r)
+}
+
+/// Opens one page of a TIFF or BigTIFF file: `None` is the page Photoshop opens (the first
+/// full-resolution one), `Some(i)` an index into [`codecs::tiff_info`]'s pages (every IFD and
+/// SubIFD). A page with Photoshop layer data opens layered.
+pub fn import_tiff_page(name: &str, bytes: &[u8], page: Option<usize>) -> Result<ImportResult, IoError> {
+    // The orientation is applied after the layer check: rotating the composite but not the
+    // layers would misalign them, so a layered TIFF keeps its stored orientation.
+    let keep = codecs::DecodeOptions { keep_orientation: true, ..Default::default() };
+    let (img, orientation) = match page {
+        None => (codecs::decode_with(bytes, &keep)?, codecs::tiff_orientation(bytes)),
+        Some(p) => (codecs::decode_tiff_page(bytes, p, &keep)?, codecs::tiff_page_orientation(bytes, p)),
+    };
+    if let Some(layers) = img.meta.photoshop_layers.as_deref().filter(|l| !l.is_empty()) {
+        let mut r = crate::tiff_layers::import_layered(name, &img, layers)?;
+        if orientation != 1 {
+            r.warnings.push("the TIFF's orientation tag was ignored so the layers stay aligned with the image".to_string());
+        }
+        return Ok(r);
+    }
+    image_to_document(name, &img.oriented(orientation)?)
 }
 
 /// A decoded flat image as a single-layer document.

@@ -15,7 +15,7 @@
 	Edit	编辑
 	Image	图像
 	Layer	图层
-	Type	类型
+	Type	文字
 	Select	选择
 	Filter	滤镜
 	View	视图
@@ -697,7 +697,7 @@
 	3D LUT File	3D LUT 文件
 	Absolute	绝对
 	Absolute Colorimetric	绝对比色法
-	Action	行动
+	Action	动作
 	Adaptive	自适应
 	Adaptive Wide Angle isn't open	自适应广角未开启
 	Add	添加
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	高级
+	Alt-click to define a source point to clone from	按住 Alt 键单击以定义要仿制的源点
+	Automatic (recommended)	自动（推荐）
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	“自动”会在可用时使用 GPU 加速，出错时回退到 CPU 渲染。
+	CPU / Compatibility	CPU / 兼容模式
+	Cancel Background Job	取消后台任务
+	Cancel opening	取消打开
+	Cancelled opening {name}	已取消打开 {name}
+	Cancelled {label}	已取消 {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	单击：选择锚点 · 拖动：移动锚点、手柄或线段 · {shift}-单击：添加 · {alt}-单击：整个子路径
+	Content-Aware Move	内容感知移动
+	Convert to Layers	转换为图层
+	Copy Layers to Document	将图层复制到文档
+	Couldn't place {name}: {error}	无法置入 {name}：{error}
+	Delete Action	删除动作
+	Details	详细信息
+	Disable Symmetry Path	停用对称路径
+	Discard Layers and Save a Copy	丢弃图层并保存副本
+	Don't show again	不再显示
+	Drop Floating Selection	放下浮动选区
+	Edit Layer Style	编辑图层样式
+	Esc to cancel	按 Esc 取消
+	Extend	扩展
+	Float Selection	浮动选区
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	冻结套索：拖动以冻结区域，按住 Alt 拖动以解冻 (L)
+	GPU Backend	GPU 后端
+	GPU acceleration could not continue. Your documents are unchanged.	GPU 加速无法继续。您的文档未受影响。
+	Get Action	获取动作
+	Grid:	网格：
+	Hit-Test Type	文字命中测试
+	Including layers will increase file size.	包含图层会增大文件大小。
+	Invalid {mode} profile	无效的 {mode} 配置文件
+	Keep Using CPU	继续使用 CPU
+	Lasso around an area, then drag the selection	用套索圈出区域，然后拖动选区
+	Layer Style Default	图层样式默认值
+	List Actions	列出动作
+	List Background Jobs	列出后台任务
+	Make Layer Style Default	设为图层样式默认值
+	Make Selection from Path	从路径建立选区
+	Make Symmetry Path	建立对称路径
+	Move	移动
+	Move Document	移动文档
+	Navigate Type	文字导航
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	没有可用于建立选区的路径：请用钢笔工具绘制路径，或在“路径”面板中选择一条路径。
+	Opening {name}	正在打开 {name}
+	Opening {name}…	正在打开 {name}…
+	Opening…	正在打开…
+	Patch	修补
+	Patch:	修补：
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite 正在使用 CPU 图像合成器。窗口仍可能使用您的显卡。
+	Play Action	播放动作
+	Reading…	正在读取…
+	Record Action	记录动作
+	Rendering Mode	渲染模式
+	Retry GPU	重试 GPU
+	Retry GPU requires a restart. Save your work first.	重试 GPU 需要重新启动。请先保存您的工作。
+	Save cancelled	已取消保存
+	Save failed: {error}	保存失败：{error}
+	Stamp Down	向下盖印
+	Stamp Visible	盖印可见图层
+	Stop Recording	停止记录
+	Structure:	结构：
+	Switched to CPU rendering	已切换到 CPU 渲染
+	TIFF Options	TIFF 选项
+	Type Caret	文字插入点
+	Unnamed {mode} profile	未命名的 {mode} 配置文件
+	Warp Grid	弯曲网格
+	Working…	正在处理…

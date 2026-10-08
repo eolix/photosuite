@@ -341,13 +341,23 @@ pub fn params_for(id: &str, p: &Value) -> Option<FilterParams> {
             }),
         },
         "filter.blurGallery.pathBlur" => FilterParams::PathBlur {
-            paths: list::<BlurPath>(p, "paths").unwrap_or_else(|| {
-                vec![BlurPath {
-                    points: vec![[f(p, "startX", 0.2), f(p, "startY", 0.5)], [f(p, "endX", 0.8), f(p, "endY", 0.5)]],
-                    speed: f(p, "speed", 50.0).clamp(0.0, 500.0),
-                    taper: f(p, "taper", 0.0).clamp(0.0, 100.0),
-                }]
-            }),
+            paths: list::<BlurPath>(p, "paths")
+                .map(|mut v| {
+                    // Entry speeds bypass the scalar clamp above; the halo
+                    // casts one to i32 and adds, so an unclamped value
+                    // overflows (#708).
+                    for b in &mut v {
+                        b.speed = b.speed.clamp(0.0, 500.0);
+                    }
+                    v
+                })
+                .unwrap_or_else(|| {
+                    vec![BlurPath {
+                        points: vec![[f(p, "startX", 0.2), f(p, "startY", 0.5)], [f(p, "endX", 0.8), f(p, "endY", 0.5)]],
+                        speed: f(p, "speed", 50.0).clamp(0.0, 500.0),
+                        taper: f(p, "taper", 0.0).clamp(0.0, 100.0),
+                    }]
+                }),
         },
         // ---- Other ----
         "filter.other.custom" => FilterParams::Custom {
@@ -490,7 +500,8 @@ fn relight_enabled(s: &Session) -> std::result::Result<(), String> {
         return Ok(());
     }
     let l = crate::active_layer_of(s)?;
-    if l.locks.pixels || l.locks.all { Err(format!("the layer \"{}\" is locked", l.name)) } else { Ok(()) }
+    let locks = s.active().ok_or("no document open")?.doc.effective_locks(l.id);
+    if locks.pixels || locks.all { Err(format!("the layer \"{}\" is locked", l.name)) } else { Ok(()) }
 }
 
 fn run_relight(s: &mut Session, p: &Value) -> Result<Value> {

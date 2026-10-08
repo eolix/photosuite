@@ -15,7 +15,7 @@
 	Edit	Editar
 	Image	Imagem
 	Layer	Camada
-	Type	Tipo
+	Type	Texto
 	Select	Selecionar
 	Filter	Filtro
 	View	Visualizar
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avançado
+	Alt-click to define a source point to clone from	Alt-clique para definir um ponto de origem a partir do qual clonar
+	Automatic (recommended)	Automático (recomendado)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	O modo automático utiliza a aceleração por GPU quando disponível e recorre à renderização por CPU em caso de erro.
+	CPU / Compatibility	CPU / Compatibilidade
+	Cancel Background Job	Cancelar tarefa em segundo plano
+	Cancel opening	Cancelar abertura
+	Cancelled opening {name}	Abertura de {name} cancelada
+	Cancelled {label}	Cancelado: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clique: selecionar âncora · Arrastar: mover âncora, alça ou segmento · {shift}-clique: adicionar · {alt}-clique: subdemarcador completo
+	Content-Aware Move	Mover com reconhecimento de conteúdo
+	Convert to Layers	Converter em camadas
+	Copy Layers to Document	Copiar camadas para o documento
+	Couldn't place {name}: {error}	Não foi possível colocar {name}: {error}
+	Delete Action	Apagar ação
+	Details	Detalhes
+	Disable Symmetry Path	Desativar demarcador de simetria
+	Discard Layers and Save a Copy	Descartar camadas e gravar uma cópia
+	Don't show again	Não voltar a mostrar
+	Drop Floating Selection	Largar seleção flutuante
+	Edit Layer Style	Editar estilo de camada
+	Esc to cancel	Esc para cancelar
+	Extend	Estender
+	Float Selection	Tornar seleção flutuante
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Laço de congelamento: arraste para congelar uma área, Alt-arrastar para a descongelar (L)
+	GPU Backend	Back-end da GPU
+	GPU acceleration could not continue. Your documents are unchanged.	A aceleração por GPU não pôde continuar. Os seus documentos não foram alterados.
+	Get Action	Obter ação
+	Grid:	Grade:
+	Hit-Test Type	Teste de posição no texto
+	Including layers will increase file size.	Incluir as camadas aumentará o tamanho do ficheiro.
+	Invalid {mode} profile	Perfil {mode} inválido
+	Keep Using CPU	Continuar a usar a CPU
+	Lasso around an area, then drag the selection	Contorne uma área com o laço e depois arraste a seleção
+	Layer Style Default	Estilo de camada predefinido
+	List Actions	Listar ações
+	List Background Jobs	Listar tarefas em segundo plano
+	Make Layer Style Default	Tornar estilo de camada predefinido
+	Make Selection from Path	Criar seleção a partir do demarcador
+	Make Symmetry Path	Criar demarcador de simetria
+	Move	Mover
+	Move Document	Mover documento
+	Navigate Type	Navegar no texto
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Não há nenhum demarcador a partir do qual criar uma seleção: desenhe um com a ferramenta Caneta ou selecione um no painel Demarcadores.
+	Opening {name}	A abrir {name}
+	Opening {name}…	A abrir {name}…
+	Opening…	A abrir…
+	Patch	Remendo
+	Patch:	Remendo:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	O PhotoSuite está a utilizar o compositor de imagens da CPU. A janela pode continuar a utilizar a sua placa gráfica.
+	Play Action	Reproduzir ação
+	Reading…	A ler…
+	Record Action	Gravar ação
+	Rendering Mode	Modo de renderização
+	Retry GPU	Tentar novamente a GPU
+	Retry GPU requires a restart. Save your work first.	Tentar novamente a GPU requer um reinício. Grave primeiro o seu trabalho.
+	Save cancelled	Gravação cancelada
+	Save failed: {error}	Falha ao gravar: {error}
+	Stamp Down	Fundir uma cópia para baixo
+	Stamp Visible	Fundir uma cópia dos visíveis
+	Stop Recording	Parar gravação
+	Structure:	Estrutura:
+	Switched to CPU rendering	Mudou para a renderização por CPU
+	TIFF Options	Opções de TIFF
+	Type Caret	Cursor de texto
+	Unnamed {mode} profile	Perfil {mode} sem nome
+	Warp Grid	Grade de deformação
+	Working…	A processar…

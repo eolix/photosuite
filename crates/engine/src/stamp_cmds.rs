@@ -93,7 +93,8 @@ fn stamp_down(s: &mut Session, p: &Value) -> Result<Value> {
         if !matches!(lower.content, LayerContent::Raster(_)) {
             return Err(EngineError::Other("the layer below is not a pixel layer".into()));
         }
-        if lower.locks.all || lower.locks.pixels {
+        let locks = doc.effective_locks(lower.id);
+        if locks.all || locks.pixels {
             return Err(EngineError::Other("the layer below is locked".into()));
         }
         if !upper.visible {

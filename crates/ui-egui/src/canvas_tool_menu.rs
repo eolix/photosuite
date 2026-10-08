@@ -1,4 +1,4 @@
-//! Canvas context actions for selection and Pen tools.
+//! Canvas context menus for the selection tools, the Pen and an active Free Transform box.
 
 use egui::Context;
 use photosuite_doc::LayerContent;
@@ -21,19 +21,61 @@ pub struct CanvasToolMenu {
     pub transform: bool,
 }
 
+/// One menu row: label and command id. `None` is a separator.
+pub type Row = Option<(&'static str, &'static str)>;
+
 /// Right-click while transforming: what the box's handles do.
-pub const TRANSFORM_MENU: &[(&str, &str)] = &[
-    ("Free Transform", "edit.freeTransform"),
-    ("Scale", "edit.transform.scale"),
-    ("Rotate", "edit.transform.rotate"),
-    ("Skew", "edit.transform.skew"),
-    ("Distort", "edit.transform.distort"),
-    ("Perspective", "edit.transform.perspective"),
+pub const TRANSFORM_MENU: &[Row] = &[
+    Some(("Free Transform", "edit.freeTransform")),
+    Some(("Scale", "edit.transform.scale")),
+    Some(("Rotate", "edit.transform.rotate")),
+    Some(("Skew", "edit.transform.skew")),
+    Some(("Distort", "edit.transform.distort")),
+    Some(("Perspective", "edit.transform.perspective")),
 ];
 
-/// Photoshop's Pen context menu order. `None` is a separator. Rows whose operation is not
-/// applicable to the current path or layer stay visible and disabled.
-pub const PEN_MENU: &[Option<(&str, &str)>] = &[
+/// Photoshop's selection-tool context menu with an active selection, in its order. Its Generative
+/// Fill and Delete and Fill Selection rows have no PhotoSuite command and are left out. Rows
+/// stay visible and grey out exactly like their menu-bar twins.
+pub const SELECTION_MENU: &[Row] = &[
+    Some(("Deselect", "select.deselect")),
+    Some(("Select Inverse", "select.inverse")),
+    Some(("Feather…", "select.modify.feather")),
+    Some(("Select and Mask…", "select.selectAndMask")),
+    None,
+    Some(("Save Selection…", "select.saveSelection")),
+    Some(("Make Work Path…", "select.toWorkPath")),
+    None,
+    Some(("Layer via Copy", "layer.new.layerViaCopy")),
+    Some(("Layer via Cut", "layer.new.layerViaCut")),
+    Some(("New Layer…", "layer.new.layer")),
+    None,
+    Some(("Free Transform", "edit.freeTransform")),
+    Some(("Transform Selection", "select.transformSelection")),
+    Some(("Distort", "edit.transform.distort")),
+    Some(("Perspective", "edit.transform.perspective")),
+    None,
+    Some(("Fill…", "edit.fill")),
+    Some(("Stroke…", "edit.stroke")),
+    Some(("Content-Aware Fill…", "edit.contentAwareFill")),
+    None,
+    Some(("Last Filter", "filter.lastFilter")),
+    None,
+    Some(("Fade…", "edit.fade")),
+];
+
+/// The selection tools' context menu with nothing selected: making a selection.
+pub const NO_SELECTION_MENU: &[Row] = &[
+    Some(("Select All", "select.all")),
+    Some(("Reselect", "select.reselect")),
+    Some(("Color Range…", "select.colorRange")),
+    None,
+    Some(("Load Selection…", "select.loadSelection")),
+];
+
+/// Photoshop's Pen context menu order. Rows whose operation is not applicable to the current
+/// path or layer stay visible and disabled.
+pub const PEN_MENU: &[Row] = &[
     Some(("Create Vector Mask", "layer.vectorMask.fromPath")),
     Some(("Delete Path", "path.delete")),
     None,
@@ -70,29 +112,25 @@ pub fn applies(tool: Tool) -> bool {
     matches!(tool, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso | Tool::PolygonLasso | Tool::MagicWand | Tool::ObjectSelection | Tool::Pen)
 }
 
-/// Command ids are shared with the Select menu. Disabled actions remain visible.
-pub fn entries(has_selection: bool) -> &'static [(&'static str, &'static str)] {
-    if has_selection {
-        &[
-            ("Deselect", "select.deselect"),
-            ("Inverse Selection", "select.inverse"),
-            ("Feather…", "select.modify.feather"),
-            ("Select and Mask…", "select.selectAndMask"),
-            ("Transform Selection", "select.transformSelection"),
-        ]
-    } else {
-        &[("Reselect", "select.reselect")]
-    }
+/// The selection tools' rows, with or without an active selection.
+pub fn selection_rows(has_selection: bool) -> &'static [Row] {
+    if has_selection { SELECTION_MENU } else { NO_SELECTION_MENU }
 }
 
-pub fn menu_entries(menu: &CanvasToolMenu) -> &'static [(&'static str, &'static str)] {
+/// The rows of an open menu.
+pub fn rows(menu: &CanvasToolMenu) -> &'static [Row] {
     if menu.transform {
         TRANSFORM_MENU
     } else if menu.tool == Tool::Pen {
-        &[]
+        PEN_MENU
     } else {
-        entries(menu.has_selection)
+        selection_rows(menu.has_selection)
     }
+}
+
+/// Is `command` one of the open menu's rows, and enabled?
+pub fn available(app: &PhotosuiteApp, menu: &CanvasToolMenu, command: &str) -> bool {
+    rows(menu).iter().flatten().any(|(_, id)| *id == command) && entry_enabled(app, menu, command)
 }
 
 /// Is `command` the transform box's current mode (checked in the transform menu)?
@@ -120,13 +158,14 @@ pub fn entry_enabled(app: &PhotosuiteApp, menu: &CanvasToolMenu, command: &str) 
     }
     let Some(st) = app.session.active() else { return false };
     let layer = st.active_layer.and_then(|id| st.doc.layer(id));
-    let can_paint = layer.is_some_and(|l| matches!(l.content, LayerContent::Raster(_)) && !l.locks.all);
+    let locked = layer.is_some_and(|l| st.doc.effective_locks(l.id).all);
+    let can_paint = layer.is_some_and(|l| matches!(l.content, LayerContent::Raster(_))) && !locked;
     let shape_layer = layer.and_then(|l| match &l.content {
         LayerContent::Shape(sh) => Some(sh),
         _ => None,
     });
     let shape = shape_layer.is_some();
-    let can_mask = layer.is_some_and(|l| !matches!(l.content, LayerContent::Shape(_)) && !l.locks.all);
+    let can_mask = layer.is_some_and(|l| !matches!(l.content, LayerContent::Shape(_))) && !locked;
     let saved = menu.path_name.as_deref().is_some_and(|n| n != "work" && n != "layer");
     let has_path = menu.has_path;
     let pending = app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2);
@@ -167,22 +206,31 @@ pub fn open(app: &mut PhotosuiteApp, tool: Tool, pos: [f32; 2]) -> bool {
 
 pub fn choose(app: &mut PhotosuiteApp, ctx: &Context, command: &str) {
     let Some(menu) = app.ui.canvas_tool_menu.take() else { return };
-    if menu.tool == Tool::Pen && !menu.transform {
-        if !PEN_MENU.iter().flatten().any(|(_, id)| *id == command) || !entry_enabled(app, &menu, command) {
-            return;
-        }
-        if let Err(e) = choose_pen(app, ctx, &menu, command) {
-            app.ui.status = e;
-            app.ui.status_error = true;
-        }
+    if !available(app, &menu, command) {
         return;
     }
-    if !menu_entries(&menu).iter().any(|&(_, id)| id == command) || !crate::menus::is_enabled(app, command) {
-        return;
-    }
-    if let Err(e) = crate::menus::invoke(app, ctx, command, json!({})) {
+    let result = if menu.tool == Tool::Pen && !menu.transform {
+        choose_pen(app, ctx, &menu, command)
+    } else if command == "select.toWorkPath" {
+        // Photoshop's Make Work Path… asks for the tolerance first.
+        spec_dialog(app, command, "Make Work Path", r##"{"tolerance":0.5..10=2}"##, serde_json::Map::new());
+        Ok(())
+    } else {
+        crate::menus::invoke(app, ctx, command, json!({})).map(|_| ())
+    };
+    if let Err(e) = result {
         app.ui.status = e;
+        app.ui.status_error = true;
     }
+}
+
+/// A parameter dialog for `command` following `spec` (registry notation), prefilled with `fields`.
+fn spec_dialog(app: &mut PhotosuiteApp, command: &str, label: &str, spec: &str, mut fields: serde_json::Map<String, serde_json::Value>) {
+    fields.insert("__command".into(), json!(command));
+    fields.insert("__label".into(), json!(label));
+    fields.insert("__filter".into(), json!(true));
+    fields.insert("__spec".into(), json!(spec));
+    app.ui.open_dialog(crate::state::DialogKind::Command, fields);
 }
 
 fn pen_dialog(app: &mut PhotosuiteApp, command: &str, label: &str, name: &str) {
@@ -202,10 +250,6 @@ fn pen_dialog(app: &mut PhotosuiteApp, command: &str, label: &str, name: &str) {
     } else {
         fields.insert("name".into(), json!(name));
     }
-    fields.insert("__command".into(), json!(command));
-    fields.insert("__label".into(), json!(label));
-    fields.insert("__filter".into(), json!(true));
-    fields.insert("__spec".into(), json!(spec));
     if matches!(command, "path.fill" | "path.stroke") {
         let fg = app.session.tools.foreground;
         let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
@@ -216,7 +260,7 @@ fn pen_dialog(app: &mut PhotosuiteApp, command: &str, label: &str, name: &str) {
             fields.insert(key.into(), json!(value));
         }
     }
-    app.ui.open_dialog(crate::state::DialogKind::Command, fields);
+    spec_dialog(app, command, label, spec, fields);
 }
 
 fn choose_pen(app: &mut PhotosuiteApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
@@ -271,23 +315,14 @@ pub fn show(app: &mut PhotosuiteApp, ctx: &Context) {
             v.widgets.hovered.corner_radius = egui::CornerRadius::same(3);
             ui.spacing_mut().item_spacing.y = 0.0;
             ui.set_width(200.0);
-            if menu.tool == Tool::Pen && !menu.transform {
-                for row in PEN_MENU {
-                    if let Some((label, command)) = row {
-                        let item = egui::Button::selectable(false, tl!(label)).min_size(egui::vec2(200.0, 20.0));
-                        if ui.add_enabled(entry_enabled(app, &menu, command), item).clicked() {
-                            selected = Some(*command);
-                        }
-                    } else {
-                        ui.separator();
-                    }
-                }
-            } else {
-                for &(label, command) in menu_entries(&menu) {
-                    let item = egui::Button::selectable(mode_checked(app, &menu, command), tl!(&label)).min_size(egui::vec2(200.0, 22.0));
-                    if ui.add_enabled(entry_enabled(app, &menu, command), item).clicked() {
-                        selected = Some(command);
-                    }
+            for row in rows(&menu) {
+                let Some((label, command)) = *row else {
+                    ui.separator();
+                    continue;
+                };
+                let item = egui::Button::selectable(mode_checked(app, &menu, command), tl!(label)).min_size(egui::vec2(200.0, 20.0));
+                if ui.add_enabled(entry_enabled(app, &menu, command), item).clicked() {
+                    selected = Some(command);
                 }
             }
         });
@@ -374,13 +409,57 @@ mod tests {
         assert!(h.state().ui.canvas_tool_menu.is_none(), "command right-click belongs to layer picker");
     }
 
+    fn labels(rows: &[Row]) -> Vec<Option<&str>> {
+        rows.iter().map(|row| row.map(|(label, _)| label)).collect()
+    }
+
+    #[test]
+    fn selection_menus_follow_photoshop_order() {
+        assert_eq!(
+            labels(SELECTION_MENU),
+            vec![
+                Some("Deselect"),
+                Some("Select Inverse"),
+                Some("Feather…"),
+                Some("Select and Mask…"),
+                None,
+                Some("Save Selection…"),
+                Some("Make Work Path…"),
+                None,
+                Some("Layer via Copy"),
+                Some("Layer via Cut"),
+                Some("New Layer…"),
+                None,
+                Some("Free Transform"),
+                Some("Transform Selection"),
+                Some("Distort"),
+                Some("Perspective"),
+                None,
+                Some("Fill…"),
+                Some("Stroke…"),
+                Some("Content-Aware Fill…"),
+                None,
+                Some("Last Filter"),
+                None,
+                Some("Fade…"),
+            ]
+        );
+        assert_eq!(labels(NO_SELECTION_MENU), vec![Some("Select All"), Some("Reselect"), Some("Color Range…"), None, Some("Load Selection…")]);
+        // Every row runs a real command: one the menu bar has, or an engine command.
+        let app = app();
+        let items = crate::menus::menu_items(&app);
+        for (label, id) in [SELECTION_MENU, NO_SELECTION_MENU, PEN_MENU, TRANSFORM_MENU].into_iter().flatten().flatten() {
+            assert!(items.iter().any(|i| i.id == *id) || photosuite_engine::commands::find(id).is_some(), "{label}: unknown command {id}");
+        }
+    }
+
     #[test]
     fn selection_menu_routes_actions_through_commands() {
         let mut app = app();
         app.ui.tool = Tool::RectMarquee;
         app.run("select.rect", json!({"x": 1, "y": 1, "width": 8, "height": 8})).unwrap();
         assert!(open(&mut app, Tool::RectMarquee, [10.0, 10.0]));
-        assert!(entries(true).iter().any(|(_, id)| *id == "select.inverse"));
+        assert_eq!(rows(app.ui.canvas_tool_menu.as_ref().unwrap()), SELECTION_MENU);
         let before = app.session.journal.len();
         choose(&mut app, &Context::default(), "select.inverse");
         assert!(app.ui.canvas_tool_menu.is_none());
@@ -390,11 +469,60 @@ mod tests {
         choose(&mut app, &Context::default(), "select.deselect");
         assert!(app.session.active().unwrap().doc.selection.is_none());
         assert!(app.session.journal[before..].iter().any(|(id, _)| id == "select.deselect"));
-        assert_eq!(entries(false), &[("Reselect", "select.reselect")]);
+        // Nothing selected: the menu that makes a selection.
         assert!(open(&mut app, Tool::RectMarquee, [10.0, 10.0]));
+        assert_eq!(rows(app.ui.canvas_tool_menu.as_ref().unwrap()), NO_SELECTION_MENU);
         choose(&mut app, &Context::default(), "select.reselect");
         assert!(app.session.active().unwrap().doc.selection.is_some());
         assert!(app.session.journal.iter().any(|(id, _)| id == "select.reselect"));
+        app.run("select.deselect", json!({})).unwrap();
+        assert!(open(&mut app, Tool::Lasso, [10.0, 10.0]));
+        choose(&mut app, &Context::default(), "select.all");
+        assert!(app.session.active().unwrap().doc.selection.is_some());
+    }
+
+    #[test]
+    fn selection_menu_layer_and_path_actions() {
+        let mut app = app();
+        app.ui.tool = Tool::EllipseMarquee;
+        app.run("layer.new.layer", json!({})).unwrap();
+        app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
+        app.run("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
+        let layers = app.session.active().unwrap().doc.layers.len();
+        assert!(open(&mut app, Tool::EllipseMarquee, [10.0, 10.0]));
+        choose(&mut app, &Context::default(), "layer.new.layerViaCopy");
+        assert_eq!(app.session.active().unwrap().doc.layers.len(), layers + 1, "Layer via Copy adds a layer");
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("layer.new.layerViaCopy"));
+        // Make Work Path… asks for the tolerance, then traces the selection.
+        app.run("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
+        assert!(open(&mut app, Tool::EllipseMarquee, [10.0, 10.0]));
+        choose(&mut app, &Context::default(), "select.toWorkPath");
+        let dialog = app.ui.dialogs.last().map(|d| d.id).expect("tolerance dialog");
+        assert!(app.session.active().unwrap().doc.work_path.is_none(), "nothing happens before OK");
+        crate::dialogs::confirm(&mut app, dialog).unwrap();
+        assert!(app.session.active().unwrap().doc.work_path.is_some());
+        assert_eq!(app.session.journal.last().map(|(id, _)| id.as_str()), Some("select.toWorkPath"));
+    }
+
+    #[test]
+    fn disabled_selection_rows_do_nothing() {
+        let mut app = app();
+        app.ui.tool = Tool::MagicWand;
+        app.run("select.rect", json!({"x": 1, "y": 1, "width": 8, "height": 8})).unwrap();
+        assert!(open(&mut app, Tool::MagicWand, [10.0, 10.0]));
+        let menu = app.ui.canvas_tool_menu.clone().unwrap();
+        // No filter has run and nothing can be faded yet.
+        for id in ["filter.lastFilter", "edit.fade"] {
+            assert!(!entry_enabled(&app, &menu, id), "{id} is greyed out");
+        }
+        let before = app.session.journal.len();
+        choose(&mut app, &Context::default(), "edit.fade");
+        assert_eq!(app.session.journal.len(), before);
+        assert!(app.ui.dialogs.is_empty());
+        // Rows of the other variant are not part of this menu.
+        assert!(open(&mut app, Tool::MagicWand, [10.0, 10.0]));
+        choose(&mut app, &Context::default(), "select.all");
+        assert_eq!(app.session.journal.len(), before);
     }
 
     #[test]

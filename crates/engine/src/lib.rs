@@ -15,6 +15,7 @@ pub mod analysis_cmds;
 pub mod artboard_cmds;
 pub mod automate_cmds;
 pub mod brush_cmds;
+pub mod brush_key_cmds;
 pub mod brush_preset_cmds;
 pub mod build_info;
 mod canvas_geom;
@@ -43,6 +44,7 @@ pub mod group_view_cmds;
 pub mod image_cmds;
 pub mod inspect;
 pub mod jobs;
+pub mod layer_copy_cmds;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
 pub mod layer_nav_cmds;
@@ -54,6 +56,7 @@ pub mod mode_cmds;
 pub mod multichannel_cmds;
 pub mod notes_cmds;
 pub mod paint_cmds;
+mod path_edit_cmds;
 pub mod pattern_cmds;
 pub mod photo_cmds;
 pub mod pick_cmds;
@@ -317,8 +320,9 @@ pub struct Session {
     pub preset_store: Option<preset_store::PresetStore>,
     /// Window › Actions. The list persists with the preset store when one is attached.
     pub actions: actions_cmds::ActionState,
-    /// Per-step gate for `actions.play`. Untrusted sessions (MCP, the control channel) install
-    /// the same check a top-level command sees. `None` runs every step, which is what a local
+    /// Gate for every command the session runs, including the ones a command runs on its own
+    /// behalf and `actions.play` steps. Untrusted sessions (MCP, the control channel) install
+    /// the same check a top-level request sees. `None` runs everything, which is what a local
     /// UI and `photosuite-cli run` do.
     pub authorize: Option<fn(&str, &serde_json::Value) -> Result<()>>,
     /// Background jobs (see [`jobs`]).
@@ -420,14 +424,30 @@ impl Session {
 
     /// Is the command currently runnable? (drives menu enablement)
     pub fn is_enabled(&self, id: &str) -> bool {
-        commands::find(id).is_some_and(|s| (s.enabled)(self).is_ok() && self.job_conflict(id, s.journal).is_none())
+        self.is_enabled_with(id, &Value::Null)
+    }
+
+    /// [`Self::is_enabled`] for a call with `params`: their `"target"` can enable a command, as a
+    /// targeted layer mask enables Image › Adjustments › Invert on an adjustment layer (#780).
+    pub fn is_enabled_with(&self, id: &str, params: &Value) -> bool {
+        self.disabled_reason_with(id, params).is_none()
     }
 
     /// Why the command can't run now (None = it can): its own precondition, or a background job
     /// running on the active document.
     pub fn disabled_reason(&self, id: &str) -> Option<String> {
+        self.disabled_reason_with(id, &Value::Null)
+    }
+
+    /// [`Self::disabled_reason`] for a call with `params`.
+    pub fn disabled_reason_with(&self, id: &str, params: &Value) -> Option<String> {
         let Some(s) = commands::find(id) else { return Some(format!("unknown command `{id}`")) };
-        (s.enabled)(self).err().or_else(|| self.job_conflict(id, s.journal))
+        self.precondition(s, &channel_cmds::inject_target(self, id, params.clone())).err().or_else(|| self.job_conflict(id, s.journal))
+    }
+
+    /// The command's own precondition for a call with `params` (their target filled in).
+    fn precondition(&self, spec: &commands::CommandSpec, params: &Value) -> std::result::Result<(), String> {
+        channel_cmds::mask_target_enabled(self, spec.id, params).unwrap_or_else(|| (spec.enabled)(self))
     }
 
     /// Apply an undoable edit to the active document.

@@ -15,7 +15,7 @@
 	Edit	Editar
 	Image	Imatge
 	Layer	Capa
-	Type	Tipus
+	Type	Text
 	Select	Selecciona
 	Filter	Filtre
 	View	Veure
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avançat
+	Alt-click to define a source point to clone from	Alt-clic per definir un punt d'origen des del qual clonar
+	Automatic (recommended)	Automàtic (recomanat)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	El mode automàtic utilitza l'acceleració per GPU quan està disponible i recorre a la renderització per CPU si hi ha errors.
+	CPU / Compatibility	CPU / Compatibilitat
+	Cancel Background Job	Cancel·la la tasca en segon pla
+	Cancel opening	Cancel·la l'obertura
+	Cancelled opening {name}	S'ha cancel·lat l'obertura de {name}
+	Cancelled {label}	S'ha cancel·lat: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clic: selecciona l'àncora · Arrossega: mou l'àncora, la nansa o el segment · {shift}-clic: afegeix · {alt}-clic: tot el subcamí
+	Content-Aware Move	Moviment amb reconeixement de contingut
+	Convert to Layers	Converteix en capes
+	Copy Layers to Document	Copia les capes al document
+	Couldn't place {name}: {error}	No s'ha pogut col·locar {name}: {error}
+	Delete Action	Suprimeix l'acció
+	Details	Detalls
+	Disable Symmetry Path	Desactiva el camí de simetria
+	Discard Layers and Save a Copy	Descarta les capes i desa una còpia
+	Don't show again	No ho tornis a mostrar
+	Drop Floating Selection	Deixa anar la selecció flotant
+	Edit Layer Style	Edita l'estil de capa
+	Esc to cancel	Esc per cancel·lar
+	Extend	Estén
+	Float Selection	Fes flotant la selecció
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lazo de congelació: arrossegueu per congelar una àrea, Alt-arrossegueu per descongelar-la (L)
+	GPU Backend	Backend de la GPU
+	GPU acceleration could not continue. Your documents are unchanged.	L'acceleració per GPU no ha pogut continuar. Els vostres documents no han canviat.
+	Get Action	Obtén l'acció
+	Grid:	Quadrícula:
+	Hit-Test Type	Prova de posició al text
+	Including layers will increase file size.	Incloure les capes augmentarà la mida del fitxer.
+	Invalid {mode} profile	Perfil {mode} no vàlid
+	Keep Using CPU	Continua amb la CPU
+	Lasso around an area, then drag the selection	Envolteu una àrea amb el lazo i després arrossegueu la selecció
+	Layer Style Default	Estil de capa per defecte
+	List Actions	Llista les accions
+	List Background Jobs	Llista les tasques en segon pla
+	Make Layer Style Default	Defineix com a estil de capa per defecte
+	Make Selection from Path	Crea una selecció a partir del camí
+	Make Symmetry Path	Crea un camí de simetria
+	Move	Mou
+	Move Document	Mou el document
+	Navigate Type	Navega pel text
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	No hi ha cap camí a partir del qual crear una selecció: dibuixeu-ne un amb l'eina de ploma o seleccioneu-ne un al tauler Camins.
+	Opening {name}	S'està obrint {name}
+	Opening {name}…	S'està obrint {name}…
+	Opening…	S'està obrint…
+	Patch	Pedaç
+	Patch:	Pedaç:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite utilitza el compositor d'imatges per CPU. La finestra encara pot utilitzar l'adaptador gràfic.
+	Play Action	Reprodueix l'acció
+	Reading…	S'està llegint…
+	Record Action	Enregistra l'acció
+	Rendering Mode	Mode de renderització
+	Retry GPU	Torna a provar la GPU
+	Retry GPU requires a restart. Save your work first.	Tornar a provar la GPU requereix reiniciar. Deseu abans la vostra feina.
+	Save cancelled	S'ha cancel·lat el desament
+	Save failed: {error}	No s'ha pogut desar: {error}
+	Stamp Down	Fusiona una còpia cap avall
+	Stamp Visible	Fusiona una còpia dels visibles
+	Stop Recording	Atura l'enregistrament
+	Structure:	Estructura:
+	Switched to CPU rendering	S'ha canviat a la renderització per CPU
+	TIFF Options	Opcions de TIFF
+	Type Caret	Cursor de text
+	Unnamed {mode} profile	Perfil {mode} sense nom
+	Warp Grid	Quadrícula de deformació
+	Working…	S'està processant…

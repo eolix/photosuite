@@ -226,7 +226,7 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
             let bounds = sel_bounds.filter(|b| !b.is_empty()).unwrap_or(doc_bounds);
             // Neighbourhood filters repeat edge pixels at the canvas edge (or past it, where the
             // layer has off-canvas pixels) instead of fading in transparency, as Photoshop does.
-            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, &p)? {
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, Some(layer), &p)? {
                 let content = surf.content_bounds();
                 let area = algo::output_area(&fp, content, bounds, sel_bounds);
                 *surf = filter(surf, &fp, area, bounds, selection.as_ref(), doc_bounds.union(&content))?;

@@ -694,7 +694,7 @@ fn html_table(title: &str, w: u32, h: u32, cells: &[(Rect, String, String)], spa
     for (r, attrs, body) in cells {
         let (c0, c1, r0, r1) = (col(r.x0), col(r.x1), row(r.y0), row(r.y1));
         if (r0..r1).any(|j| (c0..c1).any(|i| taken[j * nc + i])) {
-            continue; // overlapped by an earlier slice
+            continue; // overlapped (the caller cuts slices into visible pieces, so this can't happen)
         }
         for j in r0..r1 {
             for i in c0..c1 {
@@ -785,35 +785,69 @@ fn save_for_web(s: &mut Session, p: &Value) -> Result<Value> {
     let mut files = Vec::new();
     let mut cells: Vec<(Rect, String, String)> = Vec::new();
     let mut total = 0usize;
+    // Output names are unique (case-insensitively, for macOS and Windows file systems): two
+    // slices named alike, or names that sanitize alike, must not overwrite each other. The HTML
+    // page's spacer image is reserved.
+    let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
+    if html {
+        used.insert("spacer.gif".into());
+    }
+    let mut unique = |stem: &str, ext: &str| {
+        let mut name = format!("{stem}.{ext}");
+        let mut k = 2u32;
+        while !used.insert(name.to_lowercase()) {
+            name = format!("{stem}_{k}.{ext}");
+            k = k.saturating_add(1);
+        }
+        name
+    };
+    // Stacking order: later stored slices are on top (auto slices never overlap anything).
+    let z = |r: &ResolvedSlice| r.id.and_then(|id| doc.slices.list.iter().position(|sl| sl.id == id));
     for r in &chosen {
         let rect = scale_rect(r.rect, sx, sy).intersect(&wdoc.bounds());
         if rect.is_empty() {
             continue;
         }
-        let stored = r.id.and_then(|id| doc.slices.get(id));
-        if r.kind == SliceKind::NoImage {
-            let text = stored.map(|s| if s.cell_text_is_html { s.cell_text.clone() } else { html_escape(&s.cell_text) }).unwrap_or_default();
-            let bg = stored.and_then(|s| s.background).map(|c| format!(" bgcolor=\"#{:02X}{:02X}{:02X}\"", c[1], c[2], c[3])).unwrap_or_default();
-            cells.push((rect, bg, text));
-            continue;
-        }
-        let o = optimize(&buf.px, bw, rect, &st, icc, xmp.as_deref(), dpi, false)?;
-        let name = format!("{}.{}", slice_file(&r.name), o.ext);
-        let rel = if images.is_empty() { name.clone() } else { format!("{images}/{name}") };
-        let out = join(&dir, &rel);
-        write_file(&out, &o.bytes)?;
-        total += o.bytes.len();
-        files.push(out);
-        let alt = stored.map_or(String::new(), |s| html_escape(&s.alt));
-        let img = format!("\n\t\t\t<img src=\"{}\" width=\"{}\" height=\"{}\" alt=\"{alt}\">", html_escape(&rel), rect.width(), rect.height());
-        let body = match stored.filter(|s| !s.url.is_empty()) {
-            Some(s) => {
-                let target = if s.target.is_empty() { String::new() } else { format!(" target=\"{}\"", html_escape(&s.target)) };
-                format!("\n\t\t\t<a href=\"{}\"{target}>{img}</a>", html_escape(&s.url))
-            }
-            None => img,
+        // In the HTML table a slice shows only where no slice above covers it; that visible part
+        // is cut into rectangles, each its own cell (and image), as Photoshop's subslices.
+        let pieces = if html {
+            let above: Vec<Rect> = chosen.iter().filter(|o| z(o) > z(r)).map(|o| scale_rect(o.rect, sx, sy).intersect(&wdoc.bounds())).collect();
+            slices::auto_slices(rect, &above)
+        } else {
+            vec![rect]
         };
-        cells.push((rect, String::new(), body));
+        let split = pieces.len() > 1;
+        let stored = r.id.and_then(|id| doc.slices.get(id));
+        for (k, piece) in pieces.into_iter().enumerate() {
+            if r.kind == SliceKind::NoImage {
+                let text = if k > 0 {
+                    String::new()
+                } else {
+                    stored.map(|s| if s.cell_text_is_html { s.cell_text.clone() } else { html_escape(&s.cell_text) }).unwrap_or_default()
+                };
+                let bg = stored.and_then(|s| s.background).map(|c| format!(" bgcolor=\"#{:02X}{:02X}{:02X}\"", c[1], c[2], c[3])).unwrap_or_default();
+                cells.push((piece, bg, text));
+                continue;
+            }
+            let o = optimize(&buf.px, bw, piece, &st, icc, xmp.as_deref(), dpi, false)?;
+            let stem = if split { format!("{}_{:02}", slice_file(&r.name), k + 1) } else { slice_file(&r.name) };
+            let name = unique(&stem, o.ext);
+            let rel = if images.is_empty() { name.clone() } else { format!("{images}/{name}") };
+            let out = join(&dir, &rel);
+            write_file(&out, &o.bytes)?;
+            total += o.bytes.len();
+            files.push(out);
+            let alt = stored.map_or(String::new(), |s| html_escape(&s.alt));
+            let img = format!("\n\t\t\t<img src=\"{}\" width=\"{}\" height=\"{}\" alt=\"{alt}\">", html_escape(&rel), piece.width(), piece.height());
+            let body = match stored.filter(|s| !s.url.is_empty()) {
+                Some(s) => {
+                    let target = if s.target.is_empty() { String::new() } else { format!(" target=\"{}\"", html_escape(&s.target)) };
+                    format!("\n\t\t\t<a href=\"{}\"{target}>{img}</a>", html_escape(&s.url))
+                }
+                None => img,
+            };
+            cells.push((piece, String::new(), body));
+        }
     }
     let mut html_path = None;
     if html {

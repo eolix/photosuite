@@ -533,13 +533,12 @@ fn adjust(c: vec3<f32>) -> vec3<f32> {
             return vec3(r, clamp(dot(p1.xyz, c) + p1.w, 0.0, 1.0), clamp(dot(p2.xyz, c) + p2.w, 0.0, 1.0));
         }
         case 11: {                                                             // Photo filter
-            let f = c * (1.0 - p0.w) + c * p0.rgb * p0.w;
-            if (p1.x > 0.5) {
-                let l0 = gray(c);
-                let l1 = max(gray(f), 1e-6);
-                return clamp(f * l0 / l1, vec3(0.0), vec3(1.0));
-            }
-            return f;
+            // compose::adjust::photo_filter_matrix (rows p0..p2) in linear light, then SetLum.
+            let g = p3.y;
+            let lin = vec3(t_decode(c.r, g), t_decode(c.g, g), t_decode(c.b, g));
+            var f = vec3(t_encode(dot(p0.xyz, lin), g), t_encode(dot(p1.xyz, lin), g), t_encode(dot(p2.xyz, lin), g));
+            if (p3.x > 0.5) { f = set_lum(f, lum(c)); }
+            return clamp(f, vec3(0.0), vec3(1.0));
         }
         case 12: {                                                             // Black & White
             // compose::adjust::black_white_gray: grey + secondary + primary parts, weighted.
@@ -793,7 +792,7 @@ fn pattern_sample(d: vec2<i32>) -> vec4<f32> {
 }
 
 // Effect paint colour at `d`: p2.z = 0 solid (`color`), 1 gradient (stops in `lut_tex`),
-// 2 pattern.
+// 2 pattern (4, a glow's gradient, is resolved in `fs_fxpaint`).
 fn fx_color(d: vec2<i32>) -> vec4<f32> {
     let kind = i32(op.p2.z);
     if (kind == 1) {
@@ -867,6 +866,13 @@ fn fs_fxpaint(in: VOut) -> @location(0) vec4<f32> {
     }
     if ((op.flags & F_STROKE_OUT) != 0u && inside_shape) {
         m = select(1.0, 0.0, (op.flags & F_VECTOR) != 0u);
+    }
+    if (i32(op.p2.z) == 4) {
+        // effects::paint_glow: the gradient at 1 - strength, opaque from strength 1 / gain (p0.x).
+        let k = min(m * op.p0.x, 1.0) * op.opacity;
+        if (k <= 0.0) { return dst; }
+        let t = 1.0 - clamp(m, 0.0, 1.0);
+        return composite(op.mode, dst, vec4(lut(0, t), lut(1, t), lut(2, t), lut(3, t) * k), 1.0);
     }
     let k = m * op.opacity;
     if (k <= 0.0) { return dst; }

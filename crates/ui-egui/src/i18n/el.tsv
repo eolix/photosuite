@@ -15,7 +15,7 @@
 	Edit	Επεξεργασία
 	Image	Εικόνα
 	Layer	Επίπεδο
-	Type	Τύπος
+	Type	Κείμενο
 	Select	Επιλογή
 	Filter	Φίλτρα
 	View	Προβολή
@@ -697,7 +697,7 @@
 	3D LUT File	3D αρχείο LUT
 	Absolute	Απόλυτος
 	Absolute Colorimetric	Απόλυτη Χρωματομετρική
-	Action	Δράση
+	Action	Ενέργεια
 	Adaptive	Προσαρμοστικό
 	Adaptive Wide Angle isn't open	Το Adaptive Wide Angle δεν είναι ανοιχτό
 	Add	Προσθήκη
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Για προχωρημένους
+	Alt-click to define a source point to clone from	Alt-κλικ για να ορίσετε ένα σημείο πηγής από το οποίο θα κλωνοποιήσετε
+	Automatic (recommended)	Αυτόματο (συνιστάται)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Η αυτόματη λειτουργία χρησιμοποιεί επιτάχυνση GPU όταν είναι διαθέσιμη και επιστρέφει σε απόδοση μέσω CPU σε περίπτωση σφαλμάτων.
+	CPU / Compatibility	CPU / Συμβατότητα
+	Cancel Background Job	Ακύρωση εργασίας παρασκηνίου
+	Cancel opening	Ακύρωση ανοίγματος
+	Cancelled opening {name}	Ακυρώθηκε το άνοιγμα του {name}
+	Cancelled {label}	Ακυρώθηκε: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Κλικ: επιλογή σημείου αγκύρωσης · Σύρσιμο: μετακίνηση σημείου αγκύρωσης, λαβής ή τμήματος · {shift}-κλικ: προσθήκη · {alt}-κλικ: ολόκληρη η υποδιαδρομή
+	Content-Aware Move	Μετακίνηση με επίγνωση περιεχομένου
+	Convert to Layers	Μετατροπή σε επίπεδα
+	Copy Layers to Document	Αντιγραφή επιπέδων σε έγγραφο
+	Couldn't place {name}: {error}	Δεν ήταν δυνατή η τοποθέτηση του {name}: {error}
+	Delete Action	Διαγραφή ενέργειας
+	Details	Λεπτομέρειες
+	Disable Symmetry Path	Απενεργοποίηση διαδρομής συμμετρίας
+	Discard Layers and Save a Copy	Απόρριψη επιπέδων και αποθήκευση αντιγράφου
+	Don't show again	Να μην εμφανιστεί ξανά
+	Drop Floating Selection	Απόθεση αιωρούμενης επιλογής
+	Edit Layer Style	Επεξεργασία στυλ επιπέδου
+	Esc to cancel	Esc για ακύρωση
+	Extend	Επέκταση
+	Float Selection	Αιώρηση επιλογής
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Λάσο παγώματος: σύρετε για να παγώσετε μια περιοχή, Alt-σύρσιμο για να την ξεπαγώσετε (L)
+	GPU Backend	GPU backend
+	GPU acceleration could not continue. Your documents are unchanged.	Η επιτάχυνση GPU δεν μπόρεσε να συνεχίσει. Τα έγγραφά σας δεν άλλαξαν.
+	Get Action	Λήψη ενέργειας
+	Grid:	Πλέγμα:
+	Hit-Test Type	Έλεγχος επαφής κειμένου
+	Including layers will increase file size.	Η συμπερίληψη επιπέδων θα αυξήσει το μέγεθος του αρχείου.
+	Invalid {mode} profile	Μη έγκυρο προφίλ {mode}
+	Keep Using CPU	Συνέχιση με CPU
+	Lasso around an area, then drag the selection	Περικυκλώστε μια περιοχή με το λάσο και, στη συνέχεια, σύρετε την επιλογή
+	Layer Style Default	Προεπιλογή στυλ επιπέδου
+	List Actions	Λίστα ενεργειών
+	List Background Jobs	Λίστα εργασιών παρασκηνίου
+	Make Layer Style Default	Ορισμός ως προεπιλογής στυλ επιπέδου
+	Make Selection from Path	Δημιουργία επιλογής από διαδρομή
+	Make Symmetry Path	Δημιουργία διαδρομής συμμετρίας
+	Move	Μετακίνηση
+	Move Document	Μετακίνηση εγγράφου
+	Navigate Type	Πλοήγηση στο κείμενο
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Δεν υπάρχει διαδρομή για τη δημιουργία επιλογής: σχεδιάστε μία με το εργαλείο στυλό ή επιλέξτε μία στον πίνακα Διαδρομές.
+	Opening {name}	Άνοιγμα {name}
+	Opening {name}…	Άνοιγμα {name}…
+	Opening…	Άνοιγμα…
+	Patch	Μπάλωμα
+	Patch:	Μπάλωμα:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	Το PhotoSuite χρησιμοποιεί τη σύνθεση εικόνας μέσω CPU. Το παράθυρο ενδέχεται να εξακολουθεί να χρησιμοποιεί την κάρτα γραφικών σας.
+	Play Action	Αναπαραγωγή ενέργειας
+	Reading…	Ανάγνωση…
+	Record Action	Εγγραφή ενέργειας
+	Rendering Mode	Λειτουργία απόδοσης
+	Retry GPU	Επανάληψη με GPU
+	Retry GPU requires a restart. Save your work first.	Η επανάληψη με GPU απαιτεί επανεκκίνηση. Αποθηκεύστε πρώτα την εργασία σας.
+	Save cancelled	Η αποθήκευση ακυρώθηκε
+	Save failed: {error}	Η αποθήκευση απέτυχε: {error}
+	Stamp Down	Αποτύπωση προς τα κάτω
+	Stamp Visible	Αποτύπωση ορατών
+	Stop Recording	Διακοπή εγγραφής
+	Structure:	Δομή:
+	Switched to CPU rendering	Έγινε μετάβαση σε απόδοση μέσω CPU
+	TIFF Options	Επιλογές TIFF
+	Type Caret	Δρομέας κειμένου
+	Unnamed {mode} profile	Προφίλ {mode} χωρίς όνομα
+	Warp Grid	Πλέγμα στρέβλωσης
+	Working…	Επεξεργασία…

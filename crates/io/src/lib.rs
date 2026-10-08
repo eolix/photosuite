@@ -51,7 +51,7 @@ use photosuite_doc::Document;
 use photosuite_psd::{PsdError, PsdFile};
 
 pub use adjust_map::ADJUSTMENT_KEYS;
-pub use flat::document_to_image;
+pub use flat::{document_to_image, import_tiff_page};
 pub use psd_export::{PsdExportOptions, document_to_psd, document_to_psd_with};
 pub use psd_import::{psd_to_document, psd_to_document_with};
 
