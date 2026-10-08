@@ -1,9 +1,11 @@
 //! Blurs: Gaussian, box, motion, radial, surface.
 
 use photosuite_geom::Rect;
+use photosuite_raster::Interrupt;
 
 use crate::image::{Edge, Image, premultiply, unpremultiply};
-use crate::{Ctx, RadialMethod};
+use crate::photo_util::{par_map, par_rows};
+use crate::{Ctx, FilterParams, RadialMethod};
 
 /// Normalized Gaussian kernel with standard deviation `sigma` (radius 3σ).
 pub(crate) fn gaussian_kernel(sigma: f32) -> Vec<f32> {
@@ -69,11 +71,13 @@ pub(crate) fn conv_sep(src: &Image, out: Rect, kx: &[f32], ky: &[f32], alpha: bo
 pub(crate) fn gaussian(src: &Image, out: Rect, ctx: &Ctx, radius: f32) -> Vec<f32> {
     // Exact kernel for small radii; beyond that three box passes approximate the Gaussian with
     // cost independent of the radius (Kovesi, "Fast almost-Gaussian filtering", 2010).
-    if radius <= 4.0 {
-        let k = gaussian_kernel(radius);
-        return conv_sep(src, out, &k, &k, ctx.alpha);
+    match box_widths(&FilterParams::GaussianBlur { radius }) {
+        Some(boxes) => box_passes(src, out, ctx.alpha, &boxes),
+        None => {
+            let k = gaussian_kernel(radius);
+            conv_sep(src, out, &k, &k, ctx.alpha)
+        }
     }
-    gaussian_boxes(src, out, ctx.alpha, radius)
 }
 
 /// Box widths (odd) whose `n`-fold convolution has standard deviation `sigma`.
@@ -91,143 +95,219 @@ fn boxes_for_gauss(sigma: f32, n: usize) -> Vec<usize> {
     (0..n).map(|i| if i < m { wl as usize } else { wu as usize }).collect()
 }
 
-/// Running-sum box blur of every row of an interleaved `w × h × n` buffer (edges clamped).
-fn box_rows(buf: &mut [f32], w: usize, n: usize, r: usize) {
-    if r == 0 || w == 0 {
-        return;
+/// The box widths (odd) a blur runs as running-sum passes along each axis, or `None` when it uses a
+/// direct kernel (small radii, where the kernel is quicker).
+pub(crate) fn box_widths(params: &FilterParams) -> Option<Vec<usize>> {
+    match *params {
+        FilterParams::GaussianBlur { radius } if radius > 4.0 => Some(boxes_for_gauss(radius, 3)),
+        FilterParams::BoxBlur { radius } => {
+            let r = radius.max(0.0).round() as usize;
+            (r > 4).then(|| vec![2 * r + 1])
+        }
+        _ => None,
     }
+}
+
+/// Scratch buffers of one worker for [`box_blur`].
+#[derive(Default)]
+struct Scratch {
+    line: Vec<f32>,
+    next: Vec<f32>,
+    acc: Vec<f32>,
+}
+
+/// One running-sum box pass of radius `r` along a line of elements of `w` floats each (a pixel's
+/// channels, or a strip of a row): element `i` of `dst` is the mean of elements `i ..= i + 2r` of
+/// `src`, which is `2r` elements longer.
+fn box_pass(src: &[f32], dst: &mut [f32], w: usize, r: usize, acc: &mut Vec<f32>) {
+    // Pixels are short elements: fixed sizes let the compiler keep the sums in registers.
+    match w {
+        1 => box_pass_px::<1>(src, dst, r),
+        2 => box_pass_px::<2>(src, dst, r),
+        3 => box_pass_px::<3>(src, dst, r),
+        4 => box_pass_px::<4>(src, dst, r),
+        5 => box_pass_px::<5>(src, dst, r),
+        0 => {}
+        _ => {
+            let norm = 1.0 / (2 * r + 1) as f32;
+            acc.clear();
+            acc.resize(w, 0.0);
+            for e in src.chunks_exact(w).take(2 * r + 1) {
+                for (a, s) in acc.iter_mut().zip(e) {
+                    *a += s;
+                }
+            }
+            for (i, d) in dst.chunks_exact_mut(w).enumerate() {
+                for (d, a) in d.iter_mut().zip(acc.iter()) {
+                    *d = a * norm;
+                }
+                let (add, sub) = ((i + 2 * r + 1) * w, i * w);
+                if let (Some(add), Some(sub)) = (src.get(add..add + w), src.get(sub..sub + w)) {
+                    for ((a, add), sub) in acc.iter_mut().zip(add).zip(sub) {
+                        *a += add - sub;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// [`box_pass`] for elements of `N` floats.
+fn box_pass_px<const N: usize>(src: &[f32], dst: &mut [f32], r: usize) {
+    let (src, dst) = (src.as_chunks::<N>().0, dst.as_chunks_mut::<N>().0);
     let norm = 1.0 / (2 * r + 1) as f32;
-    let blur_row = |row: &mut [f32]| {
-        // The row with clamped edges materialised (r + 1 pixels each side), so the running sum
-        // reads without bounds clamping, all channels per step.
-        let pad = r + 1;
-        let mut src = Vec::with_capacity((w + 2 * pad) * n);
-        for _ in 0..pad {
-            src.extend_from_slice(&row[..n]);
+    let mut acc = [0.0f32; N];
+    for e in src.iter().take(2 * r + 1) {
+        for c in 0..N {
+            acc[c] += e[c];
         }
-        src.extend_from_slice(row);
-        for _ in 0..pad {
-            src.extend_from_slice(&row[(w - 1) * n..w * n]);
-        }
-        let mut acc = [0.0f32; 8];
-        let acc = &mut acc[..n.min(8)];
-        if n > 8 {
-            // Unusual channel counts: per channel.
-            for c in 0..n {
-                let mut a: f32 = (0..=2 * r).map(|i| src[(pad - r + i) * n + c]).sum();
-                for x in 0..w {
-                    row[x * n + c] = a * norm;
-                    a += src[(x + pad + r + 1) * n + c] - src[(x + pad - r) * n + c];
-                }
-            }
-            return;
-        }
-        for i in 0..=2 * r {
-            let o = (pad - r + i) * n;
-            for c in 0..n {
-                acc[c] += src[o + c];
-            }
-        }
-        for x in 0..w {
-            let (add, sub) = ((x + pad + r + 1) * n, (x + pad - r) * n);
-            for c in 0..n {
-                row[x * n + c] = acc[c] * norm;
-                acc[c] += src[add + c] - src[sub + c];
-            }
-        }
-    };
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use rayon::prelude::*;
-        buf.par_chunks_mut(w * n).for_each(blur_row);
     }
-    #[cfg(target_arch = "wasm32")]
-    buf.chunks_mut(w * n).for_each(blur_row);
+    for (i, d) in dst.iter_mut().enumerate() {
+        for c in 0..N {
+            d[c] = acc[c] * norm;
+        }
+        if let (Some(add), Some(sub)) = (src.get(i + 2 * r + 1), src.get(i)) {
+            for c in 0..N {
+                acc[c] += add[c] - sub[c];
+            }
+        }
+    }
 }
 
-fn transpose(buf: &[f32], w: usize, h: usize, n: usize) -> Vec<f32> {
-    let mut out = vec![0.0f32; buf.len()];
-    if w == 0 || h == 0 {
-        return out;
-    }
-    const B: usize = 32; // cache-friendly blocks
-    // Bands of B output rows (= input columns) are independent: transpose them in parallel.
-    let band = |(i, chunk): (usize, &mut [f32])| {
-        let bx = i * B;
-        for by in (0..h).step_by(B) {
-            for y in by..(by + B).min(h) {
-                for x in bx..(bx + B).min(w) {
-                    let (s, d) = ((y * w + x) * n, ((x - bx) * h + y) * n);
-                    chunk[d..d + n].copy_from_slice(&buf[s..s + n]);
-                }
-            }
+/// Box passes of the given radii in turn along the line in `s.line` (`w`-float elements, as many
+/// as `dst` holds plus twice the radii's sum; consumed), ending in `dst`.
+fn line_passes(dst: &mut [f32], w: usize, radii: &[usize], s: &mut Scratch) {
+    let Scratch { line, next, acc } = s;
+    let Some(len) = dst.len().checked_div(w) else { return };
+    let mut tail: usize = radii.iter().sum();
+    for (k, &r) in radii.iter().enumerate() {
+        tail -= r;
+        if k + 1 == radii.len() {
+            box_pass(line, dst, w, r, acc);
+        } else {
+            next.resize((len + 2 * tail) * w, 0.0);
+            box_pass(line, next, w, r, acc);
+            std::mem::swap(line, next);
         }
-    };
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use rayon::prelude::*;
-        out.par_chunks_mut(B * h * n).enumerate().for_each(band);
     }
-    #[cfg(target_arch = "wasm32")]
-    out.chunks_mut(B * h * n).enumerate().for_each(band);
-    out
 }
 
-/// Gaussian blur by three box passes per axis over a premultiplied window.
-fn gaussian_boxes(src: &Image, out: Rect, alpha: bool, sigma: f32) -> Vec<f32> {
-    box_passes(src, out, alpha, &boxes_for_gauss(sigma, 3))
+/// Rows of the horizontal passes handed to one worker (they share its scratch buffers).
+const ROWS_PER_TASK: usize = 8;
+/// Width in pixels of the column strips the vertical passes work on (a divisor of the tile size).
+pub(crate) const STRIP: i32 = 64;
+
+/// Samples of a column strip of an output area.
+pub(crate) type Strip = (Rect, Vec<f32>);
+
+/// Box blurs of the given (odd) widths, one after another along each axis, of the `n`-channel
+/// pixels of `src` extended beyond it by repeating its edge pixels (alpha-weighted when `alpha`).
+/// `read(row, buf)` fills `buf` with the samples of a one-pixel-high rectangle inside `src`.
+///
+/// Running sums make the cost independent of the widths, and only `src`'s own rows and the output
+/// columns are blurred: the repeated edges are never read or blurred as 2-D margins, so a huge
+/// radius costs about what a small one does. Returns the straight results for `out` as column
+/// strips (`None` when `ctl` was cancelled).
+pub(crate) fn box_blur(
+    src: Rect,
+    read: &(dyn Fn(Rect, &mut Vec<f32>) + Sync),
+    out: Rect,
+    n: usize,
+    alpha: bool,
+    boxes: &[usize],
+    ctl: &Interrupt,
+) -> Option<Vec<Strip>> {
+    let radii: Vec<usize> = boxes.iter().map(|w| w / 2).collect();
+    let reach = i32::try_from(radii.iter().sum::<usize>()).unwrap_or(i32::MAX);
+    let (ow, oh) = (out.width() as usize, out.height() as usize);
+    let used = src.intersect(&out.inflate(reach));
+    if used.is_empty() || n == 0 {
+        // Nothing to read: transparent, as `Image::get` reads outside an image.
+        return Some(strips(out).map(|t| (t, vec![0.0; t.width() as usize * oh * n])).collect());
+    }
+    // Horizontal passes over `used`'s rows only (the repeated rows above and below it would just
+    // repeat their results), for the output columns. Each row is extended to the passes' reach by
+    // repeating its end pixels.
+    let mut h = vec![0.0f32; used.height() as usize * ow * n];
+    let (left, right) = ((used.x0 - out.x0.saturating_sub(reach)) as usize, (out.x1.saturating_add(reach) - used.x1) as usize);
+    par_rows(&mut h, ow * ROWS_PER_TASK, n, |task, chunk| {
+        let (mut row, mut s) = (Vec::new(), Scratch::default());
+        for (k, dst) in chunk.chunks_exact_mut(ow * n).enumerate() {
+            if ctl.cancelled() {
+                return;
+            }
+            let y = used.y0 + (task * ROWS_PER_TASK + k) as i32;
+            read(Rect::new(used.x0, y, used.x1, y + 1), &mut row);
+            premultiply(&mut row, n, alpha);
+            let (Some(first), Some(last)) = (row.get(..n), row.get(row.len().saturating_sub(n)..)) else { return };
+            s.line.clear();
+            (0..left).for_each(|_| s.line.extend_from_slice(first));
+            s.line.extend_from_slice(&row);
+            (0..right).for_each(|_| s.line.extend_from_slice(last));
+            line_passes(dst, n, &radii, &mut s);
+        }
+    });
+    // Vertical passes, strip by strip, the same way down the columns.
+    let (top, bottom) = ((used.y0 - out.y0.saturating_sub(reach)) as usize, (out.y1.saturating_add(reach) - used.y1) as usize);
+    let (rows, stride) = (used.height() as usize, ow * n);
+    let strips: Vec<Rect> = strips(out).collect();
+    let done = par_map(strips.len(), |k| {
+        let t = strips[k];
+        if ctl.cancelled() {
+            return (t, Vec::new());
+        }
+        let (sx, w) = ((t.x0 - out.x0) as usize * n, t.width() as usize * n);
+        let row = |y: usize| &h[y * stride + sx..y * stride + sx + w];
+        let mut s = Scratch::default();
+        (0..top).for_each(|_| s.line.extend_from_slice(row(0)));
+        (0..rows).for_each(|y| s.line.extend_from_slice(row(y)));
+        (0..bottom).for_each(|_| s.line.extend_from_slice(row(rows - 1)));
+        let mut res = vec![0.0f32; oh * w];
+        line_passes(&mut res, w, &radii, &mut s);
+        unpremultiply(&mut res, n, alpha);
+        (t, res)
+    });
+    (!ctl.cancelled()).then_some(done)
 }
 
-/// Box blurs of the given (odd) widths, one after another along each axis, over a premultiplied
-/// window; running sums make the cost independent of the widths.
+/// Column strips of `out` at multiples of [`STRIP`], so each lies inside one tile column.
+fn strips(out: Rect) -> impl Iterator<Item = Rect> {
+    (out.x0.div_euclid(STRIP) * STRIP..out.x1)
+        .step_by(STRIP as usize)
+        .map(move |x| Rect::new(x.max(out.x0), out.y0, x.saturating_add(STRIP).min(out.x1), out.y1))
+}
+const _: () = assert!(photosuite_geom::TILE_SIZE % STRIP == 0);
+
+/// [`box_blur`] of an image (edges repeated) into one interleaved buffer for `out`.
 fn box_passes(src: &Image, out: Rect, alpha: bool, boxes: &[usize]) -> Vec<f32> {
     let n = src.ch;
-    let margin: i32 = boxes.iter().map(|w| (*w as i32 - 1) / 2).sum::<i32>() + 1;
-    let win = Rect::new(out.x0 - margin, out.y0 - margin, out.x1 + margin, out.y1 + margin);
-    let (ww, wh) = (win.width() as usize, win.height() as usize);
-    let mut p = vec![0.0f32; ww * wh * n];
-    let fill = |yy: usize, row: &mut [f32]| {
-        let y = win.y0 + yy as i32;
-        for (xx, px) in row.chunks_exact_mut(n).enumerate() {
-            for (c, v) in px.iter_mut().enumerate() {
-                *v = src.get(win.x0 + xx as i32, y, c);
-            }
-        }
+    let read = |r: Rect, buf: &mut Vec<f32>| {
+        buf.clear();
+        buf.extend_from_slice(src.row(r));
     };
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use rayon::prelude::*;
-        p.par_chunks_mut(ww * n).enumerate().for_each(|(y, row)| fill(y, row));
+    let ow = out.width() as usize * n;
+    let mut res = vec![0.0f32; ow * out.height() as usize];
+    if res.is_empty() {
+        return res;
     }
-    #[cfg(target_arch = "wasm32")]
-    p.chunks_mut(ww * n).enumerate().for_each(|(y, row)| fill(y, row));
-    premultiply(&mut p, n, alpha);
-    for w in boxes {
-        box_rows(&mut p, ww, n, (w - 1) / 2);
+    for (t, data) in box_blur(src.rect, &read, out, n, alpha, boxes, &Interrupt::NONE).unwrap_or_default() {
+        let (x0, w) = ((t.x0 - out.x0) as usize * n, t.width() as usize * n);
+        for (dst, s) in res.chunks_exact_mut(ow).zip(data.chunks_exact(w)) {
+            dst[x0..x0 + w].copy_from_slice(s);
+        }
     }
-    let mut t = transpose(&p, ww, wh, n);
-    for w in boxes {
-        box_rows(&mut t, wh, n, (w - 1) / 2);
-    }
-    let p = transpose(&t, wh, ww, n);
-    let (ow, oh) = (out.width() as usize, out.height() as usize);
-    let mut res = vec![0.0f32; ow * oh * n];
-    for y in 0..oh {
-        let s = ((y + margin as usize) * ww + margin as usize) * n;
-        res[y * ow * n..(y + 1) * ow * n].copy_from_slice(&p[s..s + ow * n]);
-    }
-    unpremultiply(&mut res, n, alpha);
     res
 }
 
 pub(crate) fn boxed(src: &Image, out: Rect, ctx: &Ctx, radius: f32) -> Vec<f32> {
-    let r = radius.max(0.0).round() as usize;
-    // Running sums cost the same at any radius; the direct kernel is quicker for the smallest.
-    if r <= 4 {
-        let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
-        return conv_sep(src, out, &k, &k, ctx.alpha);
+    match box_widths(&FilterParams::BoxBlur { radius }) {
+        Some(boxes) => box_passes(src, out, ctx.alpha, &boxes),
+        None => {
+            let r = radius.max(0.0).round() as usize;
+            let k = vec![1.0 / (2 * r + 1) as f32; 2 * r + 1];
+            conv_sep(src, out, &k, &k, ctx.alpha)
+        }
     }
-    box_passes(src, out, ctx.alpha, &[2 * r + 1])
 }
 
 fn average_samples(src: &Image, out: Rect, ctx: &Ctx, mut offsets: impl FnMut(f32, f32, &mut Vec<(f32, f32)>)) -> Vec<f32> {
@@ -440,6 +520,8 @@ fn surface_direct(src: &Image, out: Rect, ctx: &Ctx, r: i32, t: f32) -> Vec<f32>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use photosuite_color::{ColorMode, PixelFormat, SampleType};
+    use photosuite_raster::Surface;
 
     #[test]
     fn box_gaussian_matches_exact_kernel() {
@@ -456,7 +538,7 @@ mod tests {
         let out = Rect::new(0, 0, 120, 8);
         let k = gaussian_kernel(12.0);
         let exact = conv_sep(&img, out, &k, &k, true);
-        let fast = gaussian_boxes(&img, out, true, 12.0);
+        let fast = box_passes(&img, out, true, &boxes_for_gauss(12.0, 3));
         let err = exact.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
         assert!(err < 0.02, "max error {err}");
         assert_eq!(boxes_for_gauss(10.0, 3).len(), 3);
@@ -484,6 +566,106 @@ mod tests {
             let err = direct.iter().zip(&fast).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
             assert!(err < 1e-5, "radius {r}: max error {err}");
         }
+    }
+
+    /// The definition the running sums must match: each box applied in turn as a direct
+    /// convolution (cost per pixel proportional to the radius) to `img`, which covers `out` grown
+    /// by every box's reach (its own edge handling included).
+    fn direct_boxes(img: &Image, out: Rect, boxes: &[usize], alpha: bool) -> Vec<f32> {
+        let mut cur = img.clone();
+        let mut left: i32 = boxes.iter().map(|w| (w / 2) as i32).sum();
+        for &w in boxes {
+            left -= (w / 2) as i32;
+            let k = vec![1.0 / w as f32; w];
+            let rect = out.inflate(left);
+            cur = Image { rect, ch: img.ch, data: conv_sep(&cur, rect, &k, &k, alpha) };
+        }
+        cur.data
+    }
+
+    /// Noisy pixels over `r` (alpha varying, some fully transparent).
+    fn noisy(fmt: PixelFormat, r: Rect, seed: u32) -> Surface {
+        let mut s = Surface::new(fmt);
+        let mut st = seed;
+        let mut v = Vec::new();
+        for _ in 0..r.width() * r.height() {
+            for c in 0..fmt.channels() {
+                st ^= st << 13;
+                st ^= st >> 17;
+                st ^= st << 5;
+                let x = (st % 256) as f32 / 255.0;
+                v.push(if fmt.alpha && c + 1 == fmt.channels() && st.is_multiple_of(5) { 0.0 } else { x });
+            }
+        }
+        s.write_region(r, &v);
+        s
+    }
+
+    #[test]
+    fn layer_box_blurs_match_direct_convolution_at_any_radius() {
+        // Gaussian and Box Blur at radii up to several times the layer (37 × 23), filtered as a
+        // document layer (canvas edge repeated, as Photoshop does) and on their own (transparent
+        // beyond), at every depth, with and without alpha, 1 to 5 channels.
+        let canvas = Rect::new(0, 0, 37, 23);
+        let formats = [
+            PixelFormat::RGBA8,
+            PixelFormat::RGBA16,
+            PixelFormat::RGBA32F,
+            PixelFormat::GRAY8,
+            PixelFormat::CMYKA8,
+            PixelFormat::new(ColorMode::Lab, SampleType::F32, false),
+        ];
+        let params = [
+            FilterParams::GaussianBlur { radius: 4.5 },
+            FilterParams::GaussianBlur { radius: 9.3 },
+            FilterParams::GaussianBlur { radius: 40.0 },
+            FilterParams::BoxBlur { radius: 5.0 },
+            FilterParams::BoxBlur { radius: 70.0 },
+        ];
+        for (i, fmt) in formats.into_iter().enumerate() {
+            let s = noisy(fmt, canvas, 0x9e37_79b9 + i as u32);
+            // A level of the depth (colour and alpha are each rounded on write) plus float noise.
+            let tol = match fmt.sample {
+                SampleType::U8 => 1.0 / 255.0,
+                SampleType::U16 => 1.0 / 65535.0,
+                _ => 0.0,
+            } + 2e-5;
+            for p in &params {
+                let boxes = box_widths(p).expect("a box-pass blur");
+                let reach: i32 = boxes.iter().map(|w| (w / 2) as i32).sum();
+                let area = crate::output_area(p, s.content_bounds(), canvas, None);
+                for (got, img, out) in [
+                    (crate::apply_in(&s, p, area, canvas, None, canvas), Image::read_clamped(&s, canvas.inflate(reach), canvas), canvas),
+                    (crate::apply(&s, p, area, canvas, None), Image::read(&s, area.inflate(reach)), area),
+                ] {
+                    // Compared alpha-weighted: colour is meaningless where (nearly) transparent.
+                    let (mut got, mut want) = (got.read_region(out), direct_boxes(&img, out, &boxes, fmt.alpha));
+                    premultiply(&mut got, img.ch, fmt.alpha);
+                    premultiply(&mut want, img.ch, fmt.alpha);
+                    let err = got.iter().zip(&want).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+                    assert!(err <= tol, "{} on {fmt:?} over {out:?}: max error {err}", p.label());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn layer_box_blurs_mix_by_the_selection_and_stop_when_cancelled() {
+        let canvas = Rect::new(0, 0, 37, 23);
+        let s = noisy(PixelFormat::RGBA32F, canvas, 7);
+        let p = FilterParams::GaussianBlur { radius: 12.0 };
+        let full = crate::apply_in(&s, &p, canvas, canvas, None, canvas);
+        let half = Surface::with_default(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false), &[0.5]);
+        let mixed = crate::apply_in(&s, &p, canvas, canvas, Some(&half), canvas);
+        for (x, y) in [(0, 0), (18, 11), (36, 22)] {
+            let (o, f, m) = (s.pixel(x, y), full.pixel(x, y), mixed.pixel(x, y));
+            for c in 0..4 {
+                assert!((m[c] - (o[c] + f[c]) / 2.0).abs() < 1e-5, "({x},{y}) channel {c}");
+            }
+        }
+        let cancel = || true;
+        let ctl = Interrupt::cancel_only(&cancel);
+        assert!(crate::apply_in_with(&s, &p, canvas, canvas, None, canvas, &ctl).is_none());
     }
 
     #[test]

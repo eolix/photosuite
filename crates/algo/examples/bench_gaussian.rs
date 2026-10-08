@@ -1,6 +1,7 @@
-//! Timing: Gaussian Blur radius 10 on a 6016×6016 RGBA8 layer.
-//! `cargo run --release -p photosuite-algo --example bench_gaussian`
-use photosuite_algo::{FilterParams, apply, output_area};
+//! Timing: Gaussian Blur radius 10 on a 6016×6016 RGBA8 layer, as a document layer filling the
+//! canvas is filtered (edges repeated at the canvas edge).
+//! `cargo run --release -p photosuite-algo --example bench_gaussian [-- <size> <radius>]`
+use photosuite_algo::{FilterParams, apply_in, output_area};
 use photosuite_color::PixelFormat;
 use photosuite_geom::Rect;
 use photosuite_raster::Surface;
@@ -15,8 +16,13 @@ fn main() {
     s.write_interleaved(r, &bytes);
     let p = FilterParams::GaussianBlur { radius };
     let area = output_area(&p, s.content_bounds(), r, None).intersect(&r);
-    let t = std::time::Instant::now();
-    let out = apply(&s, &p, area, r, None);
-    let dt = t.elapsed();
+    // Best of a few runs (the first also pays for page faults).
+    let mut dt = std::time::Duration::MAX;
+    let mut out = s.clone();
+    for _ in 0..5 {
+        let t = std::time::Instant::now();
+        out = apply_in(&s, &p, area, r, None, r);
+        dt = dt.min(t.elapsed());
+    }
     println!("gaussian radius {radius} on {n}x{n} RGBA8: {:.2?} ({} tiles)", dt, out.tile_count());
 }

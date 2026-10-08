@@ -34,7 +34,9 @@ fn run(s: &Surface, p: &FilterParams) -> Surface {
 fn all_filters() -> Vec<FilterParams> {
     vec![
         FilterParams::GaussianBlur { radius: 2.5 },
+        FilterParams::GaussianBlur { radius: 9.0 },
         FilterParams::BoxBlur { radius: 2.0 },
+        FilterParams::BoxBlur { radius: 6.0 },
         FilterParams::MotionBlur { angle: 30.0, distance: 7.0 },
         FilterParams::RadialBlur { amount: 20.0, method: RadialMethod::Spin, center_x: 0.5, center_y: 0.5 },
         FilterParams::RadialBlur { amount: 30.0, method: RadialMethod::Zoom, center_x: 0.3, center_y: 0.6 },

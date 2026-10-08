@@ -949,6 +949,9 @@ pub fn apply_tiled_with(
     if area.is_empty() {
         return Some(out);
     }
+    if let Some(boxes) = blur::box_widths(params) {
+        return apply_box_blur(out, surface, area, extent, selection, &boxes, ctl);
+    }
     let fmt = surface.format();
     let ctx = Ctx { bounds, mode: fmt.mode, alpha: fmt.alpha };
     let halo = params.halo();
@@ -994,19 +997,7 @@ pub fn apply_tiled_with(
         };
         let mut data = kernel(params, src, *t, &ctx);
         if let Some(sel) = selection {
-            let n = src.ch;
-            let w = t.width() as usize;
-            for (i, px) in data.chunks_exact_mut(n).enumerate() {
-                let (xx, yy) = (t.x0 + (i % w) as i32, t.y0 + (i / w) as i32);
-                let k = sel.pixel(xx, yy)[0].clamp(0.0, 1.0);
-                if k >= 1.0 {
-                    continue;
-                }
-                for (c, v) in px.iter_mut().enumerate() {
-                    let o = src.get(xx, yy, c);
-                    *v = o + (*v - o) * k;
-                }
-            }
+            mix_selection(&mut data, *t, sel, src);
         }
         tick();
         (*t, data)
@@ -1043,6 +1034,87 @@ pub fn apply_tiled_with(
     out.prune();
     ctl.progress(1.0);
     Some(out)
+}
+
+/// [`apply_tiled_with`] for the blurs run as box passes ([`blur::box_widths`]): the whole area at
+/// once (in column bands of about [`RESULT_BUDGET`] bytes of floats), so the wide halo of a large
+/// radius is read once rather than around every tile. Pixels beyond `extent` repeat its edge, as
+/// [`Image::read_clamped`] does for tiles; without one the surface is read (transparent where empty).
+fn apply_box_blur(
+    mut out: Surface,
+    surface: &Surface,
+    area: Rect,
+    extent: Option<Rect>,
+    selection: Option<&Surface>,
+    boxes: &[usize],
+    ctl: &photosuite_raster::Interrupt,
+) -> Option<Surface> {
+    let fmt = surface.format();
+    let n = fmt.channels();
+    let reach = i32::try_from(boxes.iter().map(|w| w / 2).sum::<usize>()).unwrap_or(i32::MAX);
+    let grown = area.inflate(reach);
+    let src = extent.map(|e| grown.intersect(&e)).filter(|r| !r.is_empty()).unwrap_or(grown);
+    let read = |r: Rect, buf: &mut Vec<f32>| surface.read_region_into(r, buf);
+    // Per output column: the horizontal results for every source row, plus the final samples.
+    let column_bytes = (src.height() as usize + area.height() as usize) * n * std::mem::size_of::<f32>();
+    let band = i32::try_from(RESULT_BUDGET / column_bytes.max(1)).unwrap_or(i32::MAX).max(blur::STRIP) / blur::STRIP * blur::STRIP;
+    let bands: Vec<Rect> = (area.x0..area.x1).step_by(band as usize).map(|x| Rect::new(x, area.y0, x.saturating_add(band).min(area.x1), area.y1)).collect();
+    for (i, b) in bands.iter().enumerate() {
+        let strips = blur::box_blur(src, &read, *b, n, fmt.alpha, boxes, ctl)?;
+        // Each strip lies in one tile column: the columns' tiles are written in parallel.
+        let mut columns: Vec<(Surface, Vec<blur::Strip>)> = Vec::new();
+        for (t, data) in strips {
+            match columns.last_mut() {
+                Some((_, v)) if v.first().is_some_and(|(r, _)| r.x0.div_euclid(photosuite_geom::TILE_SIZE) == t.x0.div_euclid(photosuite_geom::TILE_SIZE)) => {
+                    v.push((t, data))
+                }
+                _ => columns.push((Surface::with_default(fmt, &surface.default_pixel()), vec![(t, data)])),
+            }
+        }
+        for (s, v) in &mut columns {
+            let r = v.iter().fold(Rect::EMPTY, |acc, (t, _)| if acc.is_empty() { *t } else { acc.union(t) });
+            s.put_tiles(out.take_tiles(r));
+        }
+        let write = |(s, v): &mut (Surface, Vec<blur::Strip>)| {
+            for (t, data) in v.iter_mut() {
+                if let Some(sel) = selection {
+                    mix_selection(data, *t, sel, &Image::read(surface, *t));
+                }
+                s.write_region(*t, data);
+            }
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use rayon::prelude::*;
+            columns.par_iter_mut().for_each(write);
+        }
+        #[cfg(target_arch = "wasm32")]
+        columns.iter_mut().for_each(write);
+        for (s, _) in columns {
+            out.put_tiles(s.tiles().map(|(c, t)| (*c, t.clone())));
+        }
+        ctl.progress(0.98 * (i + 1) as f32 / bands.len() as f32);
+    }
+    out.prune();
+    ctl.progress(1.0);
+    Some(out)
+}
+
+/// Mixes filtered `data` for `t` back toward the original pixels in `orig` by the selection's
+/// coverage (channel 0 of `sel`).
+fn mix_selection(data: &mut [f32], t: Rect, sel: &Surface, orig: &Image) {
+    let w = t.width() as usize;
+    for (i, px) in data.chunks_exact_mut(orig.ch.max(1)).enumerate() {
+        let (x, y) = (t.x0 + (i % w) as i32, t.y0 + (i / w) as i32);
+        let k = sel.pixel(x, y)[0].clamp(0.0, 1.0);
+        if k >= 1.0 {
+            continue;
+        }
+        for (c, v) in px.iter_mut().enumerate() {
+            let o = orig.get(x, y, c);
+            *v = o + (*v - o) * k;
+        }
+    }
 }
 
 /// Bytes of float filter results held at once by [`apply_tiled`].
