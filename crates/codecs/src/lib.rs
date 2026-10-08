@@ -27,6 +27,7 @@ pub use crate::codecs::jpeg::estimate_quality as jpeg_quality;
 pub use crate::codecs::jpeg::exif as jpeg_exif;
 pub use crate::codecs::webp::is_lossless as webp_is_lossless;
 pub use crate::codecs::tiff::{PhotoshopTags as TiffPhotoshopTags, photoshop_tags as tiff_photoshop_tags, writes_little_endian as tiff_writes_little_endian};
+pub use crate::codecs::tiff_ifd::{TiffInfo, TiffPage, TiffPageKind};
 pub use crate::error::CodecError;
 pub use crate::fidelity::{FidelityWarning, fidelity_warnings, fidelity_warnings_with};
 pub use crate::format::{ASYMMETRIC_EXCEPTIONS, Format, FormatCaps, caps, detect, from_extension};
@@ -69,33 +70,68 @@ pub fn decode_as_with(format: Format, bytes: &[u8], opts: &DecodeOptions) -> Res
         Format::Heic => heic::decode(bytes, l),
         Format::Gif | Format::Bmp | Format::Tga | Format::Ico | Format::Qoi | Format::Hdr | Format::Avif => via_image::decode(format, bytes, l),
     }?;
-    // Final guard for decoders whose header we could not pre-inspect.
-    l.check(img.width(), img.height(), img.layout(), img.sample_type())?;
-    if opts.keep_orientation {
-        return Ok(img);
-    }
-    // Turn the pixels upright, like Photoshop: a TIFF records it in its own IFD0, the others
-    // in their EXIF block. The metadata is rewritten to Orientation = 1 on the way.
+    // Turn the pixels upright, like Photoshop: a TIFF records it in the decoded page's own
+    // directory, the others in their EXIF block. The metadata is rewritten to Orientation = 1
+    // on the way.
     let o = match format {
         // HEIF orients by its `irot`/`imir` properties, which the decoder has already applied;
         // the EXIF tag is not to be applied again, only reset so an export does not repeat it.
         Format::Heic => {
             let mut img = img;
-            if let Some(e) = &mut img.meta.exif
-                && let std::borrow::Cow::Owned(fixed) = upright_exif(e)
-            {
-                *e = fixed;
+            if !opts.keep_orientation {
+                if let Some(e) = &mut img.meta.exif
+                    && let std::borrow::Cow::Owned(fixed) = upright_exif(e)
+                {
+                    *e = fixed;
+                }
+                if let Some(x) = &mut img.meta.xmp
+                    && let std::borrow::Cow::Owned(fixed) = upright_xmp(x)
+                {
+                    *x = fixed;
+                }
             }
-            if let Some(x) = &mut img.meta.xmp
-                && let std::borrow::Cow::Owned(fixed) = upright_xmp(x)
-            {
-                *x = fixed;
-            }
-            return Ok(img);
+            return finish_decode(img, 1, opts);
         }
-        Format::Tiff => exif_orientation(bytes),
+        Format::Tiff => tiff::orientation(bytes, None),
         _ => img.meta.exif.as_deref().map_or(1, exif_orientation),
     };
+    finish_decode(img, o, opts)
+}
+
+/// Lists the pages (image directories) of a TIFF or BigTIFF file without decoding pixels: the
+/// main IFD chain and its SubIFDs, each with its size, kind (page, reduced-resolution copy or
+/// mask) and storage. [`TiffInfo::default_page`] is the page [`decode`] opens.
+pub fn tiff_info(bytes: &[u8]) -> Result<TiffInfo, CodecError> {
+    crate::codecs::tiff_ifd::tiff_info(bytes)
+}
+
+/// Decodes page `page` (an index into [`tiff_info`]'s `pages`) of a TIFF or BigTIFF file,
+/// applying that page's orientation unless `opts.keep_orientation`.
+pub fn decode_tiff_page(bytes: &[u8], page: usize, opts: &DecodeOptions) -> Result<Image, CodecError> {
+    let img = tiff::decode_page(bytes, Some(page), &opts.limits)?;
+    finish_decode(img, tiff::orientation(bytes, Some(page)), opts)
+}
+
+/// The Orientation (1–8) of the page [`decode`] opens from a TIFF or BigTIFF file; 1 when it is
+/// absent, malformed or out of range.
+pub fn tiff_orientation(bytes: &[u8]) -> u16 {
+    tiff::orientation(bytes, None)
+}
+
+/// The Orientation (1–8) of page `page` (an index into [`tiff_info`]'s `pages`); 1 when it is
+/// absent, malformed or out of range, or the page does not exist.
+pub fn tiff_page_orientation(bytes: &[u8], page: usize) -> u16 {
+    tiff::orientation(bytes, Some(page))
+}
+
+/// The limits check and the orientation, shared by every decoder.
+fn finish_decode(img: Image, o: u16, opts: &DecodeOptions) -> Result<Image, CodecError> {
+    let l = &opts.limits;
+    // Final guard for decoders whose header we could not pre-inspect.
+    l.check(img.width(), img.height(), img.layout(), img.sample_type())?;
+    if opts.keep_orientation {
+        return Ok(img);
+    }
     // Orientations 5–8 swap width and height: with asymmetric limits a stored landscape
     // that fit can turn into a portrait that does not, so check the upright size too.
     if (5..=8).contains(&o) {
