@@ -130,3 +130,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `1d8a32ed83` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on the org macos-release runner |
 | `34a87cedea` | skip | only held-back files (translations / CI / brand / records) — actionlint: declare the org macos-release runner label (#927) |
 | `e040376e15` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on macos-15-xlarge |
+| `fee08b07b6` | skip | only held-back files (translations / CI / brand / records) — CI: craft-fonts run uses the Test step's exact build again (Linux runner out of disk since #800) (#955) |
