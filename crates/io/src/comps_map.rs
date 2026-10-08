@@ -102,12 +102,12 @@ pub fn write_artboard(a: &Artboard, guides: &[i32]) -> Vec<u8> {
     pad_even(VersionedDescriptor::new(d).to_bytes())
 }
 
-/// Indices of the document guides (horizontal first, then vertical, as in resource 1032) that
+/// Indices of the document guides (vertical first, then horizontal, as in resource 1032) that
 /// lie inside `r`.
 pub fn guides_in(guides: &Guides, r: Rect) -> Vec<i32> {
-    let h = guides.horizontal.iter().map(|y| (*y as f64) > f64::from(r.y0) && (*y as f64) < f64::from(r.y1));
     let v = guides.vertical.iter().map(|x| (*x as f64) > f64::from(r.x0) && (*x as f64) < f64::from(r.x1));
-    h.chain(v).enumerate().filter(|(_, inside)| *inside).map(|(i, _)| i as i32).collect()
+    let h = guides.horizontal.iter().map(|y| (*y as f64) > f64::from(r.y0) && (*y as f64) < f64::from(r.y1));
+    v.chain(h).enumerate().filter(|(_, inside)| *inside).map(|(i, _)| i as i32).collect()
 }
 
 /// Keeps, regenerates or removes the artboard block among a layer's raw blocks.
