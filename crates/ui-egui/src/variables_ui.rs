@@ -110,7 +110,7 @@ const METHODS: &[(&str, &str)] = &[("fit", "Fit"), ("fill", "Fill"), ("conform",
 pub fn body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let layers = layer_options(app);
-    let mut state = fields.get("__variables").cloned().unwrap_or_else(|| json!({"defs": [], "dataSets": []}));
+    let mut state = normalize(fields.get("__variables").unwrap_or(&Value::Null));
     let mut page = fields.get("__page").and_then(Value::as_str).unwrap_or("define").to_string();
 
     ui.set_min_width(420.0);
@@ -135,6 +135,22 @@ pub fn body(app: &mut PhotosuiteApp, ui: &mut egui::Ui, fields: &mut Map<String,
 
     fields.insert("__variables".into(), state);
     fields.insert("__page".into(), json!(page));
+}
+
+/// The dialog state with only object entries in `defs`, `dataSets` and each set's `values`.
+/// `ui.dialog.set` can store any JSON in `__variables`, and the pages write fields into entries
+/// (`d["name"] = …`), which panics on a number or a string.
+fn normalize(state: &Value) -> Value {
+    let objects =
+        |v: Option<&Value>| -> Vec<Value> { v.and_then(Value::as_array).map(|a| a.iter().filter(|e| e.is_object()).cloned().collect()).unwrap_or_default() };
+    let sets: Vec<Value> = objects(state.get("dataSets"))
+        .into_iter()
+        .map(|mut set| {
+            set["values"] = Value::Array(objects(set.get("values")));
+            set
+        })
+        .collect();
+    json!({"defs": objects(state.get("defs")), "dataSets": sets})
 }
 
 fn define_page(ui: &mut egui::Ui, _t: &Tokens, layers: &[(u64, String, bool)], state: &mut Value) {
@@ -337,6 +353,15 @@ mod tests {
         fields.insert("__cur".into(), json!(1));
         assert_eq!(data_set_index(&fields, 3), 1);
         assert_eq!(data_set_index(&fields, 0), 0);
+    }
+
+    #[test]
+    fn normalize_keeps_only_object_entries() {
+        let s = normalize(&json!({"defs": [1, {"name": "a"}], "dataSets": ["x", {"name": "A", "values": [true, {"variable": "a"}]}, {"values": 3}]}));
+        assert_eq!(s, json!({"defs": [{"name": "a"}], "dataSets": [{"name": "A", "values": [{"variable": "a"}]}, {"values": []}]}));
+        for bad in [Value::Null, json!(5), json!("s"), json!([1]), json!({"defs": "x", "dataSets": {}})] {
+            assert_eq!(normalize(&bad), json!({"defs": [], "dataSets": []}), "{bad}");
+        }
     }
 
     #[test]

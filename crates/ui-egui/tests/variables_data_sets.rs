@@ -55,3 +55,37 @@ fn out_of_range_data_set_index_is_clamped_before_delete() {
     h.get_by_label("Delete").click();
     h.run_steps(2);
 }
+
+/// `ui.dialog.set` can store any JSON in `__variables`; the editors write into its entries.
+fn app_with_malformed_variables(page: &str) -> PhotosuiteApp {
+    let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), photosuite_ui_egui::Services::default());
+    app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
+    app.run("layer.new.layer", json!({})).unwrap();
+    let mut fields = Map::new();
+    fields.insert(
+        "__variables".into(),
+        json!({"defs": [42, {"name": "v1", "layer": 0, "type": "textReplacement"}], "dataSets": ["bad", {"name": "A", "values": [7, "x"]}, {"name": "B", "values": "nope"}]}),
+    );
+    fields.insert("__page".into(), json!(page));
+    app.ui.open_dialog(DialogKind::Command, fields);
+    app
+}
+
+fn type_into_first_text_field(h: &mut Harness<'static, PhotosuiteApp>) {
+    h.query_all_by_role(egui::accesskit::Role::TextInput).next().expect("a text field").click();
+    h.run_steps(2);
+    h.query_all_by_role(egui::accesskit::Role::TextInput).next().expect("a text field").type_text("z");
+    h.run_steps(2);
+}
+
+#[test]
+fn malformed_variable_entries_are_dropped_before_an_edit() {
+    for page in ["define", "dataSets"] {
+        let mut h = harness(app_with_malformed_variables(page));
+        type_into_first_text_field(&mut h);
+        let state = &h.state().ui.dialogs.last().unwrap().fields["__variables"];
+        assert_eq!(state["defs"].as_array().unwrap().len(), 1, "{page}: {state}");
+        assert_eq!(state["dataSets"].as_array().unwrap().len(), 2, "{page}: {state}");
+        assert!(state["dataSets"].as_array().unwrap().iter().all(|s| s["values"].as_array().unwrap().iter().all(|v| v.is_object())), "{page}: {state}");
+    }
+}
