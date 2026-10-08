@@ -163,9 +163,9 @@ pub struct MenuParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UiSetParams {
     /// Fields for the control method `ui.set`: tool, panels, dock, dockTabs, dockWidth, maskTarget,
-    /// vectorMaskTarget, selectionMode, zoom, center, fit, theme (pro, proMedium, studio,
-    /// studioLight, classic), brushSection, brushTab, brushesView, brushSize. Other fields are an
-    /// error.
+    /// vectorMaskTarget, selectionMode, zoom, center, fit, theme (midnight, anthracite, slate,
+    /// pearl, aubergine, ocean), brushSection, brushTab, brushesView, brushSize. Other fields are
+    /// an error.
     pub fields: Value,
 }
 
