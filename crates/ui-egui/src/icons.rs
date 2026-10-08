@@ -124,8 +124,7 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::ContentAwareMove => "tools-camove",
         Tool::Brush => "tools-brush",
         Tool::Pencil => "tools-pencil",
-        // No Mixer Brush icon in PhotoSuite's set yet: the Brush one stands in.
-        Tool::MixerBrush => "tools-brush",
+        Tool::MixerBrush => "tools-mbrush",
         Tool::CloneStamp => "tools-clone",
         Tool::Eraser => "tools-eraser",
         Tool::BackgroundEraser => "tools-beraser",
@@ -139,8 +138,7 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::Sponge => "tools-sponge",
         Tool::Pen => "tools-pen",
         Tool::Type => "tools-htype",
-        // No vertical type icon in PhotoSuite's set yet: the horizontal one stands in.
-        Tool::VerticalType => "tools-htype",
+        Tool::VerticalType => "tools-vtype",
         Tool::PathSelection => "tools-pselect",
         Tool::Rectangle => "tools-rect",
         Tool::EllipseShape => "tools-ellipse",

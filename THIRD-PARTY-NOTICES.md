@@ -145,6 +145,7 @@ the public domain.
 | `assets/dict/en_US-scowl-50.txt.gz` | English word list | Kevin Atkinson and the SCOWL contributors | SCOWL |
 | `assets/ico/**/*.svg`, most | Tabler Icons | Paweł Kuna | MIT |
 | `assets/ico/tools/{blur,brush,camove,corner,crepl,fpen,gradient,hbrush,mlasso,oselect,patch,pen,plasso,qselect,redeye,shbrush,sponge}.svg` | Tool glyphs drawn for this app | The PhotoSuite authors | MIT OR Apache-2.0 |
+| `assets/ico/tools/mbrush.svg` | Mixer Brush glyph: the Brush glyph above with Tabler Icons' `droplet` | The PhotoSuite authors; Paweł Kuna | MIT OR Apache-2.0; MIT |
 | `assets/img/icon_full.{svg,png}` | PhotoSuite logo | The PhotoSuite authors | MIT OR Apache-2.0 |
 | `assets/img/beach.jpg` | The Filter Gallery thumbnails' picture (a sailboat on a beach) | The PhotoSuite authors | MIT OR Apache-2.0 |
 | `resources/luts/*.CUBE` (45) | Color Lookup presets | Fresh LUTs uploaders | CC0 |
