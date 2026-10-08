@@ -13,6 +13,37 @@ pub fn adjust_surface(s: &mut Surface, adj: &Adjustment, selection: Option<&Surf
     if r.is_empty() {
         return;
     }
+    let out = adjusted(s, r, adj, selection, mode);
+    s.write_region(r, &out);
+}
+
+/// Applies `adj` to a layer mask through the selection. Untouched mask pixels count (they read as
+/// the mask's default value), and without a selection the default changes too, since a mask
+/// reaches past the canvas: Invert turns a reveal-all mask into a hide-all one (#780).
+pub fn adjust_mask(s: &mut Surface, adj: &Adjustment, selection: Option<&Surface>) {
+    let mode = photosuite_color::ColorMode::Grayscale;
+    if let Some(sel) = selection {
+        let r = sel.content_bounds();
+        if !r.is_empty() {
+            let out = adjusted(s, r, adj, Some(sel), mode);
+            s.write_region(r, &out);
+            s.prune();
+        }
+        return;
+    }
+    let fmt = s.format();
+    let unit = Rect::from_xywh(0, 0, 1, 1);
+    let mut out = Surface::with_default(fmt, &adjusted(&Surface::with_default(fmt, &s.default_pixel()), unit, adj, None, mode));
+    let r = s.tile_bounds();
+    if !r.is_empty() {
+        out.write_region(r, &adjusted(s, r, adj, None, mode));
+    }
+    out.prune();
+    *s = out;
+}
+
+/// `s`'s pixels over `r` (untouched ones included) with `adj` applied through the selection, encoded.
+fn adjusted(s: &Surface, r: Rect, adj: &Adjustment, selection: Option<&Surface>, mode: photosuite_color::ColorMode) -> Vec<f32> {
     let fmt = s.format();
     let n = fmt.channels();
     let raw = s.read_region(r);
@@ -31,7 +62,7 @@ pub fn adjust_surface(s: &mut Surface, adj: &Adjustment, selection: Option<&Surf
         let m = photosuite_raster::from_rgba_into(&fmt, mixed, &mut enc);
         out.extend_from_slice(&enc[..m]);
     }
-    s.write_region(r, &out);
+    out
 }
 
 /// Fill (respecting selection coverage) with a straight RGBA colour.

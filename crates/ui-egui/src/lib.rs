@@ -660,6 +660,7 @@ impl PhotosuiteApp {
             }
         }
         // Long commands become background jobs when enabled (`jobs_ui`); the rest run inline.
+        let params = self.with_mask_target(id, params);
         let r = jobs_ui::run(self, id, params);
         if r.is_ok() && matches!(id, "edit.copy" | "edit.cut" | "edit.copyMerged") {
             self.clip_external = false;
@@ -1171,6 +1172,28 @@ fn read_dropped(_f: &dyn egui::DroppedFile) -> Result<Vec<u8>, String> {
 }
 
 impl PhotosuiteApp {
+    /// `params` aimed at the active layer's mask (`"target":"mask"`) when the Layers panel targets
+    /// it and command `id` edits the target (adjustments, filters, fills) without naming one:
+    /// ⌘I then inverts the mask, as in Photoshop (#780). A targeted alpha channel or Quick Mask
+    /// mode wins, as the engine routes those itself.
+    pub fn with_mask_target(&self, id: &str, params: Value) -> Value {
+        if !self.ui.mask_target || !photosuite_engine::channel_cmds::follows_target(id) || params.get("target").is_some() {
+            return params;
+        }
+        let Some(st) = self.session.active() else { return params };
+        let composite = st.channel_view.target == photosuite_engine::channel_cmds::ChannelTarget::Composite && st.doc.quick_mask.is_none();
+        if !composite || st.active_layer.and_then(|id| st.doc.layer(id)).is_none_or(|l| l.mask.is_none()) {
+            return params;
+        }
+        match params {
+            Value::Object(mut m) => {
+                m.insert("target".into(), Value::from("mask"));
+                Value::Object(m)
+            }
+            _ => serde_json::json!({ "target": "mask" }),
+        }
+    }
+
     /// Viewing a layer mask (#196) targets it; a vector-mask target needs a vector mask on the
     /// active layer (a shape layer's path is its content, not a mask).
     fn sync_mask_targets(&mut self) {

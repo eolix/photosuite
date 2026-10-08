@@ -541,7 +541,8 @@ pub fn is_enabled(app: &PhotosuiteApp, id: &str) -> bool {
             Some(t) => t.warp.is_none(),
             None => app.session.active().and_then(|s| s.active_layer).is_some(),
         },
-        i => app.session.is_enabled(i),
+        // A targeted layer mask enables what edits it (Invert on an adjustment layer's mask).
+        i => app.session.is_enabled_with(i, &app.with_mask_target(i, Value::Null)),
     }
 }
 

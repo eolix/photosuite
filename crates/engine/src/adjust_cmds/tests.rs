@@ -223,3 +223,69 @@ fn new_kinds_round_trip_through_psd_and_pcraft() {
         assert_eq!(a.content, b.content);
     }
 }
+
+fn mask_at(s: &Session, x: i32, y: i32) -> f32 {
+    let d = s.active().unwrap();
+    d.doc.layer(d.active_layer.unwrap()).unwrap().mask.as_ref().unwrap().surface.sample_channel(x, y, 0)
+}
+
+/// #780: with the layer mask targeted, Invert (⌘I) inverts the mask, past the canvas too, and
+/// leaves the layer's pixels alone; one history step.
+#[test]
+fn invert_with_the_mask_targeted_inverts_the_mask() {
+    for depth in DEPTHS {
+        let mut s = session(depth, "rgb");
+        s.execute("select.rect", json!({"x": 24, "y": 0, "width": 24, "height": 32})).unwrap();
+        s.execute("layer.layerMask.revealSelection", json!({})).unwrap();
+        s.execute("select.deselect", json!({})).unwrap();
+        let (pixels, off_canvas) = (rgba(&s, 3, 3), mask_at(&s, -500, 3));
+        let steps = s.active().unwrap().history.past_len();
+        s.execute("image.adjustments.invert", json!({"target": "mask"})).unwrap();
+        assert_eq!((mask_at(&s, 3, 3), mask_at(&s, 30, 3)), (1.0, 0.0), "depth {depth}");
+        assert_eq!(mask_at(&s, -500, 3), 1.0 - off_canvas, "the mask's untouched area inverts too");
+        assert_eq!(rgba(&s, 3, 3), pixels, "the layer is untouched");
+        assert_eq!(s.active().unwrap().history.past_len(), steps + 1);
+        // Through a selection, only the selected part.
+        s.execute("select.rect", json!({"x": 0, "y": 0, "width": 10, "height": 32})).unwrap();
+        s.execute("image.adjustments.invert", json!({"target": "mask"})).unwrap();
+        assert_eq!((mask_at(&s, 3, 3), mask_at(&s, 12, 3), mask_at(&s, 30, 3)), (0.0, 1.0, 0.0));
+        for _ in 0..3 {
+            s.undo(); // invert, select, invert
+        }
+        assert_eq!((mask_at(&s, 3, 3), mask_at(&s, 30, 3), mask_at(&s, -500, 3)), (0.0, 1.0, off_canvas));
+    }
+}
+
+/// #780: a targeted mask enables Invert (and filters) on layers without pixels, such as an
+/// adjustment layer; viewing the mask (⌥-click) targets it too.
+#[test]
+fn a_targeted_mask_enables_editing_it_on_any_layer() {
+    let mut s = session(8, "rgb");
+    s.execute("layer.newAdjustmentLayer.levels", json!({})).unwrap();
+    s.execute("layer.layerMask.revealAll", json!({})).unwrap();
+    let mask = json!({"target": "mask"});
+    assert!(!s.is_enabled("image.adjustments.invert"), "no pixels to invert");
+    assert!(s.is_enabled_with("image.adjustments.invert", &mask));
+    assert!(s.is_enabled_with("filter.blur.gaussianBlur", &mask));
+    assert!(!s.is_enabled_with("image.adjustments.desaturate", &mask), "only what edits the mask");
+    s.execute("image.adjustments.invert", mask.clone()).unwrap();
+    assert_eq!((mask_at(&s, 3, 3), mask_at(&s, -500, -500)), (0.0, 0.0), "reveal all → hide all");
+    s.execute("view.layerMask", json!({"mode": "gray"})).unwrap();
+    assert!(s.is_enabled("image.adjustments.invert"), "the mask view targets the mask");
+    s.execute("image.adjustments.invert", json!({})).unwrap();
+    assert_eq!(mask_at(&s, 3, 3), 1.0);
+    // A filter on a pixel layer's targeted mask leaves the pixels alone.
+    s.execute("layer.delete", json!({})).unwrap();
+    s.execute("select.rect", json!({"x": 24, "y": 0, "width": 24, "height": 32})).unwrap();
+    s.execute("layer.layerMask.revealSelection", json!({})).unwrap();
+    s.execute("select.deselect", json!({})).unwrap();
+    let pixels = rgba(&s, 23, 3);
+    s.execute("filter.blur.gaussianBlur", json!({"radius": 3, "target": "mask"})).unwrap();
+    assert!(mask_at(&s, 23, 3) > 0.0 && mask_at(&s, 23, 3) < 1.0, "the mask's edge is blurred");
+    assert_eq!(rgba(&s, 23, 3), pixels);
+    // No mask: an error, not the layer's pixels.
+    s.execute("layer.layerMask.delete", json!({})).unwrap();
+    assert!(!s.is_enabled_with("image.adjustments.invert", &mask));
+    assert!(s.execute("image.adjustments.invert", mask).is_err());
+    assert_eq!(rgba(&s, 23, 3), pixels);
+}

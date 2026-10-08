@@ -192,11 +192,22 @@ fn new_adjustment(s: &mut Session, adj: Adjustment) -> Result<Value> {
 }
 
 fn destructive_adjust(s: &mut Session, label: &str, adj: Adjustment, p: &Value) -> Result<Value> {
+    if is_mask_target(p) {
+        // The targeted layer mask (#780): ⌘I inverts it, as in Photoshop.
+        let id = layer_param(s, &Value::Null)?;
+        return s.edit(label, |doc, _| {
+            let sel = doc.selection.clone();
+            let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+            let mask = l.mask.as_mut().ok_or_else(|| EngineError::Other("layer has no mask".into()))?;
+            pixels::adjust_mask(&mut mask.surface, &adj, sel.as_ref());
+            Ok(Value::Null)
+        });
+    }
     if crate::channel_cmds::is_channel_target(p) {
         // Alpha channel / Quick Mask target: the adjustment runs on the grayscale channel.
         return s.edit(label, |doc, _| {
             let sel = doc.selection.clone();
-            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, p)? {
+            if let Some(surf) = crate::channel_cmds::channel_surface_for_filter(doc, None, p)? {
                 pixels::adjust_surface(surf, &adj, sel.as_ref(), ColorMode::Grayscale);
                 surf.prune();
             }

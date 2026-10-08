@@ -815,7 +815,8 @@ fn ensure_filter_preview(app: &mut PhotosuiteApp, idx: usize) -> Option<(u32, u6
         return None;
     }
     let cmd = d.fields.get("__command")?.as_str()?.to_string();
-    let params = crate::filter_dialog::params_of(&d.fields);
+    // Previews edit what the command will: a targeted layer mask included (#780).
+    let params = app.with_mask_target(&cmd, crate::filter_dialog::params_of(&d.fields));
     let (doc_id, revision, doc, active) = {
         let st = app.session.documents().get(idx)?;
         (st.doc.id, st.revision, st.doc.clone(), st.active_layer)
