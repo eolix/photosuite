@@ -15,7 +15,7 @@
 	Edit	Düzenle
 	Image	Resim
 	Layer	Katman
-	Type	Tip
+	Type	Metin
 	Select	Seç
 	Filter	Filtre
 	View	Görünüm
@@ -1966,3 +1966,74 @@
 	175%	%175
 	250%	%250
 	300%	%300
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Gelişmiş
+	Alt-click to define a source point to clone from	Kopyalanacak kaynak noktayı tanımlamak için Alt tuşunu basılı tutarak tıklayın
+	Automatic (recommended)	Otomatik (önerilen)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Otomatik mod, kullanılabildiğinde GPU hızlandırması kullanır ve hata durumunda CPU ile işlemeye geri döner.
+	CPU / Compatibility	CPU / Uyumluluk
+	Cancel Background Job	Arka Plan İşini İptal Et
+	Cancel opening	Açmayı iptal et
+	Cancelled opening {name}	{name} açılması iptal edildi
+	Cancelled {label}	İptal edildi: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Tıklama: bağlantı noktası seç · Sürükleme: bağlantı noktasını, tutamacı veya bölümü taşı · {shift}-tıklama: ekle · {alt}-tıklama: tüm alt yol
+	Content-Aware Move	İçeriğe Duyarlı Taşıma
+	Convert to Layers	Katmanlara Dönüştür
+	Copy Layers to Document	Katmanları Belgeye Kopyala
+	Couldn't place {name}: {error}	{name} yerleştirilemedi: {error}
+	Delete Action	Eylemi Sil
+	Details	Ayrıntılar
+	Disable Symmetry Path	Simetri Yolunu Devre Dışı Bırak
+	Discard Layers and Save a Copy	Katmanları At ve Bir Kopya Kaydet
+	Don't show again	Bir daha gösterme
+	Drop Floating Selection	Kayan Seçimi Bırak
+	Edit Layer Style	Katman Stilini Düzenle
+	Esc to cancel	İptal için Esc
+	Extend	Genişlet
+	Float Selection	Kayan Seçim Yap
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Dondurma Kementi: bir alanı dondurmak için sürükleyin, çözmek için Alt ile sürükleyin (L)
+	GPU Backend	GPU Arka Ucu
+	GPU acceleration could not continue. Your documents are unchanged.	GPU hızlandırması devam edemedi. Belgeleriniz değişmedi.
+	Get Action	Eylemi Al
+	Grid:	Izgara:
+	Hit-Test Type	Metin İsabet Testi
+	Including layers will increase file size.	Katmanları dahil etmek dosya boyutunu artırır.
+	Invalid {mode} profile	Geçersiz {mode} profili
+	Keep Using CPU	CPU Kullanmaya Devam Et
+	Lasso around an area, then drag the selection	Bir alanın çevresini kementle çizin, ardından seçimi sürükleyin
+	Layer Style Default	Varsayılan Katman Stili
+	List Actions	Eylemleri Listele
+	List Background Jobs	Arka Plan İşlerini Listele
+	Make Layer Style Default	Katman Stilini Varsayılan Yap
+	Make Selection from Path	Yoldan Seçim Oluştur
+	Make Symmetry Path	Simetri Yolu Oluştur
+	Move	Taşı
+	Move Document	Belgeyi Taşı
+	Navigate Type	Metinde Gezin
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Seçim oluşturulacak yol yok: Kalem aracıyla bir yol çizin veya Yollar panelinden bir yol seçin.
+	Opening {name}	{name} açılıyor
+	Opening {name}…	{name} açılıyor…
+	Opening…	Açılıyor…
+	Patch	Yama
+	Patch:	Yama:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite, CPU görüntü birleştiricisini kullanıyor. Pencere yine de grafik bağdaştırıcınızı kullanabilir.
+	Play Action	Eylemi Oynat
+	Reading…	Okunuyor…
+	Record Action	Eylemi Kaydet
+	Rendering Mode	İşleme Modu
+	Retry GPU	GPU'yu Yeniden Dene
+	Retry GPU requires a restart. Save your work first.	GPU'yu yeniden denemek için yeniden başlatma gerekir. Önce çalışmanızı kaydedin.
+	Save cancelled	Kaydetme iptal edildi
+	Save failed: {error}	Kaydetme başarısız oldu: {error}
+	Stamp Down	Aşağı Damgala
+	Stamp Visible	Görünürü Damgala
+	Stop Recording	Kaydı Durdur
+	Structure:	Yapı:
+	Switched to CPU rendering	CPU ile işlemeye geçildi
+	TIFF Options	TIFF Seçenekleri
+	Type Caret	Metin İmleci
+	Unnamed {mode} profile	Adsız {mode} profili
+	Warp Grid	Çarpıtma Izgarası
+	Working…	Çalışıyor…

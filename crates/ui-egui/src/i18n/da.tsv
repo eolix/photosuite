@@ -15,7 +15,7 @@
 	Edit	Rediger
 	Image	Billede
 	Layer	Lag
-	Type	Type
+	Type	Tekst
 	Select	Marker
 	Filter	Filter
 	View	Vis
@@ -252,7 +252,7 @@
 	Delete	Slet
 	Rename Layer	Omdøb lag
 	Create Layer	Opret lag
-	Layer Style	Lagtype
+	Layer Style	Lagstil
 	Blending Options…	Blandingsmuligheder…
 	Bevel & Emboss…	Fasning og prægning…
 	Inner Shadow…	Indvendig skygge…
@@ -1966,3 +1966,74 @@
 	175%	175 %
 	250%	250 %
 	300%	300 %
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avanceret
+	Alt-click to define a source point to clone from	Alt-klik for at angive et kildepunkt, der skal klones fra
+	Automatic (recommended)	Automatisk (anbefalet)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatisk bruger GPU-acceleration, når den er tilgængelig, og skifter til CPU-gengivelse ved fejl.
+	CPU / Compatibility	CPU / Kompatibilitet
+	Cancel Background Job	Annuller baggrundsjob
+	Cancel opening	Annuller åbning
+	Cancelled opening {name}	Åbning af {name} annulleret
+	Cancelled {label}	{label} annulleret
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klik: markér ankerpunkt · Træk: flyt ankerpunkt, håndtag eller segment · {shift}-klik: tilføj · {alt}-klik: hele delkurven
+	Content-Aware Move	Indholdsbevidst flytning
+	Convert to Layers	Konverter til lag
+	Copy Layers to Document	Kopier lag til dokument
+	Couldn't place {name}: {error}	Kunne ikke placere {name}: {error}
+	Delete Action	Slet handling
+	Details	Detaljer
+	Disable Symmetry Path	Deaktiver symmetrikurve
+	Discard Layers and Save a Copy	Kassér lag, og gem en kopi
+	Don't show again	Vis ikke igen
+	Drop Floating Selection	Slip flydende markering
+	Edit Layer Style	Rediger lagstil
+	Esc to cancel	Esc for at annullere
+	Extend	Udvid
+	Float Selection	Gør markeringen flydende
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Frys-lasso: træk for at fryse et område, Alt-træk for at tø det op (L)
+	GPU Backend	GPU-backend
+	GPU acceleration could not continue. Your documents are unchanged.	GPU-accelerationen kunne ikke fortsætte. Dine dokumenter er uændrede.
+	Get Action	Hent handling
+	Grid:	Gitter:
+	Hit-Test Type	Træftest for tekst
+	Including layers will increase file size.	Medtagelse af lag øger filstørrelsen.
+	Invalid {mode} profile	Ugyldig {mode}-profil
+	Keep Using CPU	Bliv ved med at bruge CPU
+	Lasso around an area, then drag the selection	Tegn en lasso rundt om et område, og træk derefter markeringen
+	Layer Style Default	Standard for lagstil
+	List Actions	Vis handlinger
+	List Background Jobs	Vis baggrundsjob
+	Make Layer Style Default	Gør til standard for lagstil
+	Make Selection from Path	Opret markering fra kurve
+	Make Symmetry Path	Opret symmetrikurve
+	Move	Flyt
+	Move Document	Flyt dokument
+	Navigate Type	Naviger i tekst
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Ingen kurve at oprette en markering fra: tegn en med penværktøjet, eller vælg en i panelet Kurver.
+	Opening {name}	Åbner {name}
+	Opening {name}…	Åbner {name}…
+	Opening…	Åbner…
+	Patch	Lap
+	Patch:	Lap:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite bruger CPU-billedkompositoren. Vinduet bruger muligvis stadig dit grafikkort.
+	Play Action	Afspil handling
+	Reading…	Læser…
+	Record Action	Optag handling
+	Rendering Mode	Gengivelsestilstand
+	Retry GPU	Prøv GPU igen
+	Retry GPU requires a restart. Save your work first.	Prøv GPU igen kræver en genstart. Gem dit arbejde først.
+	Save cancelled	Gemning annulleret
+	Save failed: {error}	Kunne ikke gemme: {error}
+	Stamp Down	Stempl ned
+	Stamp Visible	Stempl synlige
+	Stop Recording	Stop optagelse
+	Structure:	Struktur:
+	Switched to CPU rendering	Skiftede til CPU-gengivelse
+	TIFF Options	TIFF-indstillinger
+	Type Caret	Tekstmarkør
+	Unnamed {mode} profile	Unavngiven {mode}-profil
+	Warp Grid	Fordrejningsgitter
+	Working…	Arbejder…

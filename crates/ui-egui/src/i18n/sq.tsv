@@ -15,7 +15,7 @@
 	Edit	Redakto
 	Image	Foto
 	Layer	Shtresa
-	Type	Lloji
+	Type	Teksti
 	Select	Përzgjidh
 	Filter	Filtrues
 	View	Pamja
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Të avancuara
+	Alt-click to define a source point to clone from	Alt-kliko për të përcaktuar një pikë burimi për klonim
+	Automatic (recommended)	Automatike (rekomandohet)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Mënyra automatike përdor përshpejtimin GPU kur është i disponueshëm dhe kalon në paraqitje me CPU në rast gabimesh.
+	CPU / Compatibility	CPU / Përputhshmëri
+	Cancel Background Job	Anulo punën në sfond
+	Cancel opening	Anulo hapjen
+	Cancelled opening {name}	U anulua hapja e {name}
+	Cancelled {label}	U anulua: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Kliko: përzgjidh pikën e ankorimit · Zvarrit: lëviz pikën e ankorimit, dorezën ose segmentin · {shift}-kliko: shto · {alt}-kliko: nënrrugën e plotë
+	Content-Aware Move	Lëvizje me njohje të përmbajtjes
+	Convert to Layers	Shndërro në shtresa
+	Copy Layers to Document	Kopjo shtresat në dokument
+	Couldn't place {name}: {error}	{name} nuk u vendos dot: {error}
+	Delete Action	Fshi veprimin
+	Details	Hollësi
+	Disable Symmetry Path	Çaktivizo rrugën e simetrisë
+	Discard Layers and Save a Copy	Hidh poshtë shtresat dhe ruaj një kopje
+	Don't show again	Mos e shfaq më
+	Drop Floating Selection	Lësho përzgjedhjen pezull
+	Edit Layer Style	Përpuno stilin e shtresës
+	Esc to cancel	Esc për ta anuluar
+	Extend	Zgjero
+	Float Selection	Bëje pezull përzgjedhjen
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lasso ngrirjeje: zvarrit për të ngrirë një zonë, Alt-zvarrit për ta shkrirë (L)
+	GPU Backend	Mbështetja e GPU-së
+	GPU acceleration could not continue. Your documents are unchanged.	Përshpejtimi GPU nuk mundi të vazhdonte. Dokumentet tuaja nuk kanë ndryshuar.
+	Get Action	Merr veprimin
+	Grid:	Rrjeta:
+	Hit-Test Type	Testim goditjeje në tekst
+	Including layers will increase file size.	Përfshirja e shtresave do ta rrisë madhësinë e skedarit.
+	Invalid {mode} profile	Profil {mode} i pavlefshëm
+	Keep Using CPU	Vazhdo me CPU
+	Lasso around an area, then drag the selection	Rrethoje një zonë me lasso, pastaj zvarrit përzgjedhjen
+	Layer Style Default	Stili i parazgjedhur i shtresës
+	List Actions	Listo veprimet
+	List Background Jobs	Listo punët në sfond
+	Make Layer Style Default	Bëje stilin e shtresës të parazgjedhur
+	Make Selection from Path	Krijo përzgjedhje nga rruga
+	Make Symmetry Path	Krijo rrugë simetrie
+	Move	Lëviz
+	Move Document	Lëviz dokumentin
+	Navigate Type	Lundro në tekst
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nuk ka rrugë nga e cila të krijohet përzgjedhje: vizatoni një me mjetin Stilolaps ose përzgjidhni një te paneli Rrugët.
+	Opening {name}	Po hapet {name}
+	Opening {name}…	Po hapet {name}…
+	Opening…	Po hapet…
+	Patch	Arnë
+	Patch:	Arnë:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite po përdor kompozitorin e imazheve me CPU. Dritarja mund të vazhdojë të përdorë përshtatësin tuaj grafik.
+	Play Action	Luaj veprimin
+	Reading…	Po lexohet…
+	Record Action	Regjistro veprimin
+	Rendering Mode	Mënyra e paraqitjes
+	Retry GPU	Riprovo GPU-në
+	Retry GPU requires a restart. Save your work first.	Riprovimi i GPU-së kërkon rinisje. Ruani më parë punën tuaj.
+	Save cancelled	Ruajtja u anulua
+	Save failed: {error}	Ruajtja dështoi: {error}
+	Stamp Down	Vulos poshtë
+	Stamp Visible	Vulos të dukshmet
+	Stop Recording	Ndalo regjistrimin
+	Structure:	Struktura:
+	Switched to CPU rendering	U kalua në paraqitje me CPU
+	TIFF Options	Opsionet TIFF
+	Type Caret	Kursori i tekstit
+	Unnamed {mode} profile	Profil {mode} pa emër
+	Warp Grid	Rrjeta e deformimit
+	Working…	Po punohet…

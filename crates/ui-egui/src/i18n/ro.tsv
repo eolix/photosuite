@@ -15,7 +15,7 @@
 	Edit	Editare
 	Image	Imagine
 	Layer	Strat
-	Type	Tip
+	Type	Text
 	Select	Selectează
 	Filter	Filtru
 	View	Vedere
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avansat
+	Alt-click to define a source point to clone from	Alt-clic pentru a defini un punct sursă din care să clonați
+	Automatic (recommended)	Automat (recomandat)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Modul automat folosește accelerarea GPU când este disponibilă și revine la randarea pe CPU în caz de erori.
+	CPU / Compatibility	CPU / Compatibilitate
+	Cancel Background Job	Anulează sarcina din fundal
+	Cancel opening	Anulează deschiderea
+	Cancelled opening {name}	Deschiderea fișierului {name} a fost anulată
+	Cancelled {label}	Anulat: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clic: selectează ancora · Glisare: mută ancora, mânerul sau segmentul · {shift}-clic: adaugă · {alt}-clic: întreaga subcale
+	Content-Aware Move	Mutare în funcție de conținut
+	Convert to Layers	Convertește în straturi
+	Copy Layers to Document	Copiază straturile în document
+	Couldn't place {name}: {error}	{name} nu a putut fi plasat: {error}
+	Delete Action	Șterge acțiunea
+	Details	Detalii
+	Disable Symmetry Path	Dezactivează calea de simetrie
+	Discard Layers and Save a Copy	Renunță la straturi și salvează o copie
+	Don't show again	Nu mai afișa
+	Drop Floating Selection	Fixează selecția flotantă
+	Edit Layer Style	Editează stilul stratului
+	Esc to cancel	Esc pentru anulare
+	Extend	Extindere
+	Float Selection	Transformă selecția în flotantă
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lasso de înghețare: trageți pentru a îngheța o zonă, Alt-tragere pentru a o dezgheța (L)
+	GPU Backend	Backend GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Accelerarea GPU nu a putut continua. Documentele dvs. nu au fost modificate.
+	Get Action	Obține acțiunea
+	Grid:	Grilă:
+	Hit-Test Type	Testare poziție în text
+	Including layers will increase file size.	Includerea straturilor va mări dimensiunea fișierului.
+	Invalid {mode} profile	Profil {mode} nevalid
+	Keep Using CPU	Continuă cu CPU
+	Lasso around an area, then drag the selection	Încercuiți o zonă cu lasso-ul, apoi trageți selecția
+	Layer Style Default	Stil implicit de strat
+	List Actions	Listează acțiunile
+	List Background Jobs	Listează sarcinile din fundal
+	Make Layer Style Default	Setează ca stil implicit de strat
+	Make Selection from Path	Creează selecție din cale
+	Make Symmetry Path	Creează cale de simetrie
+	Move	Mutare
+	Move Document	Mută documentul
+	Navigate Type	Navighează în text
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nu există nicio cale din care să se creeze o selecție: desenați una cu instrumentul Stilou sau selectați una în panoul Căi.
+	Opening {name}	Se deschide {name}
+	Opening {name}…	Se deschide {name}…
+	Opening…	Se deschide…
+	Patch	Petic
+	Patch:	Petic:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite folosește compozitorul de imagini pe CPU. Fereastra poate folosi în continuare placa grafică.
+	Play Action	Redă acțiunea
+	Reading…	Se citește…
+	Record Action	Înregistrează acțiunea
+	Rendering Mode	Mod de randare
+	Retry GPU	Reîncearcă GPU
+	Retry GPU requires a restart. Save your work first.	Reîncercarea GPU necesită o repornire. Salvați mai întâi lucrul.
+	Save cancelled	Salvare anulată
+	Save failed: {error}	Salvarea a eșuat: {error}
+	Stamp Down	Îmbină o copie în jos
+	Stamp Visible	Îmbină o copie a straturilor vizibile
+	Stop Recording	Oprește înregistrarea
+	Structure:	Structură:
+	Switched to CPU rendering	S-a trecut la randarea pe CPU
+	TIFF Options	Opțiuni TIFF
+	Type Caret	Cursor text
+	Unnamed {mode} profile	Profil {mode} fără nume
+	Warp Grid	Grilă de deformare
+	Working…	Se procesează…

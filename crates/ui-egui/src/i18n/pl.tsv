@@ -15,7 +15,7 @@
 	Edit	Edycja
 	Image	Obraz
 	Layer	Warstwa
-	Type	Typ
+	Type	Tekst
 	Select	Wybierz
 	Filter	Filtr
 	View	Widok
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Zaawansowane
+	Alt-click to define a source point to clone from	Kliknij z klawiszem Alt, aby określić punkt źródłowy do klonowania
+	Automatic (recommended)	Automatycznie (zalecane)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Tryb automatyczny korzysta z akceleracji GPU, gdy jest dostępna, a w razie błędów przełącza się na renderowanie przez CPU.
+	CPU / Compatibility	CPU / Zgodność
+	Cancel Background Job	Anuluj zadanie w tle
+	Cancel opening	Anuluj otwieranie
+	Cancelled opening {name}	Anulowano otwieranie {name}
+	Cancelled {label}	Anulowano: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Kliknięcie: zaznacz punkt zakotwiczenia · Przeciąganie: przesuń punkt zakotwiczenia, uchwyt lub segment · {shift}-kliknięcie: dodaj · {alt}-kliknięcie: cała ścieżka składowa
+	Content-Aware Move	Przesunięcie z uwzględnieniem zawartości
+	Convert to Layers	Konwertuj na warstwy
+	Copy Layers to Document	Kopiuj warstwy do dokumentu
+	Couldn't place {name}: {error}	Nie można umieścić {name}: {error}
+	Delete Action	Usuń operację
+	Details	Szczegóły
+	Disable Symmetry Path	Wyłącz ścieżkę symetrii
+	Discard Layers and Save a Copy	Odrzuć warstwy i zapisz kopię
+	Don't show again	Nie pokazuj ponownie
+	Drop Floating Selection	Zakotwicz pływające zaznaczenie
+	Edit Layer Style	Edytuj styl warstwy
+	Esc to cancel	Esc, aby anulować
+	Extend	Rozszerz
+	Float Selection	Utwórz pływające zaznaczenie
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lasso zamrażania: przeciągnij, aby zamrozić obszar, przeciągnij z Alt, aby go odmrozić (L)
+	GPU Backend	Zaplecze GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Akceleracja GPU nie mogła być kontynuowana. Twoje dokumenty pozostały bez zmian.
+	Get Action	Pobierz operację
+	Grid:	Siatka:
+	Hit-Test Type	Test trafienia tekstu
+	Including layers will increase file size.	Dołączenie warstw zwiększy rozmiar pliku.
+	Invalid {mode} profile	Nieprawidłowy profil {mode}
+	Keep Using CPU	Nadal używaj CPU
+	Lasso around an area, then drag the selection	Obrysuj obszar lassem, a następnie przeciągnij zaznaczenie
+	Layer Style Default	Domyślny styl warstwy
+	List Actions	Lista operacji
+	List Background Jobs	Lista zadań w tle
+	Make Layer Style Default	Ustaw styl warstwy jako domyślny
+	Make Selection from Path	Utwórz zaznaczenie ze ścieżki
+	Make Symmetry Path	Utwórz ścieżkę symetrii
+	Move	Przesunięcie
+	Move Document	Przenieś dokument
+	Navigate Type	Nawigacja w tekście
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Brak ścieżki, z której można utworzyć zaznaczenie: narysuj ją narzędziem Pióro lub zaznacz ją w panelu Ścieżki.
+	Opening {name}	Otwieranie {name}
+	Opening {name}…	Otwieranie {name}…
+	Opening…	Otwieranie…
+	Patch	Łatka
+	Patch:	Łatka:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite składa obraz za pomocą CPU. Okno może nadal korzystać z karty graficznej.
+	Play Action	Odtwórz operację
+	Reading…	Wczytywanie…
+	Record Action	Nagraj operację
+	Rendering Mode	Tryb renderowania
+	Retry GPU	Ponów próbę GPU
+	Retry GPU requires a restart. Save your work first.	Ponowna próba GPU wymaga ponownego uruchomienia. Najpierw zapisz swoją pracę.
+	Save cancelled	Anulowano zapisywanie
+	Save failed: {error}	Zapisywanie nie powiodło się: {error}
+	Stamp Down	Stempluj w dół
+	Stamp Visible	Stempluj widoczne
+	Stop Recording	Zatrzymaj nagrywanie
+	Structure:	Struktura:
+	Switched to CPU rendering	Przełączono na renderowanie przez CPU
+	TIFF Options	Opcje TIFF
+	Type Caret	Kursor tekstowy
+	Unnamed {mode} profile	Nienazwany profil {mode}
+	Warp Grid	Siatka wypaczenia
+	Working…	Przetwarzanie…

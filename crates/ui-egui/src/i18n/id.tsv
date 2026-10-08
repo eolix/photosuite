@@ -15,7 +15,7 @@
 	Edit	Ubah
 	Image	Gambar
 	Layer	Lapisan
-	Type	Tipe
+	Type	Teks
 	Select	Pilih
 	Filter	Penyaring
 	View	Tampilan
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Lanjutan
+	Alt-click to define a source point to clone from	Alt-klik untuk menentukan titik sumber yang akan dikloning
+	Automatic (recommended)	Otomatis (disarankan)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Mode otomatis menggunakan akselerasi GPU jika tersedia dan beralih ke perenderan CPU jika terjadi kesalahan.
+	CPU / Compatibility	CPU / Kompatibilitas
+	Cancel Background Job	Batalkan Tugas Latar Belakang
+	Cancel opening	Batalkan pembukaan
+	Cancelled opening {name}	Pembukaan {name} dibatalkan
+	Cancelled {label}	Dibatalkan: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klik: pilih titik jangkar · Seret: pindahkan titik jangkar, pegangan, atau segmen · {shift}-klik: tambah · {alt}-klik: seluruh subjalur
+	Content-Aware Move	Pindah Sadar Konten
+	Convert to Layers	Konversi ke Lapisan
+	Copy Layers to Document	Salin Lapisan ke Dokumen
+	Couldn't place {name}: {error}	Tidak dapat menempatkan {name}: {error}
+	Delete Action	Hapus Aksi
+	Details	Detail
+	Disable Symmetry Path	Nonaktifkan Jalur Simetri
+	Discard Layers and Save a Copy	Buang Lapisan dan Simpan Salinan
+	Don't show again	Jangan tampilkan lagi
+	Drop Floating Selection	Lepaskan Seleksi Mengambang
+	Edit Layer Style	Edit Gaya Lapisan
+	Esc to cancel	Esc untuk membatalkan
+	Extend	Perluas
+	Float Selection	Jadikan Seleksi Mengambang
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Laso Pembeku: seret untuk membekukan area, Alt-seret untuk mencairkannya (L)
+	GPU Backend	Backend GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Akselerasi GPU tidak dapat dilanjutkan. Dokumen Anda tidak berubah.
+	Get Action	Ambil Aksi
+	Grid:	Kisi:
+	Hit-Test Type	Uji Sentuh Teks
+	Including layers will increase file size.	Menyertakan lapisan akan memperbesar ukuran file.
+	Invalid {mode} profile	Profil {mode} tidak valid
+	Keep Using CPU	Tetap Gunakan CPU
+	Lasso around an area, then drag the selection	Lingkari area dengan laso, lalu seret seleksinya
+	Layer Style Default	Gaya Lapisan Bawaan
+	List Actions	Daftar Aksi
+	List Background Jobs	Daftar Tugas Latar Belakang
+	Make Layer Style Default	Jadikan Gaya Lapisan Bawaan
+	Make Selection from Path	Buat Seleksi dari Jalur
+	Make Symmetry Path	Buat Jalur Simetri
+	Move	Pindahkan
+	Move Document	Pindahkan Dokumen
+	Navigate Type	Navigasi Teks
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Tidak ada jalur untuk membuat seleksi: gambar satu dengan alat Pena atau pilih satu di panel Jalur.
+	Opening {name}	Membuka {name}
+	Opening {name}…	Membuka {name}…
+	Opening…	Membuka…
+	Patch	Tambal
+	Patch:	Tambal:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite menggunakan kompositor gambar CPU. Jendela mungkin tetap menggunakan adaptor grafis Anda.
+	Play Action	Putar Aksi
+	Reading…	Membaca…
+	Record Action	Rekam Aksi
+	Rendering Mode	Modus Perenderan
+	Retry GPU	Coba GPU Lagi
+	Retry GPU requires a restart. Save your work first.	Mencoba GPU lagi memerlukan mulai ulang. Simpan pekerjaan Anda terlebih dahulu.
+	Save cancelled	Penyimpanan dibatalkan
+	Save failed: {error}	Gagal menyimpan: {error}
+	Stamp Down	Cap ke Bawah
+	Stamp Visible	Cap yang Terlihat
+	Stop Recording	Hentikan Perekaman
+	Structure:	Struktur:
+	Switched to CPU rendering	Beralih ke perenderan CPU
+	TIFF Options	Opsi TIFF
+	Type Caret	Kursor Teks
+	Unnamed {mode} profile	Profil {mode} tanpa nama
+	Warp Grid	Kisi Lengkungan
+	Working…	Memproses…

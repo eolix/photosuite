@@ -15,7 +15,7 @@
 	Edit	ערוך
 	Image	תמונה
 	Layer	שכבה
-	Type	הקלד
+	Type	טקסט
 	Select	בחר
 	Filter	מסנן
 	View	תצוגה
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	מתקדם
+	Alt-click to define a source point to clone from	לחץ עם Alt כדי להגדיר נקודת מקור לשיבוט
+	Automatic (recommended)	אוטומטי (מומלץ)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	במצב אוטומטי נעשה שימוש בהאצת GPU כשהיא זמינה, ובמקרה של שגיאות מתבצע מעבר לעיבוד ב-CPU.
+	CPU / Compatibility	CPU / תאימות
+	Cancel Background Job	בטל משימת רקע
+	Cancel opening	בטל פתיחה
+	Cancelled opening {name}	פתיחת {name} בוטלה
+	Cancelled {label}	{label} בוטל
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	לחיצה: בחירת עוגן · גרירה: הזזת עוגן, ידית או מקטע · {shift}-לחיצה: הוספה · {alt}-לחיצה: כל תת-השביל
+	Content-Aware Move	הזזה מודעת לתוכן
+	Convert to Layers	המר לשכבות
+	Copy Layers to Document	העתק שכבות למסמך
+	Couldn't place {name}: {error}	לא ניתן היה למקם את {name}: {error}
+	Delete Action	מחק פעולה
+	Details	פרטים
+	Disable Symmetry Path	השבת שביל סימטריה
+	Discard Layers and Save a Copy	השלך שכבות ושמור עותק
+	Don't show again	אל תציג שוב
+	Drop Floating Selection	הנח בחירה צפה
+	Edit Layer Style	ערוך סגנון שכבה
+	Esc to cancel	Esc לביטול
+	Extend	הרחבה
+	Float Selection	הצף בחירה
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	לאסו הקפאה: גרור כדי להקפיא אזור, גרור עם Alt כדי להפשיר אותו (L)
+	GPU Backend	מנגנון GPU
+	GPU acceleration could not continue. Your documents are unchanged.	האצת GPU לא יכלה להמשיך. המסמכים שלך לא השתנו.
+	Get Action	קבל פעולה
+	Grid:	רשת:
+	Hit-Test Type	בדיקת פגיעה בטקסט
+	Including layers will increase file size.	הכללת שכבות תגדיל את גודל הקובץ.
+	Invalid {mode} profile	פרופיל {mode} לא חוקי
+	Keep Using CPU	המשך להשתמש ב-CPU
+	Lasso around an area, then drag the selection	הקף אזור בלאסו, ולאחר מכן גרור את הבחירה
+	Layer Style Default	ברירת מחדל של סגנון שכבה
+	List Actions	הצג פעולות
+	List Background Jobs	הצג משימות רקע
+	Make Layer Style Default	הגדר כברירת מחדל של סגנון שכבה
+	Make Selection from Path	צור בחירה משביל
+	Make Symmetry Path	צור שביל סימטריה
+	Move	הזזה
+	Move Document	הזז מסמך
+	Navigate Type	ניווט בטקסט
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	אין שביל ליצירת בחירה: צייר שביל בכלי העט או בחר שביל בחלונית השבילים.
+	Opening {name}	פותח את {name}
+	Opening {name}…	פותח את {name}…
+	Opening…	פותח…
+	Patch	טלאי
+	Patch:	טלאי:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite משתמש במרכיב התמונה של ה-CPU. ייתכן שהחלון עדיין ישתמש במתאם הגרפי שלך.
+	Play Action	הפעל פעולה
+	Reading…	קורא…
+	Record Action	הקלט פעולה
+	Rendering Mode	מצב עיבוד
+	Retry GPU	נסה שוב עם GPU
+	Retry GPU requires a restart. Save your work first.	ניסיון חוזר עם GPU מחייב הפעלה מחדש. שמור את עבודתך תחילה.
+	Save cancelled	השמירה בוטלה
+	Save failed: {error}	השמירה נכשלה: {error}
+	Stamp Down	החתם למטה
+	Stamp Visible	החתם גלויים
+	Stop Recording	עצור הקלטה
+	Structure:	מבנה:
+	Switched to CPU rendering	עבר לעיבוד ב-CPU
+	TIFF Options	אפשרויות TIFF
+	Type Caret	סמן טקסט
+	Unnamed {mode} profile	פרופיל {mode} ללא שם
+	Warp Grid	רשת עיוות
+	Working…	עובד…

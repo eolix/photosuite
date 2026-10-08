@@ -15,7 +15,7 @@
 	Edit	Bewerken
 	Image	Afbeelding
 	Layer	Laag
-	Type	Type
+	Type	Tekst
 	Select	Selecteren
 	Filter	Filter
 	View	Beeld
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Geavanceerd
+	Alt-click to define a source point to clone from	Alt-klik om een bronpunt te bepalen om van te klonen
+	Automatic (recommended)	Automatisch (aanbevolen)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatisch gebruikt GPU-versnelling wanneer die beschikbaar is en schakelt bij fouten terug naar CPU-weergave.
+	CPU / Compatibility	CPU / Compatibiliteit
+	Cancel Background Job	Achtergrondtaak annuleren
+	Cancel opening	Openen annuleren
+	Cancelled opening {name}	Openen van {name} geannuleerd
+	Cancelled {label}	{label} geannuleerd
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klik: ankerpunt selecteren · Slepen: ankerpunt, greep of segment verplaatsen · {shift}-klik: toevoegen · {alt}-klik: volledig subpad
+	Content-Aware Move	Inhoudsbewust verplaatsen
+	Convert to Layers	Converteren naar lagen
+	Copy Layers to Document	Lagen naar document kopiëren
+	Couldn't place {name}: {error}	Kan {name} niet plaatsen: {error}
+	Delete Action	Actie verwijderen
+	Details	Details
+	Disable Symmetry Path	Symmetriepad uitschakelen
+	Discard Layers and Save a Copy	Lagen verwijderen en een kopie opslaan
+	Don't show again	Niet meer weergeven
+	Drop Floating Selection	Zwevende selectie neerzetten
+	Edit Layer Style	Laagstijl bewerken
+	Esc to cancel	Esc om te annuleren
+	Extend	Uitbreiden
+	Float Selection	Selectie laten zweven
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Bevriezingslasso: sleep om een gebied te bevriezen, Alt-slepen om het te ontdooien (L)
+	GPU Backend	GPU-backend
+	GPU acceleration could not continue. Your documents are unchanged.	GPU-versnelling kon niet doorgaan. Uw documenten zijn ongewijzigd.
+	Get Action	Actie ophalen
+	Grid:	Raster:
+	Hit-Test Type	Treffertest tekst
+	Including layers will increase file size.	Het opnemen van lagen vergroot het bestand.
+	Invalid {mode} profile	Ongeldig {mode}-profiel
+	Keep Using CPU	CPU blijven gebruiken
+	Lasso around an area, then drag the selection	Omlijn een gebied met de lasso en sleep dan de selectie
+	Layer Style Default	Standaard laagstijl
+	List Actions	Acties weergeven
+	List Background Jobs	Achtergrondtaken weergeven
+	Make Layer Style Default	Laagstijl als standaard instellen
+	Make Selection from Path	Selectie maken van pad
+	Make Symmetry Path	Symmetriepad maken
+	Move	Verplaatsen
+	Move Document	Document verplaatsen
+	Navigate Type	Navigeren in tekst
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Geen pad om een selectie van te maken: teken er een met het pengereedschap of selecteer er een in het deelvenster Paden.
+	Opening {name}	{name} wordt geopend
+	Opening {name}…	{name} wordt geopend…
+	Opening…	Openen…
+	Patch	Repareren
+	Patch:	Repareren:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite gebruikt de CPU-beeldcompositor. Het venster kan nog steeds uw grafische adapter gebruiken.
+	Play Action	Actie afspelen
+	Reading…	Lezen…
+	Record Action	Actie opnemen
+	Rendering Mode	Weergavemodus
+	Retry GPU	GPU opnieuw proberen
+	Retry GPU requires a restart. Save your work first.	GPU opnieuw proberen vereist een herstart. Sla eerst uw werk op.
+	Save cancelled	Opslaan geannuleerd
+	Save failed: {error}	Opslaan mislukt: {error}
+	Stamp Down	Omlaag stempelen
+	Stamp Visible	Zichtbare stempelen
+	Stop Recording	Opname stoppen
+	Structure:	Structuur:
+	Switched to CPU rendering	Overgeschakeld naar CPU-weergave
+	TIFF Options	TIFF-opties
+	Type Caret	Tekstcursor
+	Unnamed {mode} profile	Naamloos {mode}-profiel
+	Warp Grid	Verdraaiingsraster
+	Working…	Bezig…

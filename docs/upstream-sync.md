@@ -49,6 +49,11 @@ Never applied automatically (listed after the port for a person to look at):
   taken.
 - **No translations**: upstream's catalogues, languages and i18n code are never taken; PhotoSuite
   manages its own. Translation commits are skipped.
+- **New UI strings are translated here**: when ported code adds UI text (`tl!` literals, menu
+  labels and paths, command labels), the session doing the sync translates every new line into
+  every supported language (all `LANGUAGES` but English) from the English meaning, without looking
+  at upstream's catalogues, and appends the rows to each `crates/ui-egui/src/i18n/*.tsv` in the
+  same batch. `{name}` placeholders, the trailing "…" and product names stay as they are.
 
 ## Procedure (for the session doing the sync)
 

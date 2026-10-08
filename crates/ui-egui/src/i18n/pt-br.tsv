@@ -15,7 +15,7 @@
 	Edit	Editar
 	Image	Imagem
 	Layer	Camada
-	Type	Tipo
+	Type	Texto
 	Select	Selecionar
 	Filter	Filtro
 	View	Visualizar
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avançado
+	Alt-click to define a source point to clone from	Alt-clique para definir um ponto de origem para clonar
+	Automatic (recommended)	Automático (recomendado)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	O modo automático usa a aceleração por GPU quando disponível e recorre à renderização por CPU em caso de erro.
+	CPU / Compatibility	CPU / Compatibilidade
+	Cancel Background Job	Cancelar tarefa em segundo plano
+	Cancel opening	Cancelar abertura
+	Cancelled opening {name}	Abertura de {name} cancelada
+	Cancelled {label}	Cancelado: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clique: selecionar âncora · Arrastar: mover âncora, alça ou segmento · {shift}-clique: adicionar · {alt}-clique: subdemarcador inteiro
+	Content-Aware Move	Mover com reconhecimento de conteúdo
+	Convert to Layers	Converter em camadas
+	Copy Layers to Document	Copiar camadas para o documento
+	Couldn't place {name}: {error}	Não foi possível inserir {name}: {error}
+	Delete Action	Excluir ação
+	Details	Detalhes
+	Disable Symmetry Path	Desativar demarcador de simetria
+	Discard Layers and Save a Copy	Descartar camadas e salvar uma cópia
+	Don't show again	Não mostrar novamente
+	Drop Floating Selection	Soltar seleção flutuante
+	Edit Layer Style	Editar estilo de camada
+	Esc to cancel	Esc para cancelar
+	Extend	Estender
+	Float Selection	Tornar seleção flutuante
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Laço de congelamento: arraste para congelar uma área, Alt-arrastar para descongelá-la (L)
+	GPU Backend	Back-end da GPU
+	GPU acceleration could not continue. Your documents are unchanged.	A aceleração por GPU não pôde continuar. Seus documentos não foram alterados.
+	Get Action	Obter ação
+	Grid:	Grade:
+	Hit-Test Type	Teste de posição no texto
+	Including layers will increase file size.	Incluir as camadas aumentará o tamanho do arquivo.
+	Invalid {mode} profile	Perfil {mode} inválido
+	Keep Using CPU	Continuar usando a CPU
+	Lasso around an area, then drag the selection	Contorne uma área com o laço e depois arraste a seleção
+	Layer Style Default	Estilo de camada padrão
+	List Actions	Listar ações
+	List Background Jobs	Listar tarefas em segundo plano
+	Make Layer Style Default	Tornar estilo de camada padrão
+	Make Selection from Path	Criar seleção a partir do demarcador
+	Make Symmetry Path	Criar demarcador de simetria
+	Move	Mover
+	Move Document	Mover documento
+	Navigate Type	Navegar pelo texto
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Não há demarcador para criar uma seleção: desenhe um com a ferramenta Caneta ou selecione um no painel Demarcadores.
+	Opening {name}	Abrindo {name}
+	Opening {name}…	Abrindo {name}…
+	Opening…	Abrindo…
+	Patch	Correção
+	Patch:	Correção:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	O PhotoSuite está usando o compositor de imagens da CPU. A janela ainda pode usar sua placa de vídeo.
+	Play Action	Reproduzir ação
+	Reading…	Lendo…
+	Record Action	Gravar ação
+	Rendering Mode	Modo de renderização
+	Retry GPU	Tentar GPU novamente
+	Retry GPU requires a restart. Save your work first.	Tentar a GPU novamente requer reinicialização. Salve seu trabalho primeiro.
+	Save cancelled	Salvamento cancelado
+	Save failed: {error}	Falha ao salvar: {error}
+	Stamp Down	Mesclar uma cópia para baixo
+	Stamp Visible	Mesclar uma cópia dos visíveis
+	Stop Recording	Parar gravação
+	Structure:	Estrutura:
+	Switched to CPU rendering	Alternado para renderização por CPU
+	TIFF Options	Opções de TIFF
+	Type Caret	Cursor de texto
+	Unnamed {mode} profile	Perfil {mode} sem nome
+	Warp Grid	Grade de deformação
+	Working…	Processando…

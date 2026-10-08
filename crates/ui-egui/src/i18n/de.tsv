@@ -15,7 +15,7 @@
 	Edit	Bearbeiten
 	Image	Bild
 	Layer	Ebene
-	Type	Typ
+	Type	Schrift
 	Select	Auswahl
 	Filter	Filter
 	View	Ansicht
@@ -1966,3 +1966,74 @@
 	175%	175 %
 	250%	250 %
 	300%	300 %
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Erweitert
+	Alt-click to define a source point to clone from	Alt-Klick, um einen Quellpunkt zum Klonen festzulegen
+	Automatic (recommended)	Automatisch (empfohlen)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatisch nutzt die GPU-Beschleunigung, sofern verfügbar, und wechselt bei Fehlern zur CPU-Darstellung.
+	CPU / Compatibility	CPU / Kompatibilität
+	Cancel Background Job	Hintergrundauftrag abbrechen
+	Cancel opening	Öffnen abbrechen
+	Cancelled opening {name}	Öffnen von {name} abgebrochen
+	Cancelled {label}	{label} abgebrochen
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Klick: Ankerpunkt auswählen · Ziehen: Ankerpunkt, Griff oder Segment verschieben · {shift}-Klick: hinzufügen · {alt}-Klick: ganzer Unterpfad
+	Content-Aware Move	Inhaltsbasiert verschieben
+	Convert to Layers	In Ebenen konvertieren
+	Copy Layers to Document	Ebenen in Dokument kopieren
+	Couldn't place {name}: {error}	{name} konnte nicht platziert werden: {error}
+	Delete Action	Aktion löschen
+	Details	Details
+	Disable Symmetry Path	Symmetriepfad deaktivieren
+	Discard Layers and Save a Copy	Ebenen verwerfen und Kopie speichern
+	Don't show again	Nicht mehr anzeigen
+	Drop Floating Selection	Schwebende Auswahl ablegen
+	Edit Layer Style	Ebenenstil bearbeiten
+	Esc to cancel	Esc zum Abbrechen
+	Extend	Erweitern
+	Float Selection	Schwebende Auswahl erstellen
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Fixierungslasso: Ziehen, um einen Bereich zu fixieren, Alt-Ziehen, um ihn zu lösen (L)
+	GPU Backend	GPU-Backend
+	GPU acceleration could not continue. Your documents are unchanged.	Die GPU-Beschleunigung konnte nicht fortgesetzt werden. Ihre Dokumente sind unverändert.
+	Get Action	Aktion abrufen
+	Grid:	Raster:
+	Hit-Test Type	Treffertest für Text
+	Including layers will increase file size.	Das Einbeziehen von Ebenen vergrößert die Datei.
+	Invalid {mode} profile	Ungültiges {mode}-Profil
+	Keep Using CPU	Weiter CPU verwenden
+	Lasso around an area, then drag the selection	Einen Bereich mit dem Lasso umfahren, dann die Auswahl ziehen
+	Layer Style Default	Ebenenstil-Standard
+	List Actions	Aktionen auflisten
+	List Background Jobs	Hintergrundaufträge auflisten
+	Make Layer Style Default	Ebenenstil als Standard festlegen
+	Make Selection from Path	Auswahl aus Pfad erstellen
+	Make Symmetry Path	Symmetriepfad erstellen
+	Move	Verschieben
+	Move Document	Dokument verschieben
+	Navigate Type	Im Text navigieren
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Kein Pfad, aus dem eine Auswahl erstellt werden kann: Zeichnen Sie einen mit dem Stiftwerkzeug oder wählen Sie einen im Pfade-Bedienfeld aus.
+	Opening {name}	{name} wird geöffnet
+	Opening {name}…	{name} wird geöffnet…
+	Opening…	Wird geöffnet…
+	Patch	Ausbessern
+	Patch:	Ausbessern:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite verwendet den CPU-Bildcompositor. Das Fenster nutzt möglicherweise weiterhin Ihren Grafikadapter.
+	Play Action	Aktion ausführen
+	Reading…	Wird gelesen…
+	Record Action	Aktion aufzeichnen
+	Rendering Mode	Darstellungsmodus
+	Retry GPU	GPU erneut versuchen
+	Retry GPU requires a restart. Save your work first.	GPU erneut versuchen erfordert einen Neustart. Speichern Sie zuerst Ihre Arbeit.
+	Save cancelled	Speichern abgebrochen
+	Save failed: {error}	Speichern fehlgeschlagen: {error}
+	Stamp Down	Nach unten stempeln
+	Stamp Visible	Sichtbare stempeln
+	Stop Recording	Aufzeichnung beenden
+	Structure:	Struktur:
+	Switched to CPU rendering	Zur CPU-Darstellung gewechselt
+	TIFF Options	TIFF-Optionen
+	Type Caret	Text-Einfügemarke
+	Unnamed {mode} profile	Unbenanntes {mode}-Profil
+	Warp Grid	Verkrümmungsraster
+	Working…	Wird verarbeitet…

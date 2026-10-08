@@ -15,7 +15,7 @@
 	Edit	தொகு
 	Image	படம்
 	Layer	அடுக்கு
-	Type	வகை
+	Type	உரை
 	Select	தெரிவு செய்
 	Filter	வடிகட்டு
 	View	காட்சி
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	மேம்பட்டவை
+	Alt-click to define a source point to clone from	குளோன் செய்வதற்கான மூலப் புள்ளியை வரையறுக்க Alt-கிளிக் செய்யவும்
+	Automatic (recommended)	தானியங்கு (பரிந்துரைக்கப்படுகிறது)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	தானியங்கு பயன்முறை கிடைக்கும்போது GPU முடுக்கத்தைப் பயன்படுத்துகிறது, பிழைகள் ஏற்பட்டால் CPU ரெண்டரிங்கிற்கு மாறுகிறது.
+	CPU / Compatibility	CPU / இணக்கத்தன்மை
+	Cancel Background Job	பின்னணிப் பணியை ரத்து செய்
+	Cancel opening	திறப்பதை ரத்து செய்
+	Cancelled opening {name}	{name} திறப்பது ரத்து செய்யப்பட்டது
+	Cancelled {label}	{label} ரத்து செய்யப்பட்டது
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	கிளிக்: நங்கூரத்தைத் தேர்ந்தெடு · இழு: நங்கூரம், கைப்பிடி அல்லது பகுதியை நகர்த்து · {shift}-கிளிக்: சேர் · {alt}-கிளிக்: முழு துணைப்பாதை
+	Content-Aware Move	உள்ளடக்க விழிப்பு நகர்த்தல்
+	Convert to Layers	அடுக்குகளாக மாற்று
+	Copy Layers to Document	அடுக்குகளை ஆவணத்திற்கு நகலெடு
+	Couldn't place {name}: {error}	{name} ஐ வைக்க முடியவில்லை: {error}
+	Delete Action	செயலை நீக்கு
+	Details	விவரங்கள்
+	Disable Symmetry Path	சமச்சீர் பாதையை முடக்கு
+	Discard Layers and Save a Copy	அடுக்குகளை நீக்கிவிட்டு நகலைச் சேமி
+	Don't show again	மீண்டும் காட்ட வேண்டாம்
+	Drop Floating Selection	மிதக்கும் தேர்வை இறக்கு
+	Edit Layer Style	அடுக்கு பாங்கைத் தொகு
+	Esc to cancel	ரத்து செய்ய Esc
+	Extend	விரிவாக்கு
+	Float Selection	தேர்வை மிதக்கச் செய்
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	உறைய வைக்கும் லாஸ்ஸோ: ஒரு பகுதியை உறைய வைக்க இழுக்கவும், உருக வைக்க Alt-இழுக்கவும் (L)
+	GPU Backend	GPU பின்தளம்
+	GPU acceleration could not continue. Your documents are unchanged.	GPU முடுக்கம் தொடர முடியவில்லை. உங்கள் ஆவணங்கள் மாற்றப்படவில்லை.
+	Get Action	செயலைப் பெறு
+	Grid:	கோட்டு சட்டம்:
+	Hit-Test Type	உரை ஹிட்-சோதனை
+	Including layers will increase file size.	அடுக்குகளைச் சேர்ப்பது கோப்பு அளவை அதிகரிக்கும்.
+	Invalid {mode} profile	தவறான {mode} சுயவிவரம்
+	Keep Using CPU	CPU-ஐயே தொடர்ந்து பயன்படுத்து
+	Lasso around an area, then drag the selection	ஒரு பகுதியைச் சுற்றி லாஸ்ஸோ வரைந்து, பின்னர் தேர்வை இழுக்கவும்
+	Layer Style Default	இயல்புநிலை அடுக்கு பாங்கு
+	List Actions	செயல்களைப் பட்டியலிடு
+	List Background Jobs	பின்னணிப் பணிகளைப் பட்டியலிடு
+	Make Layer Style Default	அடுக்கு பாங்கை இயல்புநிலையாக்கு
+	Make Selection from Path	பாதையிலிருந்து தேர்வை உருவாக்கு
+	Make Symmetry Path	சமச்சீர் பாதையை உருவாக்கு
+	Move	நகர்த்து
+	Move Document	ஆவணத்தை நகர்த்து
+	Navigate Type	உரையில் வழிசெலுத்து
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	தேர்வை உருவாக்கப் பாதை இல்லை: பேனா கருவியால் ஒன்றை வரையவும் அல்லது பாதைகள் பலகத்தில் ஒன்றைத் தேர்ந்தெடுக்கவும்.
+	Opening {name}	{name} திறக்கப்படுகிறது
+	Opening {name}…	{name} திறக்கப்படுகிறது…
+	Opening…	திறக்கப்படுகிறது…
+	Patch	ஒட்டுத்துண்டு
+	Patch:	ஒட்டுத்துண்டு:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite CPU பட ஒருங்கிணைப்பியைப் பயன்படுத்துகிறது. சாளரம் இன்னும் உங்கள் கிராஃபிக்ஸ் அடாப்டரைப் பயன்படுத்தக்கூடும்.
+	Play Action	செயலை இயக்கு
+	Reading…	படிக்கப்படுகிறது…
+	Record Action	செயலைப் பதிவுசெய்
+	Rendering Mode	ரெண்டரிங் பயன்முறை
+	Retry GPU	GPU-ஐ மீண்டும் முயல்
+	Retry GPU requires a restart. Save your work first.	GPU-ஐ மீண்டும் முயல மறுதொடக்கம் தேவை. முதலில் உங்கள் வேலையைச் சேமிக்கவும்.
+	Save cancelled	சேமிப்பு ரத்து செய்யப்பட்டது
+	Save failed: {error}	சேமிப்பு தோல்வியடைந்தது: {error}
+	Stamp Down	கீழே முத்திரையிடு
+	Stamp Visible	காணும் அடுக்குகளை முத்திரையிடு
+	Stop Recording	பதிவுசெய்வதை நிறுத்து
+	Structure:	கட்டமைப்பு:
+	Switched to CPU rendering	CPU ரெண்டரிங்கிற்கு மாற்றப்பட்டது
+	TIFF Options	TIFF விருப்பங்கள்
+	Type Caret	உரை சுட்டுக்குறி
+	Unnamed {mode} profile	பெயரிடப்படாத {mode} சுயவிவரம்
+	Warp Grid	உருமாற்றக் கோட்டு சட்டம்
+	Working…	செயல்படுகிறது…

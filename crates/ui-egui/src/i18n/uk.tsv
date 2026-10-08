@@ -15,7 +15,7 @@
 	Edit	Редагувати
 	Image	Зображення
 	Layer	Шар
-	Type	Тип
+	Type	Текст
 	Select	Виділити
 	Filter	Фільтр
 	View	Перегляд
@@ -1879,7 +1879,7 @@
 	More panels	Більше панелей
 	These settings aren't available in PhotoSuite yet.	Ці налаштування поки що недоступні у PhotoSuite
 	Graphics	Графіка
-	Reset GPU Backend	Скинути GPU Backend
+	Reset GPU Backend	Скинути бекенд GPU
 	Applies at next launch.	Застосовується під час наступного запуску
 	Click to sample the foreground colour  ·  {key}-click for background	Клацніть, щоб зразок кольору переднього плану · {key}-клацніть для фону
 	{key}-click to set the source	{key}-клацніть, щоб встановити джерело
@@ -1944,7 +1944,7 @@
 	Delete vector mask	Видалити векторну маску
 	CPU (no GPU acceleration)	ЦП (без прискорення GPU)
 	DirectX 12	DirectX 12
-	GPU backend	Сервер GPU
+	GPU backend	Бекенд GPU
 	Metal	метал
 	OpenGL	OpenGL
 	Use tablet pressure	Використовуйте тиск таблетки
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Додатково
+	Alt-click to define a source point to clone from	Клацніть, утримуючи Alt, щоб визначити вихідну точку для клонування
+	Automatic (recommended)	Автоматично (рекомендовано)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Автоматичний режим використовує прискорення GPU, коли воно доступне, і в разі помилок переходить на відтворення засобами CPU.
+	CPU / Compatibility	CPU / Сумісність
+	Cancel Background Job	Скасувати фонове завдання
+	Cancel opening	Скасувати відкриття
+	Cancelled opening {name}	Відкриття {name} скасовано
+	Cancelled {label}	Скасовано: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Клацання: вибрати опорну точку · Перетягування: перемістити опорну точку, маркер або сегмент · {shift}-клацання: додати · {alt}-клацання: увесь субконтур
+	Content-Aware Move	Переміщення з урахуванням вмісту
+	Convert to Layers	Перетворити на шари
+	Copy Layers to Document	Копіювати шари в документ
+	Couldn't place {name}: {error}	Не вдалося розмістити {name}: {error}
+	Delete Action	Видалити дію
+	Details	Подробиці
+	Disable Symmetry Path	Вимкнути контур симетрії
+	Discard Layers and Save a Copy	Відкинути шари й зберегти копію
+	Don't show again	Більше не показувати
+	Drop Floating Selection	Закріпити плаваюче виділення
+	Edit Layer Style	Редагувати стиль шару
+	Esc to cancel	Esc — скасувати
+	Extend	Розширення
+	Float Selection	Зробити виділення плаваючим
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Ласо заморожування: перетягніть, щоб заморозити ділянку, перетягніть з Alt, щоб розморозити її (L)
+	GPU Backend	Бекенд GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Не вдалося продовжити роботу з прискоренням GPU. Ваші документи не змінено.
+	Get Action	Отримати дію
+	Grid:	Сітка:
+	Hit-Test Type	Перевірка влучання в текст
+	Including layers will increase file size.	Включення шарів збільшить розмір файлу.
+	Invalid {mode} profile	Недійсний профіль {mode}
+	Keep Using CPU	Продовжити з CPU
+	Lasso around an area, then drag the selection	Обведіть ділянку ласо, а потім перетягніть виділення
+	Layer Style Default	Стиль шару за замовчуванням
+	List Actions	Список дій
+	List Background Jobs	Список фонових завдань
+	Make Layer Style Default	Встановити стиль шару за замовчуванням
+	Make Selection from Path	Створити виділення з контуру
+	Make Symmetry Path	Створити контур симетрії
+	Move	Переміщення
+	Move Document	Перемістити документ
+	Navigate Type	Навігація текстом
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Немає контуру для створення виділення: намалюйте його інструментом «Перо» або виберіть на панелі «Контури».
+	Opening {name}	Відкриття {name}
+	Opening {name}…	Відкриття {name}…
+	Opening…	Відкриття…
+	Patch	Латка
+	Patch:	Латка:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite використовує компонувальник зображень на CPU. Вікно все ще може використовувати ваш графічний адаптер.
+	Play Action	Відтворити дію
+	Reading…	Читання…
+	Record Action	Записати дію
+	Rendering Mode	Режим відображення
+	Retry GPU	Повторити спробу з GPU
+	Retry GPU requires a restart. Save your work first.	Для повторної спроби з GPU потрібен перезапуск. Спершу збережіть свою роботу.
+	Save cancelled	Збереження скасовано
+	Save failed: {error}	Не вдалося зберегти: {error}
+	Stamp Down	Штампувати вниз
+	Stamp Visible	Штампувати видимі
+	Stop Recording	Зупинити запис
+	Structure:	Структура:
+	Switched to CPU rendering	Перемкнено на відтворення засобами CPU
+	TIFF Options	Параметри TIFF
+	Type Caret	Текстовий курсор
+	Unnamed {mode} profile	Профіль {mode} без назви
+	Warp Grid	Сітка деформації
+	Working…	Виконується…

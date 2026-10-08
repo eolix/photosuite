@@ -15,7 +15,7 @@
 	Edit	བཟོ་སྒྲིག
 	Image	དཔར།
 	Layer	ངོས།
-	Type	བཏགས།
+	Type	ཡི་གེ
 	Select	འདེམས།
 	Filter	ཚགས།
 	View	ལྟ་སྣང་།
@@ -1966,3 +1966,74 @@
 	175%	175%།
 	250%	250%།
 	300%	300%།
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	མཐོ་རིམ།
+	Alt-click to define a source point to clone from	Alt-སྣུན་ནས་འདྲ་བཤུས་བྱ་རྒྱུའི་འབྱུང་ཁུངས་ས་ཚིགས་གཏན་འཁེལ་བྱེད།
+	Automatic (recommended)	རང་འགུལ། (འོས་སྦྱོར།)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	རང་འགུལ་གྱིས་ GPU མགྱོགས་སྣོན་ཡོད་ཚེ་དེ་བེད་སྤྱོད་བྱེད་ཅིང་། ནོར་འཁྲུལ་བྱུང་ཚེ་ CPU འཁོར་སྐྱོད་ལ་བརྗེ་སྒྱུར་བྱེད།
+	CPU / Compatibility	CPU / མཐུན་ཚད།
+	Cancel Background Job	རྒྱབ་ལོགས་ཀྱི་ལས་འགན་ཆ་མེད་གཏོང་།
+	Cancel opening	ཁ་འབྱེད་ཆ་མེད་གཏོང་།
+	Cancelled opening {name}	{name} ཁ་འབྱེད་ཆ་མེད་བཏང་ཟིན།
+	Cancelled {label}	{label} ཆ་མེད་བཏང་ཟིན།
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	སྣུན། བརྟན་ཚེག་འདེམས། · འདྲུད། བརྟན་ཚེག་དང་ལག་འཛིན་ཡང་ན་ཐིག་དུམ་སྤོ་བ། · {shift}-སྣུན། ཁ་སྣོན། · {alt}-སྣུན། ཡན་ལག་འགྲོ་ལམ་ཧྲིལ་པོ།
+	Content-Aware Move	ནང་དོན་ཤེས་རྟོགས་ཡོད་པའི་སྤོ་བ།
+	Convert to Layers	བང་རིམ་དུ་བསྒྱུར།
+	Copy Layers to Document	བང་རིམ་ཡིག་ཆར་འདྲ་བཤུས།
+	Couldn't place {name}: {error}	{name} འཇོག་མ་ཐུབ། {error}
+	Delete Action	ལས་འགུལ་སུབ།
+	Details	ཞིབ་ཕྲ།
+	Disable Symmetry Path	ཆ་སྙོམས་འགྲོ་ལམ་ནུས་མེད་བཟོ།
+	Discard Layers and Save a Copy	བང་རིམ་དོར་ནས་འདྲ་བཤུས་ཉར་ཚགས།
+	Don't show again	ཡང་བསྐྱར་མ་སྟོན།
+	Drop Floating Selection	འཕྱོ་བའི་འདེམས་སྒྲུག་འཇོག
+	Edit Layer Style	བང་རིམ་གྱི་བཟོ་ལྟ་བཟོ་སྒྲིག
+	Esc to cancel	Esc མནན་ནས་ཆ་མེད་གཏོང་།
+	Extend	རྒྱ་སྐྱེད།
+	Float Selection	འདེམས་སྒྲུག་འཕྱོ་རུ་འཇུག
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	འཁྱག་པའི་ལཱ་སོ། ས་ཁུལ་འཁྱག་པར་འདྲུད། Alt-འདྲུད་ནས་ཞུ་རུ་འཇུག (L)
+	GPU Backend	GPU རྒྱབ་སྣེ།
+	GPU acceleration could not continue. Your documents are unchanged.	GPU མགྱོགས་སྣོན་མུ་མཐུད་མ་ཐུབ། ཁྱེད་ཀྱི་ཡིག་ཆ་ལ་འགྱུར་བ་མེད།
+	Get Action	ལས་འགུལ་ལེན།
+	Grid:	སྒྲོམ་ཐིག:
+	Hit-Test Type	ཡི་གེའི་ཐེབས་ས་བརྟག་དཔྱད།
+	Including layers will increase file size.	བང་རིམ་ཚུད་ན་ཡིག་ཆའི་ཆེ་ཆུང་འཕར་ངེས།
+	Invalid {mode} profile	ནུས་མེད་ཀྱི་ {mode} གསལ་སྡུད།
+	Keep Using CPU	CPU མུ་མཐུད་བེད་སྤྱོད།
+	Lasso around an area, then drag the selection	ས་ཁུལ་ཞིག་ལཱ་སོས་བསྐོར་ནས་འདེམས་སྒྲུག་འདྲུད།
+	Layer Style Default	བང་རིམ་གྱི་བཟོ་ལྟའི་སྔོན་སྒྲིག
+	List Actions	ལས་འགུལ་ཐོ་གཞུང་།
+	List Background Jobs	རྒྱབ་ལོགས་ཀྱི་ལས་འགན་ཐོ་གཞུང་།
+	Make Layer Style Default	བང་རིམ་གྱི་བཟོ་ལྟའི་སྔོན་སྒྲིག་ཏུ་བཟོ།
+	Make Selection from Path	འགྲོ་ལམ་ནས་འདེམས་སྒྲུག་བཟོ།
+	Make Symmetry Path	ཆ་སྙོམས་འགྲོ་ལམ་བཟོ།
+	Move	སྤོ་བ།
+	Move Document	ཡིག་ཆ་སྤོ་བ།
+	Navigate Type	ཡི་གེའི་ནང་འགྲུལ་བསྐྱོད།
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	འདེམས་སྒྲུག་བཟོ་རྒྱུའི་འགྲོ་ལམ་མེད། སྨྱུ་གུའི་ལག་ཆས་འགྲོ་ལམ་ཞིག་འབྲི་བའམ། ལམ་གྱི་ལྷེ་མིག་ནང་ནས་གཅིག་འདེམས།
+	Opening {name}	{name} ཁ་འབྱེད་བཞིན་པ།
+	Opening {name}…	{name} ཁ་འབྱེད་བཞིན།…
+	Opening…	ཁ་འབྱེད་བཞིན།…
+	Patch	ལྷན་པ།
+	Patch:	ལྷན་པ:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite ཡིས་ CPU པར་རིས་སྡེབ་སྦྱོར་ཆས་བེད་སྤྱོད་བྱེད་བཞིན་ཡོད། སྒེའུ་ཁུང་གིས་ད་དུང་ཁྱེད་ཀྱི་རི་མོའི་སྒྲིག་ཆས་བེད་སྤྱོད་བྱེད་སྲིད།
+	Play Action	ལས་འགུལ་འཁྲབ།
+	Reading…	ཀློག་བཞིན།…
+	Record Action	ལས་འགུལ་ཐོ་འགོད།
+	Rendering Mode	འཁོར་སྐྱོད་རྣམ་པ།
+	Retry GPU	GPU བསྐྱར་ཚོད།
+	Retry GPU requires a restart. Save your work first.	GPU བསྐྱར་ཚོད་ལ་བསྐྱར་འགོ་འཛུགས་དགོས། སྔོན་ལ་ཁྱེད་ཀྱི་ལས་ཀ་ཉར་ཚགས་གནང་།
+	Save cancelled	ཉར་ཚགས་ཆ་མེད་བཏང་ཟིན།
+	Save failed: {error}	ཉར་ཚགས་མ་ཐུབ། {error}
+	Stamp Down	འོག་ཏུ་ཐེལ་རྒྱག
+	Stamp Visible	མཐོང་ཆོས་ཐེལ་རྒྱག
+	Stop Recording	ཐོ་འགོད་མཚམས་འཇོག
+	Structure:	གྲུབ་ཚུལ:
+	Switched to CPU rendering	CPU འཁོར་སྐྱོད་ལ་བརྗེས་ཟིན།
+	TIFF Options	TIFF གདམ་ག།
+	Type Caret	ཡི་གེའི་འོད་རྟགས།
+	Unnamed {mode} profile	མིང་མེད་པའི་ {mode} གསལ་སྡུད།
+	Warp Grid	གཅུ་སྒྲིམ་སྒྲོམ་ཐིག
+	Working…	ལས་ཀ་བྱེད་བཞིན།…

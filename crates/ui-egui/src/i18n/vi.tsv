@@ -15,7 +15,7 @@
 	Edit	Chỉnh sửa
 	Image	Hình ảnh
 	Layer	Lớp
-	Type	Kiểu
+	Type	Văn bản
 	Select	Lựa chọn
 	Filter	Bộ lọc
 	View	Xem
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Nâng cao
+	Alt-click to define a source point to clone from	Alt-nhấp để chọn điểm nguồn cần nhân bản
+	Automatic (recommended)	Tự động (khuyến nghị)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Chế độ Tự động dùng tăng tốc GPU khi có thể và chuyển sang kết xuất bằng CPU khi gặp lỗi.
+	CPU / Compatibility	CPU / Tương thích
+	Cancel Background Job	Hủy tác vụ nền
+	Cancel opening	Hủy mở
+	Cancelled opening {name}	Đã hủy mở {name}
+	Cancelled {label}	Đã hủy {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Nhấp: chọn điểm neo · Kéo: di chuyển điểm neo, tay nắm hoặc đoạn · {shift}-nhấp: thêm · {alt}-nhấp: toàn bộ path con
+	Content-Aware Move	Di chuyển theo nội dung
+	Convert to Layers	Chuyển đổi thành lớp
+	Copy Layers to Document	Sao chép lớp sang tài liệu
+	Couldn't place {name}: {error}	Không thể đặt {name}: {error}
+	Delete Action	Xóa hành động
+	Details	Chi tiết
+	Disable Symmetry Path	Tắt path đối xứng
+	Discard Layers and Save a Copy	Bỏ các lớp và lưu bản sao
+	Don't show again	Không hiển thị lại
+	Drop Floating Selection	Thả vùng chọn nổi
+	Edit Layer Style	Chỉnh sửa kiểu lớp
+	Esc to cancel	Esc để hủy
+	Extend	Mở rộng
+	Float Selection	Làm nổi vùng chọn
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lasso đóng băng: kéo để đóng băng một vùng, Alt-kéo để làm tan băng (L)
+	GPU Backend	Backend GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Không thể tiếp tục tăng tốc GPU. Tài liệu của bạn không thay đổi.
+	Get Action	Lấy hành động
+	Grid:	Lưới:
+	Hit-Test Type	Kiểm tra vị trí trong văn bản
+	Including layers will increase file size.	Việc bao gồm các lớp sẽ làm tăng kích thước tệp.
+	Invalid {mode} profile	Hồ sơ {mode} không hợp lệ
+	Keep Using CPU	Tiếp tục dùng CPU
+	Lasso around an area, then drag the selection	Khoanh một vùng bằng lasso, rồi kéo vùng chọn
+	Layer Style Default	Mặc định kiểu lớp
+	List Actions	Liệt kê hành động
+	List Background Jobs	Liệt kê tác vụ nền
+	Make Layer Style Default	Đặt làm mặc định kiểu lớp
+	Make Selection from Path	Tạo vùng chọn từ path
+	Make Symmetry Path	Tạo path đối xứng
+	Move	Di chuyển
+	Move Document	Di chuyển tài liệu
+	Navigate Type	Điều hướng văn bản
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Không có path để tạo vùng chọn: hãy vẽ một path bằng công cụ Bút hoặc chọn một path trong bảng Path.
+	Opening {name}	Đang mở {name}
+	Opening {name}…	Đang mở {name}…
+	Opening…	Đang mở…
+	Patch	Vá
+	Patch:	Vá:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite đang dùng bộ tổng hợp ảnh bằng CPU. Cửa sổ vẫn có thể dùng bộ điều hợp đồ họa của bạn.
+	Play Action	Phát hành động
+	Reading…	Đang đọc…
+	Record Action	Ghi hành động
+	Rendering Mode	Chế độ kết xuất
+	Retry GPU	Thử lại GPU
+	Retry GPU requires a restart. Save your work first.	Thử lại GPU cần khởi động lại. Hãy lưu công việc của bạn trước.
+	Save cancelled	Đã hủy lưu
+	Save failed: {error}	Lưu thất bại: {error}
+	Stamp Down	Đóng dấu xuống
+	Stamp Visible	Đóng dấu phần hiển thị
+	Stop Recording	Dừng ghi
+	Structure:	Cấu trúc:
+	Switched to CPU rendering	Đã chuyển sang kết xuất bằng CPU
+	TIFF Options	Tùy chọn TIFF
+	Type Caret	Con trỏ văn bản
+	Unnamed {mode} profile	Hồ sơ {mode} không tên
+	Warp Grid	Lưới làm cong
+	Working…	Đang xử lý…

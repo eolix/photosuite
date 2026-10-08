@@ -15,7 +15,7 @@
 	Edit	Modifica
 	Image	Immagine
 	Layer	Livello
-	Type	Tipo
+	Type	Testo
 	Select	Selezione
 	Filter	Filtro
 	View	Visualizza
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Avanzate
+	Alt-click to define a source point to clone from	Alt-clic per definire un punto di origine da cui clonare
+	Automatic (recommended)	Automatico (consigliato)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	La modalità automatica usa l'accelerazione GPU quando è disponibile e passa al rendering CPU in caso di errori.
+	CPU / Compatibility	CPU / Compatibilità
+	Cancel Background Job	Annulla attività in background
+	Cancel opening	Annulla apertura
+	Cancelled opening {name}	Apertura di {name} annullata
+	Cancelled {label}	Annullato: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Clic: seleziona ancoraggio · Trascina: sposta ancoraggio, maniglia o segmento · {shift}-clic: aggiungi · {alt}-clic: intero sottotracciato
+	Content-Aware Move	Spostamento in base al contenuto
+	Convert to Layers	Converti in livelli
+	Copy Layers to Document	Copia livelli nel documento
+	Couldn't place {name}: {error}	Impossibile inserire {name}: {error}
+	Delete Action	Elimina azione
+	Details	Dettagli
+	Disable Symmetry Path	Disattiva tracciato di simmetria
+	Discard Layers and Save a Copy	Ignora i livelli e salva una copia
+	Don't show again	Non mostrare più
+	Drop Floating Selection	Rilascia selezione mobile
+	Edit Layer Style	Modifica stile livello
+	Esc to cancel	Esc per annullare
+	Extend	Estendi
+	Float Selection	Rendi mobile la selezione
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Lazo di congelamento: trascina per congelare un'area, Alt-trascina per scongelarla (L)
+	GPU Backend	Back-end GPU
+	GPU acceleration could not continue. Your documents are unchanged.	L'accelerazione GPU non ha potuto proseguire. I documenti non sono stati modificati.
+	Get Action	Ottieni azione
+	Grid:	Griglia:
+	Hit-Test Type	Test di posizione sul testo
+	Including layers will increase file size.	L'inclusione dei livelli aumenterà le dimensioni del file.
+	Invalid {mode} profile	Profilo {mode} non valido
+	Keep Using CPU	Continua a usare la CPU
+	Lasso around an area, then drag the selection	Traccia un lazo attorno a un'area, quindi trascina la selezione
+	Layer Style Default	Stile livello predefinito
+	List Actions	Elenca azioni
+	List Background Jobs	Elenca attività in background
+	Make Layer Style Default	Imposta come stile livello predefinito
+	Make Selection from Path	Crea selezione dal tracciato
+	Make Symmetry Path	Crea tracciato di simmetria
+	Move	Sposta
+	Move Document	Sposta documento
+	Navigate Type	Naviga nel testo
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nessun tracciato da cui creare una selezione: disegnane uno con lo strumento Penna o selezionane uno nel pannello Tracciati.
+	Opening {name}	Apertura di {name}
+	Opening {name}…	Apertura di {name}…
+	Opening…	Apertura…
+	Patch	Toppa
+	Patch:	Toppa:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite sta usando il compositore di immagini CPU. La finestra potrebbe comunque usare la scheda grafica.
+	Play Action	Esegui azione
+	Reading…	Lettura…
+	Record Action	Registra azione
+	Rendering Mode	Modalità di rendering
+	Retry GPU	Riprova GPU
+	Retry GPU requires a restart. Save your work first.	Riprovare la GPU richiede un riavvio. Salva prima il tuo lavoro.
+	Save cancelled	Salvataggio annullato
+	Save failed: {error}	Salvataggio non riuscito: {error}
+	Stamp Down	Unisci una copia in basso
+	Stamp Visible	Unisci una copia dei visibili
+	Stop Recording	Interrompi registrazione
+	Structure:	Struttura:
+	Switched to CPU rendering	Passato al rendering CPU
+	TIFF Options	Opzioni TIFF
+	Type Caret	Cursore di testo
+	Unnamed {mode} profile	Profilo {mode} senza nome
+	Warp Grid	Griglia di alterazione
+	Working…	Elaborazione…

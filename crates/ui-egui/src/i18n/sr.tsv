@@ -15,7 +15,7 @@
 	Edit	Измени
 	Image	Слика
 	Layer	Слој
-	Type	Тип
+	Type	Текст
 	Select	Изабери
 	Filter	Филтар
 	View	Поглед
@@ -1944,7 +1944,7 @@
 	Delete vector mask	Избриши Векторску маску
 	CPU (no GPU acceleration)	ЦПУ (без ГПУ убрзања)
 	DirectX 12	ДирецтКс 12
-	GPU backend	ГПУ бацкенд
+	GPU backend	ГПУ бекенд
 	Metal	Метал
 	OpenGL	ОпенГЛ
 	Use tablet pressure	Користите притисак таблета
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Напредно
+	Alt-click to define a source point to clone from	Alt-кликом одредите изворну тачку за клонирање
+	Automatic (recommended)	Аутоматски (препоручено)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Аутоматски режим користи GPU убрзање када је доступно, а у случају грешака прелази на исцртавање помоћу CPU-а.
+	CPU / Compatibility	CPU / Компатибилност
+	Cancel Background Job	Откажи задатак у позадини
+	Cancel opening	Откажи отварање
+	Cancelled opening {name}	Отварање {name} је отказано
+	Cancelled {label}	Отказано: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Клик: изабери сидрену тачку · Превлачење: помери сидрену тачку, ручицу или сегмент · {shift}-клик: додај · {alt}-клик: цела подпутања
+	Content-Aware Move	Померање у складу са садржајем
+	Convert to Layers	Претвори у слојеве
+	Copy Layers to Document	Копирај слојеве у документ
+	Couldn't place {name}: {error}	Није могуће поставити {name}: {error}
+	Delete Action	Избриши акцију
+	Details	Детаљи
+	Disable Symmetry Path	Онемогући путању симетрије
+	Discard Layers and Save a Copy	Одбаци слојеве и сачувај копију
+	Don't show again	Не приказуј поново
+	Drop Floating Selection	Усидри плутајући избор
+	Edit Layer Style	Уреди стил слоја
+	Esc to cancel	Esc за отказивање
+	Extend	Прошири
+	Float Selection	Направи плутајући избор
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Ласо за замрзавање: превуците да замрзнете област, Alt-превлачењем је одмрзавате (L)
+	GPU Backend	GPU позадински систем
+	GPU acceleration could not continue. Your documents are unchanged.	GPU убрзање није могло да се настави. Ваши документи нису промењени.
+	Get Action	Преузми акцију
+	Grid:	Мрежа:
+	Hit-Test Type	Тест погодка текста
+	Including layers will increase file size.	Укључивање слојева повећаће величину датотеке.
+	Invalid {mode} profile	Неважећи профил {mode}
+	Keep Using CPU	Настави да користиш CPU
+	Lasso around an area, then drag the selection	Ласом обухватите област, а затим превуците избор
+	Layer Style Default	Подразумевани стил слоја
+	List Actions	Листа акција
+	List Background Jobs	Листа задатака у позадини
+	Make Layer Style Default	Постави стил слоја као подразумевани
+	Make Selection from Path	Направи избор од путање
+	Make Symmetry Path	Направи путању симетрије
+	Move	Померање
+	Move Document	Премести документ
+	Navigate Type	Навигација кроз текст
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Нема путање од које би се направио избор: нацртајте је алатом Перо или је изаберите на панелу Путање.
+	Opening {name}	Отварање {name}
+	Opening {name}…	Отварање {name}…
+	Opening…	Отварање…
+	Patch	Закрпа
+	Patch:	Закрпа:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite слаже слику помоћу CPU-а. Прозор и даље може да користи графички адаптер.
+	Play Action	Пусти акцију
+	Reading…	Читање…
+	Record Action	Сними акцију
+	Rendering Mode	Режим исцртавања
+	Retry GPU	Поново покушај GPU
+	Retry GPU requires a restart. Save your work first.	Поновни покушај GPU-а захтева поновно покретање. Прво сачувајте свој рад.
+	Save cancelled	Чување је отказано
+	Save failed: {error}	Чување није успело: {error}
+	Stamp Down	Отисни надоле
+	Stamp Visible	Отисни видљиве
+	Stop Recording	Заустави снимање
+	Structure:	Структура:
+	Switched to CPU rendering	Пребачено на исцртавање помоћу CPU-а
+	TIFF Options	TIFF опције
+	Type Caret	Курсор текста
+	Unnamed {mode} profile	Неименовани профил {mode}
+	Warp Grid	Мрежа искривљења
+	Working…	Обрада…

@@ -15,7 +15,7 @@
 	Edit	Upraviť
 	Image	Obraz
 	Layer	Vrstva
-	Type	Typ
+	Type	Text
 	Select	Vybrať
 	Filter	Filter
 	View	Zobrazenie
@@ -644,7 +644,7 @@
 	Pearl	Pearl
 	Aubergine	baklažán
 	Ocean	oceán
-	Actions	Akcia
+	Actions	Akcie
 	Brush Settings	Nastavenia štetca
 	Brushes	Štetce
 	Channels	Kanály
@@ -1966,3 +1966,74 @@
 	175%	175%
 	250%	250%
 	300%	300%
+	3 x 3	3 x 3
+	4 x 4	4 x 4
+	5 x 5	5 x 5
+	Advanced	Rozšírené
+	Alt-click to define a source point to clone from	Alt-kliknutím určíte zdrojový bod na klonovanie
+	Automatic (recommended)	Automaticky (odporúčané)
+	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatický režim používa akceleráciu GPU, ak je k dispozícii, a pri chybách prejde na vykresľovanie pomocou CPU.
+	CPU / Compatibility	CPU / Kompatibilita
+	Cancel Background Job	Zrušiť úlohu na pozadí
+	Cancel opening	Zrušiť otváranie
+	Cancelled opening {name}	Otváranie {name} bolo zrušené
+	Cancelled {label}	Zrušené: {label}
+	Click: select anchor · Drag: move anchor, handle or segment · {shift}-click: add · {alt}-click: whole subpath	Kliknutie: vybrať kotviaci bod · Ťahanie: presunúť kotviaci bod, úchyt alebo úsek · {shift}-kliknutie: pridať · {alt}-kliknutie: celá podcesta
+	Content-Aware Move	Presun zohľadňujúci obsah
+	Convert to Layers	Previesť na vrstvy
+	Copy Layers to Document	Kopírovať vrstvy do dokumentu
+	Couldn't place {name}: {error}	Nie je možné umiestniť {name}: {error}
+	Delete Action	Vymazať akciu
+	Details	Podrobnosti
+	Disable Symmetry Path	Vypnúť cestu symetrie
+	Discard Layers and Save a Copy	Zahodiť vrstvy a uložiť kópiu
+	Don't show again	Znova nezobrazovať
+	Drop Floating Selection	Ukotviť plávajúci výber
+	Edit Layer Style	Upraviť štýl vrstvy
+	Esc to cancel	Zrušíte klávesom Esc
+	Extend	Rozšíriť
+	Float Selection	Vytvoriť plávajúci výber
+	Freeze Lasso: drag to freeze an area, Alt-drag to thaw it (L)	Laso zmrazenia: ťahaním zmrazíte oblasť, Alt-ťahaním ju rozmrazíte (L)
+	GPU Backend	Backend GPU
+	GPU acceleration could not continue. Your documents are unchanged.	Akcelerácia GPU nemohla pokračovať. Vaše dokumenty zostali bez zmeny.
+	Get Action	Získať akciu
+	Grid:	Mriežka:
+	Hit-Test Type	Test zásahu textu
+	Including layers will increase file size.	Zahrnutie vrstiev zväčší veľkosť súboru.
+	Invalid {mode} profile	Neplatný profil {mode}
+	Keep Using CPU	Naďalej používať CPU
+	Lasso around an area, then drag the selection	Obtiahnite oblasť lasom a potom výber potiahnite
+	Layer Style Default	Predvolený štýl vrstvy
+	List Actions	Zoznam akcií
+	List Background Jobs	Zoznam úloh na pozadí
+	Make Layer Style Default	Nastaviť štýl vrstvy ako predvolený
+	Make Selection from Path	Vytvoriť výber z cesty
+	Make Symmetry Path	Vytvoriť cestu symetrie
+	Move	Presun
+	Move Document	Presunúť dokument
+	Navigate Type	Navigácia v texte
+	No path to make a selection from: draw one with the Pen tool or select one in the Paths panel.	Nie je k dispozícii cesta, z ktorej by sa dal vytvoriť výber: nakreslite ju nástrojom pero alebo ju vyberte v paneli Cesty.
+	Opening {name}	Otváranie {name}
+	Opening {name}…	Otváranie {name}…
+	Opening…	Otváranie…
+	Patch	Záplata
+	Patch:	Záplata:
+	PhotoSuite is using the CPU image compositor. The window may still use your graphics adapter.	PhotoSuite skladá obraz pomocou CPU. Okno môže naďalej využívať grafický adaptér.
+	Play Action	Prehrať akciu
+	Reading…	Načítavanie…
+	Record Action	Zaznamenať akciu
+	Rendering Mode	Režim vykresľovania
+	Retry GPU	Skúsiť znova GPU
+	Retry GPU requires a restart. Save your work first.	Opätovný pokus o GPU vyžaduje reštart. Najprv si uložte prácu.
+	Save cancelled	Ukladanie zrušené
+	Save failed: {error}	Uloženie zlyhalo: {error}
+	Stamp Down	Odtlačiť nadol
+	Stamp Visible	Odtlačiť viditeľné
+	Stop Recording	Zastaviť záznam
+	Structure:	Štruktúra:
+	Switched to CPU rendering	Prepnuté na vykresľovanie pomocou CPU
+	TIFF Options	Možnosti TIFF
+	Type Caret	Textový kurzor
+	Unnamed {mode} profile	Nepomenovaný profil {mode}
+	Warp Grid	Mriežka pokrivenia
+	Working…	Prebieha spracovanie…
