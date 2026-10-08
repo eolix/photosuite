@@ -128,3 +128,4 @@ Never applied automatically (listed after the port for a person to look at):
 | `07174271d5` | skip | only held-back files (translations / CI / brand / records) — CI: never cancel main's runs; trim per-PR runner time (#800) |
 | `00c406f589` | skip | tests behaviour from skipped 9aef02cac3 (menus open on press) — Test: one press-drag-release gesture crosses menu titles and enters submenus (#775) (#837) |
 | `1d8a32ed83` | skip | only held-back files (translations / CI / brand / records) — Release CI: macOS job on the org macos-release runner |
+| `34a87cedea` | skip | only held-back files (translations / CI / brand / records) — actionlint: declare the org macos-release runner label (#927) |
