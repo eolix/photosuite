@@ -208,6 +208,10 @@ fn finish_open(app: &mut PhotosuiteApp, name: &str, path: Option<&str>, v: &Valu
     app.ui.status = format!("Opened {name}");
     app.ui.status_error = false;
     notices::io_warnings(app, &format!("Opened {name}"), &warnings);
+    // Like Photoshop (and `open_bytes`), a camera file opens into Camera Raw.
+    if crate::camera_raw_ui::is_raw_name(name) {
+        app.camera_raw_on_open = app.session.active().map(|d| d.doc.id);
+    }
     // Script events bound to "Open Document".
     photosuite_engine::automate_cmds::document_opened(&mut app.session);
     app.sync_views();

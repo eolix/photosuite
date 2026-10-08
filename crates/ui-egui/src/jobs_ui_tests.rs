@@ -272,3 +272,18 @@ fn templates_open_untitled_in_the_background() {
     assert_eq!((st.doc.name.as_str(), st.path.as_deref()), ("Untitled-1", None));
     assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/photosuite-test/card.psdt"));
 }
+
+/// A camera file opened in the background opens into Camera Raw, as an inline open does: the
+/// background path lands in `finish_open`, which must hand the document to Camera Raw too.
+#[test]
+fn camera_files_opened_in_the_background_open_into_camera_raw() {
+    let mut app = PhotosuiteApp::new(photosuite_engine::Session::new(), crate::Services::default());
+    app.run("file.new", json!({"width": 32, "height": 24, "name": "IMG_0001.CR3"})).unwrap();
+    let id = app.session.active().unwrap().doc.id;
+    super::finish_open(&mut app, "IMG_0001.CR3", Some("/shoot/IMG_0001.CR3"), &json!({"document": 0}), None).unwrap();
+    assert_eq!(app.camera_raw_on_open, Some(id), "Camera Raw is queued for the camera file");
+    // Other files don't open into Camera Raw.
+    app.camera_raw_on_open = None;
+    super::finish_open(&mut app, "photo.psd", Some("/shoot/photo.psd"), &json!({"document": 0}), None).unwrap();
+    assert_eq!(app.camera_raw_on_open, None);
+}
