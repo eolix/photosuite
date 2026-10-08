@@ -60,7 +60,7 @@ pub fn set_selection(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>
 
 /// After a structural edit, make `ids` the selection (dropping any that no longer exist), which
 /// is also what the edit's history state targets.
-fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
+pub(crate) fn reselect(s: &mut Session, ids: Vec<LayerId>, active: Option<LayerId>) {
     if let Some(st) = s.active_mut() {
         st.selected_layers = ids;
         if let Some(a) = active {

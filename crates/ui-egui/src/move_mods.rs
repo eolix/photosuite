@@ -153,6 +153,14 @@ pub fn finish(app: &mut PhotosuiteApp) {
     }
 }
 
+/// Call when a Move drag ends without moving (its layers were dragged to another document): an
+/// ⌥-drag's copy is taken back.
+pub fn abandon(app: &mut PhotosuiteApp) {
+    if std::mem::take(&mut app.move_mods).dup_from.is_some() {
+        app.session.undo();
+    }
+}
+
 /// Arrow keys with the Move tool (or while Free Transform is active): nudge 1 px, ⇧ 10 px;
 /// ⌥ duplicates the layers first. Returns true when a key was used.
 pub fn arrow_keys(app: &mut PhotosuiteApp, ctx: &egui::Context) -> bool {

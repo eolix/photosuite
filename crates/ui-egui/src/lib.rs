@@ -76,6 +76,7 @@ pub mod layer_props_ui;
 mod layer_reveal;
 pub mod layer_row_ui;
 pub mod layer_style;
+mod layer_transfer;
 pub mod layer_tree_ui;
 pub mod links;
 pub mod liquify_ui;
