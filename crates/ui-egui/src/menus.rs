@@ -1039,11 +1039,12 @@ mod tests {
         app.run("select.rect", json!({"x": 2, "y": 2, "width": 8, "height": 8})).unwrap();
         let items = menu_items(&app);
         let top: Vec<_> = items.iter().filter(|i| i.path.len() == 1 && i.path.first().is_some_and(|p| p == "Select")).collect();
-        // Context actions live somewhere under Select (Feather stays in Select > Modify, as in the
-        // reference menus).
+        // The context menus' Select actions live somewhere under Select (Feather stays in Select >
+        // Modify, as in the reference menus). Make Work Path is a Paths panel action.
         let select: Vec<_> = items.iter().filter(|i| i.path.first().is_some_and(|p| p == "Select")).collect();
-        for &(label, id) in crate::canvas_tool_menu::entries(true).iter().chain(crate::canvas_tool_menu::entries(false)) {
-            assert!(select.iter().any(|i| i.id == id && i.label == label), "Select menu missing {label} ({id})");
+        let rows = crate::canvas_tool_menu::SELECTION_MENU.iter().chain(crate::canvas_tool_menu::NO_SELECTION_MENU).flatten();
+        for &(label, id) in rows.filter(|(_, id)| id.starts_with("select.") && *id != "select.toWorkPath") {
+            assert!(select.iter().any(|i| i.id == id), "Select menu missing {label} ({id})");
         }
         assert!(top.iter().any(|i| i.id == "select.all"));
         assert!(top.iter().any(|i| i.id == "select.colorRange"));

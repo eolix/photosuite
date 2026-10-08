@@ -1938,7 +1938,7 @@ mod tests {
         begin(&mut app, &ctx).unwrap();
         assert!(crate::canvas_tool_menu::open_transform(&mut app, [10.0, 10.0]));
         let menu = app.ui.canvas_tool_menu.clone().unwrap();
-        let ids: Vec<&str> = crate::canvas_tool_menu::menu_entries(&menu).iter().map(|e| e.1).collect();
+        let ids: Vec<&str> = crate::canvas_tool_menu::rows(&menu).iter().flatten().map(|e| e.1).collect();
         assert!(ids.contains(&"edit.transform.distort") && ids.contains(&"edit.freeTransform"));
         crate::canvas_tool_menu::choose(&mut app, &ctx, "edit.transform.distort");
         assert_eq!(app.ui.transform.as_ref().unwrap().mode, TransformMode::Distort);
