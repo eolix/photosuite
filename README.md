@@ -5,7 +5,7 @@
 <h1 align="center">PhotoSuite</h1>
 
 <p align="center">
-  <strong>A desktop image editor, faithful to classic Adobe Photoshop, with native PSD/PSB compatibility - written entirely in Rust.</strong>
+  <strong>A desktop image editor faithfully replicating classic Adobe Photoshop with 1:1 native PSD/PSB compatibility.</strong>
 </p>
 
 <p align="center">
@@ -27,9 +27,9 @@
 
 ---
 
-PhotoSuite is built on [PhotoCraft](https://github.com/storytold/photocraft), an open-source
-Rust image-editing engine (MIT OR Apache-2.0): its document model, PSD reader and writer,
-compositor and command system are the foundation, with PhotoSuite's interface, tools and features
+PhotoSuite is built upon [PhotoCraft](https://github.com/storytold/photocraft), an open-source
+Rust image-editing engine (MIT OR Apache-2.0): its document model, compositor and command system 
+are the foundation, with PhotoSuite's interface, PSD reader and writer, tools and features
 on top.
 
 > PhotoSuite's intention is to fully suppport Photoshop-PhotoSuite PSD round trips, with 
@@ -80,11 +80,16 @@ Click any image for the full-resolution version.
 
 ## What this is
 
-A native desktop editor that tries to work the way Photoshop does: menus where you expect them,
-the same shortcuts and modifier keys, dialogs with the same fields, and PSD as a first-class
-format rather than an import filter. If you know Photoshop, most of PhotoSuite will feel familiar.
-It does not do everything Photoshop does, and where it differs, the issues are open for it.
+PhotoSuite is a full-featured desktop raster and vector graphics editor designed with fidelity 
+in mind rather than reinterpretation. Panels sit where you expect them, shortcuts match your muscle memory, 
+dialogs expose identical fields, and tools behave exactly like the originals, right down to modifier keys. 
+If you know Photoshop ~CS6, you already know PhotoSuite.
 
+* **PSD/PSB Native Format**: PSD is the native format, not a lossy import filter. Documents
+  round-trip cleanly through the binary format: layer records, masks, blending modes, channel
+  data, descriptors, layer effects, smart-filter stacks, text engine data, vector paths, slices,
+  and colour profiles. A file saved in PhotoSuite opens in Photoshop with its layer tree intact,
+  and vice versa. PSB is supported for large documents.
 - **Native.** egui on wgpu (Metal, Vulkan, DirectX 12), with a CPU fallback. No Electron, no
   web view, no JavaScript.
 - **Local and private.** No account, no telemetry, no cloud. Your files stay on your machine.
@@ -97,9 +102,7 @@ It does not do everything Photoshop does, and where it differs, the issues are o
 
 ## What this is not
 
-A GIMP or Affinity replacement with a feature for everything. The goal is narrower: a free,
-legal way for designers to open, edit and save PSDs with tools they already know. Anything
-beyond that can be a [plug-in](docs/plugins.md).
+Gimp. Or Affinity. I'm certain they have great features, but my goal is not to make a mega-app with a billion functions (however, feel free to create any [plugins](docs/pliugins.md) you want!) - but to offer graphic designers a legal way to edit PSDs for free.
 
 ## Features
 
